@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <%- include('partials/head') %>
+  <link rel="stylesheet" href="/css/dashboard.css">
+  <link rel="stylesheet" href="/css/lessons.css">
+</head>
+<body class="app-body">
+
+  <div class="app-layout">
+    <%- include('partials/sidebar') %>
+
+    <main class="main-content" id="main">
+
+      <a href="/lessons" class="lesson-back">← All lessons</a>
+
+      <div class="lesson-layout">
+
+        <!-- Category tag -->
+        <%
+          const catKey = (lesson.category_tag || '').toLowerCase();
+          const tagClass = ['mindset','practical','perspective'].includes(catKey)
+            ? `lesson-article-tag--${catKey}`
+            : 'lesson-article-tag--default';
+        %>
+        <div class="lesson-article-tag <%= tagClass %>"><%= lesson.category_tag || 'Lesson' %></div>
+
+        <!-- Title + subtitle -->
+        <h1 class="lesson-article-title"><%= lesson.title %></h1>
+        <p class="lesson-article-subtitle"><em><%= lesson.subtitle %></em></p>
+
+        <!-- Meta -->
+        <div class="lesson-article-meta">
+          <span>~<%= lesson.estimated_read_time %> min read</span>
+          <span class="lesson-article-meta-dot"></span>
+          <span>The Creative's Rhythm</span>
+        </div>
+
+        <!-- Lesson body -->
+        <div class="lesson-body">
+          <%- lesson.content %>
+        </div>
+
+        <!-- Footer: completion + navigation -->
+        <footer class="lesson-footer">
+
+          <div class="lesson-complete-section">
+            <input
+              type="checkbox"
+              class="complete-checkbox"
+              id="lessonComplete"
+              <%= completed ? 'checked' : '' %>>
+            <div>
+              <label for="lessonComplete" class="lesson-complete-label <%= completed ? 'is-done' : '' %>" id="completeLabel">
+                <%= completed ? 'Lesson complete ✓' : 'Mark as complete' %>
+              </label>
+              <p class="lesson-complete-sub">Your progress is saved automatically.</p>
+            </div>
+          </div>
+
+          <nav class="lesson-nav" aria-label="Lesson navigation">
+            <% if (prevLesson) { %>
+              <a href="/lessons/<%= prevLesson.slug %>" class="lesson-nav-item lesson-nav-item--prev">
+                <span class="lesson-nav-direction">← Previous</span>
+                <span class="lesson-nav-title"><%= prevLesson.title %></span>
+              </a>
+            <% } else { %>
+              <div></div>
+            <% } %>
+
+            <% if (nextLesson) { %>
+              <a href="/lessons/<%= nextLesson.slug %>" class="lesson-nav-item lesson-nav-item--next">
+                <span class="lesson-nav-direction">Next →</span>
+                <span class="lesson-nav-title"><%= nextLesson.title %></span>
+              </a>
+            <% } else { %>
+              <div></div>
+            <% } %>
+          </nav>
+
+        </footer>
+
+      </div><!-- /.lesson-layout -->
+
+    </main>
+  </div>
+
+  <script>
+    const checkbox = document.getElementById('lessonComplete');
+    const label = document.getElementById('completeLabel');
+    const lessonId = <%= lesson.id %>;
+
+    checkbox.addEventListener('change', async () => {
+      const isComplete = checkbox.checked;
+      label.textContent = isComplete ? 'Lesson complete ✓' : 'Mark as complete';
+      label.classList.toggle('is-done', isComplete);
+
+      await fetch(`/api/lessons/${lessonId}/complete`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ completed: isComplete })
+      });
+    });
+  </script>
+
+</body>
+</html>

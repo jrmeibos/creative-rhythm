@@ -1,0 +1,473 @@
+/* ─── Goals Page ─────────────────────────────────────────────────────────── */
+
+.goals-page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 2rem;
+  margin-bottom: 2rem;
+  padding-bottom: 1.75rem;
+  border-bottom: 1px solid rgba(112, 92, 108, 0.12);
+  flex-wrap: wrap;
+}
+
+.goals-page-title {
+  font-family: var(--font-display);
+  font-size: 2rem;
+  font-weight: 400;
+  color: var(--color-ink-stained);
+  margin-bottom: 0.25rem;
+}
+
+.goals-page-sub {
+  font-size: 0.85rem;
+  font-weight: 300;
+  color: rgba(16, 15, 16, 0.5);
+}
+
+/* ─── Week Navigation ────────────────────────────────────────────────────── */
+
+.week-nav {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: var(--color-blank-page);
+  border: 1.5px solid rgba(112, 92, 108, 0.12);
+  border-radius: var(--radius-lg);
+  padding: 0.5rem 0.75rem;
+}
+
+.week-nav-arrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  color: var(--color-bloem);
+  text-decoration: none;
+  font-size: 1.1rem;
+  transition: background var(--transition);
+}
+
+.week-nav-arrow:hover { background: var(--color-bloem-light); }
+
+.week-nav-arrow--disabled {
+  opacity: 0.25;
+  pointer-events: none;
+}
+
+.week-nav-label {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 140px;
+}
+
+.week-nav-date {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--color-ink-stained);
+}
+
+.week-nav-current { color: var(--color-bloem); font-size: 0.7rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
+.week-nav-past    { color: rgba(16,15,16,0.4); font-size: 0.7rem; }
+.week-nav-future  { color: var(--color-understory); font-size: 0.7rem; }
+
+/* ─── Integration Toggle ─────────────────────────────────────────────────── */
+
+.integration-toggle-row {
+  margin-bottom: 1.75rem;
+}
+
+.integration-toggle-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  background: var(--color-blank-page);
+  border: 1.5px solid rgba(112, 92, 108, 0.1);
+  border-radius: var(--radius-md);
+  padding: 1rem 1.25rem;
+  cursor: pointer;
+}
+
+.integration-toggle-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.integration-toggle-text strong {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--color-ink-stained);
+}
+
+.integration-toggle-text span {
+  font-size: 0.78rem;
+  font-weight: 300;
+  color: rgba(16, 15, 16, 0.55);
+}
+
+.integration-toggle-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: none;
+  border: none;
+  font-family: var(--font-body);
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: rgba(16, 15, 16, 0.45);
+  cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
+  transition: color var(--transition);
+}
+
+.integration-toggle-btn.is-active {
+  color: #8a6f1a;
+}
+
+.integration-toggle-track {
+  width: 40px;
+  height: 22px;
+  background: rgba(16, 15, 16, 0.15);
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  padding: 2px;
+  transition: background var(--transition);
+}
+
+.integration-toggle-btn.is-active .integration-toggle-track {
+  background: var(--color-apricity);
+}
+
+.integration-toggle-thumb {
+  width: 18px;
+  height: 18px;
+  background: white;
+  border-radius: 50%;
+  transition: transform var(--transition);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+
+.integration-toggle-btn.is-active .integration-toggle-thumb {
+  transform: translateX(18px);
+}
+
+/* ─── Goal Full Cards ────────────────────────────────────────────────────── */
+
+.goals-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+  margin-bottom: 2.5rem;
+}
+
+.goal-full-card {
+  border-radius: 24px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-shadow: var(--shadow-sm);
+}
+
+/* Category color headers */
+.goal-full-header {
+  padding: 1rem 1.25rem 0.875rem;
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.goal-full-header > * {
+  position: relative;
+  z-index: 1;
+}
+
+.goal-full-header-text {
+  display: flex;
+  flex-direction: row;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.2rem 0.45rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.goal-full-card--curiosity .goal-full-header { background: #a990a4; }
+.goal-full-card--create    .goal-full-header { background: var(--color-understory); }
+.goal-full-card--share     .goal-full-header { background: var(--color-curiositys-kiss); }
+.goal-full-card--connect   .goal-full-header { background: var(--color-apricity); }
+
+/* ─── Seasonal texture overlays on goal card headers ─────────────────────── */
+
+.goal-full-card--curiosity .goal-full-header::before,
+.goal-full-card--create    .goal-full-header::before,
+.goal-full-card--share     .goal-full-header::before,
+.goal-full-card--connect   .goal-full-header::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  opacity: 0.0864;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.goal-full-card--curiosity .goal-full-header::before { background-image: url('/images/seasons/Spring%20-%20Curiosity.png'); }
+.goal-full-card--create    .goal-full-header::before { background-image: url('/images/seasons/Summer%20-%20Create.png'); }
+.goal-full-card--share     .goal-full-header::before { background-image: url('/images/seasons/Fall%20-%20Share.png'); }
+.goal-full-card--connect   .goal-full-header::before { background-image: url('/images/seasons/Winter%20-%20Connect.png'); }
+
+.goal-full-label {
+  font-family: var(--font-display);
+  font-size: 1rem;
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.goal-full-desc {
+  font-size: 0.75rem;
+  font-weight: 300;
+  font-style: italic;
+  opacity: 0.65;
+}
+
+.goal-full-card--curiosity .goal-full-label,
+.goal-full-card--curiosity .goal-full-desc,
+.goal-full-card--create    .goal-full-label,
+.goal-full-card--create    .goal-full-desc,
+.goal-full-card--share     .goal-full-label,
+.goal-full-card--share     .goal-full-desc,
+.goal-full-card--connect   .goal-full-label,
+.goal-full-card--connect   .goal-full-desc { color: var(--color-ink-stained); }
+
+/* Card body sections */
+.goal-full-section {
+  background: var(--color-blank-page);
+  padding: 1rem 1.25rem;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  position: relative;
+}
+
+.goal-full-section:not(.goal-checkin-section) {
+  padding-bottom: 1rem;
+}
+
+.goal-checkin-section {
+  border-top: 1.5px solid rgba(112, 92, 108, 0.08);
+  background: var(--color-pearl);
+}
+
+/* Goals page: section label row */
+.goal-full-section-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.25rem;
+}
+
+/* Checklist display on goals page */
+.goal-full-checklist-display {
+  flex: 1;
+}
+
+.goal-full-checklist-display .goal-checklist-display {
+  gap: 0.5rem;
+}
+
+.goal-full-checklist-display .goal-checklist-item-text {
+  font-size: 0.9rem;
+}
+
+.goal-full-checklist-display .goal-checklist-check-visual {
+  width: 16px;
+  height: 16px;
+}
+
+/* Goals page checklist editor */
+.goal-full-checklist-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  padding-bottom: 0.5rem;
+}
+
+.goal-full-checklist-editor .goal-checklist-edit-input {
+  font-size: 0.9rem;
+}
+
+/* Reflection inset container (goals page check-in) */
+.goal-reflection-inset {
+  background: rgba(112, 92, 108, 0.05);
+  border-left: 2px solid rgba(112, 92, 108, 0.2);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  padding: 0.625rem 0.75rem;
+}
+
+.checkin-textarea {
+  font-family: var(--font-body);
+  font-style: normal;
+  font-weight: 300;
+  font-size: 0.9rem;
+  border-bottom: none;
+  padding: 0;
+}
+
+.checkin-textarea::placeholder {
+  font-family: var(--font-body);
+  font-style: italic;
+  font-weight: 300;
+  color: rgba(16, 15, 16, 0.4);
+}
+
+/* Pencil button inside intention section */
+.goal-section-edit-btn {
+  position: absolute;
+  bottom: 0.75rem;
+  right: 0.875rem;
+  width: 24px;
+  height: 24px;
+  border: none;
+  background: rgba(112, 92, 108, 0.1);
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(16, 15, 16, 0.4);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  padding: 0;
+}
+
+.goal-section-edit-btn:hover {
+  background: rgba(112, 92, 108, 0.2);
+  color: rgba(16, 15, 16, 0.75);
+}
+
+.goal-full-section-label {
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-bloem);
+  opacity: 0.7;
+}
+
+.goal-checkin-section .goal-full-section-label {
+  opacity: 0.6;
+}
+
+.goal-full-textarea {
+  width: 100%;
+  background: transparent;
+  border: none;
+  border-bottom: 1.5px solid rgba(112, 92, 108, 0.15);
+  border-radius: 0;
+  padding: 0.4rem 0;
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  font-weight: 300;
+  color: var(--color-ink-stained);
+  line-height: 1.6;
+  resize: none;
+  outline: none;
+  transition: border-color var(--transition);
+}
+
+.goal-full-textarea::placeholder {
+  color: rgba(16, 15, 16, 0.3);
+  font-style: italic;
+}
+
+.goal-full-textarea:focus {
+  border-bottom-color: var(--color-bloem);
+}
+
+/* Check-in header */
+.goal-checkin-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* Save status indicator */
+.goal-save-status {
+  font-size: 0.7rem;
+  font-weight: 300;
+  color: var(--color-understory);
+  height: 1em;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.goal-save-status.visible {
+  opacity: 1;
+}
+
+.goal-checkin-timestamp {
+  font-size: 0.7rem;
+  color: rgba(16, 15, 16, 0.35);
+  font-style: italic;
+}
+
+/* ─── History ────────────────────────────────────────────────────────────── */
+
+.goals-history {
+  padding-top: 1.5rem;
+  border-top: 1px solid rgba(112, 92, 108, 0.1);
+}
+
+.goals-history-title {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(16, 15, 16, 0.4);
+  margin-bottom: 0.875rem;
+}
+
+.goals-history-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.goals-history-item {
+  font-size: 0.8rem;
+  font-weight: 300;
+  color: var(--color-bloem);
+  text-decoration: none;
+  padding: 0.3rem 0.75rem;
+  border: 1px solid rgba(112, 92, 108, 0.25);
+  border-radius: 999px;
+  transition: background var(--transition), border-color var(--transition);
+}
+
+.goals-history-item:hover {
+  background: var(--color-bloem-light);
+  border-color: var(--color-bloem);
+}
+
+/* ─── Responsive ─────────────────────────────────────────────────────────── */
+
+@media (max-width: 680px) {
+  .goals-grid { grid-template-columns: 1fr; }
+  .goals-page-header { flex-direction: column; gap: 1rem; }
+  .week-nav { align-self: flex-start; }
+}

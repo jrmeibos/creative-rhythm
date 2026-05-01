@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <%- include('partials/head') %>
+  <link rel="stylesheet" href="/css/dashboard.css">
+  <link rel="stylesheet" href="/css/goals.css">
+</head>
+<body class="app-body">
+
+  <div class="app-layout">
+    <%- include('partials/sidebar') %>
+
+    <main class="main-content">
+
+      <!-- Page header -->
+      <header class="goals-page-header">
+        <div>
+          <h1 class="goals-page-title">My Goals</h1>
+          <p class="goals-page-sub">The 4 C's — your weekly creative intentions</p>
+        </div>
+
+        <!-- Week navigation -->
+        <nav class="week-nav" aria-label="Week navigation">
+          <a href="/goals?week=<%= prevWeek %>" class="week-nav-arrow" aria-label="Previous week">←</a>
+          <div class="week-nav-label">
+            <span class="week-nav-date"><%= weekLabel %></span>
+            <% if (weekStart === currentWeekStart) { %>
+              <span class="week-nav-current">This week</span>
+            <% } else if (isPastWeek) { %>
+              <span class="week-nav-past">Past week</span>
+            <% } else { %>
+              <span class="week-nav-future">Future week</span>
+            <% } %>
+          </div>
+          <a href="/goals?week=<%= nextWeek %>"
+             class="week-nav-arrow <%= isFutureWeek ? 'week-nav-arrow--disabled' : '' %>"
+             aria-label="Next week"
+             <%= isFutureWeek ? 'aria-disabled="true"' : '' %>>→</a>
+        </nav>
+      </header>
+
+      <!-- Integration week toggle -->
+      <div class="integration-toggle-row">
+        <label class="integration-toggle-label">
+          <span class="integration-toggle-text">
+            <strong>Integration Week</strong>
+            <span>A week to rest, reflect, and let things settle — no goals required</span>
+          </span>
+          <button
+            class="integration-toggle-btn <%= isIntegrationWeek ? 'is-active' : '' %>"
+            id="integration-toggle"
+            data-week="<%= weekStart %>"
+            data-active="<%= isIntegrationWeek ? 'true' : 'false' %>"
+            aria-pressed="<%= isIntegrationWeek ? 'true' : 'false' %>">
+            <span class="integration-toggle-track">
+              <span class="integration-toggle-thumb"></span>
+            </span>
+            <%= isIntegrationWeek ? 'On' : 'Off' %>
+          </button>
+        </label>
+      </div>
+
+      <!-- Goals cards -->
+      <% if (isIntegrationWeek) { %>
+        <div class="integration-week-card">
+          <div class="integration-week-icon">○</div>
+          <div>
+            <h2 class="integration-week-title">Integration Week</h2>
+            <p class="integration-week-text">
+              No goals this week — just noticing. What shifted in the past few weeks? What wants to deepen? What are you still thinking about?
+            </p>
+          </div>
+        </div>
+      <% } else { %>
+
+      <%
+        const categories = [
+          { key: 'curiosity', label: 'Curiosity', description: 'Feed your artist\'s soul', prompt: 'This week I intend to...', checkinPrompt: 'How did it go? What happened, what did you notice?' },
+          { key: 'create',    label: 'Create',    description: 'Make the thing',          prompt: 'This week I intend to...', checkinPrompt: 'What did you make? How did it feel to create?' },
+          { key: 'share',     label: 'Share',     description: 'Put it into the world',   prompt: 'This week I intend to...', checkinPrompt: 'What did you share? How did showing up feel?' },
+          { key: 'connect',   label: 'Connect',   description: 'Reach outward',           prompt: 'This week I intend to...', checkinPrompt: 'What connections did you make or nurture?' }
+        ];
+      %>
+
+      <div class="goals-grid">
+        <% for (const cat of categories) { %>
+          <% const goal = goals[cat.key] || {}; %>
+          <div class="goal-full-card goal-full-card--<%= cat.key %>" data-category="<%= cat.key %>">
+
+            <!-- Card header (colored) -->
+            <div class="goal-full-header">
+              <div class="goal-full-header-text">
+                <span class="goal-full-label"><%= cat.label %></span>
+                <span class="goal-full-desc"><%= cat.description %></span>
+              </div>
+              <label class="goal-card-check-wrap" title="Mark complete">
+                <input
+                  type="checkbox"
+                  class="goal-card-checkbox header-complete-checkbox"
+                  data-week="<%= weekStart %>"
+                  data-category="<%= cat.key %>"
+                  <%= goal.completed ? 'checked' : '' %>>
+                <span class="goal-card-check-visual" aria-hidden="true"></span>
+              </label>
+            </div>
+
+            <!-- Intention section -->
+            <% const gd = goalsData[cat.key] || { mode: 'checklist', items: [] }; %>
+            <div class="goal-full-section" data-category="<%= cat.key %>">
+              <div class="goal-full-section-label-row">
+                <span class="goal-full-section-label">Intention</span>
+              </div>
+
+              <div class="goal-checklist-always-edit" data-week="<%= weekStart %>" data-category="<%= cat.key %>">
+                <ul class="goal-checklist-input-list">
+                  <% if (gd.items && gd.items.length) { %>
+                    <% gd.items.forEach(function(item) { %>
+                      <li class="goal-checklist-edit-row <%= item.checked ? 'is-checked' : '' %>">
+                        <label class="goal-checklist-check-wrap">
+                          <input type="checkbox" class="goal-checklist-checkbox goal-item-cb" <%= item.checked ? 'checked' : '' %>>
+                          <span class="goal-checklist-check-visual"></span>
+                        </label>
+                        <input type="text" class="goal-checklist-edit-input" value="<%= item.text %>" placeholder="Add item...">
+                      </li>
+                    <% }); %>
+                  <% } else { %>
+                    <li class="goal-checklist-edit-row">
+                      <label class="goal-checklist-check-wrap">
+                        <input type="checkbox" class="goal-checklist-checkbox goal-item-cb">
+                        <span class="goal-checklist-check-visual"></span>
+                      </label>
+                      <input type="text" class="goal-checklist-edit-input" placeholder="Add item...">
+                    </li>
+                  <% } %>
+                </ul>
+              </div>
+
+              <div class="goal-save-status" id="save-status-<%= cat.key %>"></div>
+            </div>
+
+            <!-- Check-in / reflection section -->
+            <div class="goal-full-section goal-checkin-section">
+              <div class="goal-checkin-header">
+                <label class="goal-full-section-label">My reflection</label>
+              </div>
+              <div class="goal-reflection-inset">
+                <textarea
+                  class="goal-full-textarea checkin-textarea"
+                  placeholder="<%= cat.checkinPrompt %>"
+                  data-week="<%= weekStart %>"
+                  data-category="<%= cat.key %>"
+                  rows="3"><%= goal.reflection || '' %></textarea>
+              </div>
+              <% if (goal.reflection_at) { %>
+                <p class="goal-checkin-timestamp">
+                  Last updated <%= new Date(goal.reflection_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) %>
+                </p>
+              <% } %>
+            </div>
+
+          </div>
+        <% } %>
+      </div>
+
+      <% } %>
+
+      <!-- Week history links -->
+      <% if (history.length > 0) { %>
+      <div class="goals-history">
+        <h3 class="goals-history-title">Past weeks</h3>
+        <div class="goals-history-list">
+          <% for (const w of history) { %>
+            <% if (w !== weekStart) { %>
+              <a href="/goals?week=<%= w %>" class="goals-history-item">
+                Week of <%= formatWeekLabel(w) %>
+              </a>
+            <% } %>
+          <% } %>
+        </div>
+      </div>
+      <% } %>
+
+    </main>
+  </div>
+
+  <script src="/js/goals.js"></script>
+
+</body>
+</html>

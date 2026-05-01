@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <%- include('partials/head') %>
+  <link rel="stylesheet" href="/css/dashboard.css">
+</head>
+<body class="app-body">
+
+  <div class="app-layout">
+    <%- include('partials/sidebar') %>
+
+    <main class="main-content" id="main">
+
+      <!-- Dashboard header -->
+      <header class="dash-header">
+        <div class="dash-greeting">
+          <h1 class="dash-greeting-text">
+            <%= greeting %>, <span class="dash-name"><%= user.name.split(' ')[0] %></span>
+          </h1>
+          <p class="dash-week-label">
+            <% if (isIntegrationWeek) { %>
+              <span class="integration-badge">Integration Week</span> · <%= weekLabel %>
+            <% } else { %>
+              Week of <%= weekLabel %>
+            <% } %>
+          </p>
+        </div>
+        <div class="dash-progress-pill">
+          <span class="dash-progress-count"><%= completedCount %> / <%= totalLessons %></span>
+          <span class="dash-progress-label">lessons complete</span>
+        </div>
+      </header>
+
+      <!-- 4 C's goals preview -->
+      <section class="dash-section">
+        <div class="dash-section-header">
+          <h2 class="dash-section-title">This week's intentions</h2>
+          <a href="/goals" class="dash-section-link">View & edit all →</a>
+        </div>
+
+        <% if (isIntegrationWeek) { %>
+          <div class="integration-week-card">
+            <div class="integration-week-icon">○</div>
+            <div>
+              <h3 class="integration-week-title">Integration Week</h3>
+              <p class="integration-week-text">
+                This is a week for letting things settle. No goals — just noticing what's alive in you from the past few weeks. What shifted? What wants to deepen?
+              </p>
+            </div>
+          </div>
+        <% } else { %>
+          <div class="goals-grid">
+            <%
+              const categories = [
+                { key: 'curiosity', label: 'Curiosity', description: 'Feed your artist\'s soul' },
+                { key: 'create', label: 'Create', description: 'Make the thing' },
+                { key: 'share', label: 'Share', description: 'Put it into the world' },
+                { key: 'connect', label: 'Connect', description: 'Reach outward' }
+              ];
+            %>
+            <% for (const cat of categories) { %>
+              <% const goal = goals[cat.key]; %>
+              <div class="goal-card goal-card--<%= cat.key %> <%= (goal && goal.completed) ? 'is-complete' : '' %>"
+                   data-category="<%= cat.key %>"
+                   data-description="<%= cat.description %>">
+
+                <div class="goal-card-header">
+                  <div class="goal-card-header-left">
+                    <span class="goal-card-label"><%= cat.label %></span>
+                    <span class="goal-card-desc"><%= cat.description %></span>
+                  </div>
+                  <label class="goal-card-check-wrap" title="Mark complete">
+                    <input type="checkbox"
+                           class="goal-card-checkbox"
+                           data-week="<%= weekStart %>"
+                           data-category="<%= cat.key %>"
+                           <%= (goal && goal.completed) ? 'checked' : '' %>>
+                    <span class="goal-card-check-visual" aria-hidden="true"></span>
+                  </label>
+                </div>
+
+                <% const gd = goalsData[cat.key] || { mode: 'checklist', items: [] }; %>
+
+                <div class="goal-checklist-always-edit" data-week="<%= weekStart %>" data-category="<%= cat.key %>">
+                  <ul class="goal-checklist-input-list">
+                    <% if (gd.items && gd.items.length) { %>
+                      <% gd.items.forEach(function(item) { %>
+                        <li class="goal-checklist-edit-row <%= item.checked ? 'is-checked' : '' %>">
+                          <label class="goal-checklist-check-wrap">
+                            <input type="checkbox" class="goal-checklist-checkbox goal-item-cb" <%= item.checked ? 'checked' : '' %>>
+                            <span class="goal-checklist-check-visual"></span>
+                          </label>
+                          <input type="text" class="goal-checklist-edit-input" value="<%= item.text %>" placeholder="Add item...">
+                        </li>
+                      <% }); %>
+                    <% } else { %>
+                      <li class="goal-checklist-edit-row">
+                        <label class="goal-checklist-check-wrap">
+                          <input type="checkbox" class="goal-checklist-checkbox goal-item-cb">
+                          <span class="goal-checklist-check-visual"></span>
+                        </label>
+                        <input type="text" class="goal-checklist-edit-input" placeholder="Add item...">
+                      </li>
+                    <% } %>
+                  </ul>
+                </div>
+
+                <a href="/goals" class="goal-card-arrow" aria-label="View goals">→</a>
+
+
+              </div>
+            <% } %>
+          </div>
+        <% } %>
+      </section>
+
+      <!-- Continue learning -->
+      <% if (currentLesson) { %>
+      <section class="dash-section">
+        <div class="dash-section-header">
+          <h2 class="dash-section-title">Continue learning</h2>
+          <a href="/lessons" class="dash-section-link">All lessons →</a>
+        </div>
+
+        <a href="/lessons/<%= currentLesson.slug %>" class="lesson-continue-card">
+          <div class="lesson-continue-tag"><%= currentLesson.category_tag || 'Lesson' %></div>
+          <h3 class="lesson-continue-title"><%= currentLesson.title %></h3>
+          <p class="lesson-continue-subtitle"><em><%= currentLesson.subtitle %></em></p>
+          <div class="lesson-continue-meta">
+            <span>~<%= currentLesson.estimated_read_time %> min read</span>
+            <span class="lesson-continue-arrow">Read now →</span>
+          </div>
+        </a>
+      </section>
+      <% } else { %>
+      <section class="dash-section">
+        <div class="dash-section-header">
+          <h2 class="dash-section-title">Your lessons</h2>
+        </div>
+        <div class="all-complete-card">
+          <p class="all-complete-text">You've completed all available lessons. Beautiful work.</p>
+          <a href="/lessons" class="dash-section-link">Review lessons →</a>
+        </div>
+      </section>
+      <% } %>
+
+      <!-- Daily quote -->
+      <section class="dash-quote">
+        <div class="dash-quote-mark">"</div>
+        <blockquote class="dash-quote-text"><%= quote.text %></blockquote>
+        <p class="dash-quote-source">— <%= quote.source %></p>
+      </section>
+
+    </main>
+  </div>
+
+  <script src="/js/dashboard-cards.js"></script>
+
+
+</body>
+</html>

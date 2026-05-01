@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <%- include('partials/head') %>
+  <link rel="stylesheet" href="/css/dashboard.css">
+  <link rel="stylesheet" href="/css/community.css">
+</head>
+<body class="app-body">
+
+  <div class="app-layout">
+    <%- include('partials/sidebar') %>
+
+    <main class="main-content">
+
+      <header class="comm-header">
+        <div>
+          <h1 class="comm-title">Our Community</h1>
+          <p class="comm-week-heading">
+            <span class="comm-week-name"><%= weekName %></span>
+            <span class="comm-week-sep">·</span>
+            <span class="comm-week-date"><%= dateRange %></span>
+          </p>
+        </div>
+      </header>
+
+      <%
+        const cats = ['curiosity', 'create', 'share', 'connect'];
+        const catMeta = {
+          curiosity: { label: 'Curiosity', description: "Feed your artist's soul" },
+          create:    { label: 'Create',    description: 'Make the thing' },
+          share:     { label: 'Share',     description: 'Put it into the world' },
+          connect:   { label: 'Connect',   description: 'Reach outward' }
+        };
+      %>
+
+      <% if (members.length === 0) { %>
+        <div class="comm-empty">
+          <p class="comm-empty-icon">○</p>
+          <h2>No members yet</h2>
+          <p>Once students are enrolled, their weekly intentions will appear here.</p>
+        </div>
+      <% } else { %>
+
+        <!-- Member card grid -->
+        <div class="comm-grid" id="comm-grid">
+          <% for (const member of members) { %>
+            <button class="comm-card <%= member.id === currentUserId ? 'comm-card--self' : '' %>"
+                    data-user-id="<%= member.id %>"
+                    data-name="<%= member.name %>"
+                    type="button"
+                    aria-expanded="false">
+
+              <div class="comm-card-avatar"><%= member.avatar_initial %></div>
+              <span class="comm-card-name"><%= member.name %><% if (member.id === currentUserId) { %> <span class="comm-card-you">you</span><% } %></span>
+
+              <div class="comm-circles">
+                <% for (const cat of cats) { %>
+                  <% const g = member.goals[cat] || {}; %>
+                  <%
+                    const state = g.completed ? 'filled' : g.hasGoal ? 'set' : 'empty';
+                  %>
+                  <div class="comm-circle-wrap">
+                    <div class="comm-circle comm-circle--<%= cat %> comm-circle--<%= state %>"></div>
+                    <span class="comm-circle-label"><%= catMeta[cat].label %></span>
+                  </div>
+                <% } %>
+              </div>
+
+            </button>
+          <% } %>
+        </div>
+
+        <!-- Expanded detail drawer -->
+        <div class="comm-drawer" id="comm-drawer" hidden>
+
+          <div class="comm-drawer-header">
+            <div>
+              <h2 class="comm-drawer-name" id="comm-drawer-name"></h2>
+              <p class="comm-drawer-week"><%= dateRange %></p>
+            </div>
+            <button class="comm-drawer-close" id="comm-drawer-close" aria-label="Close">×</button>
+          </div>
+
+          <% for (const member of members) { %>
+            <div class="comm-panel" data-user-id="<%= member.id %>" hidden>
+              <% const hasAnyGoals = cats.some(cat => member.goals[cat] && member.goals[cat].hasGoal); %>
+              <% if (!hasAnyGoals) { %>
+                <p class="comm-no-goals">No intentions set for this week yet.</p>
+              <% } else { %>
+                <div class="goals-grid">
+                  <% for (const cat of cats) { %>
+                    <% const g = member.goals[cat] || {}; %>
+                    <div class="goal-card goal-card--<%= cat %> <%= g.completed ? 'is-complete' : '' %>"
+                         data-category="<%= cat %>">
+
+                      <div class="goal-card-header">
+                        <div class="goal-card-header-left">
+                          <span class="goal-card-label"><%= catMeta[cat].label %></span>
+                          <span class="goal-card-desc"><%= catMeta[cat].description %></span>
+                        </div>
+                        <% if (g.completed) { %>
+                          <span class="comm-done-sparkle" aria-label="Completed">✨</span>
+                        <% } %>
+                      </div>
+
+                      <% if (g.hasGoal && g.goalData && g.goalData.items && g.goalData.items.length) { %>
+                        <ul class="comm-checklist">
+                          <% for (const item of g.goalData.items) { %>
+                            <li class="comm-checklist-item <%= item.checked ? 'is-checked' : '' %>">
+                              <span class="comm-checklist-dot <%= item.checked ? 'is-checked' : '' %>"></span>
+                              <span class="comm-checklist-text"><%= item.text %></span>
+                            </li>
+                          <% } %>
+                        </ul>
+                      <% } else { %>
+                        <p class="goal-card-empty"><%= catMeta[cat].description %></p>
+                      <% } %>
+
+                      <% if (g.reflection && g.reflection.trim()) { %>
+                        <div class="goal-card-reflection">
+                          <div class="goal-card-reflection-header">
+                            <span class="goal-card-reflection-label">My reflection</span>
+                          </div>
+                          <div class="goal-card-reflection-preview">
+                            <p class="goal-card-reflection-text"><%= g.reflection %></p>
+                          </div>
+                        </div>
+                      <% } %>
+
+                    </div>
+                  <% } %>
+                </div>
+              <% } %>
+            </div>
+          <% } %>
+
+        </div><!-- .comm-drawer -->
+
+      <% } %>
+
+      <!-- Week navigation -->
+      <nav class="comm-week-nav" aria-label="Week navigation">
+        <% if (hasPrevWeek) { %>
+          <a href="/community?week=<%= prevWeek %>" class="comm-nav-btn">← Previous Week</a>
+        <% } else { %>
+          <span class="comm-nav-btn comm-nav-btn--disabled">← Previous Week</span>
+        <% } %>
+        <span class="comm-nav-center">
+          <span class="comm-nav-week-name"><%= weekName %></span>
+          <span class="comm-week-sep">·</span>
+          <span class="comm-week-date"><%= dateRange %></span>
+        </span>
+        <% if (hasNextWeek) { %>
+          <a href="/community?week=<%= nextWeek %>" class="comm-nav-btn">Next Week →</a>
+        <% } else { %>
+          <span class="comm-nav-btn comm-nav-btn--disabled">Next Week →</span>
+        <% } %>
+      </nav>
+
+    </main>
+  </div>
+
+  <script src="/js/community.js"></script>
+
+</body>
+</html>

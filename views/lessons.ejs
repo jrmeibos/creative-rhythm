@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <%- include('partials/head') %>
+  <link rel="stylesheet" href="/css/dashboard.css">
+  <link rel="stylesheet" href="/css/lessons.css">
+</head>
+<body class="app-body">
+
+  <div class="app-layout">
+    <%- include('partials/sidebar') %>
+
+    <main class="main-content" id="main">
+
+      <header class="lessons-header">
+        <div class="lessons-header-left">
+          <h1 class="lessons-title">Your Lessons</h1>
+          <p class="lessons-sub">Read at your own pace. Return to anything, anytime.</p>
+        </div>
+        <div class="lessons-progress-pill">
+          <span class="lessons-progress-count"><%= completedCount %> / <%= lessons.length %></span>
+          <span class="lessons-progress-label">complete</span>
+        </div>
+      </header>
+
+      <!-- Category filter tabs -->
+      <div class="lessons-filter" id="lessonFilter">
+        <button class="filter-tab is-active" data-filter="all">All</button>
+        <% const categories = [...new Set(lessons.map(l => l.category_tag).filter(Boolean))]; %>
+        <% for (const cat of categories) { %>
+          <button class="filter-tab" data-filter="<%= cat.toLowerCase() %>"><%= cat %></button>
+        <% } %>
+      </div>
+
+      <!-- Lesson cards -->
+      <div class="lessons-grid" id="lessonsGrid">
+        <% for (const lesson of lessons) { %>
+          <%
+            const isComplete = completedIds.has(lesson.id);
+            const catKey = (lesson.category_tag || '').toLowerCase();
+            const tagClass = ['mindset','practical','perspective'].includes(catKey)
+              ? `lesson-card-tag--${catKey}`
+              : 'lesson-card-tag--default';
+            const articleTagClass = ['mindset','practical','perspective'].includes(catKey)
+              ? `lesson-article-tag--${catKey}`
+              : 'lesson-article-tag--default';
+          %>
+          <a
+            href="/lessons/<%= lesson.slug %>"
+            class="lesson-card <%= isComplete ? 'is-complete' : '' %>"
+            data-category="<%= catKey %>">
+
+            <% if (isComplete) { %>
+              <div class="lesson-complete-badge">✓</div>
+            <% } %>
+
+            <div class="lesson-card-tag <%= tagClass %>"><%= lesson.category_tag || 'Lesson' %></div>
+            <div class="lesson-card-body">
+              <h2 class="lesson-card-title"><%= lesson.title %></h2>
+              <p class="lesson-card-subtitle"><em><%= lesson.subtitle %></em></p>
+              <div class="lesson-card-footer">
+                <span class="lesson-card-read-time">~<%= lesson.estimated_read_time %> min read</span>
+                <span class="lesson-card-cta"><%= isComplete ? 'Read again →' : 'Read →' %></span>
+              </div>
+            </div>
+          </a>
+        <% } %>
+      </div>
+
+      <% if (completedCount === lessons.length && lessons.length > 0) { %>
+        <div class="lessons-all-done">
+          <p class="lessons-all-done-title">You've read everything. Beautiful work.</p>
+          <p class="lessons-all-done-sub">Feel free to return to any lesson anytime — some things only land on a second read.</p>
+        </div>
+      <% } %>
+
+    </main>
+  </div>
+
+  <script>
+    const tabs = document.querySelectorAll('.filter-tab');
+    const cards = document.querySelectorAll('.lesson-card');
+
+    tabs.forEach(tab => {
+      tab.addEventListener('click', () => {
+        tabs.forEach(t => t.classList.remove('is-active'));
+        tab.classList.add('is-active');
+        const filter = tab.dataset.filter;
+        cards.forEach(card => {
+          card.style.display = (filter === 'all' || card.dataset.category === filter) ? '' : 'none';
+        });
+      });
+    });
+  </script>
+
+</body>
+</html>

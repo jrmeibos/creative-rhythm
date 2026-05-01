@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <%- include('partials/head') %>
+  <link rel="stylesheet" href="/css/dashboard.css">
+</head>
+<body class="app-body">
+
+  <div class="app-layout">
+    <%- include('partials/sidebar') %>
+
+    <main class="main-content">
+      <div class="coming-soon">
+        <div class="coming-soon-icon">○</div>
+        <h1 class="coming-soon-title"><%= title %></h1>
+        <p class="coming-soon-text">
+          This section is being built with care.<br>
+          It'll be ready before you know it.
+        </p>
+        <a href="/dashboard" class="btn btn-secondary">← Back to dashboard</a>
+      </div>
+    </main>
+  </div>
+
+</body>
+</html>

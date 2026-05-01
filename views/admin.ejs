@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <%- include('partials/head') %>
+  <link rel="stylesheet" href="/css/dashboard.css">
+</head>
+<body class="app-body">
+
+  <div class="app-layout">
+    <%- include('partials/sidebar') %>
+
+    <main class="main-content">
+
+      <header class="dash-header">
+        <div class="dash-greeting">
+          <h1 class="dash-greeting-text">Admin</h1>
+          <p class="dash-week-label">Platform settings and management</p>
+        </div>
+      </header>
+
+      <!-- Course Settings -->
+      <section class="dash-section">
+        <div class="dash-section-header">
+          <h2 class="dash-section-title">Course Settings</h2>
+        </div>
+
+        <div class="admin-card">
+          <div class="admin-card-row">
+            <div class="admin-field-group">
+              <label class="admin-field-label" for="course-start-date">Course Start Date</label>
+              <p class="admin-field-hint">
+                The Monday that Week 1 begins. All 12 week dates calculate automatically from this.
+                Defaults to the current week if not set.
+              </p>
+              <div class="admin-field-input-row">
+                <input
+                  type="date"
+                  id="course-start-date"
+                  class="admin-date-input"
+                  value="<%= courseStartDate %>"
+                  aria-label="Course start date">
+                <button class="admin-save-btn" id="save-start-date" type="button">Save</button>
+                <span class="admin-save-status" id="start-date-status"></span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Students -->
+      <section class="dash-section">
+        <div class="dash-section-header">
+          <h2 class="dash-section-title">Students</h2>
+          <span class="admin-count"><%= users.filter(u => u.role === 'student').length %> enrolled</span>
+        </div>
+        <div class="admin-card">
+          <% for (const u of users) { %>
+            <div class="admin-user-row">
+              <div class="sidebar-avatar" style="width:32px;height:32px;font-size:0.85rem;flex-shrink:0">
+                <%= u.avatar_initial || u.name.charAt(0) %>
+              </div>
+              <div class="admin-user-info">
+                <span class="admin-user-name"><%= u.name %></span>
+                <span class="admin-user-email"><%= u.email %></span>
+              </div>
+              <span class="admin-user-role <%= u.role === 'admin' ? 'admin-role--admin' : '' %>">
+                <%= u.role === 'admin' ? 'Instructor' : 'Student' %>
+              </span>
+            </div>
+          <% } %>
+        </div>
+      </section>
+
+      <!-- Lesson Stats -->
+      <section class="dash-section">
+        <div class="dash-section-header">
+          <h2 class="dash-section-title">Lesson Completions</h2>
+        </div>
+        <div class="admin-card">
+          <% for (const stat of lessonStats) { %>
+            <div class="admin-lesson-row">
+              <span class="admin-lesson-title"><%= stat.title %></span>
+              <span class="admin-lesson-count"><%= stat.completion_count %> completed</span>
+            </div>
+          <% } %>
+          <% if (!lessonStats.length) { %>
+            <p style="font-size:0.85rem;font-weight:300;color:rgba(16,15,16,0.45);padding:0.5rem 0">No lessons found.</p>
+          <% } %>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <script>
+    document.getElementById('save-start-date')?.addEventListener('click', async () => {
+      const val    = document.getElementById('course-start-date').value;
+      const status = document.getElementById('start-date-status');
+      const res = await fetch('/api/admin/settings', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ key: 'course_start_date', value: val })
+      });
+      if (res.ok) {
+        status.textContent = 'Saved ✓';
+        status.style.color = 'var(--color-understory)';
+      } else {
+        status.textContent = 'Error saving';
+        status.style.color = '#c0392b';
+      }
+      setTimeout(() => { status.textContent = ''; }, 2500);
+    });
+  </script>
+
+</body>
+</html>

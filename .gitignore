@@ -1,0 +1,10 @@
+node_modules/
+.env
+data/
+sessions/
+*.db
+*.sqlite
+*.db-shm
+*.db-wal
+.DS_Store
+.claude/

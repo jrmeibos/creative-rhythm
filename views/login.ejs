@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <%- include('partials/head') %>
+  <link rel="stylesheet" href="/css/login.css">
+</head>
+<body class="login-body">
+
+  <div class="login-layout">
+
+    <!-- Left brand panel -->
+    <div class="login-brand" aria-hidden="true">
+      <div class="login-brand-inner">
+        <div class="login-brand-logo">
+          <img
+            src="/images/logo/Main_Logo__Bloem1500x.png"
+            alt="The Meibos Touch"
+            class="login-brand-logo-img"
+            onerror="this.style.display='none'; document.getElementById('brand-logo-text').style.display='block'">
+          <span id="brand-logo-text" class="login-brand-logo-text" style="display:none">The Meibos Touch</span>
+        </div>
+
+        <div class="login-brand-divider"></div>
+
+        <h1 class="login-brand-headline">
+          The Creative's<br><em>Rhythm</em>
+        </h1>
+
+        <p class="login-brand-sub">
+          Soul-led visibility<br>for artists.
+        </p>
+
+        <div class="login-brand-shapes">
+          <div class="brand-shape brand-shape-1"></div>
+          <div class="brand-shape brand-shape-2"></div>
+          <div class="brand-shape brand-shape-3"></div>
+        </div>
+
+        <p class="login-brand-tagline">
+          "Visibility that feels like a return to self."
+        </p>
+      </div>
+    </div>
+
+    <!-- Right form panel -->
+    <div class="login-form-panel">
+      <div class="login-form-inner">
+
+        <p class="login-form-eyebrow">Welcome back</p>
+        <h2 class="login-form-title">Sign in to your studio</h2>
+
+        <% if (error) { %>
+          <div class="login-error" role="alert">
+            <%= error %>
+          </div>
+        <% } %>
+
+        <form action="/login" method="POST" class="login-form" novalidate>
+          <div class="form-group">
+            <label for="email" class="form-label">Email</label>
+            <input
+              type="email"
+              id="email"
+              name="email"
+              class="form-input"
+              placeholder="you@example.com"
+              autocomplete="email"
+              required>
+          </div>
+
+          <div class="form-group">
+            <label for="password" class="form-label">Password</label>
+            <input
+              type="password"
+              id="password"
+              name="password"
+              class="form-input"
+              placeholder="••••••••"
+              autocomplete="current-password"
+              required>
+          </div>
+
+          <button type="submit" class="btn btn-primary btn-full">
+            Enter the studio
+          </button>
+        </form>
+
+        <p class="login-help">
+          Trouble signing in? Reach out to Julia directly.
+        </p>
+
+      </div>
+    </div>
+
+  </div>
+
+</body>
+</html>

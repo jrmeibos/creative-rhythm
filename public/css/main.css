@@ -1,0 +1,211 @@
+/* ─── Goldage Webfont ────────────────────────────────────────────────────── */
+
+@font-face {
+  font-family: 'Goldage';
+  src: url('/fonts/goldage-regular-webfont.woff') format('woff');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Goldage';
+  src: url('/fonts/goldage-italic-webfont.woff') format('woff');
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+
+/* ─── Design Tokens ─────────────────────────────────────────────────────── */
+
+:root {
+  --color-bloem:            #705C6C;
+  --color-understory:       #76856C;
+  --color-curiositys-kiss:  #D8B0AB;
+  --color-apricity:         #F6C95C;
+  --color-new-growth:       #E6EBE0;
+  --color-pearl:            #F2EEE3;
+  --color-blank-page:       #FAFAFA;
+  --color-ink-stained:      #100F10;
+  --color-bloem-mid:        #574557;
+  --color-bloem-light:      rgba(112, 92, 108, 0.08);
+  --color-bloem-hover:      rgba(255, 255, 255, 0.12);
+
+  --font-display:  'Goldage', Georgia, serif;
+  --font-body:     'Jost', system-ui, sans-serif;
+
+  --radius-sm:  6px;
+  --radius-md:  12px;
+  --radius-lg:  20px;
+  --radius-xl:  28px;
+
+  --shadow-sm:  0 1px 4px rgba(16, 15, 16, 0.06);
+  --shadow-md:  0 4px 16px rgba(16, 15, 16, 0.08);
+  --shadow-lg:  0 12px 40px rgba(16, 15, 16, 0.10);
+
+  --transition: 0.18s ease;
+}
+
+/* ─── Reset ─────────────────────────────────────────────────────────────── */
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  font-family: var(--font-body);
+  font-weight: 300;
+  color: var(--color-ink-stained);
+  background: var(--color-pearl);
+  line-height: 1.7;
+}
+
+img { max-width: 100%; display: block; }
+a { color: inherit; }
+ul { list-style: none; }
+button { cursor: pointer; font-family: inherit; }
+input, textarea, select { font-family: inherit; }
+
+/* ─── Typography ─────────────────────────────────────────────────────────── */
+
+h1, h2, h3, h4 {
+  font-family: var(--font-display);
+  font-weight: 400;
+  line-height: 1.2;
+  color: var(--color-ink-stained);
+}
+
+/* ─── Buttons ────────────────────────────────────────────────────────────── */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.75rem;
+  border-radius: var(--radius-md);
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-decoration: none;
+  border: 2px solid transparent;
+  transition: background var(--transition), color var(--transition), border-color var(--transition), transform var(--transition), box-shadow var(--transition);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.btn:active { transform: translateY(1px); }
+
+.btn-primary {
+  background: var(--color-bloem);
+  color: var(--color-blank-page);
+  border-color: var(--color-bloem);
+}
+
+.btn-primary:hover {
+  background: var(--color-bloem-mid);
+  border-color: var(--color-bloem-mid);
+  box-shadow: var(--shadow-md);
+}
+
+.btn-secondary {
+  background: transparent;
+  color: var(--color-bloem);
+  border-color: var(--color-bloem);
+}
+
+.btn-secondary:hover {
+  background: var(--color-bloem-light);
+}
+
+.btn-cta {
+  background: var(--color-apricity);
+  color: var(--color-ink-stained);
+  border-color: var(--color-apricity);
+  font-weight: 700;
+}
+
+.btn-cta:hover {
+  background: #f0bc44;
+  box-shadow: var(--shadow-md);
+}
+
+.btn-full { width: 100%; }
+
+/* ─── Forms ──────────────────────────────────────────────────────────────── */
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-bottom: 1.25rem;
+}
+
+.form-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-bloem);
+}
+
+.form-input {
+  width: 100%;
+  padding: 0.8rem 1rem;
+  background: var(--color-blank-page);
+  border: 1.5px solid rgba(112, 92, 108, 0.2);
+  border-radius: var(--radius-sm);
+  font-size: 0.95rem;
+  font-weight: 300;
+  color: var(--color-ink-stained);
+  transition: border-color var(--transition), box-shadow var(--transition);
+  outline: none;
+}
+
+.form-input::placeholder {
+  color: rgba(16, 15, 16, 0.3);
+}
+
+.form-input:focus {
+  border-color: var(--color-bloem);
+  box-shadow: 0 0 0 3px rgba(112, 92, 108, 0.12);
+}
+
+/* ─── Cards ──────────────────────────────────────────────────────────────── */
+
+.card {
+  background: var(--color-blank-page);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  padding: 1.5rem;
+  transition: box-shadow var(--transition);
+}
+
+.card:hover {
+  box-shadow: var(--shadow-md);
+}
+
+/* ─── Badge / pill ───────────────────────────────────────────────────────── */
+
+.badge {
+  display: inline-block;
+  padding: 0.2em 0.7em;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.badge--mindset   { background: var(--color-bloem-light); color: var(--color-bloem); }
+.badge--practical { background: rgba(118, 133, 108, 0.12); color: var(--color-understory); }
+.badge--perspective { background: rgba(216, 176, 171, 0.3); color: #8a5550; }
