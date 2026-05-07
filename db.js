@@ -301,20 +301,39 @@ function seedDefaultAccounts() {
   const anyUser = db.prepare('SELECT id FROM users LIMIT 1').get();
   if (anyUser) return;
 
-  // SECURITY TODO: Change Julia's password from 'password' before public launch.
-  // This is a weak default for development convenience only.
-  const accounts = [
-    { name: 'Julia M.',          email: 'julia@meibostouch.com',      password: 'password',    role: 'admin',   initial: 'J' },
-    { name: 'Danielle Masters',  email: 'danielle.e.masters@gmail.com', password: 'danielle123', role: 'student', initial: 'D' },
-    { name: 'Test Student',      email: 'jrmeibos@yahoo.com',          password: 'testing123',  role: 'student', initial: 'T' },
+  const students = [
+    { name: 'Danielle Masters', email: 'danielle.e.masters@gmail.com', password: 'danielle123', initial: 'D' },
+    { name: 'Test Student',     email: 'jrmeibos@yahoo.com',           password: 'testing123',  initial: 'T' },
   ];
 
   const ins = db.prepare('INSERT INTO users (name, email, password_hash, role, avatar_initial) VALUES (?, ?, ?, ?, ?)');
-  for (const a of accounts) {
+  for (const a of students) {
     const hash = bcrypt.hashSync(a.password, 12);
-    ins.run(a.name, a.email, hash, a.role, a.initial);
-    console.log(`✓ Seeded ${a.role}: ${a.name} (${a.email})`);
+    ins.run(a.name, a.email, hash, 'student', a.initial);
+    console.log(`✓ Seeded student: ${a.name} (${a.email})`);
   }
+}
+
+function syncAdminAccount() {
+  const email    = process.env.ADMIN_EMAIL    || 'julia@meibostouch.com';
+  const password = process.env.ADMIN_PASSWORD;
+
+  if (!password) {
+    console.warn('⚠ ADMIN_PASSWORD env var not set — skipping admin password sync');
+    return;
+  }
+
+  const hash     = bcrypt.hashSync(password, 12);
+  const existing = db.prepare('SELECT id FROM users WHERE email = ?').get(email);
+
+  if (existing) {
+    db.prepare('UPDATE users SET password_hash = ?, role = ? WHERE email = ?')
+      .run(hash, 'admin', email);
+  } else {
+    db.prepare('INSERT INTO users (name, email, password_hash, role, avatar_initial) VALUES (?, ?, ?, ?, ?)')
+      .run('Julia M.', email, hash, 'admin', 'J');
+  }
+  console.log(`✓ Admin user synced: ${email}`);
 }
 
 function seedLessons() {
@@ -531,6 +550,7 @@ function seedLessons() {
   console.log('✓ Lessons seeded');
 }
 
+syncAdminAccount();
 seedDefaultAccounts();
 seedLessons();
 
