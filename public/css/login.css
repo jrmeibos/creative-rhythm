@@ -14,116 +14,18 @@
 /* ─── Brand Panel (left) ─────────────────────────────────────────────────── */
 
 .login-brand {
-  background: var(--color-bloem);
-  position: relative;
-  overflow: hidden;
+  background: var(--color-understory);
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 3rem;
 }
 
-.login-brand-inner {
-  position: relative;
-  z-index: 2;
+.login-brand-icon {
+  display: block;
   max-width: 380px;
   width: 100%;
-}
-
-.login-brand-logo {
-  margin-bottom: 2rem;
-}
-
-.login-brand-logo-img {
-  max-height: 48px;
-  width: auto;
-  mix-blend-mode: screen;
-  opacity: 0.92;
-}
-
-.login-brand-logo-text {
-  font-family: var(--font-body);
-  font-weight: 700;
-  font-size: 0.75rem;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  color: var(--color-curiositys-kiss);
-}
-
-.login-brand-divider {
-  width: 36px;
-  height: 2px;
-  background: var(--color-apricity);
-  margin-bottom: 2rem;
-  border-radius: 2px;
-}
-
-.login-brand-headline {
-  font-family: var(--font-display);
-  font-size: clamp(2.2rem, 3.5vw, 3.2rem);
-  font-weight: 400;
-  color: var(--color-pearl);
-  line-height: 1.2;
-  margin-bottom: 1.25rem;
-}
-
-.login-brand-headline em {
-  font-style: italic;
-  color: var(--color-curiositys-kiss);
-}
-
-.login-brand-sub {
-  font-family: var(--font-body);
-  font-size: 1.05rem;
-  font-weight: 300;
-  color: rgba(242, 238, 227, 0.8);
-  line-height: 1.6;
-  margin-bottom: 3rem;
-}
-
-.login-brand-tagline {
-  font-family: var(--font-display);
-  font-style: italic;
-  font-size: 0.875rem;
-  color: rgba(242, 238, 227, 0.55);
-  line-height: 1.5;
-}
-
-/* Decorative shapes */
-.login-brand-shapes {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  z-index: 1;
-}
-
-.brand-shape {
-  position: absolute;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.04);
-}
-
-.brand-shape-1 {
-  width: 380px;
-  height: 380px;
-  top: -80px;
-  right: -120px;
-}
-
-.brand-shape-2 {
-  width: 240px;
-  height: 240px;
-  bottom: 40px;
-  left: -80px;
-  background: rgba(246, 201, 92, 0.08);
-}
-
-.brand-shape-3 {
-  width: 160px;
-  height: 160px;
-  bottom: 200px;
-  right: 20px;
-  background: rgba(216, 176, 171, 0.08);
+  height: auto;
 }
 
 /* ─── Form Panel (right) ─────────────────────────────────────────────────── */
@@ -213,21 +115,12 @@
 @media (max-width: 768px) {
   .login-layout {
     grid-template-columns: 1fr;
-    grid-template-rows: auto 1fr;
   }
 
+  /* Hide brand panel on mobile — form panel has the logo already */
   .login-brand {
-    min-height: 280px;
-    padding: 2.5rem 2rem;
-    align-items: flex-start;
+    display: none;
   }
-
-  .login-brand-headline {
-    font-size: 2rem;
-  }
-
-  .login-brand-sub,
-  .login-brand-tagline { display: none; }
 
   .login-logo { max-width: 240px; }
 
