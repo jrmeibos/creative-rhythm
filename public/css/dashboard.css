@@ -42,19 +42,12 @@
   display: block;
 }
 
-.sidebar-logo-img {
-  max-height: 36px;
-  width: auto;
-  mix-blend-mode: screen;
-  opacity: 0.9;
-}
-
-.sidebar-logo-text {
-  font-family: var(--font-display);
-  font-style: italic;
-  font-size: 1rem;
-  color: var(--color-pearl);
-  opacity: 0.9;
+.sidebar-logo {
+  display: block;
+  width: 100%;
+  height: auto;
+  filter: brightness(0) invert(1);
+  opacity: 0.88;
 }
 
 /* User info */

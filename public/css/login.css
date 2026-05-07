@@ -141,6 +141,23 @@
   width: 100%;
 }
 
+.login-logo {
+  display: block;
+  max-width: 320px;
+  width: 100%;
+  height: auto;
+  margin: 0 auto 2.5rem;
+}
+
+.login-attribution {
+  margin-top: 1.5rem;
+  font-size: 0.875rem;
+  font-weight: 300;
+  color: var(--color-bloem);
+  opacity: 0.6;
+  text-align: center;
+}
+
 .login-form-eyebrow {
   font-size: 0.7rem;
   font-weight: 700;
@@ -211,6 +228,8 @@
 
   .login-brand-sub,
   .login-brand-tagline { display: none; }
+
+  .login-logo { max-width: 240px; }
 
   .login-form-panel {
     padding: 2.5rem 1.5rem;
