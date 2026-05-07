@@ -1791,9 +1791,10 @@
   text-decoration: none;
   border-radius: 50%;
   flex-shrink: 0;
-  transition: filter 0.15s;
+  cursor: pointer;
+  transition: opacity 0.15s;
 }
-.sidebar-avatar-link:hover { filter: brightness(1.12); }
+.sidebar-avatar-link:hover { opacity: 0.85; }
 .sidebar-avatar--photo {
   width: 44px;
   height: 44px;

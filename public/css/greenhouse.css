@@ -309,10 +309,84 @@
 /* ─── is-hidden utility ──────────────────────────────────────────────────── */
 .is-hidden { display: none !important; }
 
+/* ─── "Undo keep" button ─────────────────────────────────────────────────── */
+.gh-undo-keep {
+  background: none;
+  border: none;
+  font-family: var(--font-body);
+  font-size: 0.72rem;
+  font-weight: 300;
+  color: rgba(16, 15, 16, 0.35);
+  cursor: pointer;
+  padding: 0 0 0 0.5rem;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.gh-undo-keep:hover { color: rgba(16, 15, 16, 0.6); }
+
+/* ─── "What you planted" collapsible ────────────────────────────────────── */
+.gh-planted-details {
+  border: 1.5px solid rgba(112, 92, 108, 0.1);
+  border-radius: 12px;
+  padding: 1rem 1.5rem;
+  background: var(--color-blank-page);
+}
+.gh-planted-summary {
+  font-family: var(--font-display);
+  font-size: 1rem;
+  font-weight: 400;
+  color: var(--color-bloem);
+  cursor: pointer;
+  list-style: none;
+  padding: 0.25rem 0;
+  user-select: none;
+}
+.gh-planted-summary::-webkit-details-marker { display: none; }
+.gh-planted-summary::before { content: '▸  '; font-size: 0.75rem; opacity: 0.55; }
+details[open] .gh-planted-summary::before { content: '▾  '; }
+.gh-planted-details .gh-seeds { margin-top: 1.25rem; }
+
+/* ─── Read-only seed cards in harvest view ───────────────────────────────── */
+.gh-seed-card--readonly { opacity: 0.9; }
+
+/* ─── Full harvest answers section ──────────────────────────────────────── */
+.gh-full-answers {
+  margin-top: 2rem;
+  padding-top: 2rem;
+  border-top: 1px solid rgba(112, 92, 108, 0.12);
+}
+.gh-full-answers-title {
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  font-weight: 400;
+  color: var(--color-ink-stained);
+  margin: 0 0 1.5rem;
+}
+
+/* ─── "Read my full harvest answers" quiet link ──────────────────────────── */
+.gh-harvest-link {
+  display: inline-block;
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  font-weight: 300;
+  color: var(--color-bloem);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  margin-top: 1.75rem;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  opacity: 0.75;
+  transition: opacity 0.15s;
+}
+.gh-harvest-link:hover { opacity: 1; }
+
 /* ─── Mobile ─────────────────────────────────────────────────────────────── */
 @media (max-width: 680px) {
   .gh-seed-row { grid-template-columns: 1fr; gap: 1rem; }
   .gh-seed-card { padding: 1.25rem; }
   .gh-actions { flex-direction: column; }
   .gh-keep-btn, .gh-replace-btn { text-align: center; }
+  .gh-planted-details { padding: 0.875rem 1rem; }
 }

@@ -588,42 +588,9 @@ app.post('/api/onboarding/complete', requireAuth, (req, res) => {
 // ─── Profile ───────────────────────────────────────────────────────────────
 
 app.get('/profile', requireAuth, (req, res) => {
-  const userId = req.session.user.id;
-  const isAdmin = req.session.user.role === 'admin';
-  const seeds = db.getUserSeeds(userId);
-  const seedsMap = {};
-  for (const s of seeds) seedsMap[s.seed_number] = s;
-  const opening  = db.getAssessment(userId, 'opening');
-  const closing  = db.getAssessment(userId, 'closing');
-  const midcourseAssessment = db.getAssessment(userId, 'midcourse');
-  const { midcourseUnlocked: mcState, harvestUnlocked: hvState } = getUnlockState();
-  const midcourseUnlocked = isAdmin || mcState;
-  const closingUnlocked   = isAdmin || hvState;
-
-  const courseStart = db.getSetting('course_start_date');
-  let midcourseUnlockDate = null, closingUnlockDate = null;
-  if (courseStart) {
-    const start = new Date(courseStart + 'T00:00:00');
-    const m = new Date(start); m.setDate(m.getDate() + 35);
-    const c = new Date(start); c.setDate(c.getDate() + 77);
-    const fmt = d => d.toLocaleDateString('en-US', { month: 'long', day: 'numeric' });
-    midcourseUnlockDate = fmt(m);
-    closingUnlockDate   = fmt(c);
-  }
-
   res.render('profile', {
     title: 'My Profile',
-    page: 'profile',
-    seedsMap,
-    opening,
-    closing,
-    midcourseAssessment,
-    midcourseUnlocked,
-    closingUnlocked,
-    midcourseUnlockDate,
-    closingUnlockDate,
-    questions: ASSESSMENT_QUESTIONS,
-    closingQuestions: CLOSING_QUESTIONS
+    page: 'profile'
   });
 });
 
@@ -639,6 +606,12 @@ app.get('/greenhouse', requireAuth, (req, res) => {
     ? db.getGreenhouseSeeds(req.session.user.id)
     : null;
 
+  let opening = null, closing = null;
+  if (closingUnlocked) {
+    opening = db.getAssessment(req.session.user.id, 'opening');
+    closing = db.getAssessment(req.session.user.id, 'closing');
+  }
+
   const courseStart = db.getSetting('course_start_date');
   let unlockDate = null;
   if (courseStart && !midcourseUnlocked) {
@@ -653,8 +626,24 @@ app.get('/greenhouse', requireAuth, (req, res) => {
     seeds,
     midcourseUnlocked,
     closingUnlocked,
-    unlockDate
+    unlockDate,
+    opening,
+    closing,
+    questions: ASSESSMENT_QUESTIONS,
+    closingQuestions: CLOSING_QUESTIONS
   });
+});
+
+app.post('/api/seeds/:id/keep', requireAuth, (req, res) => {
+  const { midcourseUnlocked } = getUnlockState();
+  if (req.session.user.role !== 'admin' && !midcourseUnlocked) {
+    return res.status(403).json({ error: 'Not yet unlocked.' });
+  }
+  const seedId = parseInt(req.params.id);
+  if (!seedId) return res.status(400).json({ error: 'Invalid seed id.' });
+  const { kept } = req.body;
+  db.keepSeed(seedId, req.session.user.id, !!kept);
+  res.json({ ok: true });
 });
 
 app.post('/api/greenhouse/replace', requireAuth, (req, res) => {
@@ -683,21 +672,7 @@ app.post('/api/greenhouse/update', requireAuth, (req, res) => {
 // ─── Harvest ───────────────────────────────────────────────────────────────
 
 app.get('/harvest', requireAuth, (req, res) => {
-  res.redirect('/profile#harvest');
-});
-
-app.post('/api/midcourse', requireAuth, (req, res) => {
-  const { midcourseUnlocked } = getUnlockState();
-  if (req.session.user.role !== 'admin' && !midcourseUnlocked) return res.status(403).json({ error: 'Mid-course check-in not yet unlocked.' });
-  const { seeds } = req.body;
-  if (!Array.isArray(seeds) || seeds.length !== 3) return res.status(400).json({ error: 'Invalid seeds data.' });
-  for (const s of seeds) {
-    const num = parseInt(s.seed_number);
-    if (![1,2,3].includes(num)) return res.status(400).json({ error: 'Invalid seed number.' });
-    db.saveSeedTending(req.session.user.id, num, s.status || 'active', s.updated_feeling || '', s.updated_looks_like || '');
-  }
-  db.markMidcourseComplete(req.session.user.id);
-  res.json({ ok: true });
+  res.redirect('/greenhouse');
 });
 
 app.post('/api/harvest', requireAuth, (req, res) => {

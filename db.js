@@ -285,6 +285,13 @@ db.exec(`
     console.log('✓ Migrated: rebuilt seeds table with multi-row replacement support');
   }
 
+  // Seeds: add kept_at for "keep growing" persistence
+  const seedColsFinal = db.prepare("PRAGMA table_info(seeds)").all().map(r => r.name);
+  if (!seedColsFinal.includes('kept_at')) {
+    db.exec("ALTER TABLE seeds ADD COLUMN kept_at DATETIME");
+    console.log('✓ Migrated: added kept_at to seeds');
+  }
+
   // Default settings for unlock flags
   db.prepare("INSERT OR IGNORE INTO settings (key, value) VALUES ('midcourse_unlocked', 'false')").run();
   db.prepare("INSERT OR IGNORE INTO settings (key, value) VALUES ('harvest_unlocked', 'false')").run();
@@ -994,16 +1001,15 @@ module.exports = {
       harvest_reflection || '');
   },
 
-  saveSeedTending(userId, seedNumber, status, updatedFeeling, updatedLooksLike) {
-    return db.prepare(`
-      INSERT INTO seeds (user_id, seed_number, status, updated_feeling, updated_looks_like, updated_at)
-      VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
-      ON CONFLICT(user_id, seed_number) DO UPDATE SET
-        status             = excluded.status,
-        updated_feeling    = excluded.updated_feeling,
-        updated_looks_like = excluded.updated_looks_like,
-        updated_at         = CURRENT_TIMESTAMP
-    `).run(userId, seedNumber, status || 'active', updatedFeeling || '', updatedLooksLike || '');
+  keepSeed(seedId, userId, kept) {
+    if (kept) {
+      return db.prepare(
+        'UPDATE seeds SET kept_at=CURRENT_TIMESTAMP, updated_at=CURRENT_TIMESTAMP WHERE id=? AND user_id=?'
+      ).run(seedId, userId);
+    }
+    return db.prepare(
+      'UPDATE seeds SET kept_at=NULL, updated_at=CURRENT_TIMESTAMP WHERE id=? AND user_id=?'
+    ).run(seedId, userId);
   },
 
   markMidcourseComplete(userId) {
