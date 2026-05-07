@@ -297,13 +297,24 @@ db.exec(`
   db.prepare("INSERT OR IGNORE INTO settings (key, value) VALUES ('harvest_unlocked', 'false')").run();
 })();
 
-function seedAdmin() {
-  const email = process.env.ADMIN_EMAIL || 'julia@meibostouch.com';
-  if (db.prepare('SELECT id FROM users WHERE email = ?').get(email)) return;
-  const hash = bcrypt.hashSync(process.env.ADMIN_PASSWORD || 'changeme', 12);
-  db.prepare('INSERT INTO users (name, email, password_hash, role, avatar_initial) VALUES (?, ?, ?, ?, ?)')
-    .run('Julia M.', email, hash, 'admin', 'J');
-  console.log('✓ Admin user created');
+function seedDefaultAccounts() {
+  const anyUser = db.prepare('SELECT id FROM users LIMIT 1').get();
+  if (anyUser) return;
+
+  // SECURITY TODO: Change Julia's password from 'password' before public launch.
+  // This is a weak default for development convenience only.
+  const accounts = [
+    { name: 'Julia M.',          email: 'julia@meibostouch.com',      password: 'password',    role: 'admin',   initial: 'J' },
+    { name: 'Danielle Masters',  email: 'danielle.e.masters@gmail.com', password: 'danielle123', role: 'student', initial: 'D' },
+    { name: 'Test Student',      email: 'jrmeibos@yahoo.com',          password: 'testing123',  role: 'student', initial: 'T' },
+  ];
+
+  const ins = db.prepare('INSERT INTO users (name, email, password_hash, role, avatar_initial) VALUES (?, ?, ?, ?, ?)');
+  for (const a of accounts) {
+    const hash = bcrypt.hashSync(a.password, 12);
+    ins.run(a.name, a.email, hash, a.role, a.initial);
+    console.log(`✓ Seeded ${a.role}: ${a.name} (${a.email})`);
+  }
 }
 
 function seedLessons() {
@@ -520,17 +531,8 @@ function seedLessons() {
   console.log('✓ Lessons seeded');
 }
 
-function seedTestStudent() {
-  if (db.prepare("SELECT id FROM users WHERE email = 'student@example.com'").get()) return;
-  const hash = bcrypt.hashSync('student123', 12);
-  db.prepare('INSERT INTO users (name, email, password_hash, role, avatar_initial) VALUES (?, ?, ?, ?, ?)')
-    .run('Alex C.', 'student@example.com', hash, 'student', 'A');
-  console.log('✓ Test student created (student@example.com / student123)');
-}
-
-seedAdmin();
+seedDefaultAccounts();
 seedLessons();
-seedTestStudent();
 
 module.exports = {
   getUserByEmail(email) {

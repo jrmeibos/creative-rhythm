@@ -1,7 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const session = require('express-session');
-const FileStore = require('session-file-store')(session);
+const SQLiteStore = require('connect-sqlite3')(session);
 const bcrypt = require('bcryptjs');
 const path = require('path');
 const fs = require('fs');
@@ -48,8 +48,9 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
+const SESSION_DB_PATH = process.env.DB_PATH || path.join(__dirname, 'data', 'creative-rhythm.db');
 app.use(session({
-  store: new FileStore({ path: './sessions', ttl: 86400 * 7, reapInterval: 3600 }),
+  store: new SQLiteStore({ db: path.basename(SESSION_DB_PATH), dir: path.dirname(SESSION_DB_PATH) }),
   secret: process.env.SESSION_SECRET || 'dev-secret-please-change-in-production',
   resave: false,
   saveUninitialized: false,
