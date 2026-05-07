@@ -35,6 +35,21 @@
   margin: 0;
 }
 
+.gh-resting-body {
+  max-width: 480px;
+  text-align: center;
+}
+
+.gh-resting-body p {
+  font-size: 0.95rem;
+  font-weight: 300;
+  color: #705C6C;
+  line-height: 1.8;
+  margin: 0 0 1.1rem;
+}
+
+.gh-resting-body p:last-child { margin-bottom: 0; }
+
 /* ─── Tending header subtitle ────────────────────────────────────────────── */
 .gh-subtitle {
   font-size: 0.9rem;
