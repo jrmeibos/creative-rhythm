@@ -1,7 +1,7 @@
 {
   "name": "creative-rhythm",
   "version": "1.0.0",
-  "description": "The Creative's Rhythm — Soul-Led Visibility for Artists",
+  "description": "The Creative's Garden — Soul-Led Visibility for Artists",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

@@ -27,9 +27,43 @@
         </div>
         <div class="dash-progress-pill">
           <span class="dash-progress-count"><%= completedCount %> / <%= totalLessons %></span>
-          <span class="dash-progress-label">lessons complete</span>
+          <span class="dash-progress-label">field notes complete</span>
         </div>
       </header>
+
+      <!-- Current Season -->
+      <section class="dash-section">
+        <div class="dash-section-header">
+          <h2 class="dash-section-title">Your Current Season</h2>
+        </div>
+        <% if (!user.current_season) { %>
+          <p class="season-first-prompt">What season are you in right now?</p>
+        <% } %>
+        <div class="season-cards" id="season-cards">
+          <%
+            const seasonDefs = [
+              { key: 'spring', name: 'Spring', category: 'Prioritizing Curiosity',
+                desc: "You're in receptive mode — filling the cup, following whims, letting ideas germinate." },
+              { key: 'summer', name: 'Summer', category: 'Creation Mode',
+                desc: "You're in full creative flow — making, building, pouring energy into the work." },
+              { key: 'autumn', name: 'Autumn', category: 'Sharing is Caring',
+                desc: "You're ready to release — sharing your work with the world from a place of fullness." },
+              { key: 'winter', name: 'Winter', category: 'Time to Connect',
+                desc: "You're going deep — whether reaching outward to collaborate or retreating inward for perspective. Both are Winter." }
+            ];
+          %>
+          <% for (const s of seasonDefs) { %>
+            <button class="season-card season-card--<%= s.key %> <%= user.current_season === s.key ? 'is-selected' : '' %>"
+                    data-season="<%= s.key %>" type="button" aria-pressed="<%= user.current_season === s.key %>">
+              <span class="season-card-emoji"><%- include('partials/season-icon', { season: s.key, size: 48 }) %></span>
+              <span class="season-card-name"><%= s.name %></span>
+              <span class="season-card-category"><%= s.category %></span>
+              <span class="season-card-desc"><%= s.desc %></span>
+              <span class="season-card-check" aria-hidden="true">✓</span>
+            </button>
+          <% } %>
+        </div>
+      </section>
 
       <!-- 4 C's goals preview -->
       <section class="dash-section">
@@ -118,12 +152,12 @@
       <% if (currentLesson) { %>
       <section class="dash-section">
         <div class="dash-section-header">
-          <h2 class="dash-section-title">Continue learning</h2>
-          <a href="/lessons" class="dash-section-link">All lessons →</a>
+          <h2 class="dash-section-title">Continue reading</h2>
+          <a href="/lessons" class="dash-section-link">All field notes →</a>
         </div>
 
         <a href="/lessons/<%= currentLesson.slug %>" class="lesson-continue-card">
-          <div class="lesson-continue-tag"><%= currentLesson.category_tag || 'Lesson' %></div>
+          <div class="lesson-continue-tag"><%= currentLesson.category_tag || 'Field Note' %></div>
           <h3 class="lesson-continue-title"><%= currentLesson.title %></h3>
           <p class="lesson-continue-subtitle"><em><%= currentLesson.subtitle %></em></p>
           <div class="lesson-continue-meta">
@@ -135,11 +169,11 @@
       <% } else { %>
       <section class="dash-section">
         <div class="dash-section-header">
-          <h2 class="dash-section-title">Your lessons</h2>
+          <h2 class="dash-section-title">Your field notes</h2>
         </div>
         <div class="all-complete-card">
-          <p class="all-complete-text">You've completed all available lessons. Beautiful work.</p>
-          <a href="/lessons" class="dash-section-link">Review lessons →</a>
+          <p class="all-complete-text">You've read all available field notes. Beautiful work.</p>
+          <a href="/lessons" class="dash-section-link">Browse field notes →</a>
         </div>
       </section>
       <% } %>
@@ -155,7 +189,33 @@
   </div>
 
   <script src="/js/dashboard-cards.js"></script>
-
-
+  <script>
+    document.querySelectorAll('.season-card').forEach(card => {
+      card.addEventListener('click', async () => {
+        const season = card.dataset.season;
+        const already = card.classList.contains('is-selected');
+        const res = await fetch('/api/season', {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify({ season: already ? null : season })
+        });
+        if (!res.ok) return;
+        document.querySelectorAll('.season-card').forEach(c => {
+          c.classList.remove('is-selected');
+          c.setAttribute('aria-pressed', 'false');
+        });
+        if (!already) {
+          card.classList.add('is-selected');
+          card.setAttribute('aria-pressed', 'true');
+        }
+        const seasonClasses = ['season-avatar--spring','season-avatar--summer','season-avatar--autumn','season-avatar--winter'];
+        document.querySelectorAll('.sidebar-avatar').forEach(el => {
+          el.classList.remove(...seasonClasses);
+          if (!already) el.classList.add(`season-avatar--${season}`);
+        });
+        document.querySelector('.season-first-prompt')?.remove();
+      });
+    });
+  </script>
 </body>
 </html>

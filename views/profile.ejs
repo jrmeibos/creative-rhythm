@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <%- include('partials/head') %>
+  <link rel="stylesheet" href="/css/dashboard.css">
+  <link rel="stylesheet" href="/css/profile.css">
+  <link rel="stylesheet" href="/css/onboarding.css">
+</head>
+<body class="app-body">
+  <div class="app-layout">
+    <%- include('partials/sidebar') %>
+    <main class="main-content" id="main">
+
+      <header class="dash-header">
+        <div class="dash-greeting">
+          <h1 class="dash-greeting-text"><%= user.name.split(' ')[0] %>'s Profile</h1>
+        </div>
+      </header>
+
+      <!-- ── Account ────────────────────────────────────────────────────── -->
+      <section class="dash-section">
+        <div class="dash-section-header">
+          <h2 class="dash-section-title">Account</h2>
+        </div>
+        <div class="profile-info-card">
+          <div class="profile-avatar <%= user.current_season ? 'season-avatar--' + user.current_season : '' %>">
+            <%= user.avatar_initial || user.name.charAt(0).toUpperCase() %>
+          </div>
+          <div class="profile-info-details">
+            <span class="profile-info-name"><%= user.name %></span>
+            <span class="profile-info-email"><%= user.email %></span>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── Current Season ─────────────────────────────────────────────── -->
+      <section class="dash-section">
+        <div class="dash-section-header">
+          <h2 class="dash-section-title">Your Current Season</h2>
+        </div>
+        <%
+          const seasonDefs = [
+            { key: 'spring', name: 'Spring', category: 'Prioritizing Curiosity' },
+            { key: 'summer', name: 'Summer', category: 'Creation Mode' },
+            { key: 'autumn', name: 'Autumn', category: 'Sharing is Caring' },
+            { key: 'winter', name: 'Winter', category: 'Time to Connect' }
+          ];
+        %>
+        <div class="season-cards" id="season-cards">
+          <% for (const s of seasonDefs) { %>
+            <button class="season-card season-card--<%= s.key %> <%= user.current_season === s.key ? 'is-selected' : '' %>"
+                    data-season="<%= s.key %>" type="button" aria-pressed="<%= user.current_season === s.key %>">
+              <span class="season-card-emoji"><%- include('partials/season-icon', { season: s.key, size: 40 }) %></span>
+              <span class="season-card-name"><%= s.name %></span>
+              <span class="season-card-category"><%= s.category %></span>
+              <span class="season-card-check" aria-hidden="true">✓</span>
+            </button>
+          <% } %>
+        </div>
+      </section>
+
+      <!-- ── HARVEST (Week 12+) ──────────────────────────────────────────── -->
+      <% if (closingUnlocked) { %>
+      <section class="dash-section" id="harvest">
+
+        <% if (!closing) { %>
+        <!-- STEP 1: Closing assessment form -->
+        <div class="harvest-progress-wrap">
+          <div class="harvest-progress-bar" id="harvest-progress-bar" style="width:0%"></div>
+        </div>
+
+        <div class="dash-section-header" style="margin-top:1.5rem">
+          <h2 class="dash-section-title harvest-title-display">The Harvest 🌾</h2>
+        </div>
+        <p class="harvest-assess-intro">Before we look at how far you've come — answer these questions from where you are right now. Don't look back first.</p>
+
+        <form class="harvest-form" id="harvest-form">
+          <div class="ob-questions">
+
+            <!-- Q1–Q6: same questions as opening, with "Before" hints -->
+            <% questions.slice(0, 6).forEach(function(q, idx) { %>
+            <div class="ob-question" id="hq-block-<%= q.id %>">
+              <div class="ob-q-num">0<%= idx + 1 %></div>
+              <% if (opening && q.type === 'rating' && opening[q.field]) { %>
+                <p class="harvest-then-note">You said <strong><%= opening[q.field] %></strong> before.</p>
+              <% } else if (opening && q.type === 'choice' && opening[q.field]) { %>
+                <p class="harvest-then-note">Before: <em><%= opening[q.field] %></em></p>
+              <% } %>
+              <p class="ob-q-text"><%= q.text %></p>
+              <% if (q.type === 'choice') { %>
+                <div class="ob-choices">
+                  <% q.choices.forEach(function(c) { %>
+                    <button type="button" class="ob-choice" data-group="<%= q.field %>" data-value="<%= c.val %>">
+                      <span class="ob-choice-val"><%= c.val %></span>
+                      <span class="ob-choice-label"><%= c.label %></span>
+                    </button>
+                  <% }); %>
+                </div>
+              <% } else { %>
+                <p class="ob-rating-scale"><span><%= q.low %></span><span><%= q.high %></span></p>
+                <div class="ob-rating-row">
+                  <% for (let i = 1; i <= 10; i++) { %>
+                    <button type="button" class="ob-rating-btn" data-group="<%= q.field %>" data-value="<%= i %>"><%= i %></button>
+                  <% } %>
+                </div>
+              <% } %>
+            </div>
+            <% }); %>
+
+            <!-- Q7–Q12: harvest-specific questions -->
+            <% closingQuestions.forEach(function(q, idx) { %>
+            <div class="ob-question" id="hq-block-<%= q.id %>">
+              <div class="ob-q-num">0<%= idx + 7 %></div>
+              <p class="ob-q-text"><%= q.text %></p>
+              <% if (q.type === 'choice') { %>
+                <div class="ob-choices">
+                  <% q.choices.forEach(function(c) { %>
+                    <button type="button" class="ob-choice" data-group="<%= q.field %>" data-value="<%= c.val %>">
+                      <span class="ob-choice-val"><%= c.val %></span>
+                      <span class="ob-choice-label"><%= c.label %></span>
+                    </button>
+                  <% }); %>
+                </div>
+              <% } else { %>
+                <textarea class="ob-textarea" data-field="<%= q.field %>"
+                          rows="4" placeholder="<%= q.placeholder %>"></textarea>
+              <% } %>
+            </div>
+            <% }); %>
+
+          </div>
+
+          <p class="ob-error" id="harvest-error" hidden>Please answer all questions before submitting.</p>
+          <div class="ob-actions">
+            <button type="button" class="ob-btn ob-btn--primary" id="harvest-submit-btn">
+              Reveal my harvest 🌾
+            </button>
+          </div>
+        </form>
+
+        <% } else { %>
+        <!-- STEP 2: Before/After reveal -->
+        <%
+          const choiceQs = questions.slice(0,6).filter(q => q.type === 'choice');
+          const ratingQs = questions.slice(0,6).filter(q => q.type === 'rating');
+        %>
+
+        <div class="harvest-reveal">
+          <h2 class="harvest-reveal-title">Look how far you've grown. 🌿</h2>
+          <p class="harvest-reveal-sub">Here is where you started — and where you are now.</p>
+
+          <!-- Rating bars: Q2, Q4, Q6 -->
+          <div class="harvest-bars-section">
+            <% ratingQs.forEach(function(q) { %>
+              <% const then = opening ? (opening[q.field] || 0) : 0; %>
+              <% const now  = closing[q.field] || 0; %>
+              <% const improved = now > then; %>
+              <div class="harvest-bar-item">
+                <p class="harvest-bar-q"><%= q.text %></p>
+                <div class="harvest-bar-row">
+                  <span class="harvest-bar-label">Then</span>
+                  <div class="harvest-bar-track">
+                    <div class="harvest-bar-fill harvest-bar-fill--then" style="width:<%= then ? (then/10*100).toFixed(0) : 0 %>%"></div>
+                  </div>
+                  <span class="harvest-bar-score harvest-bar-score--then"><%= then || '—' %></span>
+                </div>
+                <div class="harvest-bar-row harvest-bar-row--now">
+                  <span class="harvest-bar-label harvest-bar-label--now">Now</span>
+                  <div class="harvest-bar-track">
+                    <div class="harvest-bar-fill" style="width:<%= now ? (now/10*100).toFixed(0) : 0 %>%"></div>
+                  </div>
+                  <span class="harvest-bar-score"><%= now || '—' %></span>
+                  <% if (improved) { %><span class="harvest-bar-improved" title="Improved">✨</span><% } %>
+                </div>
+                <p class="harvest-bar-scale"><span><%= q.low %></span><span><%= q.high %></span></p>
+              </div>
+            <% }); %>
+          </div>
+
+          <!-- Choice pills: Q1, Q3, Q5 -->
+          <div class="harvest-pills-section">
+            <% choiceQs.forEach(function(q) { %>
+              <% const thenVal = opening ? (opening[q.field] || '') : ''; %>
+              <% const nowVal  = closing[q.field] || ''; %>
+              <% const thenLabel = q.choices.find(c => c.val === thenVal); %>
+              <% const nowLabel  = q.choices.find(c => c.val === nowVal); %>
+              <div class="harvest-pill-item">
+                <p class="harvest-pill-q"><%= q.text %></p>
+                <div class="harvest-pill-row">
+                  <span class="harvest-pill harvest-pill--then">Then — <%= thenVal %><% if (thenLabel) { %>: <%= thenLabel.label %><% } %></span>
+                  <span class="harvest-pill harvest-pill--now">Now — <%= nowVal %><% if (nowLabel) { %>: <%= nowLabel.label %><% } %></span>
+                  <% if (thenVal && nowVal && thenVal === nowVal) { %><span class="harvest-consistent">consistent 🌿</span><% } %>
+                </div>
+              </div>
+            <% }); %>
+          </div>
+
+          <!-- Open harvest answers: Q7–Q12 -->
+          <div class="harvest-open-section">
+            <h3 class="harvest-open-heading">What grew.</h3>
+            <% closingQuestions.forEach(function(q) { %>
+              <% if (q.type === 'text') { %>
+                <% const answer = closing[q.field]; %>
+                <% if (answer) { %>
+                <div class="harvest-open-item">
+                  <p class="harvest-open-label"><%= q.text %></p>
+                  <div class="harvest-open-answer"><%= answer %></div>
+                </div>
+                <% } %>
+              <% } else if (q.type === 'choice') { %>
+                <% const choiceVal = closing[q.field]; %>
+                <% const choiceLabel = choiceVal ? q.choices.find(c => c.val === choiceVal) : null; %>
+                <% if (choiceVal) { %>
+                <div class="harvest-open-item">
+                  <p class="harvest-open-label"><%= q.text %></p>
+                  <div class="harvest-open-answer"><%= choiceLabel ? choiceLabel.label : choiceVal %></div>
+                </div>
+                <% } %>
+              <% } %>
+            <% }); %>
+          </div>
+
+          <!-- Final closing words -->
+          <div class="harvest-closing">
+            <h3 class="harvest-closing-title">You showed up. 🌿</h3>
+            <p class="harvest-closing-body">That's the whole thing.<br>That's always been the whole thing.</p>
+          </div>
+        </div>
+        <% } %>
+
+      </section>
+      <% } %>
+
+    </main>
+  </div>
+
+  <script>
+    // ── Season picker ──────────────────────────────────────────────────────────
+    document.querySelectorAll('.season-card').forEach(card => {
+      card.addEventListener('click', async () => {
+        const season = card.dataset.season;
+        const already = card.classList.contains('is-selected');
+        const res = await fetch('/api/season', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ season: already ? null : season })
+        });
+        if (!res.ok) return;
+        document.querySelectorAll('.season-card').forEach(c => {
+          c.classList.remove('is-selected'); c.setAttribute('aria-pressed', 'false');
+        });
+        if (!already) { card.classList.add('is-selected'); card.setAttribute('aria-pressed', 'true'); }
+      });
+    });
+
+    // ── Harvest form ───────────────────────────────────────────────────────────
+    const harvestData = {};
+    const HARVEST_REQUIRED = ['q1_choice','q2_rating','q3_choice','q4_rating','q5_choice','q6_rating'];
+
+    document.querySelectorAll('#harvest-form .ob-choice').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll(`#harvest-form .ob-choice[data-group="${btn.dataset.group}"]`)
+          .forEach(b => b.classList.remove('is-selected'));
+        btn.classList.add('is-selected');
+        harvestData[btn.dataset.group] = btn.dataset.value;
+        updateHarvestProgress();
+      });
+    });
+
+    document.querySelectorAll('#harvest-form .ob-rating-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll(`#harvest-form .ob-rating-btn[data-group="${btn.dataset.group}"]`)
+          .forEach(b => b.classList.remove('is-selected'));
+        btn.classList.add('is-selected');
+        harvestData[btn.dataset.group] = parseInt(btn.dataset.value);
+        updateHarvestProgress();
+      });
+    });
+
+    document.querySelectorAll('#harvest-form .ob-textarea').forEach(ta => {
+      ta.addEventListener('input', () => { harvestData[ta.dataset.field] = ta.value; updateHarvestProgress(); });
+    });
+
+    function updateHarvestProgress() {
+      const filled = HARVEST_REQUIRED.filter(k => harvestData[k] || harvestData[k] === 0).length;
+      const pct = (filled / HARVEST_REQUIRED.length * 100).toFixed(0);
+      const bar = document.getElementById('harvest-progress-bar');
+      if (bar) bar.style.width = pct + '%';
+    }
+
+    const harvestSubmitBtn = document.getElementById('harvest-submit-btn');
+    if (harvestSubmitBtn) {
+      harvestSubmitBtn.addEventListener('click', async () => {
+        const errEl = document.getElementById('harvest-error');
+        errEl.hidden = true;
+        document.querySelectorAll('#harvest-form .ob-textarea').forEach(ta => {
+          harvestData[ta.dataset.field] = ta.value.trim();
+        });
+        for (const key of HARVEST_REQUIRED) {
+          if (!harvestData[key] && harvestData[key] !== 0) {
+            errEl.hidden = false;
+            document.getElementById('hq-block-' + key.split('_')[0])?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            return;
+          }
+        }
+        harvestSubmitBtn.disabled = true;
+        harvestSubmitBtn.textContent = 'Submitting…';
+        const res = await fetch('/api/harvest', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(harvestData)
+        });
+        if (res.ok) { window.location.reload(); }
+        else {
+          harvestSubmitBtn.disabled = false;
+          harvestSubmitBtn.textContent = 'Reveal my harvest 🌾';
+          const data = await res.json();
+          errEl.textContent = data.error || 'Something went wrong.';
+          errEl.hidden = false;
+        }
+      });
+    }
+
+    // Scroll to harvest section if hash is present
+    if (window.location.hash === '#harvest') {
+      document.getElementById('harvest')?.scrollIntoView({ behavior: 'smooth' });
+    }
+  </script>
+
+</body>
+</html>

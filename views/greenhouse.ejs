@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <%- include('partials/head') %>
+  <link rel="stylesheet" href="/css/dashboard.css">
+  <link rel="stylesheet" href="/css/greenhouse.css">
+</head>
+<body class="app-body">
+  <div class="app-layout">
+    <%- include('partials/sidebar') %>
+    <main class="main-content" id="main">
+
+      <% if (closingUnlocked) { %>
+      <!-- ══ HARVEST PLACEHOLDER ════════════════════════════════════════════ -->
+      <div class="gh-locked">
+        <div class="gh-locked-icon" aria-hidden="true">
+          <svg viewBox="0 0 80 96" width="72" height="86" fill="none">
+            <line x1="40" y1="88" x2="40" y2="28" stroke="#F6C95C" stroke-width="3" stroke-linecap="round"/>
+            <path d="M40 55 C40 55 20 48 16 28 C30 24 42 40 40 55Z" fill="#F6C95C" opacity="0.75"/>
+            <path d="M40 42 C40 42 60 36 64 16 C50 12 38 30 40 42Z" fill="#F6C95C"/>
+            <path d="M28 88 Q40 80 52 88" stroke="#F6C95C" stroke-width="3" stroke-linecap="round" fill="none"/>
+          </svg>
+        </div>
+        <h1 class="gh-locked-title">The Harvest</h1>
+        <p class="gh-locked-subtitle">Harvest state — coming soon.</p>
+      </div>
+
+      <% } else if (midcourseUnlocked) { %>
+      <!-- ══ TENDING STATE ════════════════════════════════════════════════ -->
+      <header class="dash-header">
+        <div class="dash-greeting">
+          <h1 class="dash-greeting-text">The Greenhouse</h1>
+        </div>
+        <p class="gh-subtitle">Tend what you planted. Or plant something new.</p>
+      </header>
+
+      <section class="dash-section">
+        <div class="gh-seeds">
+          <% for (let n = 1; n <= 3; n++) { %>
+            <% const entry = seeds[n] || { original: null, replacement: null }; %>
+            <% const orig = entry.original; %>
+            <% const repl = entry.replacement; %>
+            <% const seedLabel = ['One', 'Two', 'Three'][n - 1]; %>
+
+            <div class="gh-seed-card" id="gh-card-<%= n %>">
+              <div class="gh-seed-num">Seed <%= seedLabel %></div>
+
+              <% if (repl) { %>
+                <!-- ── Replaced: show original greyed, replacement active ── -->
+                <div class="gh-original-block">
+                  <span class="gh-original-label">Originally planted</span>
+                  <div class="gh-seed-row gh-seed-row--faded">
+                    <div class="gh-col">
+                      <span class="gh-col-label gh-col-label--faded">The feeling</span>
+                      <p class="gh-col-text gh-col-text--faded"><%= orig?.feeling || '' %></p>
+                    </div>
+                    <div class="gh-col">
+                      <span class="gh-col-label gh-col-label--faded">What it looks like</span>
+                      <p class="gh-col-text gh-col-text--faded"><%= orig?.looks_like || '' %></p>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="gh-active-block" id="gh-active-<%= n %>">
+                  <div class="gh-active-header">
+                    <span class="gh-updated-tag">New seed planted</span>
+                    <button class="gh-pencil-btn" type="button"
+                            aria-label="Edit this seed"
+                            onclick="openEdit(<%= repl.id %>, <%= n %>, '<%= (repl.feeling || '').replace(/'/g, "\\'") %>', '<%= (repl.looks_like || '').replace(/'/g, "\\'") %>')">
+                      <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+                        <path d="M9.5 2.5L11.5 4.5L4.5 11.5H2.5v-2L9.5 2.5Z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/>
+                      </svg>
+                    </button>
+                  </div>
+                  <div class="gh-seed-row" id="gh-view-<%= n %>">
+                    <div class="gh-col">
+                      <span class="gh-col-label">The feeling</span>
+                      <p class="gh-col-text"><%= repl.feeling || '' %></p>
+                    </div>
+                    <div class="gh-col">
+                      <span class="gh-col-label">What it looks like</span>
+                      <p class="gh-col-text"><%= repl.looks_like || '' %></p>
+                    </div>
+                  </div>
+                  <!-- Edit form (hidden) -->
+                  <div class="gh-edit-form is-hidden" id="gh-edit-<%= n %>">
+                    <div class="gh-seed-row gh-seed-row--inputs">
+                      <div class="gh-col">
+                        <label class="gh-col-label" for="gh-ef-feeling-<%= n %>">The feeling</label>
+                        <textarea class="gh-textarea" id="gh-ef-feeling-<%= n %>" rows="3"></textarea>
+                      </div>
+                      <div class="gh-col">
+                        <label class="gh-col-label" for="gh-ef-looks-<%= n %>">What it looks like</label>
+                        <textarea class="gh-textarea" id="gh-ef-looks-<%= n %>" rows="3"></textarea>
+                      </div>
+                    </div>
+                    <div class="gh-edit-footer">
+                      <button class="gh-save-btn" type="button" onclick="saveEdit(<%= repl.id %>, <%= n %>)">Save</button>
+                      <button class="gh-cancel-btn" type="button" onclick="cancelEdit(<%= n %>)">Cancel</button>
+                    </div>
+                  </div>
+                </div>
+
+              <% } else { %>
+                <!-- ── Original only: show with keep/replace buttons ── -->
+                <div class="gh-active-block" id="gh-active-<%= n %>">
+                  <div class="gh-active-header">
+                    <% if (orig) { %>
+                    <button class="gh-pencil-btn" type="button"
+                            aria-label="Edit this seed"
+                            onclick="openEdit(<%= orig.id %>, <%= n %>, '<%= (orig.feeling || '').replace(/'/g, "\\'") %>', '<%= (orig.looks_like || '').replace(/'/g, "\\'") %>')">
+                      <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+                        <path d="M9.5 2.5L11.5 4.5L4.5 11.5H2.5v-2L9.5 2.5Z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/>
+                      </svg>
+                    </button>
+                    <% } %>
+                  </div>
+                  <div class="gh-seed-row" id="gh-view-<%= n %>">
+                    <div class="gh-col">
+                      <span class="gh-col-label">The feeling</span>
+                      <p class="gh-col-text"><%= orig?.feeling || '<em class="gh-empty">Not yet planted</em>' %></p>
+                    </div>
+                    <div class="gh-col">
+                      <span class="gh-col-label">What it looks like</span>
+                      <p class="gh-col-text"><%= orig?.looks_like || '<em class="gh-empty">Not yet planted</em>' %></p>
+                    </div>
+                  </div>
+                  <!-- Edit form (hidden) -->
+                  <div class="gh-edit-form is-hidden" id="gh-edit-<%= n %>">
+                    <div class="gh-seed-row gh-seed-row--inputs">
+                      <div class="gh-col">
+                        <label class="gh-col-label" for="gh-ef-feeling-<%= n %>">The feeling</label>
+                        <textarea class="gh-textarea" id="gh-ef-feeling-<%= n %>" rows="3"></textarea>
+                      </div>
+                      <div class="gh-col">
+                        <label class="gh-col-label" for="gh-ef-looks-<%= n %>">What it looks like</label>
+                        <textarea class="gh-textarea" id="gh-ef-looks-<%= n %>" rows="3"></textarea>
+                      </div>
+                    </div>
+                    <div class="gh-edit-footer">
+                      <button class="gh-save-btn" type="button" onclick="saveEdit(<%= orig ? orig.id : 0 %>, <%= n %>)">Save</button>
+                      <button class="gh-cancel-btn" type="button" onclick="cancelEdit(<%= n %>)">Cancel</button>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Action buttons -->
+                <div class="gh-actions" id="gh-actions-<%= n %>">
+                  <button class="gh-keep-btn" type="button" onclick="keepSeed(<%= n %>)">Keep growing 🌿</button>
+                  <button class="gh-replace-btn" type="button" onclick="openReplace(<%= n %>)">Plant something new 🌱</button>
+                </div>
+
+                <!-- Keep confirmation (hidden) -->
+                <div class="gh-kept-confirm is-hidden" id="gh-kept-<%= n %>">
+                  <span class="gh-kept-badge">Still growing 🌿</span>
+                </div>
+
+                <!-- Replace form (hidden) -->
+                <div class="gh-replace-form is-hidden" id="gh-replace-<%= n %>">
+                  <p class="gh-replace-label">What are you planting now?</p>
+                  <div class="gh-seed-row gh-seed-row--inputs">
+                    <div class="gh-col">
+                      <label class="gh-col-label" for="gh-rf-feeling-<%= n %>">The feeling</label>
+                      <textarea class="gh-textarea" id="gh-rf-feeling-<%= n %>" rows="3" placeholder="How do I want to feel?"></textarea>
+                    </div>
+                    <div class="gh-col">
+                      <label class="gh-col-label" for="gh-rf-looks-<%= n %>">What it looks like</label>
+                      <textarea class="gh-textarea" id="gh-rf-looks-<%= n %>" rows="3" placeholder="What might this make possible?"></textarea>
+                    </div>
+                  </div>
+                  <div class="gh-edit-footer">
+                    <button class="gh-save-btn" type="button" onclick="saveReplace(<%= n %>)">Plant this seed 🌱</button>
+                    <button class="gh-cancel-btn" type="button" onclick="cancelReplace(<%= n %>)">Cancel</button>
+                  </div>
+                </div>
+
+              <% } %>
+            </div>
+          <% } %>
+        </div>
+      </section>
+
+      <% } else { %>
+      <!-- ══ RESTING STATE ═══════════════════════════════════════════════ -->
+      <div class="gh-locked">
+        <div class="gh-locked-icon" aria-hidden="true">
+          <svg viewBox="0 0 80 96" width="72" height="86" fill="none">
+            <line x1="40" y1="88" x2="40" y2="52" stroke="#76856C" stroke-width="3" stroke-linecap="round"/>
+            <path d="M40 68 C40 68 24 62 22 46 C34 44 40 58 40 68Z" fill="#76856C" opacity="0.65"/>
+            <path d="M40 60 C40 60 56 54 58 38 C46 36 40 52 40 60Z" fill="#76856C"/>
+            <line x1="26" y1="88" x2="54" y2="88" stroke="#D8B0AB" stroke-width="3" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <h1 class="gh-locked-title">The Greenhouse</h1>
+        <p class="gh-locked-subtitle">Your seeds are still resting underground. They'll be ready to tend at Week 6.<% if (unlockDate) { %> Opens <%= unlockDate %>.<% } %></p>
+      </div>
+      <% } %>
+
+    </main>
+  </div>
+
+  <script>
+    // ── Edit existing seed ───────────────────────────────────────────────────
+    function openEdit(seedId, n, feeling, looksLike) {
+      document.getElementById('gh-ef-feeling-' + n).value = feeling;
+      document.getElementById('gh-ef-looks-' + n).value   = looksLike;
+      document.getElementById('gh-view-' + n).classList.add('is-hidden');
+      document.getElementById('gh-edit-' + n).classList.remove('is-hidden');
+    }
+
+    function cancelEdit(n) {
+      document.getElementById('gh-view-' + n).classList.remove('is-hidden');
+      document.getElementById('gh-edit-' + n).classList.add('is-hidden');
+    }
+
+    async function saveEdit(seedId, n) {
+      const feeling   = document.getElementById('gh-ef-feeling-' + n).value.trim();
+      const looksLike = document.getElementById('gh-ef-looks-' + n).value.trim();
+      const btn = document.querySelector('#gh-edit-' + n + ' .gh-save-btn');
+      btn.disabled = true; btn.textContent = 'Saving…';
+      const res = await fetch('/api/greenhouse/update', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ seedId, feeling, looksLike })
+      });
+      if (res.ok) {
+        window.location.reload();
+      } else {
+        btn.disabled = false; btn.textContent = 'Save';
+        alert('Could not save. Please try again.');
+      }
+    }
+
+    // ── Keep seed ────────────────────────────────────────────────────────────
+    function keepSeed(n) {
+      document.getElementById('gh-actions-' + n).classList.add('is-hidden');
+      document.getElementById('gh-kept-' + n).classList.remove('is-hidden');
+    }
+
+    // ── Replace seed ─────────────────────────────────────────────────────────
+    function openReplace(n) {
+      document.getElementById('gh-actions-' + n).classList.add('is-hidden');
+      document.getElementById('gh-replace-' + n).classList.remove('is-hidden');
+    }
+
+    function cancelReplace(n) {
+      document.getElementById('gh-replace-' + n).classList.add('is-hidden');
+      document.getElementById('gh-actions-' + n).classList.remove('is-hidden');
+    }
+
+    async function saveReplace(n) {
+      const feeling   = document.getElementById('gh-rf-feeling-' + n).value.trim();
+      const looksLike = document.getElementById('gh-rf-looks-' + n).value.trim();
+      if (!feeling && !looksLike) {
+        document.getElementById('gh-rf-feeling-' + n).focus();
+        return;
+      }
+      const btn = document.querySelector('#gh-replace-' + n + ' .gh-save-btn');
+      btn.disabled = true; btn.textContent = 'Planting…';
+      const res = await fetch('/api/greenhouse/replace', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ seedNumber: n, feeling, looksLike })
+      });
+      if (res.ok) {
+        window.location.reload();
+      } else {
+        btn.disabled = false; btn.textContent = 'Plant this seed 🌱';
+        alert('Could not save. Please try again.');
+      }
+    }
+  </script>
+</body>
+</html>

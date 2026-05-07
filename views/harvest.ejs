@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <%- include('partials/head') %>
+  <link rel="stylesheet" href="/css/dashboard.css">
+  <link rel="stylesheet" href="/css/profile.css">
+</head>
+<body class="app-body">
+  <div class="app-layout">
+    <%- include('partials/sidebar') %>
+    <main class="main-content" id="main">
+
+      <% if (closing) { %>
+        <!-- Already completed -->
+        <div class="harvest-complete-screen">
+          <div class="harvest-complete-inner">
+            <div class="harvest-complete-glyph">🌿</div>
+            <h1 class="harvest-complete-title">You showed up.</h1>
+            <p class="harvest-complete-body">That's the whole thing. That's always been the whole thing.</p>
+            <a href="/profile" class="ob-btn ob-btn--primary" style="display:inline-block;text-decoration:none;margin-top:1rem">View your Then &amp; Now →</a>
+          </div>
+        </div>
+
+      <% } else { %>
+
+        <header class="dash-header">
+          <div class="dash-greeting">
+            <h1 class="dash-greeting-text harvest-title-display">The Harvest</h1>
+            <p class="dash-week-label">Look back at everything you planted. See what grew.</p>
+          </div>
+        </header>
+
+        <!-- Seeds reveal -->
+        <section class="dash-section">
+          <div class="dash-section-header">
+            <h2 class="dash-section-title harvest-reveal-heading">These are the seeds you planted.</h2>
+          </div>
+          <div class="harvest-seeds-grid">
+            <% for (let n = 1; n <= 3; n++) { %>
+              <% const s = seedsMap[n]; %>
+              <div class="harvest-seed-card">
+                <span class="harvest-seed-num">Seed <%= ['One','Two','Three'][n-1] %></span>
+                <% if (s && s.feeling) { %>
+                  <div class="harvest-seed-field">
+                    <span class="harvest-seed-field-label">🌱 The feeling</span>
+                    <p class="harvest-seed-field-text"><%= s.feeling %></p>
+                  </div>
+                <% } %>
+                <% if (s && s.looks_like) { %>
+                  <div class="harvest-seed-field">
+                    <span class="harvest-seed-field-label">🌿 What it looks like</span>
+                    <p class="harvest-seed-field-text"><%= s.looks_like %></p>
+                  </div>
+                <% } %>
+                <% if (!s || (!s.feeling && !s.looks_like)) { %>
+                  <p class="harvest-seed-empty">No seed planted here.</p>
+                <% } %>
+              </div>
+            <% } %>
+          </div>
+        </section>
+
+        <!-- Closing assessment -->
+        <section class="dash-section">
+          <div class="dash-section-header">
+            <h2 class="dash-section-title">Revisit the questions.</h2>
+          </div>
+          <p class="harvest-assess-intro">Answer these again — from the other side. Honest is still the point.</p>
+
+          <form class="harvest-form" id="harvest-form">
+            <div class="ob-questions">
+              <% questions.forEach(function(q, idx) { %>
+                <div class="ob-question" id="hq-block-<%= q.id %>">
+                  <div class="ob-q-num">0<%= idx + 1 %></div>
+                  <% if (opening) { %>
+                    <p class="harvest-then-note">
+                      <% if (q.type === 'rating') { %>
+                        You said <strong><%= opening[q.field] || '—' %></strong> before.
+                      <% } else if (q.type === 'text') { %>
+                        <em>Before: "<%= (opening[q.field] || '').slice(0, 80) %><%= (opening[q.field] || '').length > 80 ? '…' : '' %>"</em>
+                      <% } else { %>
+                        <em>Before: <%= opening[q.field] || '—' %></em>
+                      <% } %>
+                    </p>
+                  <% } %>
+                  <p class="ob-q-text"><%= q.text %></p>
+
+                  <% if (q.type === 'choice' || q.type === 'multi') { %>
+                    <% if (q.type === 'multi') { %><p class="ob-multi-note">Choose up to <%= q.max %></p><% } %>
+                    <div class="ob-choices">
+                      <% q.choices.forEach(function(c) { %>
+                        <button type="button"
+                          class="ob-choice <%= q.type === 'multi' ? 'ob-multi' : '' %>"
+                          data-group="<%= q.field %>" data-value="<%= c.val %>">
+                          <span class="ob-choice-val"><%= c.val %></span>
+                          <span class="ob-choice-label"><%= c.label %></span>
+                        </button>
+                      <% }); %>
+                    </div>
+                  <% } else if (q.type === 'rating') { %>
+                    <p class="ob-rating-scale"><span><%= q.low %></span><span><%= q.high %></span></p>
+                    <div class="ob-rating-row">
+                      <% for (let i = 1; i <= 10; i++) { %>
+                        <button type="button" class="ob-rating-btn"
+                          data-group="<%= q.field %>" data-value="<%= i %>"><%= i %></button>
+                      <% } %>
+                    </div>
+                  <% } else { %>
+                    <textarea class="ob-textarea" data-field="<%= q.field %>"
+                              rows="4" placeholder="<%= q.placeholder %>"></textarea>
+                  <% } %>
+                </div>
+              <% }); %>
+            </div>
+
+            <!-- Harvest reflection -->
+            <div class="harvest-reflection-block">
+              <h3 class="harvest-reflection-title">The Harvest</h3>
+              <p class="harvest-reflection-prompt">Look back at the seeds you planted. What grew? What surprised you? What are you still tending?</p>
+              <textarea class="ob-textarea harvest-reflection-ta" data-field="harvest_reflection"
+                        rows="8" placeholder="Write as much or as little as feels true."></textarea>
+            </div>
+
+            <p class="ob-error" id="harvest-error" hidden>Please answer all questions before submitting.</p>
+            <div class="ob-actions">
+              <button type="button" class="ob-btn ob-btn--primary" id="harvest-submit-btn" onclick="submitHarvest()">
+                Complete my harvest 🌾
+              </button>
+            </div>
+          </form>
+        </section>
+      <% } %>
+
+    </main>
+  </div>
+
+  <link rel="stylesheet" href="/css/onboarding.css">
+  <script>
+    const harvestData = {};
+
+    document.querySelectorAll('.ob-choice:not(.ob-multi)').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const group = btn.dataset.group;
+        document.querySelectorAll(`.ob-choice[data-group="${group}"]`)
+          .forEach(b => b.classList.remove('is-selected'));
+        btn.classList.add('is-selected');
+        harvestData[group] = btn.dataset.value;
+      });
+    });
+
+    document.querySelectorAll('.ob-choice.ob-multi').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const group = btn.dataset.group;
+        const selected = document.querySelectorAll(`.ob-choice[data-group="${group}"].is-selected`);
+        if (btn.classList.contains('is-selected')) {
+          btn.classList.remove('is-selected');
+        } else if (selected.length < 2) {
+          btn.classList.add('is-selected');
+        }
+        harvestData[group] = [...document.querySelectorAll(`.ob-choice[data-group="${group}"].is-selected`)]
+          .map(b => b.dataset.value).join(',');
+      });
+    });
+
+    document.querySelectorAll('.ob-rating-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const group = btn.dataset.group;
+        document.querySelectorAll(`.ob-rating-btn[data-group="${group}"]`)
+          .forEach(b => b.classList.remove('is-selected'));
+        btn.classList.add('is-selected');
+        harvestData[group] = parseInt(btn.dataset.value);
+      });
+    });
+
+    document.querySelectorAll('.ob-textarea').forEach(ta => {
+      ta.addEventListener('input', () => { harvestData[ta.dataset.field] = ta.value; });
+    });
+
+    async function submitHarvest() {
+      const errEl = document.getElementById('harvest-error');
+      errEl.hidden = true;
+
+      document.querySelectorAll('.ob-textarea').forEach(ta => {
+        harvestData[ta.dataset.field] = ta.value.trim();
+      });
+
+      const required = ['q1_choice','q2_rating','q3_choice','q4_rating','q5_choice','q6_rating','q7_choices','q8_choice','q9_text','q10_text'];
+      for (const key of required) {
+        if (!harvestData[key] && harvestData[key] !== 0) {
+          errEl.hidden = false;
+          const fieldId = key.split('_')[0];
+          document.getElementById(`hq-block-${fieldId}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          return;
+        }
+      }
+
+      const btn = document.getElementById('harvest-submit-btn');
+      btn.disabled = true;
+      btn.textContent = 'Submitting…';
+
+      const res = await fetch('/api/harvest', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(harvestData)
+      });
+
+      if (res.ok) {
+        window.location.reload();
+      } else {
+        btn.disabled = false;
+        btn.textContent = 'Complete my harvest 🌾';
+        const data = await res.json();
+        errEl.textContent = data.error || 'Something went wrong.';
+        errEl.hidden = false;
+      }
+    }
+  </script>
+
+</body>
+</html>

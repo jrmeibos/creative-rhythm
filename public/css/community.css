@@ -183,16 +183,16 @@
 }
 
 /* Set but not complete — colored outline, clear center */
-.comm-circle--curiosity.comm-circle--set { border: 2px solid #a990a4; background: transparent; }
-.comm-circle--create.comm-circle--set    { border: 2px solid #76856C; background: transparent; }
-.comm-circle--share.comm-circle--set     { border: 2px solid #D8B0AB; background: transparent; }
-.comm-circle--connect.comm-circle--set   { border: 2px solid #F6C95C; background: transparent; }
+.comm-circle--curiosity.comm-circle--set { border: 2px solid #D8B0AB; background: transparent; }
+.comm-circle--create.comm-circle--set    { border: 2px solid #F6C95C; background: transparent; }
+.comm-circle--share.comm-circle--set     { border: 2px solid #76856C; background: transparent; }
+.comm-circle--connect.comm-circle--set   { border: 2px solid #a990a4; background: transparent; }
 
 /* Completed — fully filled */
-.comm-circle--curiosity.comm-circle--filled { border: 2px solid #a990a4; background: #a990a4; }
-.comm-circle--create.comm-circle--filled    { border: 2px solid #76856C; background: #76856C; }
-.comm-circle--share.comm-circle--filled     { border: 2px solid #D8B0AB; background: #D8B0AB; }
-.comm-circle--connect.comm-circle--filled   { border: 2px solid #F6C95C; background: #F6C95C; }
+.comm-circle--curiosity.comm-circle--filled { border: 2px solid #D8B0AB; background: #D8B0AB; }
+.comm-circle--create.comm-circle--filled    { border: 2px solid #F6C95C; background: #F6C95C; }
+.comm-circle--share.comm-circle--filled     { border: 2px solid #76856C; background: #76856C; }
+.comm-circle--connect.comm-circle--filled   { border: 2px solid #a990a4; background: #a990a4; }
 
 /* ─── Detail Drawer ──────────────────────────────────────────────────────── */
 
@@ -397,4 +397,58 @@
   .comm-grid { grid-template-columns: 1fr; }
   .comm-drawer { padding: 1.25rem; }
   .comm-week-nav { flex-wrap: wrap; justify-content: center; }
+}
+
+/* ─── Season badges ───────────────────────────────────────────────────────── */
+
+.season-badge {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  line-height: 0;
+  cursor: default;
+  flex-shrink: 0;
+  vertical-align: middle;
+  margin-left: 0.25rem;
+}
+
+.season-badge::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--color-ink-stained);
+  color: var(--color-pearl);
+  padding: 0.25rem 0.6rem;
+  border-radius: 6px;
+  font-family: var(--font-body);
+  font-size: 0.68rem;
+  font-weight: 300;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s;
+  z-index: 20;
+}
+
+.season-badge:hover::after { opacity: 1; }
+
+
+/* ─── Photo avatars ──────────────────────────────────────────────────────── */
+.comm-avatar-photo {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+}
+
+/* ─── Private intentions message ─────────────────────────────────────────── */
+.comm-private-msg {
+  text-align: center;
+  color: rgba(16,15,16,0.45);
+  font-size: 0.9rem;
+  font-weight: 300;
+  font-style: italic;
+  padding: 1.5rem 0;
 }

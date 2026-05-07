@@ -4,8 +4,41 @@ const session = require('express-session');
 const FileStore = require('session-file-store')(session);
 const bcrypt = require('bcryptjs');
 const path = require('path');
+const fs = require('fs');
+const multer = require('multer');
 const db = require('./db');
 const { requireAuth, requireAdmin } = require('./auth');
+
+const AVATAR_DIR = path.join(__dirname, 'public', 'uploads', 'avatars');
+if (!fs.existsSync(AVATAR_DIR)) fs.mkdirSync(AVATAR_DIR, { recursive: true });
+
+const upload = multer({
+  storage: multer.diskStorage({
+    destination: AVATAR_DIR,
+    filename: (req, file, cb) => {
+      const ext = path.extname(file.originalname).toLowerCase() || '.jpg';
+      cb(null, `avatar-${req.session.user.id}-${Date.now()}${ext}`);
+    }
+  }),
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: (_, file, cb) => {
+    if (['image/jpeg','image/png','image/gif'].includes(file.mimetype)) cb(null, true);
+    else cb(new Error('Only JPG, PNG, and GIF files are allowed.'));
+  }
+});
+
+const TIMEZONES = [
+  { value: 'America/New_York',    label: 'Eastern Time (ET)' },
+  { value: 'America/Chicago',     label: 'Central Time (CT)' },
+  { value: 'America/Denver',      label: 'Mountain Time (MT)' },
+  { value: 'America/Los_Angeles', label: 'Pacific Time (PT)' },
+  { value: 'America/Anchorage',   label: 'Alaska Time (AKT)' },
+  { value: 'America/Honolulu',    label: 'Hawaii Time (HST)' },
+  { value: 'Europe/London',       label: 'London (GMT/BST)' },
+  { value: 'Europe/Paris',        label: 'Paris (CET/CEST)' },
+  { value: 'Australia/Sydney',    label: 'Sydney (AEST/AEDT)' },
+  { value: 'Asia/Tokyo',          label: 'Tokyo (JST)' },
+];
 
 const app = express();
 
@@ -32,6 +65,35 @@ app.use((req, res, next) => {
   next();
 });
 
+// Onboarding guard — students who haven't completed onboarding can only access onboarding routes
+app.use((req, res, next) => {
+  const u = req.session.user;
+  if (u && u.role === 'student' && !u.onboarding_completed) {
+    const ok = req.path === '/' || req.path === '/logout'
+      || req.path.startsWith('/onboarding')
+      || req.path.startsWith('/api/onboarding');
+    if (!ok) return res.redirect('/onboarding');
+  }
+  next();
+});
+
+// Auto-unlock: persist date-based unlock flags to DB once thresholds pass
+app.use((req, res, next) => {
+  const courseStart = db.getSetting('course_start_date');
+  if (courseStart) {
+    const daysDiff = Math.floor((Date.now() - new Date(courseStart + 'T00:00:00').getTime()) / 86400000);
+    if (daysDiff >= 35 && db.getSetting('midcourse_unlocked') !== 'true') {
+      db.setSetting('midcourse_unlocked', 'true');
+      console.log('✓ Mid-course auto-unlocked (Week 6)');
+    }
+    if (daysDiff >= 77 && db.getSetting('harvest_unlocked') !== 'true') {
+      db.setSetting('harvest_unlocked', 'true');
+      console.log('✓ Harvest auto-unlocked (Week 12)');
+    }
+  }
+  next();
+});
+
 // ─── Auth ──────────────────────────────────────────────────────────────────
 
 app.get('/', (req, res) => {
@@ -52,7 +114,15 @@ app.post('/login', async (req, res) => {
   if (!valid) {
     return res.render('login', { error: 'Invalid email or password.' });
   }
-  req.session.user = { id: user.id, name: user.name, email: user.email, role: user.role, avatar_initial: user.avatar_initial };
+  req.session.user = {
+    id: user.id, name: user.name, email: user.email, role: user.role,
+    avatar_initial: user.avatar_initial, current_season: user.current_season || null,
+    onboarding_completed: !!user.onboarding_completed,
+    profile_photo: user.profile_photo || null
+  };
+  if (user.role !== 'admin' && !user.onboarding_completed) {
+    return res.redirect('/onboarding');
+  }
   res.redirect('/dashboard');
 });
 
@@ -200,13 +270,25 @@ app.post('/api/goals/:id/toggle', requireAuth, (req, res) => {
   res.json({ ok: true });
 });
 
+// ─── Season ────────────────────────────────────────────────────────────────
+
+app.post('/api/season', requireAuth, (req, res) => {
+  const { season } = req.body;
+  if (season && !['spring', 'summer', 'autumn', 'winter'].includes(season)) {
+    return res.status(400).json({ error: 'Invalid season.' });
+  }
+  db.updateUserSeason(req.session.user.id, season || null);
+  req.session.user.current_season = season || null;
+  res.json({ ok: true });
+});
+
 // ─── Lessons ───────────────────────────────────────────────────────────────
 
 app.get('/lessons', requireAuth, (req, res) => {
   const lessons = db.getAllLessons();
   const completedIds = new Set(db.completedLessonIds(req.session.user.id));
   res.render('lessons', {
-    title: 'Lessons',
+    title: 'Field Notes',
     page: 'lessons',
     lessons,
     completedIds,
@@ -274,7 +356,7 @@ app.get('/community', requireAuth, (req, res) => {
   const hasNextWeek = !!(nextCandidate && nextCandidate <= accessibleUpTo);
   const nextWeek    = hasNextWeek ? nextCandidate : null;
 
-  const allUsers = db.getAllUsers().filter(u => u.role === 'student');
+  const allUsers = db.getAllUsers();
   const rows     = db.getAllUsersGoalsForWeek(weekStart);
 
   const goalsMap = {};
@@ -290,10 +372,14 @@ app.get('/community', requireAuth, (req, res) => {
   }
 
   const members = allUsers.map(u => ({
-    id:             u.id,
-    name:           u.name,
-    avatar_initial: u.avatar_initial || u.name.charAt(0),
-    goals:          goalsMap[u.id] || {}
+    id:                      u.id,
+    name:                    u.name,
+    avatar_initial:          u.avatar_initial || u.name.charAt(0),
+    current_season:          u.current_season || null,
+    profile_photo:           u.profile_photo || null,
+    community_goals_public:  u.community_goals_public !== 0,
+    community_season_public: u.community_season_public !== 0,
+    goals:                   goalsMap[u.id] || {}
   }));
 
   res.render('community', {
@@ -358,6 +444,368 @@ app.get('/calendar', requireAuth, (req, res) => {
   });
 });
 
+// ─── Onboarding ────────────────────────────────────────────────────────────
+
+const ASSESSMENT_QUESTIONS = [
+  { id: 'q1', type: 'choice', field: 'q1_choice',
+    text: 'How often are you currently sharing your creative work or perspective online?',
+    choices: [
+      { val: 'A', label: "I have never posted. (Or haven't in a long while)" },
+      { val: 'B', label: 'I barely post' },
+      { val: 'C', label: 'A few times a month' },
+      { val: 'D', label: 'A few times a week' },
+      { val: 'E', label: 'Daily' }
+    ]
+  },
+  { id: 'q2', type: 'rating', field: 'q2_rating',
+    text: 'How congruent do you feel between who you are and how you show up online?',
+    low: '1 = completely different people', high: '10 = exactly the same person'
+  },
+  { id: 'q3', type: 'choice', field: 'q3_choice',
+    text: 'When you sit down to create — or even just think about creating — what\'s your default state?',
+    choices: [
+      { val: 'A', label: 'Frozen or avoidant' },
+      { val: 'B', label: 'Forcing it, going through the motions' },
+      { val: 'C', label: 'Flashes of clarity, mostly noise' },
+      { val: 'D', label: 'Clear and intuitive, most of the time' },
+      { val: 'E', label: 'Fully open — when I create, I\'m in flow' }
+    ]
+  },
+  { id: 'q4', type: 'rating', field: 'q4_rating',
+    text: 'How safe do you feel being seen online?',
+    low: '1 = visibility feels like a threat', high: '10 = visibility feels like home'
+  },
+  { id: 'q5', type: 'choice', field: 'q5_choice',
+    text: 'How clear are you on what you\'re actually trying to say online?',
+    choices: [
+      { val: 'A', label: "I'm figuring it out post by post" },
+      { val: 'B', label: 'I have some themes but no real throughline' },
+      { val: 'C', label: "I know my message, I just don't say it consistently" },
+      { val: 'D', label: "I'm building something that feels cohesive" },
+      { val: 'E', label: "I know exactly what I'm here to say — and why it matters" }
+    ]
+  },
+  { id: 'q6', type: 'rating', field: 'q6_rating',
+    text: 'How fully expressed do you feel in what you currently share online?',
+    low: "1 = I'm holding almost everything back", high: '10 = what I share feels truly like me'
+  },
+  { id: 'q7', type: 'multi', field: 'q7_choices', max: 2,
+    text: 'What would feel most meaningful to track over the next 12 weeks?',
+    choices: [
+      { val: 'A', label: 'Engagement that feels like real connection' },
+      { val: 'B', label: 'Showing up more consistently without burning out' },
+      { val: 'C', label: 'Energy and nervous system wins — posting without dread' },
+      { val: 'D', label: 'People finding my work and feeling something' },
+      { val: 'E', label: 'Alignment — am I actually saying what I mean?' },
+      { val: 'F', label: 'Building a community, not just an audience' }
+    ]
+  },
+  { id: 'q8', type: 'choice', field: 'q8_choice',
+    text: 'How do you best receive support?',
+    choices: [
+      { val: 'A', label: 'Loving accountability — call me in, gently' },
+      { val: 'B', label: 'Encouragement and celebration of small wins' },
+      { val: 'C', label: 'Direct, honest feedback on my work' },
+      { val: 'D', label: 'Quiet witnessing — just knowing someone sees me' },
+      { val: 'E', label: 'Space to figure it out myself, with guidance nearby' }
+    ]
+  },
+  { id: 'q9', type: 'text', field: 'q9_text',
+    text: 'If you could wave a wand, what would your relationship with sharing your work look and feel like at the end of this course?',
+    placeholder: 'Describe the feeling, the freedom, the life...'
+  },
+  { id: 'q10', type: 'text', field: 'q10_text',
+    text: 'What promise are you making to yourself for these 12 weeks?',
+    placeholder: 'Write it like you mean it.'
+  }
+];
+
+const CLOSING_QUESTIONS = [
+  { id: 'q7', type: 'text', field: 'q7_choices',
+    text: 'What surprised you most about this experience?',
+    placeholder: 'What caught you off guard — in the best or hardest way?' },
+  { id: 'q8', type: 'choice', field: 'q8_choice',
+    text: 'What season do you feel you spent the most time in during this course?',
+    choices: [
+      { val: 'A', label: '🌸 Spring (Curiosity) — receiving, exploring' },
+      { val: 'B', label: '☀️ Summer (Create) — making, producing' },
+      { val: 'C', label: '🍂 Autumn (Share) — releasing, sharing' },
+      { val: 'D', label: '❄️ Winter (Connect) — going deep, connecting' }
+    ]
+  },
+  { id: 'q9', type: 'text', field: 'q9_text',
+    text: 'What does showing up online feel like now compared to when you started?',
+    placeholder: 'Describe the shift — even if it\'s subtle.' },
+  { id: 'q10', type: 'text', field: 'q10_text',
+    text: 'What will you keep doing after this course ends?',
+    placeholder: 'What rhythm will you carry forward?' },
+  { id: 'q11', type: 'text', field: 'q11_text',
+    text: 'What would you tell someone who is standing where you were 12 weeks ago?',
+    placeholder: 'What do they need to hear?' },
+  { id: 'q12', type: 'text', field: 'q12_text',
+    text: 'Is there anything that would have improved your experience in The Creative\'s Garden?',
+    placeholder: 'Your honesty helps the garden grow.' }
+];
+
+app.get('/onboarding', requireAuth, (req, res) => {
+  if (req.session.user.role === 'admin') return res.redirect('/dashboard');
+  if (req.session.user.onboarding_completed) return res.redirect('/dashboard');
+  res.render('onboarding', {
+    title: 'Welcome',
+    questions: ASSESSMENT_QUESTIONS
+  });
+});
+
+app.post('/api/onboarding/assessment', requireAuth, (req, res) => {
+  db.upsertAssessment(req.session.user.id, 'opening', req.body);
+  res.json({ ok: true });
+});
+
+app.post('/api/onboarding/seeds', requireAuth, (req, res) => {
+  const { seeds } = req.body;
+  if (!Array.isArray(seeds) || seeds.length !== 3) {
+    return res.status(400).json({ error: 'Invalid seeds data.' });
+  }
+  for (const s of seeds) {
+    const num = parseInt(s.seed_number);
+    if (![1, 2, 3].includes(num)) return res.status(400).json({ error: 'Invalid seed number.' });
+    db.upsertSeed(req.session.user.id, num, s.feeling, s.looks_like);
+  }
+  res.json({ ok: true });
+});
+
+app.post('/api/onboarding/complete', requireAuth, (req, res) => {
+  const userId = req.session.user.id;
+  db.setOnboardingComplete(userId);
+  console.log(`✓ Onboarding complete: user ${userId}`);
+  req.session.user.onboarding_completed = true;
+  req.session.save(err => {
+    if (err) return res.status(500).json({ error: 'Session save failed.' });
+    res.json({ ok: true });
+  });
+});
+
+// ─── Profile ───────────────────────────────────────────────────────────────
+
+app.get('/profile', requireAuth, (req, res) => {
+  const userId = req.session.user.id;
+  const isAdmin = req.session.user.role === 'admin';
+  const seeds = db.getUserSeeds(userId);
+  const seedsMap = {};
+  for (const s of seeds) seedsMap[s.seed_number] = s;
+  const opening  = db.getAssessment(userId, 'opening');
+  const closing  = db.getAssessment(userId, 'closing');
+  const midcourseAssessment = db.getAssessment(userId, 'midcourse');
+  const { midcourseUnlocked: mcState, harvestUnlocked: hvState } = getUnlockState();
+  const midcourseUnlocked = isAdmin || mcState;
+  const closingUnlocked   = isAdmin || hvState;
+
+  const courseStart = db.getSetting('course_start_date');
+  let midcourseUnlockDate = null, closingUnlockDate = null;
+  if (courseStart) {
+    const start = new Date(courseStart + 'T00:00:00');
+    const m = new Date(start); m.setDate(m.getDate() + 35);
+    const c = new Date(start); c.setDate(c.getDate() + 77);
+    const fmt = d => d.toLocaleDateString('en-US', { month: 'long', day: 'numeric' });
+    midcourseUnlockDate = fmt(m);
+    closingUnlockDate   = fmt(c);
+  }
+
+  res.render('profile', {
+    title: 'My Profile',
+    page: 'profile',
+    seedsMap,
+    opening,
+    closing,
+    midcourseAssessment,
+    midcourseUnlocked,
+    closingUnlocked,
+    midcourseUnlockDate,
+    closingUnlockDate,
+    questions: ASSESSMENT_QUESTIONS,
+    closingQuestions: CLOSING_QUESTIONS
+  });
+});
+
+// ─── Greenhouse ────────────────────────────────────────────────────────────
+
+app.get('/greenhouse', requireAuth, (req, res) => {
+  const isAdmin = req.session.user.role === 'admin';
+  const { midcourseUnlocked: mcState, harvestUnlocked: hvState } = getUnlockState();
+  const midcourseUnlocked = isAdmin || mcState;
+  const closingUnlocked   = isAdmin || hvState;
+
+  const seeds = (midcourseUnlocked || closingUnlocked)
+    ? db.getGreenhouseSeeds(req.session.user.id)
+    : null;
+
+  const courseStart = db.getSetting('course_start_date');
+  let unlockDate = null;
+  if (courseStart && !midcourseUnlocked) {
+    const start = new Date(courseStart + 'T00:00:00');
+    const m = new Date(start); m.setDate(m.getDate() + 35);
+    unlockDate = m.toLocaleDateString('en-US', { month: 'long', day: 'numeric' });
+  }
+
+  res.render('greenhouse', {
+    title: 'The Greenhouse',
+    page: 'greenhouse',
+    seeds,
+    midcourseUnlocked,
+    closingUnlocked,
+    unlockDate
+  });
+});
+
+app.post('/api/greenhouse/replace', requireAuth, (req, res) => {
+  const { midcourseUnlocked } = getUnlockState();
+  if (req.session.user.role !== 'admin' && !midcourseUnlocked) {
+    return res.status(403).json({ error: 'Not yet unlocked.' });
+  }
+  const { seedNumber, feeling, looksLike } = req.body;
+  const num = parseInt(seedNumber);
+  if (![1, 2, 3].includes(num)) return res.status(400).json({ error: 'Invalid seed number.' });
+  db.replaceSeeds(req.session.user.id, num, feeling, looksLike);
+  res.json({ ok: true });
+});
+
+app.post('/api/greenhouse/update', requireAuth, (req, res) => {
+  const { midcourseUnlocked } = getUnlockState();
+  if (req.session.user.role !== 'admin' && !midcourseUnlocked) {
+    return res.status(403).json({ error: 'Not yet unlocked.' });
+  }
+  const { seedId, feeling, looksLike } = req.body;
+  if (!seedId) return res.status(400).json({ error: 'seedId required.' });
+  db.updateSeedById(parseInt(seedId), req.session.user.id, feeling, looksLike);
+  res.json({ ok: true });
+});
+
+// ─── Harvest ───────────────────────────────────────────────────────────────
+
+app.get('/harvest', requireAuth, (req, res) => {
+  res.redirect('/profile#harvest');
+});
+
+app.post('/api/midcourse', requireAuth, (req, res) => {
+  const { midcourseUnlocked } = getUnlockState();
+  if (req.session.user.role !== 'admin' && !midcourseUnlocked) return res.status(403).json({ error: 'Mid-course check-in not yet unlocked.' });
+  const { seeds } = req.body;
+  if (!Array.isArray(seeds) || seeds.length !== 3) return res.status(400).json({ error: 'Invalid seeds data.' });
+  for (const s of seeds) {
+    const num = parseInt(s.seed_number);
+    if (![1,2,3].includes(num)) return res.status(400).json({ error: 'Invalid seed number.' });
+    db.saveSeedTending(req.session.user.id, num, s.status || 'active', s.updated_feeling || '', s.updated_looks_like || '');
+  }
+  db.markMidcourseComplete(req.session.user.id);
+  res.json({ ok: true });
+});
+
+app.post('/api/harvest', requireAuth, (req, res) => {
+  const { harvestUnlocked } = getUnlockState();
+  if (req.session.user.role !== 'admin' && !harvestUnlocked) return res.status(403).json({ error: 'Harvest not yet unlocked.' });
+  db.upsertAssessment(req.session.user.id, 'closing', req.body);
+  res.json({ ok: true });
+});
+
+// ─── Account ───────────────────────────────────────────────────────────────
+
+app.get('/account', requireAuth, (req, res) => {
+  const profile = db.getUserFullProfile(req.session.user.id);
+  res.render('account', {
+    title: 'My Account',
+    page: 'account',
+    profile,
+    timezones: TIMEZONES
+  });
+});
+
+app.post('/api/account/details', requireAuth, async (req, res) => {
+  const { name, email } = req.body;
+  if (!name || !email) return res.status(400).json({ error: 'Name and email are required.' });
+  try {
+    db.updateUserDetails(req.session.user.id, name.trim(), email.trim().toLowerCase());
+    req.session.user.name         = name.trim();
+    req.session.user.email        = email.trim().toLowerCase();
+    req.session.user.avatar_initial = name.trim().charAt(0).toUpperCase();
+    req.session.save(err => {
+      if (err) return res.status(500).json({ error: 'Session save failed.' });
+      res.json({ ok: true });
+    });
+  } catch (e) {
+    if (e.message && e.message.includes('UNIQUE')) return res.status(409).json({ error: 'That email is already in use.' });
+    res.status(500).json({ error: 'Failed to update details.' });
+  }
+});
+
+app.post('/api/account/password', requireAuth, async (req, res) => {
+  const { current_password, new_password, confirm_password } = req.body;
+  if (!current_password || !new_password || !confirm_password) {
+    return res.status(400).json({ error: 'All password fields are required.' });
+  }
+  if (new_password !== confirm_password) {
+    return res.status(400).json({ error: 'New passwords do not match.' });
+  }
+  if (new_password.length < 8) {
+    return res.status(400).json({ error: 'Password must be at least 8 characters.' });
+  }
+  if (!/[0-9!@#$%^&*()\-_=+\[\]{};:'",.<>/?\\|`~]/.test(new_password)) {
+    return res.status(400).json({ error: 'Password must include at least one number or special character.' });
+  }
+  const user = db.getUserByEmail(req.session.user.email);
+  const valid = await bcrypt.compare(current_password, user.password_hash);
+  if (!valid) return res.status(400).json({ error: 'Current password is incorrect.' });
+  db.updateUserPassword(req.session.user.id, new_password);
+  res.json({ ok: true });
+});
+
+app.post('/api/account/photo', requireAuth, (req, res) => {
+  upload.single('photo')(req, res, err => {
+    if (err) return res.status(400).json({ error: err.message });
+    if (!req.file) return res.status(400).json({ error: 'No file uploaded.' });
+    const existing = db.getUserFullProfile(req.session.user.id);
+    if (existing && existing.profile_photo) {
+      fs.unlink(path.join(__dirname, 'public', existing.profile_photo), () => {});
+    }
+    const photoPath = `/uploads/avatars/${req.file.filename}`;
+    db.updateProfilePhoto(req.session.user.id, photoPath);
+    req.session.user.profile_photo = photoPath;
+    req.session.save(err2 => {
+      if (err2) return res.status(500).json({ error: 'Session save failed.' });
+      res.json({ ok: true, photoPath });
+    });
+  });
+});
+
+app.delete('/api/account/photo', requireAuth, (req, res) => {
+  const existing = db.getUserFullProfile(req.session.user.id);
+  if (existing && existing.profile_photo) {
+    fs.unlink(path.join(__dirname, 'public', existing.profile_photo), () => {});
+  }
+  db.removeProfilePhoto(req.session.user.id);
+  req.session.user.profile_photo = null;
+  req.session.save(err => {
+    if (err) return res.status(500).json({ error: 'Session save failed.' });
+    res.json({ ok: true });
+  });
+});
+
+app.post('/api/account/timezone', requireAuth, (req, res) => {
+  const { timezone } = req.body;
+  if (!TIMEZONES.some(t => t.value === timezone)) return res.status(400).json({ error: 'Invalid timezone.' });
+  db.updateUserTimezone(req.session.user.id, timezone);
+  res.json({ ok: true });
+});
+
+app.post('/api/account/preference', requireAuth, (req, res) => {
+  const { key, value } = req.body;
+  try {
+    db.updateUserPreference(req.session.user.id, key, value);
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(400).json({ error: e.message });
+  }
+});
+
 // ─── Resources ─────────────────────────────────────────────────────────────
 
 app.get('/resources', requireAuth, (req, res) => {
@@ -367,20 +815,166 @@ app.get('/resources', requireAuth, (req, res) => {
 // ─── Admin ─────────────────────────────────────────────────────────────────
 
 app.get('/admin', requireAdmin, (req, res) => {
-  const users           = db.getAllUsers();
-  const lessonStats     = db.getLessonCompletionCounts();
-  const courseStartDate = db.getSetting('course_start_date') || '';
-  res.render('admin', { title: 'Admin', page: 'admin', users, lessonStats, courseStartDate });
+  const users              = db.getAllUsers();
+  const lessons            = db.getAllLessonsAdmin();
+  const resources          = db.getAllResources();
+  const lessonStats        = db.getLessonCompletionCounts();
+  const courseStartDate    = db.getSetting('course_start_date') || '';
+  const harvestUnlocked    = db.getSetting('harvest_unlocked') === 'true';
+  const midcourseUnlocked  = db.getSetting('midcourse_unlocked') === 'true';
+  const studentAssessments = db.getAllStudentAssessmentStatus();
+
+  let midcourseUnlockDate = null, closingUnlockDate = null;
+  if (courseStartDate) {
+    const start = new Date(courseStartDate + 'T00:00:00');
+    const m = new Date(start); m.setDate(m.getDate() + 35);
+    const c = new Date(start); c.setDate(c.getDate() + 77);
+    const fmt = d => d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+    midcourseUnlockDate = fmt(m);
+    closingUnlockDate   = fmt(c);
+  }
+
+  res.render('admin', {
+    title: 'Admin', page: 'admin',
+    users, lessons, resources, lessonStats, courseStartDate,
+    harvestUnlocked, midcourseUnlocked,
+    midcourseUnlockDate, closingUnlockDate,
+    studentAssessments,
+    questions: ASSESSMENT_QUESTIONS,
+    closingQuestions: CLOSING_QUESTIONS
+  });
 });
 
 app.post('/api/admin/settings', requireAdmin, (req, res) => {
   const { key, value } = req.body;
-  if (!['course_start_date'].includes(key)) return res.status(400).json({ error: 'Invalid key' });
+  const allowed = ['course_start_date', 'harvest_unlocked', 'midcourse_unlocked'];
+  if (!allowed.includes(key)) return res.status(400).json({ error: 'Invalid key' });
   db.setSetting(key, value);
   res.json({ ok: true });
 });
 
+
+// ─── Admin: Students ───────────────────────────────────────────────────────
+
+app.post('/api/admin/users', requireAdmin, (req, res) => {
+  const { name, email, password, role } = req.body;
+  if (!name || !email || !password) return res.status(400).json({ error: 'Name, email, and password are required.' });
+  if (!['student', 'admin'].includes(role)) return res.status(400).json({ error: 'Invalid role.' });
+  try {
+    const result = db.createUser(name.trim(), email.trim().toLowerCase(), password, role);
+    const newUser = db.getUserById(result.lastInsertRowid);
+    res.json({ ok: true, user: newUser });
+  } catch (e) {
+    if (e.message && e.message.includes('UNIQUE')) return res.status(409).json({ error: 'That email is already in use.' });
+    res.status(500).json({ error: 'Failed to create user.' });
+  }
+});
+
+app.put('/api/admin/users/:id', requireAdmin, (req, res) => {
+  const id = parseInt(req.params.id);
+  const { name, email, role, password } = req.body;
+  if (!name || !email) return res.status(400).json({ error: 'Name and email are required.' });
+  if (!['student', 'admin'].includes(role)) return res.status(400).json({ error: 'Invalid role.' });
+  try {
+    db.updateUser(id, name, email, role, password || null);
+    res.json({ ok: true });
+  } catch (e) {
+    if (e.message && e.message.includes('UNIQUE')) return res.status(409).json({ error: 'That email is already in use.' });
+    res.status(500).json({ error: 'Failed to update user.' });
+  }
+});
+
+app.delete('/api/admin/users/:id', requireAdmin, (req, res) => {
+  const id = parseInt(req.params.id);
+  if (id === req.session.user.id) return res.status(400).json({ error: "You can't delete your own account." });
+  db.deleteUser(id);
+  res.json({ ok: true });
+});
+
+app.get('/api/admin/student-data/:id', requireAdmin, (req, res) => {
+  const data = db.getStudentFullData(parseInt(req.params.id));
+  if (!data.user) return res.status(404).json({ error: 'User not found.' });
+  res.json(data);
+});
+
+// ─── Admin: Lessons ────────────────────────────────────────────────────────
+
+app.post('/api/admin/lessons', requireAdmin, (req, res) => {
+  const { slug, title, subtitle, category_tag, content, estimated_read_time } = req.body;
+  if (!title || !slug) return res.status(400).json({ error: 'Title and slug are required.' });
+  try {
+    const result = db.createLesson(slug.trim(), title.trim(), subtitle, category_tag, content, parseInt(estimated_read_time) || 5);
+    res.json({ ok: true, id: result.lastInsertRowid });
+  } catch (e) {
+    if (e.message && e.message.includes('UNIQUE')) return res.status(409).json({ error: 'That slug is already used by another lesson.' });
+    res.status(500).json({ error: 'Failed to create lesson.' });
+  }
+});
+
+app.put('/api/admin/lessons/:id', requireAdmin, (req, res) => {
+  const id = parseInt(req.params.id);
+  const { title, subtitle, category_tag, content, estimated_read_time } = req.body;
+  if (!title) return res.status(400).json({ error: 'Title is required.' });
+  db.updateLesson(id, title.trim(), subtitle, category_tag, content, parseInt(estimated_read_time) || 5);
+  res.json({ ok: true });
+});
+
+app.delete('/api/admin/lessons/:id', requireAdmin, (req, res) => {
+  db.deleteLesson(parseInt(req.params.id));
+  res.json({ ok: true });
+});
+
+app.post('/api/admin/lessons/:id/move', requireAdmin, (req, res) => {
+  const id = parseInt(req.params.id);
+  const { direction } = req.body;
+  const lessons = db.getAllLessonsAdmin();
+  const idx = lessons.findIndex(l => l.id === id);
+  if (idx === -1) return res.status(404).json({ error: 'Lesson not found.' });
+  const swapIdx = direction === 'up' ? idx - 1 : idx + 1;
+  if (swapIdx < 0 || swapIdx >= lessons.length) return res.json({ ok: true });
+  [lessons[idx], lessons[swapIdx]] = [lessons[swapIdx], lessons[idx]];
+  db.updateLessonSortOrders(lessons.map((l, i) => ({ id: l.id, sort_order: (i + 1) * 10 })));
+  res.json({ ok: true });
+});
+
+// ─── Admin: Resources ──────────────────────────────────────────────────────
+
+app.post('/api/admin/resources', requireAdmin, (req, res) => {
+  const { title, description, category_tag, url } = req.body;
+  if (!title) return res.status(400).json({ error: 'Title is required.' });
+  const result = db.createResource(title.trim(), description || '', category_tag || '', url || '', null);
+  res.json({ ok: true, id: result.lastInsertRowid });
+});
+
+app.put('/api/admin/resources/:id', requireAdmin, (req, res) => {
+  const id = parseInt(req.params.id);
+  const { title, description, category_tag, url } = req.body;
+  if (!title) return res.status(400).json({ error: 'Title is required.' });
+  db.updateResource(id, title.trim(), description || '', category_tag || '', url || '');
+  res.json({ ok: true });
+});
+
+app.delete('/api/admin/resources/:id', requireAdmin, (req, res) => {
+  db.deleteResource(parseInt(req.params.id));
+  res.json({ ok: true });
+});
+
 // ─── Helpers ───────────────────────────────────────────────────────────────
+
+function getUnlockState() {
+  // Check date-based logic OR manual DB flags — whichever is true wins
+  const courseStart = db.getSetting('course_start_date');
+  let midcourseDate = false, closingDate = false;
+  if (courseStart) {
+    const daysDiff = Math.floor((Date.now() - new Date(courseStart + 'T00:00:00').getTime()) / 86400000);
+    midcourseDate = daysDiff >= 35;
+    closingDate   = daysDiff >= 77;
+  }
+  return {
+    midcourseUnlocked: midcourseDate || db.getSetting('midcourse_unlocked') === 'true',
+    harvestUnlocked:   closingDate   || db.getSetting('harvest_unlocked')   === 'true'
+  };
+}
 
 function getGreeting() {
   const h = new Date().getHours();
@@ -446,13 +1040,13 @@ function generate12Weeks(startDate) {
 
 function getRotatingQuote() {
   const quotes = [
-    { text: "You already know what you want to say. Let's find it together.", source: "The Creative's Rhythm" },
+    { text: "You already know what you want to say. Let's find it together.", source: "The Creative's Garden" },
     { text: "Visibility that feels like a return to self.", source: "The Meibos Touch" },
-    { text: "You're not bad at marketing. You're just doing it wrong for who you are.", source: "The Creative's Rhythm" },
-    { text: "Nobody creates well from an empty cup.", source: "The Creative's Rhythm" },
-    { text: "Don't wait to be done to show up.", source: "The Creative's Rhythm" },
-    { text: "Curiosity is not a luxury. It's load-bearing infrastructure for your creative life.", source: "The Creative's Rhythm" },
-    { text: "The buffer isn't procrastination. It's wisdom.", source: "The Creative's Rhythm" },
+    { text: "You're not bad at marketing. You're just doing it wrong for who you are.", source: "The Creative's Garden" },
+    { text: "Nobody creates well from an empty cup.", source: "The Creative's Garden" },
+    { text: "Don't wait to be done to show up.", source: "The Creative's Garden" },
+    { text: "Curiosity is not a luxury. It's load-bearing infrastructure for your creative life.", source: "The Creative's Garden" },
+    { text: "The buffer isn't procrastination. It's wisdom.", source: "The Creative's Garden" },
   ];
   const today = new Date();
   const idx = (today.getFullYear() * 365 + today.getMonth() * 31 + today.getDate()) % quotes.length;
@@ -461,5 +1055,5 @@ function getRotatingQuote() {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`\n✨ The Creative's Rhythm is running at http://localhost:${PORT}\n`);
+  console.log(`\n✨ The Creative's Garden is running at http://localhost:${PORT}\n`);
 });

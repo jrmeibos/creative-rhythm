@@ -385,10 +385,10 @@
   border-radius: var(--radius-sm);
 }
 
-.lesson-4c.curiosity { background: rgba(112, 92, 108, 0.08); }
-.lesson-4c.create    { background: rgba(106, 130, 104, 0.1); }
-.lesson-4c.share     { background: rgba(216, 176, 171, 0.18); }
-.lesson-4c.connect   { background: rgba(246, 201, 92, 0.15); }
+.lesson-4c.curiosity { background: rgba(216, 176, 171, 0.18); }
+.lesson-4c.create    { background: rgba(246, 201, 92,  0.15); }
+.lesson-4c.share     { background: rgba(169, 144, 164, 0.10); }
+.lesson-4c.connect   { background: rgba(118, 133, 108, 0.10); }
 
 .lesson-4c-label {
   display: block;
@@ -399,10 +399,10 @@
   margin-bottom: 0.35rem;
 }
 
-.lesson-4c.curiosity .lesson-4c-label { color: var(--color-bloem); }
-.lesson-4c.create    .lesson-4c-label { color: var(--color-understory); }
-.lesson-4c.share     .lesson-4c-label { color: var(--color-curiositys-kiss); }
-.lesson-4c.connect   .lesson-4c-label { color: #8a6f1a; }
+.lesson-4c.curiosity .lesson-4c-label { color: var(--color-curiositys-kiss); }
+.lesson-4c.create    .lesson-4c-label { color: #8a6f1a; }
+.lesson-4c.share     .lesson-4c-label { color: #a990a4; }
+.lesson-4c.connect   .lesson-4c-label { color: var(--color-understory); }
 
 .lesson-4c p {
   font-size: 0.85rem;

@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <%- include('partials/head') %>
+  <link rel="stylesheet" href="/css/onboarding.css">
+</head>
+<body class="ob-body">
+
+  <!-- Progress bar -->
+  <div class="ob-progress" id="ob-progress">
+    <div class="ob-progress-inner">
+      <% for (let i = 1; i <= 4; i++) { %>
+        <div class="ob-dot <%= i === 1 ? 'is-active' : '' %>" id="ob-dot-<%= i %>">
+          <span class="ob-dot-num"><%= i %></span>
+        </div>
+        <% if (i < 4) { %><div class="ob-progress-line" id="ob-line-<%= i %>"></div><% } %>
+      <% } %>
+    </div>
+  </div>
+
+  <!-- ── Step 1: Welcome ───────────────────────────────────────────────── -->
+  <div class="ob-step is-active" id="step-1">
+    <div class="ob-center">
+      <h1 class="ob-title ob-title--hero">Welcome to<br>The Creative's Garden.</h1>
+      <div class="ob-body-text ob-welcome-body">
+        <p>Before you access the course, we'd like to take a snapshot of where you are right now.</p>
+        <p>Every garden begins with a seed — and an honest look at the soil.</p>
+        <p>You'll answer a short self-assessment, then plant three seeds — intentions for what you hope to grow in these 12 weeks.</p>
+        <p>At the end of the course, you'll return to both.<br>The before and after will tell your story.</p>
+      </div>
+      <button class="ob-btn ob-btn--primary" onclick="goToStep(2)">Let's begin →</button>
+    </div>
+  </div>
+
+  <!-- ── Step 2: Self-Assessment ───────────────────────────────────────── -->
+  <div class="ob-step" id="step-2">
+    <div class="ob-content">
+      <h2 class="ob-title">Where are you right now?</h2>
+      <p class="ob-subtitle">There are no right answers. Honest is the point.<br>You'll return to these questions at the end of the course — and see how much has shifted.</p>
+
+      <div class="ob-questions">
+
+        <% questions.forEach(function(q, idx) { %>
+          <div class="ob-question" id="q-block-<%= q.id %>">
+            <div class="ob-q-num">0<%= idx + 1 %></div>
+            <p class="ob-q-text"><%= q.text %></p>
+
+            <% if (q.type === 'choice' || q.type === 'multi') { %>
+              <% if (q.type === 'multi') { %>
+                <p class="ob-multi-note">Choose up to <%= q.max %></p>
+              <% } %>
+              <div class="ob-choices">
+                <% q.choices.forEach(function(c) { %>
+                  <button type="button"
+                    class="ob-choice <%= q.type === 'multi' ? 'ob-multi' : '' %>"
+                    data-group="<%= q.field %>"
+                    data-value="<%= c.val %>">
+                    <span class="ob-choice-val"><%= c.val %></span>
+                    <span class="ob-choice-label"><%= c.label %></span>
+                  </button>
+                <% }); %>
+              </div>
+
+            <% } else if (q.type === 'rating') { %>
+              <p class="ob-rating-scale"><span><%= q.low %></span><span><%= q.high %></span></p>
+              <div class="ob-rating-row">
+                <% for (let i = 1; i <= 10; i++) { %>
+                  <button type="button" class="ob-rating-btn"
+                    data-group="<%= q.field %>" data-value="<%= i %>">
+                    <%= i %>
+                  </button>
+                <% } %>
+              </div>
+
+            <% } else if (q.type === 'text') { %>
+              <textarea class="ob-textarea" data-field="<%= q.field %>"
+                        rows="4" placeholder="<%= q.placeholder %>"></textarea>
+            <% } %>
+          </div>
+        <% }); %>
+
+      </div>
+
+      <p class="ob-error" id="assess-error" hidden>Please answer all questions before continuing.</p>
+      <div class="ob-actions">
+        <button class="ob-btn ob-btn--primary" onclick="submitAssessment()">Continue to Seeds →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Step 3: Seeds ─────────────────────────────────────────────────── -->
+  <div class="ob-step" id="step-3">
+    <div class="ob-content">
+      <h2 class="ob-title">Before we begin,<br>let's plant some seeds.</h2>
+      <p class="ob-subtitle">What are you hoping to grow in these 12 weeks?<br>Start with how you want to feel — the concrete outcomes will follow.</p>
+
+      <div class="ob-example">
+        <p>For example: <em>"I want to feel excited instead of anxious when I open Instagram"</em> might grow into <em>"I post twice a week without burning out or going dark."</em></p>
+      </div>
+
+      <div class="ob-seeds">
+        <% for (let n = 1; n <= 3; n++) { %>
+          <div class="ob-seed-card">
+            <h3 class="ob-seed-title">Seed #<%= n %></h3>
+            <div class="ob-seed-cols">
+              <div class="ob-seed-field">
+                <label class="ob-seed-label">🌱 The feeling</label>
+                <textarea id="s<%= n %>-feeling" class="ob-seed-textarea"
+                          rows="4" placeholder="How do I want to feel?"></textarea>
+              </div>
+              <div class="ob-seed-field">
+                <label class="ob-seed-label">🌿 What it looks like</label>
+                <textarea id="s<%= n %>-looks" class="ob-seed-textarea"
+                          rows="4" placeholder="What might this make possible?"></textarea>
+              </div>
+            </div>
+          </div>
+        <% } %>
+      </div>
+
+      <p class="ob-error" id="seeds-error" hidden>Please fill in all six seed fields before continuing.</p>
+      <div class="ob-actions">
+        <button class="ob-btn ob-btn--primary" id="plant-btn" onclick="submitSeeds()">Plant my seeds 🌱</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Step 4: Done ───────────────────────────────────────────────────── -->
+  <div class="ob-step" id="step-4">
+    <div class="ob-center">
+      <div class="ob-done-icon">🌿</div>
+      <h2 class="ob-title ob-title--hero">You're ready.<br>Let's begin.</h2>
+      <p class="ob-body-text">Your snapshot is saved and your seeds are planted.<br>Now — let's start growing.</p>
+      <button class="ob-btn ob-btn--primary" id="enter-btn" onclick="completeOnboarding()">Enter The Creative's Garden →</button>
+    </div>
+  </div>
+
+  <script>
+    let currentStep = 1;
+    const assessmentData = {};
+
+    // ── Step navigation ────────────────────────────────────────────────────
+    function goToStep(n) {
+      document.getElementById(`step-${currentStep}`).classList.remove('is-active');
+      document.getElementById(`step-${n}`).classList.add('is-active');
+      for (let i = 1; i <= 4; i++) {
+        const dot = document.getElementById(`ob-dot-${i}`);
+        dot.classList.toggle('is-active', i === n);
+        dot.classList.toggle('is-done', i < n);
+      }
+      for (let i = 1; i <= 3; i++) {
+        document.getElementById(`ob-line-${i}`).classList.toggle('is-done', i < n);
+      }
+      currentStep = n;
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    // ── Choice buttons ──────────────────────────────────────────────────────
+    document.querySelectorAll('.ob-choice:not(.ob-multi)').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const group = btn.dataset.group;
+        document.querySelectorAll(`.ob-choice[data-group="${group}"]`)
+          .forEach(b => b.classList.remove('is-selected'));
+        btn.classList.add('is-selected');
+        assessmentData[group] = btn.dataset.value;
+      });
+    });
+
+    document.querySelectorAll('.ob-choice.ob-multi').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const group = btn.dataset.group;
+        const maxSel = 2;
+        const selected = document.querySelectorAll(`.ob-choice[data-group="${group}"].is-selected`);
+        if (btn.classList.contains('is-selected')) {
+          btn.classList.remove('is-selected');
+        } else if (selected.length < maxSel) {
+          btn.classList.add('is-selected');
+        }
+        assessmentData[group] = [...document.querySelectorAll(`.ob-choice[data-group="${group}"].is-selected`)]
+          .map(b => b.dataset.value).join(',');
+      });
+    });
+
+    // ── Rating buttons ──────────────────────────────────────────────────────
+    document.querySelectorAll('.ob-rating-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const group = btn.dataset.group;
+        document.querySelectorAll(`.ob-rating-btn[data-group="${group}"]`)
+          .forEach(b => b.classList.remove('is-selected'));
+        btn.classList.add('is-selected');
+        assessmentData[group] = parseInt(btn.dataset.value);
+      });
+    });
+
+    // ── Text areas ──────────────────────────────────────────────────────────
+    document.querySelectorAll('.ob-textarea').forEach(ta => {
+      ta.addEventListener('input', () => {
+        assessmentData[ta.dataset.field] = ta.value;
+      });
+    });
+
+    // ── Validate & submit assessment ────────────────────────────────────────
+    async function submitAssessment() {
+      const errEl = document.getElementById('assess-error');
+      errEl.hidden = true;
+
+      // Check each question
+      const required = [
+        'q1_choice','q2_rating','q3_choice','q4_rating',
+        'q5_choice','q6_rating','q7_choices','q8_choice',
+        'q9_text','q10_text'
+      ];
+      // Also check textareas directly
+      document.querySelectorAll('.ob-textarea').forEach(ta => {
+        assessmentData[ta.dataset.field] = ta.value.trim();
+      });
+
+      for (const key of required) {
+        const val = assessmentData[key];
+        if (!val && val !== 0) {
+          errEl.hidden = false;
+          const fieldId = key.replace('_choice','').replace('_rating','').replace('_choices','').replace('_text','');
+          document.getElementById(`q-block-${fieldId}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          return;
+        }
+      }
+
+      const res = await fetch('/api/onboarding/assessment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(assessmentData)
+      });
+      if (res.ok) {
+        goToStep(3);
+      } else {
+        errEl.textContent = 'Something went wrong. Please try again.';
+        errEl.hidden = false;
+      }
+    }
+
+    // ── Validate & submit seeds ─────────────────────────────────────────────
+    async function submitSeeds() {
+      const errEl = document.getElementById('seeds-error');
+      errEl.hidden = true;
+
+      const seeds = [1, 2, 3].map(n => ({
+        seed_number: n,
+        feeling: document.getElementById(`s${n}-feeling`).value.trim(),
+        looks_like: document.getElementById(`s${n}-looks`).value.trim()
+      }));
+
+      if (seeds.some(s => !s.feeling || !s.looks_like)) {
+        errEl.hidden = false;
+        return;
+      }
+
+      const btn = document.getElementById('plant-btn');
+      btn.disabled = true;
+      btn.textContent = 'Planting…';
+
+      const res = await fetch('/api/onboarding/seeds', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ seeds })
+      });
+
+      if (res.ok) {
+        btn.textContent = "Your seeds are planted. 🌱 We'll check in together at Week 6 to see how they're growing.";
+        setTimeout(() => goToStep(4), 1200);
+      } else {
+        btn.disabled = false;
+        btn.textContent = 'Plant my seeds 🌱';
+        errEl.textContent = 'Something went wrong. Please try again.';
+        errEl.hidden = false;
+      }
+    }
+
+    // ── Complete onboarding ─────────────────────────────────────────────────
+    async function completeOnboarding() {
+      const btn = document.getElementById('enter-btn');
+      btn.disabled = true;
+      btn.textContent = 'Starting…';
+      const res = await fetch('/api/onboarding/complete', { method: 'POST' });
+      if (res.ok) window.location.href = '/dashboard';
+      else { btn.disabled = false; btn.textContent = 'Enter The Creative\'s Garden →'; }
+    }
+  </script>
+
+</body>
+</html>

@@ -12,7 +12,7 @@
 /* ─── Sidebar ─────────────────────────────────────────────────────────────── */
 
 .sidebar {
-  background: var(--color-bloem);
+  background: var(--color-understory);
   position: fixed;
   top: 0;
   left: 0;
@@ -178,6 +178,29 @@
   margin: 0.5rem 1.5rem;
 }
 
+/* Season in sidebar */
+.sidebar-season-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-top: 0.2rem;
+  text-decoration: none;
+  font-size: 0.68rem;
+  font-weight: 300;
+  color: rgba(242, 238, 227, 0.55);
+  transition: opacity 0.15s;
+  line-height: 1;
+}
+.sidebar-season-link:hover { opacity: 0.8; }
+.sidebar-season-link svg { flex-shrink: 0; }
+.sidebar-season-label { font-style: italic; }
+
+/* Season avatar overrides (sidebar + community) */
+.season-avatar--spring { background: #D8B0AB !important; color: #100F10 !important; }
+.season-avatar--summer { background: #F6C95C !important; color: #100F10 !important; }
+.season-avatar--autumn { background: #D4956A !important; color: #FAFAFA !important; }
+.season-avatar--winter { background: #a990a4 !important; color: #100F10 !important; }
+
 /* Footer / logout */
 .sidebar-footer {
   padding: 0 1.5rem;
@@ -336,10 +359,10 @@
   box-shadow: var(--shadow-md);
 }
 
-.goal-card--curiosity { background: #a990a4;                  color: var(--color-ink-stained); }
-.goal-card--create    { background: var(--color-understory);   color: var(--color-ink-stained); }
-.goal-card--share     { background: var(--color-curiositys-kiss); color: var(--color-ink-stained); }
-.goal-card--connect   { background: var(--color-apricity);     color: var(--color-ink-stained); }
+.goal-card--curiosity { background: var(--color-curiositys-kiss); color: var(--color-ink-stained); }
+.goal-card--create    { background: var(--color-apricity);        color: var(--color-ink-stained); }
+.goal-card--share     { background: #76856C;                      color: var(--color-ink-stained); }
+.goal-card--connect   { background: #a990a4;                      color: var(--color-ink-stained); }
 
 /* ─── Seasonal texture overlays (::before) ───────────────────────────────── */
 
@@ -353,7 +376,7 @@
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
-  opacity: 0.0864;
+  opacity: 0.0605;
   pointer-events: none;
   z-index: 0;
 }
@@ -1157,7 +1180,396 @@
   flex-shrink: 0;
 }
 
+.admin-section-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.admin-add-btn {
+  font-family: var(--font-body);
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--color-bloem);
+  background: var(--color-bloem-light);
+  border: 1.5px solid rgba(112, 92, 108, 0.2);
+  border-radius: 8px;
+  padding: 0.4rem 0.875rem;
+  cursor: pointer;
+  transition: background var(--transition), border-color var(--transition);
+  white-space: nowrap;
+}
+.admin-add-btn:hover {
+  background: rgba(112, 92, 108, 0.14);
+  border-color: var(--color-bloem);
+}
+
+.admin-row-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  flex-shrink: 0;
+}
+
+.admin-btn-icon {
+  font-size: 0.9rem;
+  color: rgba(16, 15, 16, 0.4);
+  background: none;
+  border: none;
+  padding: 0.3rem 0.4rem;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: color var(--transition), background var(--transition);
+  line-height: 1;
+}
+.admin-btn-icon:hover {
+  color: var(--color-bloem);
+  background: var(--color-bloem-light);
+}
+.admin-btn-icon--danger:hover {
+  color: #c0392b;
+  background: rgba(192, 57, 43, 0.08);
+}
+
+.admin-lesson-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem 0.75rem 0.75rem;
+  border-bottom: 1px solid rgba(112, 92, 108, 0.07);
+}
+.admin-lesson-row:last-child { border-bottom: none; }
+
+.admin-lesson-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.admin-lesson-tag {
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-bloem);
+  background: var(--color-bloem-light);
+  border-radius: 4px;
+  padding: 0.1rem 0.4rem;
+  flex-shrink: 0;
+}
+
+.admin-move-btns {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  flex-shrink: 0;
+}
+
+.admin-move-btn {
+  font-size: 0.7rem;
+  color: rgba(16, 15, 16, 0.35);
+  background: none;
+  border: none;
+  padding: 0.1rem 0.25rem;
+  cursor: pointer;
+  border-radius: 4px;
+  line-height: 1;
+  transition: color var(--transition), background var(--transition);
+}
+.admin-move-btn:hover {
+  color: var(--color-bloem);
+  background: var(--color-bloem-light);
+}
+.admin-move-btn--ghost { display: inline-block; visibility: hidden; }
+
+.admin-resource-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem 1.25rem;
+  border-bottom: 1px solid rgba(112, 92, 108, 0.07);
+}
+.admin-resource-row:last-child { border-bottom: none; }
+
+.admin-resource-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.admin-resource-title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-ink-stained);
+}
+
+.admin-resource-desc {
+  font-size: 0.75rem;
+  font-weight: 300;
+  color: rgba(16, 15, 16, 0.5);
+}
+
+.admin-resource-url {
+  font-size: 0.72rem;
+  font-weight: 300;
+  color: var(--color-bloem);
+  text-decoration: none;
+  flex-shrink: 0;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.admin-resource-url:hover { text-decoration: underline; }
+
+.admin-empty {
+  font-size: 0.85rem;
+  font-weight: 300;
+  color: rgba(16, 15, 16, 0.4);
+  padding: 1rem 1.25rem;
+  margin: 0;
+}
+
+/* ─── Admin dialogs ───────────────────────────────────────────────────────── */
+
+.admin-dialog {
+  border: none;
+  border-radius: var(--radius-lg);
+  padding: 2rem;
+  width: min(480px, 92vw);
+  box-shadow: 0 8px 48px rgba(16, 15, 16, 0.16);
+  background: var(--color-blank-page);
+  font-family: var(--font-body);
+}
+.admin-dialog--wide {
+  width: min(680px, 94vw);
+}
+.admin-dialog::backdrop {
+  background: rgba(16, 15, 16, 0.35);
+  backdrop-filter: blur(2px);
+}
+
+.admin-dialog-title {
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: 400;
+  color: var(--color-ink-stained);
+  margin: 0 0 1.5rem;
+}
+
+.admin-form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin-bottom: 1rem;
+}
+
+.admin-form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.admin-form-label {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--color-ink-stained);
+}
+
+.admin-form-hint {
+  font-weight: 300;
+  color: rgba(16, 15, 16, 0.45);
+  font-size: 0.75rem;
+}
+
+.admin-input {
+  font-family: var(--font-body);
+  font-size: 0.875rem;
+  font-weight: 300;
+  color: var(--color-ink-stained);
+  background: var(--color-pearl);
+  border: 1.5px solid rgba(112, 92, 108, 0.2);
+  border-radius: 8px;
+  padding: 0.5rem 0.75rem;
+  outline: none;
+  width: 100%;
+  box-sizing: border-box;
+  transition: border-color var(--transition);
+}
+.admin-input:focus { border-color: var(--color-bloem); }
+
+.admin-input--short { width: 100px; }
+
+.admin-select { cursor: pointer; }
+
+.admin-textarea {
+  resize: vertical;
+  min-height: 120px;
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+
+.admin-dialog-error {
+  font-size: 0.78rem;
+  font-weight: 400;
+  color: #c0392b;
+  margin: 0.25rem 0 0.75rem;
+}
+
+.admin-dialog-footer {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+}
+
+.admin-dialog-cancel {
+  font-family: var(--font-body);
+  font-size: 0.8rem;
+  font-weight: 400;
+  color: rgba(16, 15, 16, 0.5);
+  background: none;
+  border: none;
+  padding: 0.45rem 0.75rem;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: color var(--transition), background var(--transition);
+}
+.admin-dialog-cancel:hover {
+  color: var(--color-ink-stained);
+  background: var(--color-new-growth);
+}
+
+/* ─── Season selector ───────────────────────────────────────────────────── */
+
+.season-first-prompt {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 1.05rem;
+  font-weight: 400;
+  color: var(--color-bloem);
+  margin: 0 0 1rem;
+}
+
+.season-cards {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.875rem;
+}
+
+.season-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0;
+  padding: 1.125rem 1.125rem 1rem;
+  border-radius: var(--radius-md);
+  border: 1.5px solid transparent;
+  cursor: pointer;
+  text-align: left;
+  filter: grayscale(1);
+  opacity: 0.6;
+  transition: transform 0.25s ease, box-shadow 0.25s ease, background 0.25s ease,
+              border-color 0.25s ease, padding 0.2s ease,
+              filter 0.25s ease, opacity 0.25s ease;
+  font-family: var(--font-body);
+}
+
+.season-card--spring { background: rgba(216, 176, 171, 0.10); }
+.season-card--summer { background: rgba(246, 201, 92,  0.10); }
+.season-card--autumn { background: rgba(118, 133, 108, 0.12); }
+.season-card--winter { background: rgba(169, 144, 164, 0.10); }
+
+.season-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 18px rgba(16, 15, 16, 0.09);
+  filter: grayscale(0);
+  opacity: 1;
+}
+
+.season-card.is-selected {
+  filter: none;
+  opacity: 1;
+}
+
+.season-card.is-selected.season-card--spring { background: rgba(216, 176, 171, 0.22); border-color: #D8B0AB; }
+.season-card.is-selected.season-card--summer { background: rgba(246, 201, 92,  0.25); border-color: #F6C95C; }
+.season-card.is-selected.season-card--autumn { background: rgba(118, 133, 108, 0.22); border-color: #76856C; }
+.season-card.is-selected.season-card--winter { background: rgba(169, 144, 164, 0.22); border-color: #a990a4; }
+
+.season-card-emoji {
+  display: block;
+  margin-bottom: 0.625rem;
+  line-height: 0;
+}
+
+.season-card-name {
+  font-family: var(--font-display);
+  font-size: 1rem;
+  font-weight: 400;
+  color: var(--color-ink-stained);
+  display: block;
+  margin-bottom: 0.2rem;
+}
+
+.season-card-category {
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(16, 15, 16, 0.42);
+  display: block;
+  margin-bottom: 0.6rem;
+}
+
+.season-card-desc {
+  font-size: 0.9375rem;
+  font-weight: 300;
+  color: rgba(16, 15, 16, 0.70);
+  line-height: 1.55;
+  display: block;
+  max-height: 0;
+  overflow: hidden;
+  opacity: 0;
+  margin-top: 0;
+  transition: max-height 0.2s ease, opacity 0.2s ease, margin-top 0.2s ease;
+}
+.season-card:hover .season-card-desc,
+.season-card.is-selected .season-card-desc {
+  max-height: 6rem;
+  opacity: 1;
+  margin-top: 0.5rem;
+}
+
+.season-card-check {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.875rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--color-ink-stained);
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.season-card.is-selected .season-card-check { opacity: 1; }
+
 /* ─── Responsive ─────────────────────────────────────────────────────────── */
+
+@media (max-width: 900px) {
+  .season-cards { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 560px) {
+  .season-cards { grid-template-columns: 1fr 1fr; gap: 0.625rem; }
+  .season-card { padding: 1rem 0.875rem; }
+}
 
 @media (max-width: 768px) {
   .sidebar {
@@ -1204,4 +1616,355 @@
   .goals-grid {
     grid-template-columns: 1fr;
   }
+}
+
+/* ─── Admin: Course Controls ─────────────────────────────────────────────── */
+
+.admin-toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  padding: 0.25rem 0;
+}
+
+.admin-toggle-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.admin-toggle-text strong {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--color-ink-stained);
+}
+
+.admin-toggle-text span {
+  font-size: 0.78rem;
+  font-weight: 300;
+  color: rgba(16, 15, 16, 0.5);
+}
+
+.admin-toggle-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: none;
+  border: none;
+  font-family: var(--font-body);
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: rgba(16, 15, 16, 0.4);
+  cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
+  transition: color var(--transition);
+}
+
+.admin-toggle-btn.is-active { color: var(--color-understory); }
+
+.admin-toggle-track {
+  width: 40px;
+  height: 22px;
+  background: rgba(16, 15, 16, 0.15);
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  padding: 2px;
+  transition: background var(--transition);
+}
+
+.admin-toggle-btn.is-active .admin-toggle-track { background: var(--color-understory); }
+
+.admin-toggle-thumb {
+  width: 18px;
+  height: 18px;
+  background: white;
+  border-radius: 50%;
+  transition: transform var(--transition);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+
+.admin-toggle-btn.is-active .admin-toggle-thumb { transform: translateX(18px); }
+
+/* ─── Admin: Student Seeds ───────────────────────────────────────────────── */
+
+.admin-seeds-user-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.875rem;
+  padding: 1rem;
+  border-bottom: 1px solid rgba(112, 92, 108, 0.07);
+}
+
+.admin-seeds-user-row:last-child { border-bottom: none; }
+
+.admin-seeds-user-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.admin-seeds-name {
+  display: block;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--color-ink-stained);
+  margin-bottom: 0.5rem;
+}
+
+.admin-seeds-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.625rem;
+}
+
+.admin-seed-item {
+  background: rgba(112, 92, 108, 0.04);
+  border-radius: 10px;
+  padding: 0.625rem 0.75rem;
+}
+
+.admin-seed-num {
+  display: block;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-bloem);
+  opacity: 0.65;
+  margin-bottom: 0.3rem;
+}
+
+.admin-seed-text {
+  font-size: 0.78rem;
+  font-weight: 300;
+  color: var(--color-ink-stained);
+  line-height: 1.5;
+  margin-bottom: 0.2rem;
+}
+
+.admin-seed-empty {
+  color: rgba(16, 15, 16, 0.3);
+  font-style: italic;
+}
+
+@media (max-width: 680px) {
+  .admin-seeds-grid { grid-template-columns: 1fr; }
+  .admin-toggle-row { flex-direction: column; align-items: flex-start; gap: 0.625rem; }
+}
+
+/* ─── Admin: Assessment Table ────────────────────────────────────────────── */
+
+.admin-assess-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.admin-assess-table th {
+  text-align: left;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(16,15,16,0.4);
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid rgba(112,92,108,0.1);
+}
+.admin-assess-table td {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid rgba(112,92,108,0.07);
+  font-size: 0.85rem;
+  font-weight: 300;
+  color: var(--color-ink-stained);
+  vertical-align: middle;
+}
+.admin-assess-table tr:last-child td { border-bottom: none; }
+.assess-name-cell { display: flex; align-items: center; gap: 0.625rem; font-weight: 500; }
+.assess-status { font-size: 0.78rem; font-weight: 600; }
+.assess-status--done { color: var(--color-understory); }
+.assess-status--pending { color: rgba(16,15,16,0.3); font-weight: 300; }
+.assess-status--partial { color: var(--color-apricity); filter: brightness(0.8); }
+
+/* ─── Sidebar avatar link + photo ───────────────────────────────────────── */
+.sidebar-avatar-link {
+  display: block;
+  text-decoration: none;
+  border-radius: 50%;
+  flex-shrink: 0;
+  transition: filter 0.15s;
+}
+.sidebar-avatar-link:hover { filter: brightness(1.12); }
+.sidebar-avatar--photo {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  object-fit: cover;
+  display: block;
+}
+.sidebar-avatar--sm.sidebar-avatar--photo {
+  width: 30px;
+  height: 30px;
+}
+
+/* ─── Admin: Course Simulation ───────────────────────────────────────────── */
+.admin-sim-divider {
+  margin: 1.5rem -1.5rem 0;
+  border: none;
+  border-top: 1px solid rgba(112,92,108,0.12);
+}
+.admin-sim-box {
+  margin-top: 1.25rem;
+  padding: 1.25rem 1.5rem;
+  background: var(--color-new-growth);
+  border-radius: 12px;
+}
+.admin-sim-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+}
+.admin-sim-title {
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  font-weight: 400;
+  margin: 0 0 0.2rem;
+  color: var(--color-ink-stained);
+}
+.admin-sim-subtitle {
+  font-size: 0.78rem;
+  font-weight: 300;
+  color: rgba(16,15,16,0.5);
+  margin: 0;
+  line-height: 1.5;
+}
+.admin-sim-badge {
+  flex-shrink: 0;
+  font-size: 0.7rem;
+  font-weight: 300;
+  color: rgba(16,15,16,0.45);
+  background: rgba(16,15,16,0.07);
+  border-radius: 20px;
+  padding: 0.2rem 0.6rem;
+  white-space: nowrap;
+}
+.admin-sim-status {
+  font-size: 0.8rem;
+  font-weight: 300;
+  color: rgba(16,15,16,0.55);
+  margin: 0 0 1rem;
+}
+.admin-sim-status strong {
+  font-weight: 600;
+  color: var(--color-bloem);
+}
+.admin-sim-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.admin-sim-btn {
+  padding: 0.45rem 1rem;
+  border-radius: 20px;
+  border: 1.5px solid var(--color-bloem);
+  background: transparent;
+  color: var(--color-bloem);
+  font-family: var(--font-body);
+  font-size: 0.8rem;
+  font-weight: 400;
+  cursor: pointer;
+  transition: background 0.18s, color 0.18s, border-color 0.18s;
+}
+.admin-sim-btn:hover { background: rgba(112,92,108,0.08); }
+.admin-sim-btn--active {
+  background: var(--color-bloem);
+  color: #FAFAFA;
+}
+.admin-sim-btn--active:hover {
+  background: var(--color-bloem-mid);
+  border-color: var(--color-bloem-mid);
+  color: #FAFAFA;
+}
+.admin-sim-btn--reset {
+  border-color: rgba(16,15,16,0.25);
+  color: rgba(16,15,16,0.5);
+}
+.admin-sim-btn--reset:hover { background: rgba(16,15,16,0.06); }
+.admin-sim-btn--reset.admin-sim-btn--active {
+  background: rgba(16,15,16,0.12);
+  border-color: rgba(16,15,16,0.3);
+  color: var(--color-ink-stained);
+}
+.admin-sim-btn--reset.admin-sim-btn--active:hover {
+  background: rgba(16,15,16,0.18);
+}
+
+.admin-sim-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.admin-sim-row-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid rgba(112,92,108,0.08);
+}
+.admin-sim-row-item:last-child { border-bottom: none; padding-bottom: 0; }
+
+.admin-sim-row-label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+.admin-sim-row-label strong {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-ink-stained);
+}
+
+.admin-sim-row-hint {
+  font-size: 0.75rem;
+  font-weight: 300;
+  color: rgba(16,15,16,0.45);
+}
+
+.admin-sim-row-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.admin-sim-active {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--color-understory);
+}
+
+/* ─── Sidebar profile link ───────────────────────────────────────────────── */
+.sidebar-profile-link {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.5rem 0;
+  text-decoration: none;
+  margin-bottom: 0.75rem;
+  transition: opacity var(--transition);
+}
+.sidebar-profile-link:hover { opacity: 0.8; }
+.sidebar-avatar--sm {
+  width: 26px !important;
+  height: 26px !important;
+  font-size: 0.72rem !important;
+  flex-shrink: 0;
+}
+.sidebar-profile-name {
+  font-size: 0.82rem;
+  font-weight: 400;
+  color: rgba(255,255,255,0.75);
 }

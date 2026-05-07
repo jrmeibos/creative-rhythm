@@ -1,0 +1,360 @@
+/* ═══════════════════════════════════════════════════════════
+   Account Page
+   ═══════════════════════════════════════════════════════════ */
+
+/* ─── Page header ────────────────────────────────────────────────────────── */
+.acct-page-title {
+  font-family: var(--font-display);
+  font-size: 2rem;
+  font-weight: 400;
+  color: var(--color-ink-stained);
+  margin-bottom: 0.2rem;
+}
+
+.acct-page-subtitle {
+  font-size: 0.875rem;
+  font-weight: 300;
+  color: rgba(16,15,16,0.5);
+}
+
+/* ─── Card ───────────────────────────────────────────────────────────────── */
+.acct-card {
+  background: var(--color-blank-page);
+  border-radius: 16px;
+  border: 1px solid rgba(112,92,108,0.08);
+  padding: 1.75rem;
+}
+
+.acct-card--danger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+/* ─── Section subtitle ───────────────────────────────────────────────────── */
+.acct-section-subtitle {
+  font-size: 0.82rem;
+  font-weight: 300;
+  color: rgba(16,15,16,0.5);
+  margin-bottom: 1.25rem;
+}
+
+/* ─── Photo section ──────────────────────────────────────────────────────── */
+.acct-photo-layout {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.acct-avatar-wrap { flex-shrink: 0; }
+
+.acct-avatar {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-display);
+  font-size: 1.7rem;
+  font-weight: 400;
+  background: var(--color-curiositys-kiss);
+  color: var(--color-ink-stained);
+  flex-shrink: 0;
+}
+
+.acct-avatar--photo {
+  object-fit: cover;
+  display: block;
+}
+
+.acct-avatar--initial { }
+
+.acct-photo-controls {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.35rem;
+}
+
+.acct-upload-label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-bloem);
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-color: rgba(112,92,108,0.3);
+  text-underline-offset: 3px;
+  transition: color 0.15s;
+}
+.acct-upload-label:hover { color: var(--color-bloem-mid); }
+
+.acct-remove-link {
+  font-size: 0.8rem;
+  font-weight: 300;
+  color: rgba(16,15,16,0.4);
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  transition: color 0.15s;
+}
+.acct-remove-link:hover { color: #D4956A; }
+
+.acct-photo-hint {
+  font-size: 0.72rem;
+  font-weight: 300;
+  color: rgba(16,15,16,0.35);
+}
+
+.acct-preview-section {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  flex-wrap: wrap;
+  margin-top: 1.25rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid rgba(112,92,108,0.1);
+}
+
+.acct-preview-img {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.acct-preview-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+/* ─── Forms ──────────────────────────────────────────────────────────────── */
+.acct-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+}
+
+.acct-form--inline {
+  max-width: 400px;
+}
+
+.acct-field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.acct-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: rgba(16,15,16,0.65);
+  letter-spacing: 0.02em;
+}
+
+.acct-field-hint {
+  font-size: 0.72rem;
+  font-weight: 300;
+  color: rgba(16,15,16,0.4);
+  margin: 0;
+  line-height: 1.4;
+}
+
+.acct-input {
+  background: var(--color-pearl);
+  border: 1px solid rgba(112,92,108,0.2);
+  border-radius: 8px;
+  padding: 0.6rem 0.8rem;
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  font-weight: 300;
+  color: var(--color-ink-stained);
+  width: 100%;
+  max-width: 420px;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  outline: none;
+  appearance: none;
+}
+.acct-input:focus {
+  border-color: var(--color-bloem);
+  box-shadow: 0 0 0 3px rgba(112,92,108,0.1);
+}
+
+.acct-select { cursor: pointer; }
+
+.acct-form-footer {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 0.25rem;
+}
+
+/* ─── Buttons ────────────────────────────────────────────────────────────── */
+.acct-save-btn {
+  background: var(--color-bloem);
+  color: #FAFAFA;
+  border: none;
+  border-radius: 8px;
+  padding: 0.6rem 1.5rem;
+  font-family: var(--font-body);
+  font-size: 0.875rem;
+  font-weight: 400;
+  cursor: pointer;
+  transition: opacity 0.15s;
+  flex-shrink: 0;
+}
+.acct-save-btn:hover { opacity: 0.85; }
+.acct-save-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.acct-text-btn {
+  background: none;
+  border: none;
+  font-family: var(--font-body);
+  font-size: 0.875rem;
+  font-weight: 300;
+  color: rgba(16,15,16,0.45);
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.acct-text-btn:hover { color: rgba(16,15,16,0.7); }
+
+/* ─── Status messages ────────────────────────────────────────────────────── */
+.acct-status {
+  font-size: 0.82rem;
+  font-weight: 400;
+}
+.acct-status--ok    { color: var(--color-understory); }
+.acct-status--error { color: #D4956A; }
+
+/* ─── Toggle rows ────────────────────────────────────────────────────────── */
+.acct-toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 0;
+  border-bottom: 1px solid rgba(112,92,108,0.08);
+}
+.acct-toggle-row--last { border-bottom: none; padding-bottom: 0; }
+
+.acct-toggle-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+.acct-toggle-text strong {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--color-ink-stained);
+}
+.acct-toggle-text span {
+  font-size: 0.78rem;
+  font-weight: 300;
+  color: rgba(16,15,16,0.5);
+  line-height: 1.4;
+}
+
+.acct-toggle-right {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  flex-shrink: 0;
+}
+
+.acct-toggle-saved {
+  font-size: 0.72rem;
+  font-weight: 400;
+  color: var(--color-understory);
+  white-space: nowrap;
+}
+
+/* Toggle switch */
+.acct-toggle {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.acct-toggle-track {
+  display: flex;
+  align-items: center;
+  width: 46px;
+  height: 26px;
+  border-radius: 13px;
+  padding: 2px;
+  background: #D5D5D5;
+  transition: background 0.2s;
+}
+.acct-toggle[aria-pressed="true"] .acct-toggle-track {
+  background: var(--color-bloem);
+}
+.acct-toggle-thumb {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+  transition: transform 0.2s;
+  flex-shrink: 0;
+}
+.acct-toggle[aria-pressed="true"] .acct-toggle-thumb {
+  transform: translateX(20px);
+}
+
+/* ─── Danger zone ────────────────────────────────────────────────────────── */
+.acct-danger-title {
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  font-weight: 400;
+  color: #D4956A;
+  margin: 0;
+}
+
+.acct-signout-btn {
+  display: inline-block;
+  padding: 0.55rem 1.5rem;
+  border: 1.5px solid #D4956A;
+  color: #D4956A;
+  background: transparent;
+  border-radius: 8px;
+  font-family: var(--font-body);
+  font-size: 0.875rem;
+  font-weight: 400;
+  text-decoration: none;
+  transition: background 0.15s, color 0.15s;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.acct-signout-btn:hover {
+  background: rgba(212,149,106,0.08);
+}
+
+/* ─── Data note ──────────────────────────────────────────────────────────── */
+.acct-data-note {
+  text-align: center;
+  font-size: 0.75rem;
+  font-weight: 300;
+  color: rgba(16,15,16,0.3);
+  line-height: 1.6;
+  padding: 0.5rem 1rem 2rem;
+}
+
+/* ─── Mobile ─────────────────────────────────────────────────────────────── */
+@media (max-width: 680px) {
+  .acct-card { padding: 1.25rem; }
+  .acct-photo-layout { gap: 1rem; }
+  .acct-input { max-width: 100%; }
+  .acct-form--inline { max-width: 100%; }
+  .acct-toggle-row { flex-wrap: wrap; }
+  .acct-card--danger { flex-direction: column; align-items: flex-start; }
+}

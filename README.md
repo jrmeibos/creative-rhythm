@@ -1,4 +1,4 @@
-# The Creative's Rhythm
+# The Creative's Garden
 
 Soul-Led Visibility for Artists — a course platform for The Meibos Touch.
 

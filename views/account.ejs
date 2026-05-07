@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <%- include('partials/head') %>
+  <link rel="stylesheet" href="/css/dashboard.css">
+  <link rel="stylesheet" href="/css/account.css">
+</head>
+<body class="app-body">
+
+  <div class="app-layout">
+    <%- include('partials/sidebar') %>
+
+    <main class="main-content">
+
+      <header class="dash-header">
+        <div>
+          <h1 class="acct-page-title">My Account</h1>
+          <p class="acct-page-subtitle">Manage your personal details and preferences.</p>
+        </div>
+      </header>
+
+      <!-- ── Profile Photo ─────────────────────────────────────────────────── -->
+      <section class="dash-section">
+        <div class="dash-section-header">
+          <h2 class="dash-section-title">Your Photo</h2>
+        </div>
+        <div class="acct-card">
+          <div class="acct-photo-layout">
+            <div class="acct-avatar-wrap" id="acct-avatar-wrap">
+              <% if (profile.profile_photo) { %>
+                <img src="<%= profile.profile_photo %>" class="acct-avatar acct-avatar--photo" id="current-photo" alt="">
+              <% } else { %>
+                <div class="acct-avatar acct-avatar--initial<%= profile.current_season ? ' season-avatar--' + profile.current_season : '' %>" id="current-initial">
+                  <%= profile.avatar_initial || profile.name.charAt(0).toUpperCase() %>
+                </div>
+              <% } %>
+            </div>
+            <div class="acct-photo-controls">
+              <label class="acct-upload-label" for="photo-input">Upload a photo</label>
+              <input type="file" id="photo-input" accept="image/jpeg,image/png,image/gif" hidden>
+              <% if (profile.profile_photo) { %>
+                <button class="acct-remove-link" type="button" id="remove-photo-btn" onclick="removePhoto()">Remove photo</button>
+              <% } %>
+              <p class="acct-photo-hint">JPG, PNG, or GIF · Max 5MB</p>
+            </div>
+          </div>
+          <div id="photo-preview-wrap" hidden>
+            <div class="acct-preview-section">
+              <img id="photo-preview" class="acct-preview-img" alt="Preview">
+              <div class="acct-preview-actions">
+                <button class="acct-save-btn" type="button" id="save-photo-btn" onclick="savePhoto()">Save Photo</button>
+                <button class="acct-text-btn" type="button" onclick="cancelPhotoPreview()">Cancel</button>
+              </div>
+            </div>
+          </div>
+          <p class="acct-status acct-status--error" id="photo-error" hidden></p>
+        </div>
+      </section>
+
+      <!-- ── Personal Details ──────────────────────────────────────────────── -->
+      <section class="dash-section">
+        <div class="dash-section-header">
+          <h2 class="dash-section-title">Your Details</h2>
+        </div>
+        <div class="acct-card">
+          <div class="acct-form">
+            <div class="acct-field-group">
+              <label class="acct-label" for="details-name">Full Name</label>
+              <input class="acct-input" type="text" id="details-name" value="<%= profile.name %>" autocomplete="name">
+            </div>
+            <div class="acct-field-group">
+              <label class="acct-label" for="details-email">Email</label>
+              <input class="acct-input" type="email" id="details-email" value="<%= profile.email %>" autocomplete="email">
+            </div>
+            <div class="acct-form-footer">
+              <button class="acct-save-btn" type="button" onclick="saveDetails()">Update Details</button>
+              <span class="acct-status" id="details-status"></span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── Change Password ───────────────────────────────────────────────── -->
+      <section class="dash-section">
+        <div class="dash-section-header">
+          <h2 class="dash-section-title">Change Password</h2>
+        </div>
+        <div class="acct-card">
+          <div class="acct-form">
+            <div class="acct-field-group">
+              <label class="acct-label" for="pw-current">Current Password</label>
+              <input class="acct-input" type="password" id="pw-current" autocomplete="current-password">
+            </div>
+            <div class="acct-field-group">
+              <label class="acct-label" for="pw-new">New Password</label>
+              <input class="acct-input" type="password" id="pw-new" autocomplete="new-password">
+              <p class="acct-field-hint">At least 8 characters with one number or special character.</p>
+            </div>
+            <div class="acct-field-group">
+              <label class="acct-label" for="pw-confirm">Confirm New Password</label>
+              <input class="acct-input" type="password" id="pw-confirm" autocomplete="new-password">
+            </div>
+            <div class="acct-form-footer">
+              <button class="acct-save-btn" type="button" onclick="savePassword()">Update Password</button>
+              <span class="acct-status" id="pw-status"></span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── Your Season ───────────────────────────────────────────────────── -->
+      <section class="dash-section">
+        <div class="dash-section-header">
+          <h2 class="dash-section-title">Your Current Season</h2>
+        </div>
+        <div class="acct-card">
+          <div class="season-cards">
+            <% const seasonMeta = {
+              spring: { name: 'Spring',  category: 'Curiosity', desc: 'Feed your artist\'s soul' },
+              summer: { name: 'Summer',  category: 'Create',    desc: 'Make the thing' },
+              autumn: { name: 'Autumn',  category: 'Share',     desc: 'Put it into the world' },
+              winter: { name: 'Winter',  category: 'Connect',   desc: 'Reach outward' }
+            }; %>
+            <% for (const [s, meta] of Object.entries(seasonMeta)) { %>
+              <button class="season-card season-card--<%= s %><%= profile.current_season === s ? ' is-selected' : '' %>"
+                      data-season="<%= s %>" type="button">
+                <span class="season-card-emoji">
+                  <%- include('partials/season-icon', { season: s, size: 36 }) %>
+                </span>
+                <span class="season-card-category"><%= meta.category %></span>
+                <span class="season-card-name"><%= meta.name %></span>
+                <span class="season-card-desc"><%= meta.desc %></span>
+                <span class="season-card-check" aria-hidden="true">✓</span>
+              </button>
+            <% } %>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── Timezone ──────────────────────────────────────────────────────── -->
+      <section class="dash-section">
+        <div class="dash-section-header">
+          <h2 class="dash-section-title">Your Timezone</h2>
+        </div>
+        <div class="acct-card">
+          <div class="acct-form acct-form--inline">
+            <div class="acct-field-group">
+              <label class="acct-label" for="timezone-select">Timezone</label>
+              <select class="acct-input acct-select" id="timezone-select">
+                <% for (const tz of timezones) { %>
+                  <option value="<%= tz.value %>"<%= (profile.timezone || 'America/Denver') === tz.value ? ' selected' : '' %>>
+                    <%= tz.label %>
+                  </option>
+                <% } %>
+              </select>
+            </div>
+            <div class="acct-form-footer">
+              <button class="acct-save-btn" type="button" onclick="saveTimezone()">Save Timezone</button>
+              <span class="acct-status" id="tz-status"></span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── Notifications ─────────────────────────────────────────────────── -->
+      <section class="dash-section">
+        <div class="dash-section-header">
+          <h2 class="dash-section-title">Notifications</h2>
+        </div>
+        <div class="acct-card">
+          <p class="acct-section-subtitle">Choose what you'd like to hear about.</p>
+
+          <div class="acct-toggle-row">
+            <div class="acct-toggle-text">
+              <strong>New Field Notes</strong>
+              <span>Get notified when new content is published</span>
+            </div>
+            <div class="acct-toggle-right">
+              <span class="acct-toggle-saved" id="saved-notify_new_fieldnotes" hidden>Saved ✓</span>
+              <button class="acct-toggle" id="toggle-notify_new_fieldnotes"
+                      aria-pressed="<%= profile.notify_new_fieldnotes !== 0 ? 'true' : 'false' %>"
+                      type="button" onclick="togglePref(this, 'notify_new_fieldnotes')">
+                <span class="acct-toggle-track"><span class="acct-toggle-thumb"></span></span>
+              </button>
+            </div>
+          </div>
+
+          <div class="acct-toggle-row">
+            <div class="acct-toggle-text">
+              <strong>Community Activity</strong>
+              <span>Get notified when someone posts in the community</span>
+            </div>
+            <div class="acct-toggle-right">
+              <span class="acct-toggle-saved" id="saved-notify_community" hidden>Saved ✓</span>
+              <button class="acct-toggle" id="toggle-notify_community"
+                      aria-pressed="<%= profile.notify_community !== 0 ? 'true' : 'false' %>"
+                      type="button" onclick="togglePref(this, 'notify_community')">
+                <span class="acct-toggle-track"><span class="acct-toggle-thumb"></span></span>
+              </button>
+            </div>
+          </div>
+
+          <div class="acct-toggle-row acct-toggle-row--last">
+            <div class="acct-toggle-text">
+              <strong>Weekly Reminder</strong>
+              <span>A gentle nudge to set your weekly intentions every Monday</span>
+            </div>
+            <div class="acct-toggle-right">
+              <span class="acct-toggle-saved" id="saved-notify_weekly_reminder" hidden>Saved ✓</span>
+              <button class="acct-toggle" id="toggle-notify_weekly_reminder"
+                      aria-pressed="<%= profile.notify_weekly_reminder !== 0 ? 'true' : 'false' %>"
+                      type="button" onclick="togglePref(this, 'notify_weekly_reminder')">
+                <span class="acct-toggle-track"><span class="acct-toggle-thumb"></span></span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── Privacy ───────────────────────────────────────────────────────── -->
+      <section class="dash-section">
+        <div class="dash-section-header">
+          <h2 class="dash-section-title">Privacy</h2>
+        </div>
+        <div class="acct-card">
+          <p class="acct-section-subtitle">Control what others in the course can see.</p>
+
+          <div class="acct-toggle-row">
+            <div class="acct-toggle-text">
+              <strong>Show my weekly intentions to the community</strong>
+              <span>Your goal status dots are visible on the community page</span>
+            </div>
+            <div class="acct-toggle-right">
+              <span class="acct-toggle-saved" id="saved-community_goals_public" hidden>Saved ✓</span>
+              <button class="acct-toggle" id="toggle-community_goals_public"
+                      aria-pressed="<%= profile.community_goals_public !== 0 ? 'true' : 'false' %>"
+                      type="button" onclick="togglePref(this, 'community_goals_public')">
+                <span class="acct-toggle-track"><span class="acct-toggle-thumb"></span></span>
+              </button>
+            </div>
+          </div>
+
+          <div class="acct-toggle-row acct-toggle-row--last">
+            <div class="acct-toggle-text">
+              <strong>Show my current season to the community</strong>
+              <span>Your season icon appears next to your name on the community page</span>
+            </div>
+            <div class="acct-toggle-right">
+              <span class="acct-toggle-saved" id="saved-community_season_public" hidden>Saved ✓</span>
+              <button class="acct-toggle" id="toggle-community_season_public"
+                      aria-pressed="<%= profile.community_season_public !== 0 ? 'true' : 'false' %>"
+                      type="button" onclick="togglePref(this, 'community_season_public')">
+                <span class="acct-toggle-track"><span class="acct-toggle-thumb"></span></span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── Sign Out ──────────────────────────────────────────────────────── -->
+      <section class="dash-section">
+        <div class="acct-card acct-card--danger">
+          <h2 class="acct-danger-title">Sign Out</h2>
+          <a href="/logout" class="acct-signout-btn">Sign Out</a>
+        </div>
+      </section>
+
+      <!-- ── Data Note ─────────────────────────────────────────────────────── -->
+      <p class="acct-data-note">
+        Want a copy of your data or need to delete your account?
+        Contact your curator.
+      </p>
+
+    </main>
+  </div>
+
+  <script>
+    // ── Photo ──────────────────────────────────────────────────────────────────
+    document.getElementById('photo-input').addEventListener('change', function() {
+      const file = this.files[0];
+      if (!file) return;
+      const url = URL.createObjectURL(file);
+      document.getElementById('photo-preview').src = url;
+      document.getElementById('photo-preview-wrap').hidden = false;
+    });
+
+    async function savePhoto() {
+      const file = document.getElementById('photo-input').files[0];
+      if (!file) return;
+      const btn = document.getElementById('save-photo-btn');
+      btn.disabled = true;
+      btn.textContent = 'Saving…';
+      const errEl = document.getElementById('photo-error');
+      errEl.hidden = true;
+
+      const formData = new FormData();
+      formData.append('photo', file);
+      const res = await fetch('/api/account/photo', { method: 'POST', body: formData });
+      const data = await res.json();
+      if (res.ok) {
+        window.location.reload();
+      } else {
+        btn.disabled = false;
+        btn.textContent = 'Save Photo';
+        errEl.textContent = data.error;
+        errEl.hidden = false;
+      }
+    }
+
+    async function removePhoto() {
+      if (!confirm('Remove your profile photo?')) return;
+      const res = await fetch('/api/account/photo', { method: 'DELETE' });
+      if (res.ok) window.location.reload();
+    }
+
+    function cancelPhotoPreview() {
+      document.getElementById('photo-input').value = '';
+      document.getElementById('photo-preview-wrap').hidden = true;
+    }
+
+    // ── Personal Details ───────────────────────────────────────────────────────
+    async function saveDetails() {
+      const name  = document.getElementById('details-name').value.trim();
+      const email = document.getElementById('details-email').value.trim();
+      const statusEl = document.getElementById('details-status');
+      if (!name || !email) {
+        showStatus(statusEl, 'Name and email are required.', true);
+        return;
+      }
+      const res = await fetch('/api/account/details', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, email })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        showStatus(statusEl, 'Details updated. ✓', false);
+        // Update sidebar name immediately
+        document.querySelectorAll('.sidebar-user-name').forEach(el => el.textContent = name);
+      } else {
+        showStatus(statusEl, data.error, true);
+      }
+    }
+
+    // ── Password ───────────────────────────────────────────────────────────────
+    async function savePassword() {
+      const current  = document.getElementById('pw-current').value;
+      const newPw    = document.getElementById('pw-new').value;
+      const confirm  = document.getElementById('pw-confirm').value;
+      const statusEl = document.getElementById('pw-status');
+      const res = await fetch('/api/account/password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ current_password: current, new_password: newPw, confirm_password: confirm })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        document.getElementById('pw-current').value = '';
+        document.getElementById('pw-new').value = '';
+        document.getElementById('pw-confirm').value = '';
+        showStatus(statusEl, 'Password updated. ✓', false);
+      } else {
+        showStatus(statusEl, data.error, true);
+      }
+    }
+
+    // ── Season ─────────────────────────────────────────────────────────────────
+    document.querySelectorAll('.season-card').forEach(card => {
+      card.addEventListener('click', async () => {
+        const season = card.dataset.season;
+        const already = card.classList.contains('is-selected');
+        document.querySelectorAll('.season-card').forEach(c => c.classList.remove('is-selected'));
+        if (!already) card.classList.add('is-selected');
+        const newSeason = already ? null : season;
+        await fetch('/api/season', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ season: newSeason })
+        });
+        const seasonClasses = ['season-avatar--spring','season-avatar--summer','season-avatar--autumn','season-avatar--winter'];
+        document.querySelectorAll('.sidebar-avatar, .sidebar-avatar-link .sidebar-avatar').forEach(el => {
+          el.classList.remove(...seasonClasses);
+          if (newSeason) el.classList.add(`season-avatar--${newSeason}`);
+        });
+      });
+    });
+
+    // ── Timezone ───────────────────────────────────────────────────────────────
+    async function saveTimezone() {
+      const timezone = document.getElementById('timezone-select').value;
+      const statusEl = document.getElementById('tz-status');
+      const res = await fetch('/api/account/timezone', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ timezone })
+      });
+      if (res.ok) {
+        showStatus(statusEl, 'Saved. ✓', false);
+      } else {
+        const data = await res.json();
+        showStatus(statusEl, data.error, true);
+      }
+    }
+
+    // ── Preference toggles ────────────────────────────────────────────────────
+    async function togglePref(btn, key) {
+      const wasOn = btn.getAttribute('aria-pressed') === 'true';
+      const nowOn = !wasOn;
+      btn.setAttribute('aria-pressed', String(nowOn));
+      const savedEl = document.getElementById(`saved-${key}`);
+      const res = await fetch('/api/account/preference', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key, value: nowOn })
+      });
+      if (res.ok) {
+        if (savedEl) {
+          savedEl.hidden = false;
+          setTimeout(() => { savedEl.hidden = true; }, 2000);
+        }
+      } else {
+        btn.setAttribute('aria-pressed', String(wasOn));
+      }
+    }
+
+    // ── Helpers ────────────────────────────────────────────────────────────────
+    function showStatus(el, msg, isError) {
+      el.textContent = msg;
+      el.className = 'acct-status ' + (isError ? 'acct-status--error' : 'acct-status--ok');
+      el.hidden = false;
+      if (!isError) setTimeout(() => { el.hidden = true; el.textContent = ''; }, 3500);
+    }
+  </script>
+
+</body>
+</html>

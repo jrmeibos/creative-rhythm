@@ -202,10 +202,10 @@
   min-width: 0;
 }
 
-.goal-full-card--curiosity .goal-full-header { background: #a990a4; }
-.goal-full-card--create    .goal-full-header { background: var(--color-understory); }
-.goal-full-card--share     .goal-full-header { background: var(--color-curiositys-kiss); }
-.goal-full-card--connect   .goal-full-header { background: var(--color-apricity); }
+.goal-full-card--curiosity .goal-full-header { background: var(--color-curiositys-kiss); }
+.goal-full-card--create    .goal-full-header { background: var(--color-apricity); }
+.goal-full-card--share     .goal-full-header { background: #76856C; }
+.goal-full-card--connect   .goal-full-header { background: #a990a4; }
 
 /* ─── Seasonal texture overlays on goal card headers ─────────────────────── */
 
@@ -219,7 +219,7 @@
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
-  opacity: 0.0864;
+  opacity: 0.0605;
   pointer-events: none;
   z-index: 0;
 }

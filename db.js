@@ -99,19 +99,195 @@ db.exec(`
     key TEXT PRIMARY KEY,
     value TEXT NOT NULL DEFAULT ''
   );
+
+  CREATE TABLE IF NOT EXISTS seeds (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    seed_number INTEGER NOT NULL,
+    feeling TEXT DEFAULT '',
+    looks_like TEXT DEFAULT '',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id),
+    UNIQUE(user_id, seed_number)
+  );
+
+  CREATE TABLE IF NOT EXISTS self_assessments (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    assessment_type TEXT NOT NULL,
+    q1_choice TEXT DEFAULT '',
+    q2_rating INTEGER,
+    q3_choice TEXT DEFAULT '',
+    q4_rating INTEGER,
+    q5_choice TEXT DEFAULT '',
+    q6_rating INTEGER,
+    q7_choices TEXT DEFAULT '',
+    q8_choice TEXT DEFAULT '',
+    q9_text TEXT DEFAULT '',
+    q10_text TEXT DEFAULT '',
+    harvest_reflection TEXT DEFAULT '',
+    completed_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id),
+    UNIQUE(user_id, assessment_type)
+  );
 `);
 
 // Migrate existing databases to add new columns
 (function migrate() {
-  const columns = db.prepare("PRAGMA table_info(weekly_goals)").all().map(r => r.name);
-  if (!columns.includes('reflection')) {
+  const goalCols = db.prepare("PRAGMA table_info(weekly_goals)").all().map(r => r.name);
+  if (!goalCols.includes('reflection')) {
     db.exec("ALTER TABLE weekly_goals ADD COLUMN reflection TEXT DEFAULT ''");
     console.log('✓ Migrated: added reflection column');
   }
-  if (!columns.includes('reflection_at')) {
+  if (!goalCols.includes('reflection_at')) {
     db.exec("ALTER TABLE weekly_goals ADD COLUMN reflection_at DATETIME");
     console.log('✓ Migrated: added reflection_at column');
   }
+
+  const userCols = db.prepare("PRAGMA table_info(users)").all().map(r => r.name);
+  if (!userCols.includes('current_season')) {
+    db.exec("ALTER TABLE users ADD COLUMN current_season TEXT");
+    console.log('✓ Migrated: added current_season column');
+  }
+  if (!userCols.includes('season_updated_at')) {
+    db.exec("ALTER TABLE users ADD COLUMN season_updated_at DATETIME");
+    console.log('✓ Migrated: added season_updated_at column');
+  }
+
+  // Onboarding completion flag
+  if (!userCols.includes('onboarding_completed')) {
+    db.exec("ALTER TABLE users ADD COLUMN onboarding_completed INTEGER DEFAULT 0");
+    console.log('✓ Migrated: added onboarding_completed column');
+  }
+  if (!userCols.includes('profile_photo')) {
+    db.exec("ALTER TABLE users ADD COLUMN profile_photo TEXT");
+    console.log('✓ Migrated: added profile_photo column');
+  }
+  if (!userCols.includes('timezone')) {
+    db.exec("ALTER TABLE users ADD COLUMN timezone TEXT DEFAULT 'America/Denver'");
+    console.log('✓ Migrated: added timezone column');
+  }
+  if (!userCols.includes('notify_new_fieldnotes')) {
+    db.exec("ALTER TABLE users ADD COLUMN notify_new_fieldnotes INTEGER DEFAULT 1");
+    console.log('✓ Migrated: added notify_new_fieldnotes column');
+  }
+  if (!userCols.includes('notify_community')) {
+    db.exec("ALTER TABLE users ADD COLUMN notify_community INTEGER DEFAULT 1");
+    console.log('✓ Migrated: added notify_community column');
+  }
+  if (!userCols.includes('notify_weekly_reminder')) {
+    db.exec("ALTER TABLE users ADD COLUMN notify_weekly_reminder INTEGER DEFAULT 1");
+    console.log('✓ Migrated: added notify_weekly_reminder column');
+  }
+  if (!userCols.includes('community_goals_public')) {
+    db.exec("ALTER TABLE users ADD COLUMN community_goals_public INTEGER DEFAULT 1");
+    console.log('✓ Migrated: added community_goals_public column');
+  }
+  if (!userCols.includes('community_season_public')) {
+    db.exec("ALTER TABLE users ADD COLUMN community_season_public INTEGER DEFAULT 1");
+    console.log('✓ Migrated: added community_season_public column');
+  }
+
+  // Rebuild self_assessments if it has old column schema
+  const saCols = db.prepare("PRAGMA table_info(self_assessments)").all().map(r => r.name);
+  if (saCols.length > 0 && saCols.includes('q1_rating')) {
+    db.exec("DROP TABLE self_assessments");
+    db.exec(`CREATE TABLE self_assessments (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      assessment_type TEXT NOT NULL,
+      q1_choice TEXT DEFAULT '',
+      q2_rating INTEGER,
+      q3_choice TEXT DEFAULT '',
+      q4_rating INTEGER,
+      q5_choice TEXT DEFAULT '',
+      q6_rating INTEGER,
+      q7_choices TEXT DEFAULT '',
+      q8_choice TEXT DEFAULT '',
+      q9_text TEXT DEFAULT '',
+      q10_text TEXT DEFAULT '',
+      harvest_reflection TEXT DEFAULT '',
+      completed_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (user_id) REFERENCES users(id),
+      UNIQUE(user_id, assessment_type)
+    )`);
+    console.log('✓ Migrated: rebuilt self_assessments with new schema');
+  }
+  // Add closing assessment columns (q11, q12)
+  const saColsNow = db.prepare("PRAGMA table_info(self_assessments)").all().map(r => r.name);
+  if (!saColsNow.includes('q11_text')) {
+    db.exec("ALTER TABLE self_assessments ADD COLUMN q11_text TEXT DEFAULT ''");
+    console.log('✓ Migrated: added q11_text to self_assessments');
+  }
+  if (!saColsNow.includes('q12_text')) {
+    db.exec("ALTER TABLE self_assessments ADD COLUMN q12_text TEXT DEFAULT ''");
+    console.log('✓ Migrated: added q12_text to self_assessments');
+  }
+
+  // Seeds: add legacy tending columns if missing (for tables created before the rebuild)
+  const seedCols = db.prepare("PRAGMA table_info(seeds)").all().map(r => r.name);
+  if (!seedCols.includes('status')) {
+    db.exec("ALTER TABLE seeds ADD COLUMN status TEXT DEFAULT 'active'");
+    console.log('✓ Migrated: added status to seeds');
+  }
+  if (!seedCols.includes('updated_feeling')) {
+    db.exec("ALTER TABLE seeds ADD COLUMN updated_feeling TEXT DEFAULT ''");
+    console.log('✓ Migrated: added updated_feeling to seeds');
+  }
+  if (!seedCols.includes('updated_looks_like')) {
+    db.exec("ALTER TABLE seeds ADD COLUMN updated_looks_like TEXT DEFAULT ''");
+    console.log('✓ Migrated: added updated_looks_like to seeds');
+  }
+
+  // Seeds: rebuild to support multi-row replacements (removes UNIQUE constraint)
+  const seedCols2 = db.prepare("PRAGMA table_info(seeds)").all().map(r => r.name);
+  if (!seedCols2.includes('is_active')) {
+    const existingSeeds = db.prepare('SELECT * FROM seeds').all();
+    const hasStatus  = seedCols2.includes('status');
+    const hasUpdated = seedCols2.includes('updated_feeling');
+    db.exec(`
+      CREATE TABLE seeds_new (
+        id               INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id          INTEGER NOT NULL,
+        seed_number      INTEGER NOT NULL,
+        feeling          TEXT    DEFAULT '',
+        looks_like       TEXT    DEFAULT '',
+        status           TEXT    DEFAULT 'active',
+        updated_feeling  TEXT    DEFAULT '',
+        updated_looks_like TEXT  DEFAULT '',
+        is_active        INTEGER DEFAULT 1,
+        is_replacement   INTEGER DEFAULT 0,
+        replaces_seed_id INTEGER,
+        created_at       DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at       DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id)
+      )
+    `);
+    const ins = db.prepare(`
+      INSERT INTO seeds_new
+        (id, user_id, seed_number, feeling, looks_like,
+         status, updated_feeling, updated_looks_like,
+         is_active, is_replacement, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, 0, ?, ?)
+    `);
+    for (const s of existingSeeds) {
+      ins.run(
+        s.id, s.user_id, s.seed_number, s.feeling || '', s.looks_like || '',
+        hasStatus  ? (s.status           || 'active') : 'active',
+        hasUpdated ? (s.updated_feeling   || '')       : '',
+        hasUpdated ? (s.updated_looks_like || '')      : '',
+        s.created_at, s.updated_at
+      );
+    }
+    db.exec('DROP TABLE seeds');
+    db.exec('ALTER TABLE seeds_new RENAME TO seeds');
+    console.log('✓ Migrated: rebuilt seeds table with multi-row replacement support');
+  }
+
+  // Default settings for unlock flags
+  db.prepare("INSERT OR IGNORE INTO settings (key, value) VALUES ('midcourse_unlocked', 'false')").run();
+  db.prepare("INSERT OR IGNORE INTO settings (key, value) VALUES ('harvest_unlocked', 'false')").run();
 })();
 
 function seedAdmin() {
@@ -129,7 +305,7 @@ function seedLessons() {
   const lessons = [
     {
       slug: 'welcome-to-the-rhythm',
-      title: "Welcome to The Creative's Rhythm",
+      title: "Welcome to The Creative's Garden",
       subtitle: "You already know what you want to say. Let's find it together.",
       category_tag: 'Mindset',
       estimated_read_time: 8,
@@ -140,7 +316,7 @@ function seedLessons() {
 
 <p>You're not a product. You're a person making things. And this platform was built for that difference.</p>
 
-<h2>The Four Rhythms</h2>
+<h2>The Four Seasons</h2>
 
 <p>This course is built around four categories of creative life. We call them The 4 C's:</p>
 
@@ -163,7 +339,7 @@ function seedLessons() {
   </div>
 </div>
 
-<blockquote class="lesson-pullquote">These aren't a hierarchy. They're a rhythm. Some weeks are heavy on Curiosity. Some weeks you're deep in a Create phase. The goal is to notice your rhythm—not force a schedule.</blockquote>
+<blockquote class="lesson-pullquote">These aren't a hierarchy. They're seasons. Some weeks you're deep in Curiosity. Some weeks you're in a full Create bloom. The goal is to notice what's alive in you—not force a schedule.</blockquote>
 
 <h2>Integration Weeks</h2>
 
@@ -175,7 +351,7 @@ function seedLessons() {
 
 <p>Each week, you'll set loose intentions across the 4 C's. Not SMART goals. Not deliverables. Intentions. Things you'd love to move toward.</p>
 
-<p>Then you'll show up—here, in the community, in your creative life—and let the rhythm carry you.</p>`
+<p>Then you'll show up—here, in the community, in your creative life—and let the garden grow.</p>`
     },
     {
       slug: 'gap-between-artist-and-marketer',
@@ -355,11 +531,45 @@ module.exports = {
   },
 
   getUserById(id) {
-    return db.prepare('SELECT id, name, email, role, avatar_initial FROM users WHERE id = ?').get(id);
+    return db.prepare('SELECT id, name, email, role, avatar_initial, current_season, profile_photo FROM users WHERE id = ?').get(id);
   },
 
   getAllUsers() {
-    return db.prepare('SELECT id, name, email, role, created_at FROM users ORDER BY role DESC, name ASC').all();
+    return db.prepare('SELECT id, name, email, role, avatar_initial, current_season, profile_photo, community_goals_public, community_season_public, created_at FROM users ORDER BY role DESC, name ASC').all();
+  },
+
+  getUserFullProfile(id) {
+    return db.prepare('SELECT id, name, email, role, avatar_initial, current_season, profile_photo, timezone, notify_new_fieldnotes, notify_community, notify_weekly_reminder, community_goals_public, community_season_public FROM users WHERE id = ?').get(id);
+  },
+
+  updateUserDetails(userId, name, email) {
+    const initial = name.trim().charAt(0).toUpperCase();
+    return db.prepare('UPDATE users SET name=?, email=?, avatar_initial=? WHERE id=?')
+      .run(name.trim(), email.trim().toLowerCase(), initial, userId);
+  },
+
+  updateUserTimezone(userId, timezone) {
+    return db.prepare('UPDATE users SET timezone=? WHERE id=?').run(timezone, userId);
+  },
+
+  updateUserPreference(userId, key, value) {
+    const allowed = ['notify_new_fieldnotes','notify_community','notify_weekly_reminder','community_goals_public','community_season_public'];
+    if (!allowed.includes(key)) throw new Error('Invalid preference key');
+    return db.prepare(`UPDATE users SET ${key}=? WHERE id=?`).run(value ? 1 : 0, userId);
+  },
+
+  updateProfilePhoto(userId, photoPath) {
+    return db.prepare('UPDATE users SET profile_photo=? WHERE id=?').run(photoPath, userId);
+  },
+
+  removeProfilePhoto(userId) {
+    return db.prepare('UPDATE users SET profile_photo=NULL WHERE id=?').run(userId);
+  },
+
+  updateUserSeason(userId, season) {
+    return db.prepare(
+      'UPDATE users SET current_season=?, season_updated_at=CURRENT_TIMESTAMP WHERE id=?'
+    ).run(season || null, userId);
   },
 
   createUser(name, email, password, role = 'student') {
@@ -599,5 +809,234 @@ module.exports = {
       grouped[row.week_start][row.category] = row;
     }
     return grouped;
-  }
+  },
+
+  // ─── Admin: users ──────────────────────────────────────────────────────────
+
+  updateUser(id, name, email, role, newPassword) {
+    const initial = name.trim().charAt(0).toUpperCase();
+    if (newPassword && newPassword.trim()) {
+      const hash = bcrypt.hashSync(newPassword.trim(), 12);
+      return db.prepare(
+        'UPDATE users SET name=?, email=?, role=?, avatar_initial=?, password_hash=? WHERE id=?'
+      ).run(name.trim(), email.trim().toLowerCase(), role, initial, hash, id);
+    }
+    return db.prepare(
+      'UPDATE users SET name=?, email=?, role=?, avatar_initial=? WHERE id=?'
+    ).run(name.trim(), email.trim().toLowerCase(), role, initial, id);
+  },
+
+  deleteUser(id) {
+    db.prepare('DELETE FROM community_reactions WHERE user_id=?').run(id);
+    db.prepare('DELETE FROM community_posts WHERE user_id=?').run(id);
+    db.prepare('DELETE FROM lesson_completions WHERE user_id=?').run(id);
+    db.prepare('DELETE FROM weekly_goals WHERE user_id=?').run(id);
+    db.prepare('DELETE FROM seeds WHERE user_id=?').run(id);
+    db.prepare('DELETE FROM self_assessments WHERE user_id=?').run(id);
+    return db.prepare('DELETE FROM users WHERE id=?').run(id);
+  },
+
+  // ─── Admin: lessons ────────────────────────────────────────────────────────
+
+  getAllLessonsAdmin() {
+    return db.prepare('SELECT * FROM lessons ORDER BY sort_order ASC, id ASC').all();
+  },
+
+  getLessonById(id) {
+    return db.prepare('SELECT * FROM lessons WHERE id=?').get(id);
+  },
+
+  createLesson(slug, title, subtitle, categoryTag, content, estimatedReadTime) {
+    const maxRow = db.prepare('SELECT MAX(sort_order) as m FROM lessons').get();
+    const sortOrder = (maxRow.m || 0) + 10;
+    return db.prepare(`
+      INSERT INTO lessons (slug, title, subtitle, category_tag, content, estimated_read_time, sort_order, published)
+      VALUES (?, ?, ?, ?, ?, ?, ?, 1)
+    `).run(slug, title, subtitle || '', categoryTag || '', content || '', estimatedReadTime || 5, sortOrder);
+  },
+
+  updateLesson(id, title, subtitle, categoryTag, content, estimatedReadTime) {
+    return db.prepare(`
+      UPDATE lessons SET title=?, subtitle=?, category_tag=?, content=?, estimated_read_time=? WHERE id=?
+    `).run(title, subtitle || '', categoryTag || '', content || '', estimatedReadTime || 5, id);
+  },
+
+  deleteLesson(id) {
+    db.prepare('DELETE FROM lesson_completions WHERE lesson_id=?').run(id);
+    return db.prepare('DELETE FROM lessons WHERE id=?').run(id);
+  },
+
+  updateLessonSortOrders(orders) {
+    const stmt = db.prepare('UPDATE lessons SET sort_order=? WHERE id=?');
+    for (const { id, sort_order } of orders) stmt.run(sort_order, id);
+  },
+
+  // ─── Admin: resources ──────────────────────────────────────────────────────
+
+  updateResource(id, title, description, categoryTag, url) {
+    return db.prepare(
+      'UPDATE resources SET title=?, description=?, category_tag=?, url=? WHERE id=?'
+    ).run(title, description || '', categoryTag || '', url || '', id);
+  },
+
+  deleteResource(id) {
+    return db.prepare('DELETE FROM resources WHERE id=?').run(id);
+  },
+
+  // ─── Seeds ─────────────────────────────────────────────────────────────────
+
+  getUserSeeds(userId) {
+    // Returns the original (non-replacement) seed per seed_number — used by profile route
+    return db.prepare(
+      'SELECT * FROM seeds WHERE user_id=? AND is_replacement=0 ORDER BY seed_number ASC'
+    ).all(userId);
+  },
+
+  getGreenhouseSeeds(userId) {
+    // Returns { 1: { original, replacement }, 2: ..., 3: ... }
+    const all = db.prepare(
+      'SELECT * FROM seeds WHERE user_id=? ORDER BY seed_number ASC, id ASC'
+    ).all(userId);
+    const map = { 1: { original: null, replacement: null },
+                  2: { original: null, replacement: null },
+                  3: { original: null, replacement: null } };
+    for (const s of all) {
+      if (!s.is_replacement) {
+        map[s.seed_number].original = s;
+      } else if (s.is_active) {
+        map[s.seed_number].replacement = s;
+      }
+    }
+    return map;
+  },
+
+  upsertSeed(userId, seedNumber, feeling, looksLike) {
+    // Find existing original seed and update, or insert new
+    const existing = db.prepare(
+      'SELECT id FROM seeds WHERE user_id=? AND seed_number=? AND is_replacement=0'
+    ).get(userId, seedNumber);
+    if (existing) {
+      return db.prepare(
+        'UPDATE seeds SET feeling=?, looks_like=?, updated_at=CURRENT_TIMESTAMP WHERE id=?'
+      ).run(feeling || '', looksLike || '', existing.id);
+    }
+    return db.prepare(
+      'INSERT INTO seeds (user_id, seed_number, feeling, looks_like, is_active, is_replacement) VALUES (?, ?, ?, ?, 1, 0)'
+    ).run(userId, seedNumber, feeling || '', looksLike || '');
+  },
+
+  replaceSeeds(userId, seedNumber, feeling, looksLike) {
+    // Mark current active seed as inactive
+    db.prepare(
+      'UPDATE seeds SET is_active=0, updated_at=CURRENT_TIMESTAMP WHERE user_id=? AND seed_number=? AND is_active=1'
+    ).run(userId, seedNumber);
+    // Get original seed id for the replaces_seed_id reference
+    const original = db.prepare(
+      'SELECT id FROM seeds WHERE user_id=? AND seed_number=? AND is_replacement=0 ORDER BY id ASC LIMIT 1'
+    ).get(userId, seedNumber);
+    // Insert new active replacement
+    return db.prepare(
+      'INSERT INTO seeds (user_id, seed_number, feeling, looks_like, is_active, is_replacement, replaces_seed_id) VALUES (?, ?, ?, ?, 1, 1, ?)'
+    ).run(userId, seedNumber, feeling || '', looksLike || '', original?.id || null);
+  },
+
+  updateSeedById(seedId, userId, feeling, looksLike) {
+    return db.prepare(
+      'UPDATE seeds SET feeling=?, looks_like=?, updated_at=CURRENT_TIMESTAMP WHERE id=? AND user_id=?'
+    ).run(feeling || '', looksLike || '', seedId, userId);
+  },
+
+  getAllUsersSeeds() {
+    return db.prepare(`
+      SELECT s.*, u.name as user_name, u.avatar_initial
+      FROM seeds s
+      JOIN users u ON s.user_id = u.id
+      WHERE s.is_replacement = 0
+      ORDER BY u.name ASC, s.seed_number ASC
+    `).all();
+  },
+
+  // ─── Self-Assessments ──────────────────────────────────────────────────────
+
+  getAssessment(userId, type) {
+    return db.prepare('SELECT * FROM self_assessments WHERE user_id = ? AND assessment_type = ?').get(userId, type);
+  },
+
+  upsertAssessment(userId, type, data) {
+    const { q1_choice, q2_rating, q3_choice, q4_rating, q5_choice, q6_rating,
+            q7_choices, q8_choice, q9_text, q10_text, q11_text, q12_text,
+            harvest_reflection } = data;
+    return db.prepare(`
+      INSERT INTO self_assessments
+        (user_id, assessment_type, q1_choice, q2_rating, q3_choice, q4_rating,
+         q5_choice, q6_rating, q7_choices, q8_choice, q9_text, q10_text,
+         q11_text, q12_text, harvest_reflection, completed_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+      ON CONFLICT(user_id, assessment_type) DO UPDATE SET
+        q1_choice          = excluded.q1_choice,
+        q2_rating          = excluded.q2_rating,
+        q3_choice          = excluded.q3_choice,
+        q4_rating          = excluded.q4_rating,
+        q5_choice          = excluded.q5_choice,
+        q6_rating          = excluded.q6_rating,
+        q7_choices         = excluded.q7_choices,
+        q8_choice          = excluded.q8_choice,
+        q9_text            = excluded.q9_text,
+        q10_text           = excluded.q10_text,
+        q11_text           = excluded.q11_text,
+        q12_text           = excluded.q12_text,
+        harvest_reflection = excluded.harvest_reflection,
+        completed_at       = CURRENT_TIMESTAMP
+    `).run(userId, type,
+      q1_choice || '', q2_rating || null, q3_choice || '', q4_rating || null,
+      q5_choice || '', q6_rating || null, q7_choices || '', q8_choice || '',
+      q9_text || '', q10_text || '', q11_text || '', q12_text || '',
+      harvest_reflection || '');
+  },
+
+  saveSeedTending(userId, seedNumber, status, updatedFeeling, updatedLooksLike) {
+    return db.prepare(`
+      INSERT INTO seeds (user_id, seed_number, status, updated_feeling, updated_looks_like, updated_at)
+      VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+      ON CONFLICT(user_id, seed_number) DO UPDATE SET
+        status             = excluded.status,
+        updated_feeling    = excluded.updated_feeling,
+        updated_looks_like = excluded.updated_looks_like,
+        updated_at         = CURRENT_TIMESTAMP
+    `).run(userId, seedNumber, status || 'active', updatedFeeling || '', updatedLooksLike || '');
+  },
+
+  markMidcourseComplete(userId) {
+    return db.prepare(`
+      INSERT INTO self_assessments (user_id, assessment_type, completed_at)
+      VALUES (?, 'midcourse', CURRENT_TIMESTAMP)
+      ON CONFLICT(user_id, assessment_type) DO UPDATE SET completed_at = CURRENT_TIMESTAMP
+    `).run(userId);
+  },
+
+  setOnboardingComplete(userId) {
+    return db.prepare('UPDATE users SET onboarding_completed = 1 WHERE id = ?').run(userId);
+  },
+
+  getAllStudentAssessmentStatus() {
+    return db.prepare(`
+      SELECT u.id, u.name, u.avatar_initial, u.role,
+        (SELECT completed_at FROM self_assessments WHERE user_id=u.id AND assessment_type='opening') as opening_at,
+        (SELECT completed_at FROM self_assessments WHERE user_id=u.id AND assessment_type='midcourse') as midcourse_at,
+        (SELECT completed_at FROM self_assessments WHERE user_id=u.id AND assessment_type='closing') as closing_at,
+        (SELECT COUNT(*) FROM seeds WHERE user_id=u.id AND (feeling!='' OR looks_like!='')) as seeds_count
+      FROM users u
+      WHERE u.role = 'student'
+      ORDER BY u.name ASC
+    `).all();
+  },
+
+  getStudentFullData(userId) {
+    const user = db.prepare('SELECT id, name, email, avatar_initial FROM users WHERE id=?').get(userId);
+    const opening  = db.prepare("SELECT * FROM self_assessments WHERE user_id=? AND assessment_type='opening'").get(userId);
+    const midcourse = db.prepare("SELECT * FROM self_assessments WHERE user_id=? AND assessment_type='midcourse'").get(userId);
+    const closing  = db.prepare("SELECT * FROM self_assessments WHERE user_id=? AND assessment_type='closing'").get(userId);
+    const seeds    = db.prepare('SELECT * FROM seeds WHERE user_id=? ORDER BY seed_number').all(userId);
+    return { user, opening, midcourse, closing, seeds };
+  },
 };

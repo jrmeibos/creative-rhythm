@@ -139,10 +139,10 @@
   background: currentColor;
 }
 
-.cal-dot--curiosity { color: #a990a4; }
-.cal-dot--create    { color: var(--color-understory); }
-.cal-dot--share     { color: var(--color-curiositys-kiss); }
-.cal-dot--connect   { color: var(--color-apricity); }
+.cal-dot--curiosity { color: var(--color-curiositys-kiss); }
+.cal-dot--create    { color: var(--color-apricity); }
+.cal-dot--share     { color: #76856C; }
+.cal-dot--connect   { color: #a990a4; }
 
 /* Current week dots use pearl */
 .cal-tile--current .cal-dot { color: rgba(242, 238, 227, 0.6); }

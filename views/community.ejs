@@ -31,34 +31,48 @@
           share:     { label: 'Share',     description: 'Put it into the world' },
           connect:   { label: 'Connect',   description: 'Reach outward' }
         };
+        const seasonLabel = { spring: 'Spring · Curiosity', summer: 'Summer · Create', autumn: 'Autumn · Share', winter: 'Winter · Connect' };
       %>
 
       <% if (members.length === 0) { %>
         <div class="comm-empty">
           <p class="comm-empty-icon">○</p>
           <h2>No members yet</h2>
-          <p>Once students are enrolled, their weekly intentions will appear here.</p>
+          <p>Once gardeners are enrolled, their weekly intentions will appear here.</p>
         </div>
       <% } else { %>
 
         <!-- Member card grid -->
         <div class="comm-grid" id="comm-grid">
           <% for (const member of members) { %>
+            <%
+              const showSeason = member.community_season_public && member.current_season;
+              const goalsPublic = member.community_goals_public;
+            %>
             <button class="comm-card <%= member.id === currentUserId ? 'comm-card--self' : '' %>"
                     data-user-id="<%= member.id %>"
                     data-name="<%= member.name %>"
                     type="button"
                     aria-expanded="false">
 
-              <div class="comm-card-avatar"><%= member.avatar_initial %></div>
-              <span class="comm-card-name"><%= member.name %><% if (member.id === currentUserId) { %> <span class="comm-card-you">you</span><% } %></span>
+              <div class="comm-card-avatar<%= showSeason ? ' season-avatar--' + member.current_season : '' %>">
+                <% if (member.profile_photo) { %>
+                  <img src="<%= member.profile_photo %>" class="comm-avatar-photo" alt="">
+                <% } else { %>
+                  <%= member.avatar_initial %>
+                <% } %>
+              </div>
+              <span class="comm-card-name">
+                <%= member.name %><% if (member.id === currentUserId) { %> <span class="comm-card-you">you</span><% } %>
+                <% if (showSeason) { %>
+                  <span class="season-badge" data-tooltip="<%= seasonLabel[member.current_season] %>"><%- include('partials/season-icon', { season: member.current_season, size: 20 }) %></span>
+                <% } %>
+              </span>
 
               <div class="comm-circles">
                 <% for (const cat of cats) { %>
                   <% const g = member.goals[cat] || {}; %>
-                  <%
-                    const state = g.completed ? 'filled' : g.hasGoal ? 'set' : 'empty';
-                  %>
+                  <% const state = goalsPublic ? (g.completed ? 'filled' : g.hasGoal ? 'set' : 'empty') : 'empty'; %>
                   <div class="comm-circle-wrap">
                     <div class="comm-circle comm-circle--<%= cat %> comm-circle--<%= state %>"></div>
                     <span class="comm-circle-label"><%= catMeta[cat].label %></span>
@@ -83,6 +97,9 @@
 
           <% for (const member of members) { %>
             <div class="comm-panel" data-user-id="<%= member.id %>" hidden>
+              <% if (!member.community_goals_public) { %>
+                <p class="comm-private-msg">This gardener has chosen to keep their intentions private. 🌿</p>
+              <% } else { %>
               <% const hasAnyGoals = cats.some(cat => member.goals[cat] && member.goals[cat].hasGoal); %>
               <% if (!hasAnyGoals) { %>
                 <p class="comm-no-goals">No intentions set for this week yet.</p>
@@ -131,6 +148,7 @@
                   <% } %>
                 </div>
               <% } %>
+              <% } /* end community_goals_public check */ %>
             </div>
           <% } %>
 
