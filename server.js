@@ -48,6 +48,8 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
+app.set('trust proxy', 1);
+
 const SESSION_DB_PATH = process.env.DB_PATH || path.join(__dirname, 'data', 'creative-rhythm.db');
 app.use(session({
   store: new SQLiteStore({ db: path.basename(SESSION_DB_PATH), dir: path.dirname(SESSION_DB_PATH) }),
@@ -107,29 +109,14 @@ app.post('/login', async (req, res) => {
   if (!email || !password) {
     return res.render('login', { error: 'Please enter your email and password.' });
   }
-  // TEMP DIAG
-  console.log(`[login] attempt: ${email.trim().toLowerCase()}`);
   const user = db.getUserByEmail(email.trim().toLowerCase());
   if (!user) {
-    console.log('[login] user found: no → invalid');
     return res.render('login', { error: 'Invalid email or password.' });
   }
-  const hasHash = !!user.password_hash;
-  const hashPrefix = hasHash ? user.password_hash.slice(0, 4) : 'none';
-  console.log(`[login] user found: yes | has hash: ${hasHash} | hash prefix: ${hashPrefix}`);
-  let valid = false;
-  try {
-    valid = await bcrypt.compare(password, user.password_hash);
-    console.log(`[login] bcrypt.compare result: ${valid}`);
-  } catch (err) {
-    console.error(`[login] bcrypt.compare error: ${err.message}`);
-    return res.render('login', { error: 'Invalid email or password.' });
-  }
+  const valid = await bcrypt.compare(password, user.password_hash);
   if (!valid) {
-    console.log('[login] result: invalid (wrong password)');
     return res.render('login', { error: 'Invalid email or password.' });
   }
-  console.log('[login] result: success');
   req.session.user = {
     id: user.id, name: user.name, email: user.email, role: user.role,
     avatar_initial: user.avatar_initial, current_season: user.current_season || null,
@@ -1047,18 +1034,4 @@ function getRotatingQuote() {
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`\n✨ The Creative's Garden is running at http://localhost:${PORT}\n`);
-
-  // TEMP DIAG — startup user snapshot
-  try {
-    const users = db.getAllUsers();
-    console.log(`[diag] total users in DB: ${users.length}`);
-    for (const u of users) {
-      const h = db.getUserByEmail(u.email);
-      const hashLen    = h && h.password_hash ? h.password_hash.length : 0;
-      const hashPrefix = h && h.password_hash ? h.password_hash.slice(0, 4) : 'none';
-      console.log(`[diag]   ${u.email} | role: ${u.role} | hash len: ${hashLen} | hash prefix: ${hashPrefix}`);
-    }
-  } catch (err) {
-    console.error(`[diag] startup user query failed: ${err.message}`);
-  }
 });
