@@ -886,12 +886,19 @@ app.post('/api/admin/users', requireAdmin, (req, res) => {
 app.put('/api/admin/users/:id', requireAdmin, (req, res) => {
   const id = parseInt(req.params.id);
   const { name, email, role, password } = req.body;
+  console.log(`[admin-pw-reset] received for user_id: ${id}, email: ${email}`);
+  console.log(`[admin-pw-reset] password field present: ${password !== undefined}, non-empty: ${!!(password && password.trim())}`);
   if (!name || !email) return res.status(400).json({ error: 'Name and email are required.' });
   if (!['student', 'admin'].includes(role)) return res.status(400).json({ error: 'Invalid role.' });
   try {
-    db.updateUser(id, name, email, role, password || null);
+    const result = db.updateUser(id, name, email, role, password || null);
+    const hashGenerated = !!(password && password.trim());
+    console.log(`[admin-pw-reset] bcrypt hash generated: ${hashGenerated}`);
+    console.log(`[admin-pw-reset] DB rows affected: ${result?.changes ?? 'unknown'}`);
+    console.log(`[admin-pw-reset] result: ${(result?.changes > 0) ? 'success' : 'warning — 0 rows changed'}`);
     res.json({ ok: true });
   } catch (e) {
+    console.log(`[admin-pw-reset] error: ${e.message}`);
     if (e.message && e.message.includes('UNIQUE')) return res.status(409).json({ error: 'That email is already in use.' });
     res.status(500).json({ error: 'Failed to update user.' });
   }

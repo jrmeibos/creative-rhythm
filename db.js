@@ -854,10 +854,14 @@ module.exports = {
     const initial = name.trim().charAt(0).toUpperCase();
     if (newPassword && newPassword.trim()) {
       const hash = bcrypt.hashSync(newPassword.trim(), 12);
-      return db.prepare(
+      console.log(`[admin-pw-reset] DB UPDATE attempted with password_hash for id=${id}`);
+      const result = db.prepare(
         'UPDATE users SET name=?, email=?, role=?, avatar_initial=?, password_hash=? WHERE id=?'
       ).run(name.trim(), email.trim().toLowerCase(), role, initial, hash, id);
+      console.log(`[admin-pw-reset] DB UPDATE result: changes=${result.changes}`);
+      return result;
     }
+    console.log(`[admin-pw-reset] DB UPDATE attempted WITHOUT password for id=${id}`);
     return db.prepare(
       'UPDATE users SET name=?, email=?, role=?, avatar_initial=? WHERE id=?'
     ).run(name.trim(), email.trim().toLowerCase(), role, initial, id);
