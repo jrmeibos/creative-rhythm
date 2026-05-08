@@ -1961,3 +1961,59 @@
   font-weight: 400;
   color: rgba(255,255,255,0.75);
 }
+
+/* ─── Admin homework editor ───────────────────────────────────────────────── */
+.admin-hw-item {
+  border: 1px solid rgba(112, 92, 108, 0.15);
+  border-radius: 8px;
+  padding: 0.875rem;
+  margin-bottom: 0.625rem;
+  background: var(--color-new-growth);
+}
+
+.admin-hw-item-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+}
+
+.admin-hw-item-num {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(16, 15, 16, 0.4);
+}
+
+.admin-hw-item-controls {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.admin-hw-move, .admin-hw-remove {
+  background: none;
+  border: 1px solid rgba(16, 15, 16, 0.15);
+  border-radius: 4px;
+  padding: 0.15rem 0.4rem;
+  font-size: 0.75rem;
+  cursor: pointer;
+  color: rgba(16, 15, 16, 0.5);
+  transition: border-color 0.15s, color 0.15s;
+}
+.admin-hw-move:hover:not(:disabled) { border-color: var(--color-bloem); color: var(--color-bloem); }
+.admin-hw-move:disabled { opacity: 0.3; cursor: not-allowed; }
+.admin-hw-remove:hover { border-color: #c0392b; color: #c0392b; }
+
+.admin-hw-title {
+  width: 100%;
+  margin-bottom: 0.5rem;
+  resize: vertical;
+  box-sizing: border-box;
+}
+
+.admin-hw-link-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}

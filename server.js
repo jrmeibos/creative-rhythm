@@ -287,6 +287,26 @@ app.post('/api/season', requireAuth, (req, res) => {
 
 // ─── Lessons ───────────────────────────────────────────────────────────────
 
+function normalizeVideoUrl(url) {
+  if (!url || !url.trim()) return null;
+  url = url.trim();
+  // YouTube watch?v=
+  let m = url.match(/[?&]v=([a-zA-Z0-9_-]+)/);
+  if (m && url.includes('youtube')) return `https://www.youtube.com/embed/${m[1]}`;
+  // YouTube short youtu.be/
+  m = url.match(/youtu\.be\/([a-zA-Z0-9_-]+)/);
+  if (m) return `https://www.youtube.com/embed/${m[1]}`;
+  // Already a YouTube embed URL
+  if (url.includes('youtube.com/embed/')) return url;
+  // Vimeo vimeo.com/NNNN
+  m = url.match(/vimeo\.com\/(\d+)/);
+  if (m) return `https://player.vimeo.com/video/${m[1]}`;
+  // Already a Vimeo player URL
+  if (url.includes('player.vimeo.com')) return url;
+  // Unknown — store as-is
+  return url;
+}
+
 app.get('/lessons', requireAuth, (req, res) => {
   const lessons = db.getAllLessons();
   const completedIds = new Set(db.completedLessonIds(req.session.user.id));
@@ -307,14 +327,23 @@ app.get('/lessons/:slug', requireAuth, (req, res) => {
   const idx = allLessons.findIndex(l => l.id === lesson.id);
   const prevLesson = idx > 0 ? allLessons[idx - 1] : null;
   const nextLesson = idx < allLessons.length - 1 ? allLessons[idx + 1] : null;
+  const homework = db.getHomeworkForLesson(lesson.id);
+  const homeworkDone = new Set(db.getHomeworkCompletions(req.session.user.id, lesson.id));
   res.render('lesson', {
     title: lesson.title,
     page: 'lessons',
     lesson,
     completed,
     prevLesson,
-    nextLesson
+    nextLesson,
+    homework,
+    homeworkDone
   });
+});
+
+app.post('/api/lessons/:lesson_id/homework/:homework_id/toggle', requireAuth, (req, res) => {
+  const result = db.toggleHomework(req.session.user.id, parseInt(req.params.homework_id));
+  res.json({ ok: true, completed: result.completed });
 });
 
 app.post('/api/lessons/:id/complete', requireAuth, (req, res) => {
@@ -837,6 +866,12 @@ app.get('/admin', requireAdmin, (req, res) => {
   const midcourseUnlocked  = db.getSetting('midcourse_unlocked') === 'true';
   const studentAssessments = db.getAllStudentAssessmentStatus();
 
+  // Attach homework to each lesson for the edit dialog
+  const lessonHomework = {};
+  for (const l of lessons) {
+    lessonHomework[l.id] = db.getHomeworkForLesson(l.id);
+  }
+
   let midcourseUnlockDate = null, closingUnlockDate = null;
   if (courseStartDate) {
     const start = new Date(courseStartDate + 'T00:00:00');
@@ -849,7 +884,7 @@ app.get('/admin', requireAdmin, (req, res) => {
 
   res.render('admin', {
     title: 'Admin', page: 'admin',
-    users, lessons, resources, lessonStats, courseStartDate,
+    users, lessons, resources, lessonStats, lessonHomework, courseStartDate,
     harvestUnlocked, midcourseUnlocked,
     midcourseUnlockDate, closingUnlockDate,
     studentAssessments,
@@ -933,9 +968,13 @@ app.post('/api/admin/lessons', requireAdmin, (req, res) => {
 
 app.put('/api/admin/lessons/:id', requireAdmin, (req, res) => {
   const id = parseInt(req.params.id);
-  const { title, subtitle, category_tag, content, estimated_read_time } = req.body;
+  const { title, subtitle, category_tag, content, estimated_read_time, video_url, homework } = req.body;
   if (!title) return res.status(400).json({ error: 'Title is required.' });
-  db.updateLesson(id, title.trim(), subtitle, category_tag, content, parseInt(estimated_read_time) || 5);
+  const normalizedVideo = normalizeVideoUrl(video_url);
+  db.updateLesson(id, title.trim(), subtitle, category_tag, content, parseInt(estimated_read_time) || 5, normalizedVideo);
+  if (Array.isArray(homework)) {
+    db.setHomework(id, homework);
+  }
   res.json({ ok: true });
 });
 

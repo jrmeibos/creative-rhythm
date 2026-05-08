@@ -498,6 +498,96 @@
   line-height: 1.35;
 }
 
+/* ─── Video embed ────────────────────────────────────────────────────────── */
+.lesson-video-wrap {
+  position: relative;
+  padding-bottom: 56.25%; /* 16:9 */
+  height: 0;
+  overflow: hidden;
+  margin-bottom: 2.5rem;
+  border-radius: 12px;
+  background: #000;
+}
+
+.lesson-video-wrap iframe {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+/* ─── Homework section ───────────────────────────────────────────────────── */
+.lesson-homework {
+  margin-top: 3rem;
+  padding: 1.75rem 2rem;
+  background: var(--color-new-growth);
+  border-radius: 16px;
+}
+
+.lesson-homework h2 {
+  font-family: var(--font-display);
+  font-size: 1.4rem;
+  font-weight: 400;
+  color: var(--color-ink-stained);
+  margin: 0 0 0.375rem;
+}
+
+.homework-intro {
+  font-size: 0.875rem;
+  font-weight: 300;
+  color: rgba(16, 15, 16, 0.5);
+  margin: 0 0 1.5rem;
+  line-height: 1.6;
+}
+
+.homework-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.875rem;
+  padding: 0.875rem 0;
+  border-bottom: 1px solid rgba(16, 15, 16, 0.08);
+}
+.homework-item:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.homework-checkbox {
+  flex-shrink: 0;
+  width: 1.125rem;
+  height: 1.125rem;
+  margin-top: 0.2rem;
+  cursor: pointer;
+  accent-color: var(--color-bloem);
+}
+
+.homework-text p {
+  font-size: 0.9rem;
+  font-weight: 300;
+  color: var(--color-ink-stained);
+  margin: 0 0 0.5rem;
+  line-height: 1.55;
+  cursor: pointer;
+}
+
+.homework-link {
+  display: inline-block;
+  font-size: 0.775rem;
+  font-weight: 400;
+  color: var(--color-bloem);
+  border: 1.5px solid var(--color-bloem);
+  border-radius: 6px;
+  padding: 0.25rem 0.75rem;
+  text-decoration: none;
+  transition: background 0.15s, color 0.15s;
+}
+.homework-link:hover {
+  background: var(--color-bloem);
+  color: #FAFAFA;
+}
+
 /* ─── Lesson 1 Greenhouse CTA ────────────────────────────────────────────── */
 .lesson-greenhouse-cta {
   margin: 2.5rem 0 0;

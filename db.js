@@ -296,6 +296,35 @@ db.exec(`
   db.prepare("INSERT OR IGNORE INTO settings (key, value) VALUES ('midcourse_unlocked', 'false')").run();
   db.prepare("INSERT OR IGNORE INTO settings (key, value) VALUES ('harvest_unlocked', 'false')").run();
 
+  // Lesson video_url column (column exists in CREATE TABLE but may be missing from old DBs)
+  const lessonCols = db.prepare("PRAGMA table_info(lessons)").all().map(r => r.name);
+  if (!lessonCols.includes('video_url')) {
+    db.exec("ALTER TABLE lessons ADD COLUMN video_url TEXT");
+    console.log('✓ Migrated: added video_url to lessons');
+  }
+
+  // Homework tables
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS lesson_homework (
+      id         INTEGER PRIMARY KEY AUTOINCREMENT,
+      lesson_id  INTEGER NOT NULL,
+      position   INTEGER NOT NULL DEFAULT 0,
+      title      TEXT NOT NULL DEFAULT '',
+      link_url   TEXT,
+      link_label TEXT,
+      FOREIGN KEY (lesson_id) REFERENCES lessons(id)
+    );
+    CREATE TABLE IF NOT EXISTS homework_completions (
+      id           INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id      INTEGER NOT NULL,
+      homework_id  INTEGER NOT NULL,
+      completed_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (user_id) REFERENCES users(id),
+      FOREIGN KEY (homework_id) REFERENCES lesson_homework(id),
+      UNIQUE(user_id, homework_id)
+    );
+  `);
+
   // V2: wipe all seeds planted during onboarding — seeds are now planted via Greenhouse after Lesson 1
   const v2SeedsFlag = db.prepare("SELECT value FROM settings WHERE key='seeds_v2_migrated'").get();
   if (!v2SeedsFlag) {
@@ -558,9 +587,22 @@ function seedLessons() {
   console.log('✓ Lessons seeded');
 }
 
+function seedLesson1Homework() {
+  const lesson = db.prepare("SELECT id FROM lessons WHERE slug='welcome-to-the-rhythm'").get();
+  if (!lesson) return;
+  const existing = db.prepare('SELECT COUNT(*) as c FROM lesson_homework WHERE lesson_id=?').get(lesson.id).c;
+  if (existing > 0) return;
+  db.prepare('INSERT INTO lesson_homework (lesson_id, position, title, link_url, link_label) VALUES (?, ?, ?, ?, ?)')
+    .run(lesson.id, 1, 'Choose your current season on the dashboard.', '/dashboard', 'Go to Dashboard');
+  db.prepare('INSERT INTO lesson_homework (lesson_id, position, title, link_url, link_label) VALUES (?, ?, ?, ?, ?)')
+    .run(lesson.id, 2, 'Plant your three seeds in The Greenhouse.', '/greenhouse', 'Open The Greenhouse');
+  console.log('✓ Seeded Lesson 1 homework tasks');
+}
+
 syncAdminAccount();
 seedDefaultAccounts();
 seedLessons();
+seedLesson1Homework();
 
 module.exports = {
   getUserByEmail(email) {
@@ -896,13 +938,71 @@ module.exports = {
     `).run(slug, title, subtitle || '', categoryTag || '', content || '', estimatedReadTime || 5, sortOrder);
   },
 
-  updateLesson(id, title, subtitle, categoryTag, content, estimatedReadTime) {
+  updateLesson(id, title, subtitle, categoryTag, content, estimatedReadTime, videoUrl) {
     return db.prepare(`
-      UPDATE lessons SET title=?, subtitle=?, category_tag=?, content=?, estimated_read_time=? WHERE id=?
-    `).run(title, subtitle || '', categoryTag || '', content || '', estimatedReadTime || 5, id);
+      UPDATE lessons SET title=?, subtitle=?, category_tag=?, content=?, estimated_read_time=?, video_url=? WHERE id=?
+    `).run(title, subtitle || '', categoryTag || '', content || '', estimatedReadTime || 5, videoUrl || null, id);
+  },
+
+  // ─── Homework ──────────────────────────────────────────────────────────────
+
+  getHomeworkForLesson(lessonId) {
+    return db.prepare(
+      'SELECT * FROM lesson_homework WHERE lesson_id=? ORDER BY position ASC, id ASC'
+    ).all(lessonId);
+  },
+
+  getHomeworkCompletions(userId, lessonId) {
+    return db.prepare(`
+      SELECT hc.homework_id FROM homework_completions hc
+      JOIN lesson_homework lh ON lh.id = hc.homework_id
+      WHERE hc.user_id=? AND lh.lesson_id=?
+    `).all(userId, lessonId).map(r => r.homework_id);
+  },
+
+  setHomework(lessonId, items) {
+    const existing = db.prepare('SELECT id FROM lesson_homework WHERE lesson_id=?').all(lessonId);
+    const existingIds = new Set(existing.map(r => r.id));
+    const keptIds = new Set();
+
+    for (let i = 0; i < items.length; i++) {
+      const { id, title, link_url, link_label } = items[i];
+      const position = i + 1;
+      if (id && existingIds.has(parseInt(id))) {
+        db.prepare('UPDATE lesson_homework SET title=?, link_url=?, link_label=?, position=? WHERE id=? AND lesson_id=?')
+          .run(title || '', link_url || null, link_label || null, position, parseInt(id), lessonId);
+        keptIds.add(parseInt(id));
+      } else {
+        const r = db.prepare('INSERT INTO lesson_homework (lesson_id, position, title, link_url, link_label) VALUES (?, ?, ?, ?, ?)')
+          .run(lessonId, position, title || '', link_url || null, link_label || null);
+        keptIds.add(r.lastInsertRowid);
+      }
+    }
+
+    for (const existingId of existingIds) {
+      if (!keptIds.has(existingId)) {
+        db.prepare('DELETE FROM homework_completions WHERE homework_id=?').run(existingId);
+        db.prepare('DELETE FROM lesson_homework WHERE id=?').run(existingId);
+      }
+    }
+  },
+
+  toggleHomework(userId, homeworkId) {
+    const existing = db.prepare('SELECT id FROM homework_completions WHERE user_id=? AND homework_id=?').get(userId, homeworkId);
+    if (existing) {
+      db.prepare('DELETE FROM homework_completions WHERE user_id=? AND homework_id=?').run(userId, homeworkId);
+      return { completed: false };
+    }
+    db.prepare('INSERT OR IGNORE INTO homework_completions (user_id, homework_id) VALUES (?, ?)').run(userId, homeworkId);
+    return { completed: true };
   },
 
   deleteLesson(id) {
+    const homework = db.prepare('SELECT id FROM lesson_homework WHERE lesson_id=?').all(id);
+    for (const h of homework) {
+      db.prepare('DELETE FROM homework_completions WHERE homework_id=?').run(h.id);
+    }
+    db.prepare('DELETE FROM lesson_homework WHERE lesson_id=?').run(id);
     db.prepare('DELETE FROM lesson_completions WHERE lesson_id=?').run(id);
     return db.prepare('DELETE FROM lessons WHERE id=?').run(id);
   },

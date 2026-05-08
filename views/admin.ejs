@@ -413,8 +413,17 @@
       </div>
     </div>
     <div class="admin-form-field">
+      <label class="admin-form-label">Video URL <span class="admin-form-hint">Paste a YouTube or Vimeo URL. Leave blank if no video.</span></label>
+      <input class="admin-input" type="text" id="edit-lesson-video" placeholder="https://www.youtube.com/watch?v=...">
+    </div>
+    <div class="admin-form-field">
       <label class="admin-form-label">Content <span class="admin-form-hint">(HTML accepted)</span></label>
       <textarea class="admin-input admin-textarea" id="edit-lesson-content" rows="10"></textarea>
+    </div>
+    <div class="admin-form-field">
+      <label class="admin-form-label">Homework</label>
+      <div id="edit-homework-list"></div>
+      <button class="admin-add-btn" type="button" onclick="addHomeworkItem()" style="margin-top:0.5rem">+ Add task</button>
     </div>
     <p class="admin-dialog-error" id="edit-lesson-error" hidden></p>
     <div class="admin-dialog-footer">
@@ -494,7 +503,9 @@
         subtitle:            l.subtitle  || '',
         category_tag:        l.category_tag || '',
         content:             l.content   || '',
-        estimated_read_time: l.estimated_read_time
+        estimated_read_time: l.estimated_read_time,
+        video_url:           l.video_url || '',
+        homework:            lessonHomework[l.id] || []
       }) %>;
     <% } %>
 
@@ -727,6 +738,70 @@
       document.getElementById('add-lesson-slug').value = slug;
     }
 
+    // ── Homework editor state ────────────────────────────────────────────────
+    let editHomework = [];
+
+    function renderHomeworkList() {
+      const list = document.getElementById('edit-homework-list');
+      if (!list) return;
+      if (editHomework.length === 0) {
+        list.innerHTML = '<p class="admin-form-hint" style="margin:0.25rem 0 0">No homework tasks yet.</p>';
+        return;
+      }
+      list.innerHTML = editHomework.map((item, i) => `
+        <div class="admin-hw-item" data-index="${i}">
+          <div class="admin-hw-item-header">
+            <span class="admin-hw-item-num">Task ${i + 1}</span>
+            <div class="admin-hw-item-controls">
+              <button type="button" class="admin-hw-move" onclick="moveHomework(${i}, -1)" ${i === 0 ? 'disabled' : ''}>↑</button>
+              <button type="button" class="admin-hw-move" onclick="moveHomework(${i}, 1)" ${i === editHomework.length - 1 ? 'disabled' : ''}>↓</button>
+              <button type="button" class="admin-hw-remove" onclick="removeHomework(${i})">✕</button>
+            </div>
+          </div>
+          <textarea class="admin-input admin-textarea admin-hw-title" rows="2"
+            placeholder="Task description (required)"
+            oninput="editHomework[${i}].title = this.value">${escHtml(item.title)}</textarea>
+          <div class="admin-hw-link-row">
+            <input class="admin-input" type="text" placeholder="Link URL (optional)"
+              value="${escHtml(item.link_url || '')}"
+              oninput="editHomework[${i}].link_url = this.value; updateLinkLabel(${i})">
+            <input class="admin-input" type="text" placeholder="Button label (default: Open link)"
+              value="${escHtml(item.link_label || '')}"
+              oninput="editHomework[${i}].link_label = this.value"
+              id="hw-label-${i}">
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function escHtml(str) {
+      return (str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    function updateLinkLabel(i) {
+      // no-op — label field is always visible, just a helper
+    }
+
+    function addHomeworkItem() {
+      editHomework.push({ id: null, title: '', link_url: '', link_label: '' });
+      renderHomeworkList();
+      // Focus the new textarea
+      const items = document.querySelectorAll('.admin-hw-title');
+      if (items.length) items[items.length - 1].focus();
+    }
+
+    function removeHomework(i) {
+      editHomework.splice(i, 1);
+      renderHomeworkList();
+    }
+
+    function moveHomework(i, dir) {
+      const j = i + dir;
+      if (j < 0 || j >= editHomework.length) return;
+      [editHomework[i], editHomework[j]] = [editHomework[j], editHomework[i]];
+      renderHomeworkList();
+    }
+
     function openEditLesson(id) {
       const l = LESSON_DATA[id];
       if (!l) return;
@@ -735,8 +810,11 @@
       document.getElementById('edit-lesson-subtitle').value = l.subtitle;
       document.getElementById('edit-lesson-category').value = l.category_tag;
       document.getElementById('edit-lesson-readtime').value = l.estimated_read_time;
+      document.getElementById('edit-lesson-video').value    = l.video_url || '';
       document.getElementById('edit-lesson-content').value  = l.content;
       document.getElementById('edit-lesson-error').hidden   = true;
+      editHomework = (l.homework || []).map(h => ({ id: h.id, title: h.title || '', link_url: h.link_url || '', link_label: h.link_label || '' }));
+      renderHomeworkList();
       openDialog('dialog-edit-lesson');
     }
 
@@ -766,13 +844,22 @@
       const subtitle = document.getElementById('edit-lesson-subtitle').value.trim();
       const category_tag = document.getElementById('edit-lesson-category').value.trim();
       const estimated_read_time = parseInt(document.getElementById('edit-lesson-readtime').value) || 5;
+      const video_url = document.getElementById('edit-lesson-video').value.trim();
       const content  = document.getElementById('edit-lesson-content').value;
       if (!title) return showError('edit-lesson-error', 'Title is required.');
+
+      // Collect current homework values from DOM
+      const homeworkItems = editHomework.map(h => ({
+        id: h.id || undefined,
+        title: h.title,
+        link_url: h.link_url || null,
+        link_label: h.link_label || null
+      }));
 
       const res = await fetch(`/api/admin/lessons/${id}`, {
         method:  'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ title, subtitle, category_tag, content, estimated_read_time })
+        body:    JSON.stringify({ title, subtitle, category_tag, content, estimated_read_time, video_url, homework: homeworkItems })
       });
       const data = await res.json();
       if (!res.ok) return showError('edit-lesson-error', data.error);
@@ -784,7 +871,7 @@
         const tagEl = row.querySelector('.admin-lesson-tag');
         if (tagEl) tagEl.textContent = category_tag;
       }
-      LESSON_DATA[id] = { title, subtitle, category_tag, content, estimated_read_time };
+      LESSON_DATA[id] = { title, subtitle, category_tag, content, estimated_read_time, video_url, homework: editHomework };
       closeDialog('dialog-edit-lesson');
     }
 

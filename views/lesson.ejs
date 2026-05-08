@@ -36,7 +36,20 @@
           <span>The Creative's Garden</span>
         </div>
 
-        <!-- Lesson body -->
+        <!-- 1. Video (if available) -->
+        <% if (lesson.video_url) { %>
+        <div class="lesson-video-wrap">
+          <iframe
+            src="<%= lesson.video_url %>"
+            title="<%= lesson.title %>"
+            frameborder="0"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowfullscreen
+            class="lesson-video"></iframe>
+        </div>
+        <% } %>
+
+        <!-- 2. Write-up -->
         <div class="lesson-body">
           <%- lesson.content %>
         </div>
@@ -45,8 +58,38 @@
         <% if (lesson.slug === 'welcome-to-the-rhythm') { %>
         <div class="lesson-greenhouse-cta">
           <p class="lesson-greenhouse-cta-label">Ready to plant?</p>
-          <a href="/greenhouse" class="lesson-greenhouse-cta-btn">Plant your seeds in the Greenhouse →</a>
+          <button class="lesson-greenhouse-cta-btn" onclick="plantAndNavigate()">Plant your seeds in the Greenhouse →</button>
         </div>
+        <% } %>
+
+        <!-- 3. Homework -->
+        <% if (homework && homework.length > 0) { %>
+        <section class="lesson-homework">
+          <h2>Homework</h2>
+          <p class="homework-intro">Mark these complete as you work through them. There's no rush.</p>
+
+          <% homework.forEach(function(task) { %>
+            <% const isExternal = task.link_url && !task.link_url.startsWith('/'); %>
+            <div class="homework-item" id="hw-item-<%= task.id %>">
+              <input
+                type="checkbox"
+                class="homework-checkbox"
+                id="hw-<%= task.id %>"
+                data-homework-id="<%= task.id %>"
+                <%= homeworkDone.has(task.id) ? 'checked' : '' %>>
+              <div class="homework-text">
+                <label for="hw-<%= task.id %>"><p><%= task.title %></p></label>
+                <% if (task.link_url) { %>
+                  <a href="<%= task.link_url %>"
+                     class="homework-link"
+                     <%= isExternal ? 'target="_blank" rel="noopener"' : '' %>>
+                    <%= task.link_label || 'Open link' %>
+                  </a>
+                <% } %>
+              </div>
+            </div>
+          <% }); %>
+        </section>
         <% } %>
 
         <!-- Footer: completion + navigation -->
@@ -94,19 +137,53 @@
   </div>
 
   <script>
+    const lessonId = <%= lesson.id %>;
+
+    // ── Mark lesson complete checkbox ─────────────────────────────────────────
     const checkbox = document.getElementById('lessonComplete');
     const label = document.getElementById('completeLabel');
-    const lessonId = <%= lesson.id %>;
 
     checkbox.addEventListener('change', async () => {
       const isComplete = checkbox.checked;
       label.textContent = isComplete ? 'Lesson complete ✓' : 'Mark as complete';
       label.classList.toggle('is-done', isComplete);
-
       await fetch(`/api/lessons/${lessonId}/complete`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ completed: isComplete })
+      });
+    });
+
+    // ── Greenhouse CTA (Lesson 1 only) ────────────────────────────────────────
+    async function plantAndNavigate() {
+      try {
+        await fetch(`/api/lessons/${lessonId}/complete`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ completed: true })
+        });
+        // Sync the checkbox state
+        if (!checkbox.checked) {
+          checkbox.checked = true;
+          label.textContent = 'Lesson complete ✓';
+          label.classList.add('is-done');
+        }
+      } catch (e) { /* network hiccup — still navigate */ }
+      window.location.href = '/greenhouse';
+    }
+
+    // ── Homework checkboxes ───────────────────────────────────────────────────
+    document.querySelectorAll('.homework-checkbox').forEach(cb => {
+      cb.addEventListener('change', async () => {
+        const homeworkId = cb.dataset.homeworkId;
+        const res = await fetch(`/api/lessons/${lessonId}/homework/${homeworkId}/toggle`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' }
+        });
+        if (!res.ok) {
+          // Revert visual state on error
+          cb.checked = !cb.checked;
+        }
       });
     });
   </script>
