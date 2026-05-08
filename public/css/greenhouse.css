@@ -382,6 +382,69 @@ details[open] .gh-planted-summary::before { content: '▾  '; }
 }
 .gh-harvest-link:hover { opacity: 1; }
 
+/* ─── 28-day lock notice ─────────────────────────────────────────────────── */
+.gh-lock-notice {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+  font-weight: 400;
+  color: rgba(16, 15, 16, 0.4);
+  margin-bottom: 1rem;
+}
+
+/* ─── Plant seeds intro ──────────────────────────────────────────────────── */
+.gh-plant-intro {
+  font-size: 0.95rem;
+  font-weight: 300;
+  color: rgba(16, 15, 16, 0.65);
+  line-height: 1.7;
+  max-width: 600px;
+  margin: 0 0 1.5rem;
+}
+
+/* ─── Growth Check section ───────────────────────────────────────────────── */
+.gh-growth-check {
+  padding: 2rem;
+  background: var(--color-new-growth);
+  border-radius: var(--radius-lg, 16px);
+}
+
+.gh-growth-check-title {
+  font-family: var(--font-display);
+  font-size: 1.6rem;
+  font-weight: 400;
+  color: var(--color-ink-stained);
+  margin: 0 0 0.75rem;
+}
+
+.gh-growth-check-body {
+  font-size: 0.95rem;
+  font-weight: 300;
+  color: rgba(16, 15, 16, 0.6);
+  line-height: 1.7;
+  max-width: 520px;
+  margin: 0 0 1.5rem;
+}
+
+.gh-growth-check-locked {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.gh-growth-check-btn--locked {
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  font-weight: 400;
+  background: rgba(16, 15, 16, 0.08);
+  color: rgba(16, 15, 16, 0.35);
+  border: 1.5px solid rgba(16, 15, 16, 0.12);
+  border-radius: 8px;
+  padding: 0.625rem 1.25rem;
+  cursor: not-allowed;
+}
+
 /* ─── Mobile ─────────────────────────────────────────────────────────────── */
 @media (max-width: 680px) {
   .gh-seed-row { grid-template-columns: 1fr; gap: 1rem; }
@@ -389,4 +452,5 @@ details[open] .gh-planted-summary::before { content: '▾  '; }
   .gh-actions { flex-direction: column; }
   .gh-keep-btn, .gh-replace-btn { text-align: center; }
   .gh-planted-details { padding: 0.875rem 1rem; }
+  .gh-growth-check { padding: 1.25rem; }
 }

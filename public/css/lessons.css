@@ -498,6 +498,42 @@
   line-height: 1.35;
 }
 
+/* ─── Lesson 1 Greenhouse CTA ────────────────────────────────────────────── */
+.lesson-greenhouse-cta {
+  margin: 2.5rem 0 0;
+  padding: 1.75rem 2rem;
+  background: var(--color-new-growth);
+  border-radius: var(--radius-lg, 16px);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.lesson-greenhouse-cta-label {
+  font-family: var(--font-display);
+  font-size: 1.3rem;
+  font-weight: 400;
+  color: var(--color-ink-stained);
+  margin: 0;
+}
+
+.lesson-greenhouse-cta-btn {
+  display: inline-block;
+  background: var(--color-bloem);
+  color: #FAFAFA;
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  font-weight: 400;
+  padding: 0.625rem 1.25rem;
+  border-radius: 8px;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: opacity 0.15s;
+}
+.lesson-greenhouse-cta-btn:hover { opacity: 0.85; }
+
 /* ─── Responsive ─────────────────────────────────────────────────────────── */
 
 @media (max-width: 700px) {

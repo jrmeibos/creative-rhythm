@@ -295,6 +295,14 @@ db.exec(`
   // Default settings for unlock flags
   db.prepare("INSERT OR IGNORE INTO settings (key, value) VALUES ('midcourse_unlocked', 'false')").run();
   db.prepare("INSERT OR IGNORE INTO settings (key, value) VALUES ('harvest_unlocked', 'false')").run();
+
+  // V2: wipe all seeds planted during onboarding — seeds are now planted via Greenhouse after Lesson 1
+  const v2SeedsFlag = db.prepare("SELECT value FROM settings WHERE key='seeds_v2_migrated'").get();
+  if (!v2SeedsFlag) {
+    db.exec('DELETE FROM seeds');
+    db.prepare("INSERT OR IGNORE INTO settings (key, value) VALUES ('seeds_v2_migrated', 'true')").run();
+    console.log('✓ Migrated: Wiped seed data — V2 model resets all seeds; users will re-plant after Lesson 1');
+  }
 })();
 
 function seedDefaultAccounts() {
@@ -973,6 +981,22 @@ module.exports = {
     return db.prepare(
       'UPDATE seeds SET feeling=?, looks_like=?, updated_at=CURRENT_TIMESTAMP WHERE id=? AND user_id=?'
     ).run(feeling || '', looksLike || '', seedId, userId);
+  },
+
+  getSeedById(seedId, userId) {
+    return db.prepare('SELECT * FROM seeds WHERE id = ? AND user_id = ?').get(seedId, userId);
+  },
+
+  getActiveSeedByNumber(userId, seedNumber) {
+    return db.prepare(
+      'SELECT * FROM seeds WHERE user_id = ? AND seed_number = ? AND is_active = 1 ORDER BY id DESC LIMIT 1'
+    ).get(userId, seedNumber);
+  },
+
+  getPlantedSeedCount(userId) {
+    return db.prepare(
+      'SELECT COUNT(*) as c FROM seeds WHERE user_id = ? AND is_replacement = 0'
+    ).get(userId).c;
   },
 
   getAllUsersSeeds() {

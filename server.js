@@ -564,19 +564,6 @@ app.post('/api/onboarding/assessment', requireAuth, (req, res) => {
   res.json({ ok: true });
 });
 
-app.post('/api/onboarding/seeds', requireAuth, (req, res) => {
-  const { seeds } = req.body;
-  if (!Array.isArray(seeds) || seeds.length !== 3) {
-    return res.status(400).json({ error: 'Invalid seeds data.' });
-  }
-  for (const s of seeds) {
-    const num = parseInt(s.seed_number);
-    if (![1, 2, 3].includes(num)) return res.status(400).json({ error: 'Invalid seed number.' });
-    db.upsertSeed(req.session.user.id, num, s.feeling, s.looks_like);
-  }
-  res.json({ ok: true });
-});
-
 app.post('/api/onboarding/complete', requireAuth, (req, res) => {
   const userId = req.session.user.id;
   db.setOnboardingComplete(userId);
@@ -599,37 +586,67 @@ app.get('/profile', requireAuth, (req, res) => {
 
 // ─── Greenhouse ────────────────────────────────────────────────────────────
 
+function isSeedLocked(seed) {
+  if (!seed || !seed.created_at) return false;
+  const planted = new Date(seed.created_at);
+  return Date.now() < planted.getTime() + 28 * 24 * 60 * 60 * 1000;
+}
+
 app.get('/greenhouse', requireAuth, (req, res) => {
-  const isAdmin = req.session.user.role === 'admin';
-  const { midcourseUnlocked: mcState, harvestUnlocked: hvState } = getUnlockState();
-  const midcourseUnlocked = isAdmin || mcState;
-  const closingUnlocked   = isAdmin || hvState;
+  const userId = req.session.user.id;
 
-  const seeds = (midcourseUnlocked || closingUnlocked)
-    ? db.getGreenhouseSeeds(req.session.user.id)
-    : null;
+  // State: empty → plant → tending (based on student progress)
+  const lesson1Done = !!db.getLessonCompletion(userId, 1);
+  const plantedCount = lesson1Done ? db.getPlantedSeedCount(userId) : 0;
 
-  let opening = null, closing = null;
-  if (closingUnlocked) {
-    opening = db.getAssessment(req.session.user.id, 'opening');
-    closing = db.getAssessment(req.session.user.id, 'closing');
+  let state;
+  if (!lesson1Done)       state = 'empty';
+  else if (plantedCount === 0) state = 'plant';
+  else                    state = 'tending';
+
+  // Load seeds only when tending
+  let seeds = null;
+  if (state === 'tending') {
+    seeds = db.getGreenhouseSeeds(userId);
+    // Attach lock status to each slot
+    for (const n of [1, 2, 3]) {
+      const entry = seeds[n];
+      const activeSeed = entry.replacement || entry.original;
+      entry.locked = isSeedLocked(activeSeed);
+      if (entry.locked && activeSeed) {
+        const unlockMs = new Date(activeSeed.created_at).getTime() + 28 * 24 * 60 * 60 * 1000;
+        entry.unlockDate = new Date(unlockMs).toLocaleDateString('en-US', { month: 'long', day: 'numeric' });
+      }
+    }
   }
 
+  // Growth Check: unlocks at day 77 from course start
   const courseStart = db.getSetting('course_start_date');
-  let unlockDate = null;
-  if (courseStart && !midcourseUnlocked) {
-    const start = new Date(courseStart + 'T00:00:00');
-    const m = new Date(start); m.setDate(m.getDate() + 35);
-    unlockDate = m.toLocaleDateString('en-US', { month: 'long', day: 'numeric' });
+  let growthCheckUnlocked = false;
+  let growthCheckDate = null;
+  if (courseStart) {
+    const daysDiff = Math.floor((Date.now() - new Date(courseStart + 'T00:00:00').getTime()) / 86400000);
+    growthCheckUnlocked = daysDiff >= 77;
+    if (!growthCheckUnlocked) {
+      const unlockDay = new Date(new Date(courseStart + 'T00:00:00').getTime() + 77 * 86400000);
+      growthCheckDate = unlockDay.toLocaleDateString('en-US', { month: 'long', day: 'numeric' });
+    }
+  }
+
+  // Load harvest data only when growth check is unlocked
+  let opening = null, closing = null;
+  if (state === 'tending' && growthCheckUnlocked) {
+    opening = db.getAssessment(userId, 'opening');
+    closing  = db.getAssessment(userId, 'closing');
   }
 
   res.render('greenhouse', {
     title: 'The Greenhouse',
     page: 'greenhouse',
+    state,
     seeds,
-    midcourseUnlocked,
-    closingUnlocked,
-    unlockDate,
+    growthCheckUnlocked,
+    growthCheckDate,
     opening,
     closing,
     questions: ASSESSMENT_QUESTIONS,
@@ -637,35 +654,48 @@ app.get('/greenhouse', requireAuth, (req, res) => {
   });
 });
 
-app.post('/api/seeds/:id/keep', requireAuth, (req, res) => {
-  const { midcourseUnlocked } = getUnlockState();
-  if (req.session.user.role !== 'admin' && !midcourseUnlocked) {
-    return res.status(403).json({ error: 'Not yet unlocked.' });
+app.post('/api/greenhouse/plant', requireAuth, (req, res) => {
+  const userId = req.session.user.id;
+  if (!db.getLessonCompletion(userId, 1)) {
+    return res.status(403).json({ error: 'Complete Lesson 1 first.' });
   }
+  const { seeds } = req.body;
+  if (!Array.isArray(seeds) || seeds.length !== 3) {
+    return res.status(400).json({ error: 'Invalid seeds data.' });
+  }
+  for (const s of seeds) {
+    const num = parseInt(s.seed_number);
+    if (![1, 2, 3].includes(num)) return res.status(400).json({ error: 'Invalid seed number.' });
+    if (!s.feeling || !s.looks_like) return res.status(400).json({ error: 'All seed fields are required.' });
+    db.upsertSeed(userId, num, s.feeling, s.looks_like);
+  }
+  res.json({ ok: true });
+});
+
+app.post('/api/seeds/:id/keep', requireAuth, (req, res) => {
   const seedId = parseInt(req.params.id);
   if (!seedId) return res.status(400).json({ error: 'Invalid seed id.' });
+  const seed = db.getSeedById(seedId, req.session.user.id);
+  if (!seed) return res.status(404).json({ error: 'Seed not found.' });
+  if (isSeedLocked(seed)) return res.status(403).json({ error: 'Seed is still in the lock period.' });
   const { kept } = req.body;
   db.keepSeed(seedId, req.session.user.id, !!kept);
   res.json({ ok: true });
 });
 
 app.post('/api/greenhouse/replace', requireAuth, (req, res) => {
-  const { midcourseUnlocked } = getUnlockState();
-  if (req.session.user.role !== 'admin' && !midcourseUnlocked) {
-    return res.status(403).json({ error: 'Not yet unlocked.' });
-  }
   const { seedNumber, feeling, looksLike } = req.body;
   const num = parseInt(seedNumber);
   if (![1, 2, 3].includes(num)) return res.status(400).json({ error: 'Invalid seed number.' });
+  const activeSeed = db.getActiveSeedByNumber(req.session.user.id, num);
+  if (activeSeed && isSeedLocked(activeSeed)) {
+    return res.status(403).json({ error: 'Seed is still in the lock period.' });
+  }
   db.replaceSeeds(req.session.user.id, num, feeling, looksLike);
   res.json({ ok: true });
 });
 
 app.post('/api/greenhouse/update', requireAuth, (req, res) => {
-  const { midcourseUnlocked } = getUnlockState();
-  if (req.session.user.role !== 'admin' && !midcourseUnlocked) {
-    return res.status(403).json({ error: 'Not yet unlocked.' });
-  }
   const { seedId, feeling, looksLike } = req.body;
   if (!seedId) return res.status(400).json({ error: 'seedId required.' });
   db.updateSeedById(parseInt(seedId), req.session.user.id, feeling, looksLike);
@@ -679,8 +709,13 @@ app.get('/harvest', requireAuth, (req, res) => {
 });
 
 app.post('/api/harvest', requireAuth, (req, res) => {
-  const { harvestUnlocked } = getUnlockState();
-  if (req.session.user.role !== 'admin' && !harvestUnlocked) return res.status(403).json({ error: 'Harvest not yet unlocked.' });
+  const courseStart = db.getSetting('course_start_date');
+  let growthCheckUnlocked = false;
+  if (courseStart) {
+    const daysDiff = Math.floor((Date.now() - new Date(courseStart + 'T00:00:00').getTime()) / 86400000);
+    growthCheckUnlocked = daysDiff >= 77;
+  }
+  if (!growthCheckUnlocked) return res.status(403).json({ error: 'Growth Check not yet available.' });
   db.upsertAssessment(req.session.user.id, 'closing', req.body);
   res.json({ ok: true });
 });

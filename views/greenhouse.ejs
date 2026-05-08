@@ -4,7 +4,6 @@
   <%- include('partials/head') %>
   <link rel="stylesheet" href="/css/dashboard.css">
   <link rel="stylesheet" href="/css/greenhouse.css">
-  <link rel="stylesheet" href="/css/profile.css">
   <link rel="stylesheet" href="/css/onboarding.css">
 </head>
 <body class="app-body">
@@ -12,202 +11,99 @@
     <%- include('partials/sidebar') %>
     <main class="main-content" id="main">
 
-      <% if (closingUnlocked) { %>
-      <!-- ══ HARVEST STATE ═══════════════════════════════════════════════════ -->
+      <% if (state === 'empty') { %>
+      <!-- ══ EMPTY STATE ════════════════════════════════════════════════════ -->
+      <div class="gh-locked">
+        <div class="gh-locked-icon" aria-hidden="true">
+          <svg viewBox="0 0 80 96" width="72" height="86" fill="none">
+            <line x1="40" y1="88" x2="40" y2="52" stroke="#76856C" stroke-width="3" stroke-linecap="round"/>
+            <path d="M40 68 C40 68 24 62 22 46 C34 44 40 58 40 68Z" fill="#76856C" opacity="0.65"/>
+            <path d="M40 60 C40 60 56 54 58 38 C46 36 40 52 40 60Z" fill="#76856C"/>
+            <line x1="26" y1="88" x2="54" y2="88" stroke="#D8B0AB" stroke-width="3" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <h1 class="gh-locked-title">The Greenhouse 🌱</h1>
+        <div class="gh-resting-body">
+          <p>This is where your seeds will grow.</p>
+          <p>Complete your first lesson to unlock the Greenhouse and plant your three seeds — intentions for what you hope to grow in these 12 weeks.</p>
+          <p>The seeds you plant here will accompany you through the whole course. At the end, you'll reflect on how they grew — or changed shape entirely.</p>
+        </div>
+        <a href="/lessons/welcome-to-the-rhythm" class="ob-btn ob-btn--primary" style="display:inline-block;margin-top:2rem;text-decoration:none">Go to Lesson 1 →</a>
+      </div>
+
+      <% } else if (state === 'plant') { %>
+      <!-- ══ PLANT SEEDS STATE ═══════════════════════════════════════════════ -->
       <header class="dash-header">
         <div class="dash-greeting">
           <h1 class="dash-greeting-text">The Greenhouse</h1>
         </div>
+        <p class="gh-subtitle">Plant three seeds. What do you hope to grow?</p>
       </header>
 
-      <% if (!closing) { %>
-      <!-- ── Harvest Assessment Form ─────────────────────────────────────── -->
       <section class="dash-section">
-        <div class="harvest-progress-wrap">
-          <div class="harvest-progress-bar" id="harvest-progress-bar" style="width:0%"></div>
+        <p class="gh-plant-intro">Start with how you want to <em>feel</em> — the concrete outcomes will follow. These seeds will stay with you through the whole course. At the end, you'll return to see what grew.</p>
+
+        <div class="ob-example">
+          <p>For example: <em>"I want to feel excited instead of anxious when I open Instagram"</em> might grow into <em>"I post twice a week without burning out or going dark."</em></p>
         </div>
 
-        <div class="dash-section-header" style="margin-top:1.5rem">
-          <h2 class="dash-section-title harvest-title-display">The Harvest 🌾</h2>
+        <div class="ob-seeds">
+          <% for (let n = 1; n <= 3; n++) { %>
+            <div class="ob-seed-card">
+              <h3 class="ob-seed-title">Seed #<%= n %></h3>
+              <div class="ob-seed-cols">
+                <div class="ob-seed-field">
+                  <label class="ob-seed-label">🌱 The feeling</label>
+                  <textarea id="s<%= n %>-feeling" class="ob-seed-textarea"
+                            rows="4" placeholder="How do I want to feel?"></textarea>
+                </div>
+                <div class="ob-seed-field">
+                  <label class="ob-seed-label">🌿 What it looks like</label>
+                  <textarea id="s<%= n %>-looks" class="ob-seed-textarea"
+                            rows="4" placeholder="What might this make possible?"></textarea>
+                </div>
+              </div>
+            </div>
+          <% } %>
         </div>
-        <p class="harvest-assess-intro">Before we look at how far you've come — answer these questions from where you are right now. Don't look back first.</p>
 
-        <form class="harvest-form" id="harvest-form">
-          <div class="ob-questions">
-
-            <!-- Q1–Q6: same questions as opening, with "Before" hints -->
-            <% questions.slice(0, 6).forEach(function(q, idx) { %>
-            <div class="ob-question" id="hq-block-<%= q.id %>">
-              <div class="ob-q-num">0<%= idx + 1 %></div>
-              <% if (opening && q.type === 'rating' && opening[q.field]) { %>
-                <p class="harvest-then-note">You said <strong><%= opening[q.field] %></strong> before.</p>
-              <% } else if (opening && q.type === 'choice' && opening[q.field]) { %>
-                <p class="harvest-then-note">Before: <em><%= opening[q.field] %></em></p>
-              <% } %>
-              <p class="ob-q-text"><%= q.text %></p>
-              <% if (q.type === 'choice') { %>
-                <div class="ob-choices">
-                  <% q.choices.forEach(function(c) { %>
-                    <button type="button" class="ob-choice" data-group="<%= q.field %>" data-value="<%= c.val %>">
-                      <span class="ob-choice-val"><%= c.val %></span>
-                      <span class="ob-choice-label"><%= c.label %></span>
-                    </button>
-                  <% }); %>
-                </div>
-              <% } else { %>
-                <p class="ob-rating-scale"><span><%= q.low %></span><span><%= q.high %></span></p>
-                <div class="ob-rating-row">
-                  <% for (let i = 1; i <= 10; i++) { %>
-                    <button type="button" class="ob-rating-btn" data-group="<%= q.field %>" data-value="<%= i %>"><%= i %></button>
-                  <% } %>
-                </div>
-              <% } %>
-            </div>
-            <% }); %>
-
-            <!-- Q7–Q12: harvest-specific questions -->
-            <% closingQuestions.forEach(function(q, idx) { %>
-            <div class="ob-question" id="hq-block-<%= q.id %>">
-              <div class="ob-q-num">0<%= idx + 7 %></div>
-              <p class="ob-q-text"><%= q.text %></p>
-              <% if (q.type === 'choice') { %>
-                <div class="ob-choices">
-                  <% q.choices.forEach(function(c) { %>
-                    <button type="button" class="ob-choice" data-group="<%= q.field %>" data-value="<%= c.val %>">
-                      <span class="ob-choice-val"><%= c.val %></span>
-                      <span class="ob-choice-label"><%= c.label %></span>
-                    </button>
-                  <% }); %>
-                </div>
-              <% } else { %>
-                <textarea class="ob-textarea" data-field="<%= q.field %>"
-                          rows="4" placeholder="<%= q.placeholder %>"></textarea>
-              <% } %>
-            </div>
-            <% }); %>
-
-          </div>
-
-          <p class="ob-error" id="harvest-error" hidden>Please answer all questions before submitting.</p>
-          <div class="ob-actions">
-            <button type="button" class="ob-btn ob-btn--primary" id="harvest-submit-btn">
-              Reveal my harvest 🌾
-            </button>
-          </div>
-        </form>
+        <p class="ob-error" id="seeds-error" hidden>Please fill in all six seed fields before continuing.</p>
+        <div class="ob-actions">
+          <button class="ob-btn ob-btn--primary" id="plant-btn" onclick="plantSeeds()">Plant my seeds 🌱</button>
+        </div>
       </section>
 
       <% } else { %>
-      <!-- ── Then & Now Comparison ───────────────────────────────────────── -->
-      <section class="dash-section">
-        <div class="harvest-reveal">
-          <h2 class="harvest-reveal-title">Look how far you've grown. 🌿</h2>
-          <p class="harvest-reveal-sub">Here is where you started — and where you are now.</p>
-
-          <%
-            const ratingQs = questions.slice(0,6).filter(q => q.type === 'rating');
-            const choiceQs = questions.slice(0,6).filter(q => q.type === 'choice');
-          %>
-
-          <!-- Rating bars: Q2, Q4, Q6 -->
-          <div class="harvest-bars-section">
-            <% ratingQs.forEach(function(q) { %>
-              <% const then = opening ? (opening[q.field] || 0) : 0; %>
-              <% const now  = closing[q.field] || 0; %>
-              <% const improved = now > then; %>
-              <div class="harvest-bar-item">
-                <p class="harvest-bar-q"><%= q.text %></p>
-                <div class="harvest-bar-row">
-                  <span class="harvest-bar-label">Then</span>
-                  <div class="harvest-bar-track">
-                    <div class="harvest-bar-fill harvest-bar-fill--then" style="width:<%= then ? (then/10*100).toFixed(0) : 0 %>%"></div>
-                  </div>
-                  <span class="harvest-bar-score harvest-bar-score--then"><%= then || '—' %></span>
-                </div>
-                <div class="harvest-bar-row harvest-bar-row--now">
-                  <span class="harvest-bar-label harvest-bar-label--now">Now</span>
-                  <div class="harvest-bar-track">
-                    <div class="harvest-bar-fill" style="width:<%= now ? (now/10*100).toFixed(0) : 0 %>%"></div>
-                  </div>
-                  <span class="harvest-bar-score"><%= now || '—' %></span>
-                  <% if (improved) { %><span class="harvest-bar-improved" title="Improved">✨</span><% } %>
-                </div>
-                <p class="harvest-bar-scale"><span><%= q.low %></span><span><%= q.high %></span></p>
-              </div>
-            <% }); %>
-          </div>
-
-          <!-- Choice pills: Q1, Q3, Q5 -->
-          <div class="harvest-pills-section">
-            <% choiceQs.forEach(function(q) { %>
-              <% const thenVal = opening ? (opening[q.field] || '') : ''; %>
-              <% const nowVal  = closing[q.field] || ''; %>
-              <% const thenLabel = q.choices.find(c => c.val === thenVal); %>
-              <% const nowLabel  = q.choices.find(c => c.val === nowVal); %>
-              <div class="harvest-pill-item">
-                <p class="harvest-pill-q"><%= q.text %></p>
-                <div class="harvest-pill-row">
-                  <span class="harvest-pill harvest-pill--then">Then — <%= thenVal %><% if (thenLabel) { %>: <%= thenLabel.label %><% } %></span>
-                  <span class="harvest-pill harvest-pill--now">Now — <%= nowVal %><% if (nowLabel) { %>: <%= nowLabel.label %><% } %></span>
-                  <% if (thenVal && nowVal && thenVal === nowVal) { %><span class="harvest-consistent">consistent 🌿</span><% } %>
-                </div>
-              </div>
-            <% }); %>
-          </div>
-
-          <!-- Final closing words -->
-          <div class="harvest-closing">
-            <h3 class="harvest-closing-title">You showed up. 🌿</h3>
-            <p class="harvest-closing-body">That's the whole thing.<br>That's always been the whole thing.</p>
-          </div>
-
-          <!-- Quiet link to full answers -->
-          <button class="gh-harvest-link" id="gh-full-answers-toggle" type="button">
-            Read my full harvest answers →
-          </button>
+      <!-- ══ TENDING STATE ════════════════════════════════════════════════ -->
+      <header class="dash-header">
+        <div class="dash-greeting">
+          <h1 class="dash-greeting-text">The Greenhouse</h1>
         </div>
+        <p class="gh-subtitle">Tend what you planted. Watch what grows.</p>
+      </header>
 
-        <!-- Full closing answers (hidden by default) -->
-        <div id="gh-full-answers" class="gh-full-answers is-hidden">
-          <h3 class="gh-full-answers-title">Your harvest answers.</h3>
-          <% closingQuestions.forEach(function(q) { %>
-            <% if (q.type === 'text') { %>
-              <% const answer = closing[q.field]; %>
-              <% if (answer) { %>
-              <div class="harvest-open-item">
-                <p class="harvest-open-label"><%= q.text %></p>
-                <div class="harvest-open-answer"><%= answer %></div>
-              </div>
-              <% } %>
-            <% } else if (q.type === 'choice') { %>
-              <% const choiceVal = closing[q.field]; %>
-              <% const choiceLabel = choiceVal ? q.choices.find(c => c.val === choiceVal) : null; %>
-              <% if (choiceVal) { %>
-              <div class="harvest-open-item">
-                <p class="harvest-open-label"><%= q.text %></p>
-                <div class="harvest-open-answer"><%= choiceLabel ? choiceLabel.label : choiceVal %></div>
-              </div>
-              <% } %>
-            <% } %>
-          <% }); %>
-        </div>
-      </section>
-      <% } %>
-
-      <!-- ── What you planted (collapsible, always in harvest state) ─────── -->
-      <% if (seeds) { %>
       <section class="dash-section">
-        <details class="gh-planted-details">
-          <summary class="gh-planted-summary">What you planted 🌱</summary>
-          <div class="gh-seeds">
-            <% for (let n = 1; n <= 3; n++) { %>
-              <% const entry = seeds[n] || { original: null, replacement: null }; %>
-              <% const orig  = entry.original; %>
-              <% const repl  = entry.replacement; %>
-              <% const seedLabel = ['One', 'Two', 'Three'][n - 1]; %>
+        <div class="gh-seeds">
+          <% for (let n = 1; n <= 3; n++) { %>
+            <% const entry = seeds[n] || { original: null, replacement: null, locked: false }; %>
+            <% const orig = entry.original; %>
+            <% const repl = entry.replacement; %>
+            <% const isLocked = entry.locked; %>
+            <% const seedLabel = ['One', 'Two', 'Three'][n - 1]; %>
+            <% const isKept = orig && !!orig.kept_at; %>
 
-              <div class="gh-seed-card gh-seed-card--readonly">
-                <div class="gh-seed-num">Seed <%= seedLabel %></div>
+            <div class="gh-seed-card" id="gh-card-<%= n %>">
+              <div class="gh-seed-num">Seed <%= seedLabel %></div>
+
+              <% if (isLocked) { %>
+                <!-- ── Locked: 28-day tending period ── -->
+                <div class="gh-lock-notice">
+                  <svg width="14" height="16" viewBox="0 0 14 16" fill="none" aria-hidden="true">
+                    <rect x="1.5" y="7" width="11" height="8" rx="1.5" stroke="currentColor" stroke-width="1.4"/>
+                    <path d="M4 7V5a3 3 0 016 0v2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+                  </svg>
+                  Tendable starting <%= entry.unlockDate %>
+                </div>
 
                 <% if (repl) { %>
                   <div class="gh-original-block">
@@ -237,51 +133,19 @@
                     </div>
                   </div>
                 <% } else if (orig) { %>
-                  <% if (orig.kept_at) { %>
-                    <span class="gh-kept-badge" style="margin-bottom:0.75rem;display:inline-block">Still growing 🌿</span>
-                  <% } %>
                   <div class="gh-seed-row">
                     <div class="gh-col">
                       <span class="gh-col-label">The feeling</span>
-                      <p class="gh-col-text"><%= orig.feeling || '<em class="gh-empty">Not yet planted</em>' %></p>
+                      <p class="gh-col-text"><%= orig.feeling || '' %></p>
                     </div>
                     <div class="gh-col">
                       <span class="gh-col-label">What it looks like</span>
-                      <p class="gh-col-text"><%= orig.looks_like || '<em class="gh-empty">Not yet planted</em>' %></p>
+                      <p class="gh-col-text"><%= orig.looks_like || '' %></p>
                     </div>
                   </div>
-                <% } else { %>
-                  <p class="gh-col-text"><em class="gh-empty">Not yet planted</em></p>
                 <% } %>
-              </div>
-            <% } %>
-          </div>
-        </details>
-      </section>
-      <% } %>
 
-      <% } else if (midcourseUnlocked) { %>
-      <!-- ══ TENDING STATE ════════════════════════════════════════════════ -->
-      <header class="dash-header">
-        <div class="dash-greeting">
-          <h1 class="dash-greeting-text">The Greenhouse</h1>
-        </div>
-        <p class="gh-subtitle">Tend what you planted. Or plant something new.</p>
-      </header>
-
-      <section class="dash-section">
-        <div class="gh-seeds">
-          <% for (let n = 1; n <= 3; n++) { %>
-            <% const entry = seeds[n] || { original: null, replacement: null }; %>
-            <% const orig = entry.original; %>
-            <% const repl = entry.replacement; %>
-            <% const seedLabel = ['One', 'Two', 'Three'][n - 1]; %>
-            <% const isKept = orig && !!orig.kept_at; %>
-
-            <div class="gh-seed-card" id="gh-card-<%= n %>">
-              <div class="gh-seed-num">Seed <%= seedLabel %></div>
-
-              <% if (repl) { %>
+              <% } else if (repl) { %>
                 <!-- ── Replaced: show original greyed, replacement active ── -->
                 <div class="gh-original-block">
                   <span class="gh-original-label">Originally planted</span>
@@ -318,7 +182,6 @@
                       <p class="gh-col-text"><%= repl.looks_like || '' %></p>
                     </div>
                   </div>
-                  <!-- Edit form (hidden) -->
                   <div class="gh-edit-form is-hidden" id="gh-edit-<%= n %>">
                     <div class="gh-seed-row gh-seed-row--inputs">
                       <div class="gh-col">
@@ -361,7 +224,6 @@
                       <p class="gh-col-text"><%- orig?.looks_like || '<em class="gh-empty">Not yet planted</em>' %></p>
                     </div>
                   </div>
-                  <!-- Edit form (hidden) -->
                   <div class="gh-edit-form is-hidden" id="gh-edit-<%= n %>">
                     <div class="gh-seed-row gh-seed-row--inputs">
                       <div class="gh-col">
@@ -380,7 +242,6 @@
                   </div>
                 </div>
 
-                <!-- Action buttons (hidden if kept or no orig) -->
                 <div class="gh-actions<%= (isKept || !orig) ? ' is-hidden' : '' %>" id="gh-actions-<%= n %>">
                   <% if (orig) { %>
                     <button class="gh-keep-btn" type="button" onclick="keepSeed(<%= orig.id %>, <%= n %>)">Keep growing 🌿</button>
@@ -388,7 +249,6 @@
                   <button class="gh-replace-btn" type="button" onclick="openReplace(<%= n %>)">Plant something new 🌱</button>
                 </div>
 
-                <!-- "Still growing" confirmation (shown if kept) -->
                 <div class="gh-kept-confirm<%= isKept ? '' : ' is-hidden' %>" id="gh-kept-<%= n %>">
                   <span class="gh-kept-badge">Still growing 🌿</span>
                   <% if (orig) { %>
@@ -396,7 +256,6 @@
                   <% } %>
                 </div>
 
-                <!-- Replace form (hidden) -->
                 <div class="gh-replace-form is-hidden" id="gh-replace-<%= n %>">
                   <p class="gh-replace-label">What are you planting now?</p>
                   <div class="gh-seed-row gh-seed-row--inputs">
@@ -421,31 +280,221 @@
         </div>
       </section>
 
-      <% } else { %>
-      <!-- ══ RESTING STATE ═══════════════════════════════════════════════ -->
-      <div class="gh-locked">
-        <div class="gh-locked-icon" aria-hidden="true">
-          <svg viewBox="0 0 80 96" width="72" height="86" fill="none">
-            <line x1="40" y1="88" x2="40" y2="52" stroke="#76856C" stroke-width="3" stroke-linecap="round"/>
-            <path d="M40 68 C40 68 24 62 22 46 C34 44 40 58 40 68Z" fill="#76856C" opacity="0.65"/>
-            <path d="M40 60 C40 60 56 54 58 38 C46 36 40 52 40 60Z" fill="#76856C"/>
-            <line x1="26" y1="88" x2="54" y2="88" stroke="#D8B0AB" stroke-width="3" stroke-linecap="round"/>
-          </svg>
+      <!-- ── Growth Check ────────────────────────────────────────────────── -->
+      <section class="dash-section">
+        <div class="gh-growth-check">
+          <% if (!growthCheckUnlocked) { %>
+            <div class="gh-growth-check-locked">
+              <h2 class="gh-growth-check-title">Growth Check 🌾</h2>
+              <p class="gh-growth-check-body">At the end of the course, you'll return here to see how far you've grown. This reflection unlocks on <%= growthCheckDate || 'Week 11' %>.</p>
+              <button class="gh-growth-check-btn gh-growth-check-btn--locked" type="button" disabled>
+                Growth Check not yet available
+              </button>
+            </div>
+          <% } else if (!closing) { %>
+            <!-- ── Harvest Assessment Form ─────────────────────────────────── -->
+            <h2 class="gh-growth-check-title">Growth Check 🌾</h2>
+            <p class="harvest-assess-intro">Before we look at how far you've come — answer these questions from where you are right now. Don't look back first.</p>
+
+            <div class="harvest-progress-wrap">
+              <div class="harvest-progress-bar" id="harvest-progress-bar" style="width:0%"></div>
+            </div>
+
+            <form class="harvest-form" id="harvest-form" style="margin-top:1.5rem">
+              <div class="ob-questions">
+                <!-- Q1–Q6: same questions as opening -->
+                <% questions.slice(0, 6).forEach(function(q, idx) { %>
+                <div class="ob-question" id="hq-block-<%= q.id %>">
+                  <div class="ob-q-num">0<%= idx + 1 %></div>
+                  <% if (opening && q.type === 'rating' && opening[q.field]) { %>
+                    <p class="harvest-then-note">You said <strong><%= opening[q.field] %></strong> before.</p>
+                  <% } else if (opening && q.type === 'choice' && opening[q.field]) { %>
+                    <p class="harvest-then-note">Before: <em><%= opening[q.field] %></em></p>
+                  <% } %>
+                  <p class="ob-q-text"><%= q.text %></p>
+                  <% if (q.type === 'choice') { %>
+                    <div class="ob-choices">
+                      <% q.choices.forEach(function(c) { %>
+                        <button type="button" class="ob-choice" data-group="<%= q.field %>" data-value="<%= c.val %>">
+                          <span class="ob-choice-val"><%= c.val %></span>
+                          <span class="ob-choice-label"><%= c.label %></span>
+                        </button>
+                      <% }); %>
+                    </div>
+                  <% } else { %>
+                    <p class="ob-rating-scale"><span><%= q.low %></span><span><%= q.high %></span></p>
+                    <div class="ob-rating-row">
+                      <% for (let i = 1; i <= 10; i++) { %>
+                        <button type="button" class="ob-rating-btn" data-group="<%= q.field %>" data-value="<%= i %>"><%= i %></button>
+                      <% } %>
+                    </div>
+                  <% } %>
+                </div>
+                <% }); %>
+
+                <!-- Q7–Q12: harvest-specific questions -->
+                <% closingQuestions.forEach(function(q, idx) { %>
+                <div class="ob-question" id="hq-block-<%= q.id %>">
+                  <div class="ob-q-num">0<%= idx + 7 %></div>
+                  <p class="ob-q-text"><%= q.text %></p>
+                  <% if (q.type === 'choice') { %>
+                    <div class="ob-choices">
+                      <% q.choices.forEach(function(c) { %>
+                        <button type="button" class="ob-choice" data-group="<%= q.field %>" data-value="<%= c.val %>">
+                          <span class="ob-choice-val"><%= c.val %></span>
+                          <span class="ob-choice-label"><%= c.label %></span>
+                        </button>
+                      <% }); %>
+                    </div>
+                  <% } else { %>
+                    <textarea class="ob-textarea" data-field="<%= q.field %>"
+                              rows="4" placeholder="<%= q.placeholder %>"></textarea>
+                  <% } %>
+                </div>
+                <% }); %>
+              </div>
+
+              <p class="ob-error" id="harvest-error" hidden>Please answer all questions before submitting.</p>
+              <div class="ob-actions">
+                <button type="button" class="ob-btn ob-btn--primary" id="harvest-submit-btn">
+                  Reveal my harvest 🌾
+                </button>
+              </div>
+            </form>
+
+          <% } else { %>
+            <!-- ── Then & Now Comparison ─────────────────────────────────── -->
+            <div class="harvest-reveal">
+              <h2 class="harvest-reveal-title">Look how far you've grown. 🌿</h2>
+              <p class="harvest-reveal-sub">Here is where you started — and where you are now.</p>
+
+              <%
+                const ratingQs = questions.slice(0,6).filter(q => q.type === 'rating');
+                const choiceQs = questions.slice(0,6).filter(q => q.type === 'choice');
+              %>
+
+              <div class="harvest-bars-section">
+                <% ratingQs.forEach(function(q) { %>
+                  <% const then = opening ? (opening[q.field] || 0) : 0; %>
+                  <% const now  = closing[q.field] || 0; %>
+                  <% const improved = now > then; %>
+                  <div class="harvest-bar-item">
+                    <p class="harvest-bar-q"><%= q.text %></p>
+                    <div class="harvest-bar-row">
+                      <span class="harvest-bar-label">Then</span>
+                      <div class="harvest-bar-track">
+                        <div class="harvest-bar-fill harvest-bar-fill--then" style="width:<%= then ? (then/10*100).toFixed(0) : 0 %>%"></div>
+                      </div>
+                      <span class="harvest-bar-score harvest-bar-score--then"><%= then || '—' %></span>
+                    </div>
+                    <div class="harvest-bar-row harvest-bar-row--now">
+                      <span class="harvest-bar-label harvest-bar-label--now">Now</span>
+                      <div class="harvest-bar-track">
+                        <div class="harvest-bar-fill" style="width:<%= now ? (now/10*100).toFixed(0) : 0 %>%"></div>
+                      </div>
+                      <span class="harvest-bar-score"><%= now || '—' %></span>
+                      <% if (improved) { %><span class="harvest-bar-improved" title="Improved">✨</span><% } %>
+                    </div>
+                    <p class="harvest-bar-scale"><span><%= q.low %></span><span><%= q.high %></span></p>
+                  </div>
+                <% }); %>
+              </div>
+
+              <div class="harvest-pills-section">
+                <% choiceQs.forEach(function(q) { %>
+                  <% const thenVal = opening ? (opening[q.field] || '') : ''; %>
+                  <% const nowVal  = closing[q.field] || ''; %>
+                  <% const thenLabel = q.choices.find(c => c.val === thenVal); %>
+                  <% const nowLabel  = q.choices.find(c => c.val === nowVal); %>
+                  <div class="harvest-pill-item">
+                    <p class="harvest-pill-q"><%= q.text %></p>
+                    <div class="harvest-pill-row">
+                      <span class="harvest-pill harvest-pill--then">Then — <%= thenVal %><% if (thenLabel) { %>: <%= thenLabel.label %><% } %></span>
+                      <span class="harvest-pill harvest-pill--now">Now — <%= nowVal %><% if (nowLabel) { %>: <%= nowLabel.label %><% } %></span>
+                      <% if (thenVal && nowVal && thenVal === nowVal) { %><span class="harvest-consistent">consistent 🌿</span><% } %>
+                    </div>
+                  </div>
+                <% }); %>
+              </div>
+
+              <div class="harvest-closing">
+                <h3 class="harvest-closing-title">You showed up. 🌿</h3>
+                <p class="harvest-closing-body">That's the whole thing.<br>That's always been the whole thing.</p>
+              </div>
+
+              <button class="gh-harvest-link" id="gh-full-answers-toggle" type="button">
+                Read my full harvest answers →
+              </button>
+            </div>
+
+            <div id="gh-full-answers" class="gh-full-answers is-hidden">
+              <h3 class="gh-full-answers-title">Your harvest answers.</h3>
+              <% closingQuestions.forEach(function(q) { %>
+                <% if (q.type === 'text') { %>
+                  <% const answer = closing[q.field]; %>
+                  <% if (answer) { %>
+                  <div class="harvest-open-item">
+                    <p class="harvest-open-label"><%= q.text %></p>
+                    <div class="harvest-open-answer"><%= answer %></div>
+                  </div>
+                  <% } %>
+                <% } else if (q.type === 'choice') { %>
+                  <% const choiceVal = closing[q.field]; %>
+                  <% const choiceLabel = choiceVal ? q.choices.find(c => c.val === choiceVal) : null; %>
+                  <% if (choiceVal) { %>
+                  <div class="harvest-open-item">
+                    <p class="harvest-open-label"><%= q.text %></p>
+                    <div class="harvest-open-answer"><%= choiceLabel ? choiceLabel.label : choiceVal %></div>
+                  </div>
+                  <% } %>
+                <% } %>
+              <% }); %>
+            </div>
+          <% } %>
         </div>
-        <h1 class="gh-locked-title">The Greenhouse 🌱</h1>
-        <div class="gh-resting-body">
-          <p>The seeds you planted at the beginning of the course are growing here.</p>
-          <p>Halfway through the course, we will check in on these goals. How are they growing? Do you want to keep pursuing them?</p>
-          <p>Everything in the greenhouse is an experiment, and there are no sunk costs.</p>
-          <p>Check in here at Week 6 to reassess.</p>
-        </div>
-      </div>
+      </section>
+
       <% } %>
 
     </main>
   </div>
 
   <script>
+    // ── Plant seeds ──────────────────────────────────────────────────────────
+    async function plantSeeds() {
+      const errEl = document.getElementById('seeds-error');
+      if (errEl) errEl.hidden = true;
+
+      const seeds = [1, 2, 3].map(n => ({
+        seed_number: n,
+        feeling: document.getElementById(`s${n}-feeling`)?.value.trim() || '',
+        looks_like: document.getElementById(`s${n}-looks`)?.value.trim() || ''
+      }));
+
+      if (seeds.some(s => !s.feeling || !s.looks_like)) {
+        if (errEl) errEl.hidden = false;
+        return;
+      }
+
+      const btn = document.getElementById('plant-btn');
+      btn.disabled = true;
+      btn.textContent = 'Planting…';
+
+      const res = await fetch('/api/greenhouse/plant', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ seeds })
+      });
+
+      if (res.ok) {
+        window.location.href = '/greenhouse';
+      } else {
+        btn.disabled = false;
+        btn.textContent = 'Plant my seeds 🌱';
+        if (errEl) { errEl.textContent = 'Something went wrong. Please try again.'; errEl.hidden = false; }
+      }
+    }
+
     // ── Edit existing seed ───────────────────────────────────────────────────
     function openEdit(seedId, n, feeling, looksLike) {
       document.getElementById('gh-ef-feeling-' + n).value = feeling;
@@ -476,7 +525,7 @@
       }
     }
 
-    // ── Keep seed (persisted) ────────────────────────────────────────────────
+    // ── Keep seed ────────────────────────────────────────────────────────────
     async function keepSeed(seedId, n) {
       const res = await fetch('/api/seeds/' + seedId + '/keep', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },

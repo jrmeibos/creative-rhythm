@@ -58,48 +58,6 @@
             </div>
           </div>
           <p class="admin-unlock-note">Both unlock automatically based on course start date. No manual action needed.</p>
-
-          <div class="admin-sim-divider"></div>
-
-          <div class="admin-sim-box">
-            <div class="admin-sim-header">
-              <div>
-                <h3 class="admin-sim-title">Course Simulation</h3>
-                <p class="admin-sim-subtitle">Force-unlock sections for testing, regardless of course date.</p>
-              </div>
-              <span class="admin-sim-badge">⚠️ Testing only</span>
-            </div>
-            <div class="admin-sim-rows">
-              <div class="admin-sim-row-item">
-                <div class="admin-sim-row-label">
-                  <strong>Week 6 — Greenhouse (Tending)</strong>
-                  <span class="admin-sim-row-hint">Reveals seeds and tending UI</span>
-                </div>
-                <div class="admin-sim-row-actions">
-                  <% if (!midcourseUnlocked) { %>
-                    <button class="admin-sim-btn" type="button" onclick="setFlag('midcourse_unlocked', 'true')">Simulate Week 6 🌿</button>
-                  <% } else { %>
-                    <span class="admin-sim-active">Active</span>
-                    <button class="admin-sim-btn admin-sim-btn--reset" type="button" onclick="setFlag('midcourse_unlocked', 'false')">Reset</button>
-                  <% } %>
-                </div>
-              </div>
-              <div class="admin-sim-row-item">
-                <div class="admin-sim-row-label">
-                  <strong>Week 12 — Harvest</strong>
-                  <span class="admin-sim-row-hint">Reveals harvest state in Greenhouse</span>
-                </div>
-                <div class="admin-sim-row-actions">
-                  <% if (!harvestUnlocked) { %>
-                    <button class="admin-sim-btn" type="button" onclick="setFlag('harvest_unlocked', 'true')">Simulate Week 12 🌾</button>
-                  <% } else { %>
-                    <span class="admin-sim-active">Active</span>
-                    <button class="admin-sim-btn admin-sim-btn--reset" type="button" onclick="setFlag('harvest_unlocked', 'false')">Reset</button>
-                  <% } %>
-                </div>
-              </div>
-            </div>
-          </div>
         </div>
       </section>
 

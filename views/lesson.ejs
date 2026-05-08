@@ -41,6 +41,14 @@
           <%- lesson.content %>
         </div>
 
+        <!-- Greenhouse CTA — Lesson 1 only -->
+        <% if (lesson.slug === 'welcome-to-the-rhythm') { %>
+        <div class="lesson-greenhouse-cta">
+          <p class="lesson-greenhouse-cta-label">Ready to plant?</p>
+          <a href="/greenhouse" class="lesson-greenhouse-cta-btn">Plant your seeds in the Greenhouse →</a>
+        </div>
+        <% } %>
+
         <!-- Footer: completion + navigation -->
         <footer class="lesson-footer">
 
