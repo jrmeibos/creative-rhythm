@@ -583,8 +583,8 @@ app.get('/community', requireAuth, (req, res) => {
 
 app.get('/calendar', requireAuth, (req, res) => {
   const userId               = req.session.user.id;
-  const currentWeekStart     = getWeekStart();
   const courseCurrentWeekStart = getCurrentCourseWeek(req.session.user).weekStart;
+  const currentWeekStart     = courseCurrentWeekStart;
   const courseStartDate      = db.getSetting('course_start_date') || currentWeekStart;
   const weekStarts           = generate12Weeks(courseStartDate);
   const allGoalsRaw          = db.getGoalsForWeeks(userId, weekStarts);
