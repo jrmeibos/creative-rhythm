@@ -41,13 +41,13 @@
 
           <!-- Edit name -->
           <div class="profile-edit-item">
-            <button class="profile-edit-link" type="button" onclick="toggleEdit('name')">Edit name</button>
-            <div class="profile-inline-form" id="edit-name-form" hidden>
+            <button class="profile-edit-link" type="button" data-section="name" onclick="toggleEdit('name')">Edit name</button>
+            <div class="profile-inline-form" id="edit-name-form">
               <input type="text" class="profile-inline-input" id="name-input"
                      value="<%= profile.name %>" placeholder="Display name" maxlength="100">
               <div class="profile-inline-actions">
                 <button class="profile-inline-save" type="button" onclick="saveName()">Save</button>
-                <button class="profile-inline-cancel" type="button" onclick="toggleEdit('name')">Cancel</button>
+                <button class="profile-inline-cancel" type="button" onclick="closeSection('name')">Cancel</button>
               </div>
               <p class="profile-inline-error" id="name-error" hidden></p>
               <p class="profile-inline-saved" id="name-saved" hidden>Saved 🌿</p>
@@ -56,15 +56,15 @@
 
           <!-- Edit email -->
           <div class="profile-edit-item">
-            <button class="profile-edit-link" type="button" onclick="toggleEdit('email')">Edit email</button>
-            <div class="profile-inline-form" id="edit-email-form" hidden>
+            <button class="profile-edit-link" type="button" data-section="email" onclick="toggleEdit('email')">Edit email</button>
+            <div class="profile-inline-form" id="edit-email-form">
               <input type="password" class="profile-inline-input" id="email-current-pw"
                      placeholder="Current password" autocomplete="current-password">
               <input type="email" class="profile-inline-input" id="email-new"
                      placeholder="New email address" autocomplete="email">
               <div class="profile-inline-actions">
                 <button class="profile-inline-save" type="button" onclick="saveEmail()">Save</button>
-                <button class="profile-inline-cancel" type="button" onclick="toggleEdit('email')">Cancel</button>
+                <button class="profile-inline-cancel" type="button" onclick="closeSection('email')">Cancel</button>
               </div>
               <p class="profile-inline-error" id="email-error" hidden></p>
               <p class="profile-inline-saved" id="email-saved" hidden>Saved 🌿</p>
@@ -73,8 +73,8 @@
 
           <!-- Change password -->
           <div class="profile-edit-item">
-            <button class="profile-edit-link" type="button" onclick="toggleEdit('password')">Change password</button>
-            <div class="profile-inline-form" id="edit-password-form" hidden>
+            <button class="profile-edit-link" type="button" data-section="password" onclick="toggleEdit('password')">Change password</button>
+            <div class="profile-inline-form" id="edit-password-form">
               <input type="password" class="profile-inline-input" id="pw-current"
                      placeholder="Current password" autocomplete="current-password">
               <input type="password" class="profile-inline-input" id="pw-new"
@@ -83,7 +83,7 @@
                      placeholder="Confirm new password" autocomplete="new-password">
               <div class="profile-inline-actions">
                 <button class="profile-inline-save" type="button" onclick="savePassword()">Save</button>
-                <button class="profile-inline-cancel" type="button" onclick="toggleEdit('password')">Cancel</button>
+                <button class="profile-inline-cancel" type="button" onclick="closeSection('password')">Cancel</button>
               </div>
               <p class="profile-inline-error" id="pw-error" hidden></p>
               <p class="profile-inline-saved" id="pw-saved" hidden>Password updated 🌿</p>
@@ -92,13 +92,13 @@
 
           <!-- Profile picture -->
           <div class="profile-edit-item">
-            <button class="profile-edit-link" type="button" onclick="toggleEdit('photo')">Update profile picture</button>
-            <div class="profile-inline-form" id="edit-photo-form" hidden>
+            <button class="profile-edit-link" type="button" data-section="photo" onclick="toggleEdit('photo')">Update profile picture</button>
+            <div class="profile-inline-form" id="edit-photo-form">
               <input type="file" class="profile-inline-file" id="photo-file-input"
                      accept="image/jpeg,image/png,image/webp">
               <div class="profile-inline-actions">
                 <button class="profile-inline-save" type="button" onclick="savePhoto()">Upload</button>
-                <button class="profile-inline-cancel" type="button" onclick="toggleEdit('photo')">Cancel</button>
+                <button class="profile-inline-cancel" type="button" onclick="closeSection('photo')">Cancel</button>
                 <% if (profile.profile_photo) { %>
                   <button class="profile-inline-remove" type="button" onclick="removePhoto()">Remove current picture</button>
                 <% } %>
@@ -159,16 +159,22 @@
     });
 
     // ── Account edit controls ─────────────────────────────────────────────────
-    const EDIT_SECTIONS = ['name', 'email', 'password', 'photo'];
+    function closeSection(name) {
+      const form = document.getElementById(`edit-${name}-form`);
+      const btn  = document.querySelector(`.profile-edit-link[data-section="${name}"]`);
+      if (form) form.classList.remove('section-open');
+      if (btn)  btn.classList.remove('is-open');
+    }
 
-    function toggleEdit(section) {
-      const form = document.getElementById(`edit-${section}-form`);
-      const opening = form.hidden;
-      EDIT_SECTIONS.forEach(s => {
-        const f = document.getElementById(`edit-${s}-form`);
-        if (f) f.hidden = true;
-      });
-      if (opening) form.hidden = false;
+    function toggleEdit(name) {
+      const form   = document.getElementById(`edit-${name}-form`);
+      const wasOpen = form.classList.contains('section-open');
+      document.querySelectorAll('.profile-inline-form').forEach(f => f.classList.remove('section-open'));
+      document.querySelectorAll('.profile-edit-link').forEach(b => b.classList.remove('is-open'));
+      if (!wasOpen) {
+        form.classList.add('section-open');
+        document.querySelector(`.profile-edit-link[data-section="${name}"]`).classList.add('is-open');
+      }
     }
 
     async function apiPost(url, body) {
@@ -201,7 +207,7 @@
       document.getElementById('profile-display-name').textContent = name;
       const initEl = document.getElementById('profile-avatar-initials');
       if (initEl) initEl.textContent = data.avatar_initial;
-      showSaved('name-saved', () => toggleEdit('name'));
+      showSaved('name-saved', () => closeSection('name'));
     }
 
     async function saveEmail() {
@@ -214,7 +220,7 @@
       document.getElementById('profile-display-email').textContent = email;
       document.getElementById('email-current-pw').value = '';
       document.getElementById('email-new').value = '';
-      showSaved('email-saved', () => toggleEdit('email'));
+      showSaved('email-saved', () => closeSection('email'));
     }
 
     async function savePassword() {
@@ -229,7 +235,7 @@
       });
       if (!ok) return showError('pw-error', data.error || 'Something went wrong.');
       ['pw-current','pw-new','pw-confirm'].forEach(id => document.getElementById(id).value = '');
-      showSaved('pw-saved', () => toggleEdit('password'));
+      showSaved('pw-saved', () => closeSection('password'));
     }
 
     async function savePhoto() {
@@ -248,7 +254,7 @@
       if (!res.ok) return showError('photo-error', data.error || 'Upload failed.');
       document.getElementById('profile-avatar-wrap').innerHTML =
         `<img src="${data.photoPath}" class="profile-avatar profile-avatar--photo" alt="">`;
-      showSaved('photo-saved', () => toggleEdit('photo'));
+      showSaved('photo-saved', () => closeSection('photo'));
     }
 
     async function removePhoto() {

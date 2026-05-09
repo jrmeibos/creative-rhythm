@@ -90,13 +90,27 @@
   transition: opacity 0.15s;
 }
 
+.profile-edit-link::before {
+  content: '▸  ';
+  font-style: normal;
+  text-decoration: none;
+  display: inline-block;
+}
+
+.profile-edit-link.is-open::before { content: '▾  '; }
+
 .profile-edit-link:hover { opacity: 1; }
 
 .profile-inline-form {
+  display: none;
   margin-top: 0.75rem;
-  display: flex;
+  margin-bottom: 0.25rem;
   flex-direction: column;
   gap: 0.5rem;
+}
+
+.profile-inline-form.section-open {
+  display: flex;
 }
 
 .profile-inline-input {
