@@ -22,13 +22,92 @@
           <h2 class="dash-section-title">Account</h2>
         </div>
         <div class="profile-info-card">
-          <div class="profile-avatar <%= user.current_season ? 'season-avatar--' + user.current_season : '' %>">
-            <%= user.avatar_initial || user.name.charAt(0).toUpperCase() %>
+          <div class="profile-avatar-wrap" id="profile-avatar-wrap">
+            <% if (profile.profile_photo) { %>
+              <img src="<%= profile.profile_photo %>" class="profile-avatar profile-avatar--photo" alt="">
+            <% } else { %>
+              <div class="profile-avatar <%= profile.current_season ? 'season-avatar--' + profile.current_season : '' %>" id="profile-avatar-initials">
+                <%= profile.avatar_initial || profile.name.charAt(0).toUpperCase() %>
+              </div>
+            <% } %>
           </div>
           <div class="profile-info-details">
-            <span class="profile-info-name"><%= user.name %></span>
-            <span class="profile-info-email"><%= user.email %></span>
+            <span class="profile-info-name" id="profile-display-name"><%= profile.name %></span>
+            <span class="profile-info-email" id="profile-display-email"><%= profile.email %></span>
           </div>
+        </div>
+
+        <div class="profile-edit-controls">
+
+          <!-- Edit name -->
+          <div class="profile-edit-item">
+            <button class="profile-edit-link" type="button" onclick="toggleEdit('name')">Edit name</button>
+            <div class="profile-inline-form" id="edit-name-form" hidden>
+              <input type="text" class="profile-inline-input" id="name-input"
+                     value="<%= profile.name %>" placeholder="Display name" maxlength="100">
+              <div class="profile-inline-actions">
+                <button class="profile-inline-save" type="button" onclick="saveName()">Save</button>
+                <button class="profile-inline-cancel" type="button" onclick="toggleEdit('name')">Cancel</button>
+              </div>
+              <p class="profile-inline-error" id="name-error" hidden></p>
+              <p class="profile-inline-saved" id="name-saved" hidden>Saved 🌿</p>
+            </div>
+          </div>
+
+          <!-- Edit email -->
+          <div class="profile-edit-item">
+            <button class="profile-edit-link" type="button" onclick="toggleEdit('email')">Edit email</button>
+            <div class="profile-inline-form" id="edit-email-form" hidden>
+              <input type="password" class="profile-inline-input" id="email-current-pw"
+                     placeholder="Current password" autocomplete="current-password">
+              <input type="email" class="profile-inline-input" id="email-new"
+                     placeholder="New email address" autocomplete="email">
+              <div class="profile-inline-actions">
+                <button class="profile-inline-save" type="button" onclick="saveEmail()">Save</button>
+                <button class="profile-inline-cancel" type="button" onclick="toggleEdit('email')">Cancel</button>
+              </div>
+              <p class="profile-inline-error" id="email-error" hidden></p>
+              <p class="profile-inline-saved" id="email-saved" hidden>Saved 🌿</p>
+            </div>
+          </div>
+
+          <!-- Change password -->
+          <div class="profile-edit-item">
+            <button class="profile-edit-link" type="button" onclick="toggleEdit('password')">Change password</button>
+            <div class="profile-inline-form" id="edit-password-form" hidden>
+              <input type="password" class="profile-inline-input" id="pw-current"
+                     placeholder="Current password" autocomplete="current-password">
+              <input type="password" class="profile-inline-input" id="pw-new"
+                     placeholder="New password (8+ characters)" autocomplete="new-password">
+              <input type="password" class="profile-inline-input" id="pw-confirm"
+                     placeholder="Confirm new password" autocomplete="new-password">
+              <div class="profile-inline-actions">
+                <button class="profile-inline-save" type="button" onclick="savePassword()">Save</button>
+                <button class="profile-inline-cancel" type="button" onclick="toggleEdit('password')">Cancel</button>
+              </div>
+              <p class="profile-inline-error" id="pw-error" hidden></p>
+              <p class="profile-inline-saved" id="pw-saved" hidden>Password updated 🌿</p>
+            </div>
+          </div>
+
+          <!-- Profile picture -->
+          <div class="profile-edit-item">
+            <button class="profile-edit-link" type="button" onclick="toggleEdit('photo')">Update profile picture</button>
+            <div class="profile-inline-form" id="edit-photo-form" hidden>
+              <input type="file" class="profile-inline-file" id="photo-file-input"
+                     accept="image/jpeg,image/png,image/webp">
+              <div class="profile-inline-actions">
+                <button class="profile-inline-save" type="button" onclick="savePhoto()">Upload</button>
+                <button class="profile-inline-cancel" type="button" onclick="toggleEdit('photo')">Cancel</button>
+                <% if (profile.profile_photo) { %>
+                  <button class="profile-inline-remove" type="button" onclick="removePhoto()">Remove current picture</button>
+                <% } %>
+              </div>
+              <p class="profile-inline-error" id="photo-error" hidden></p>
+              <p class="profile-inline-saved" id="photo-saved" hidden>Photo updated 🌿</p>
+            </div>
+          </div>
+
         </div>
       </section>
 
@@ -78,6 +157,110 @@
         if (!already) { card.classList.add('is-selected'); card.setAttribute('aria-pressed', 'true'); }
       });
     });
+
+    // ── Account edit controls ─────────────────────────────────────────────────
+    const EDIT_SECTIONS = ['name', 'email', 'password', 'photo'];
+
+    function toggleEdit(section) {
+      const form = document.getElementById(`edit-${section}-form`);
+      const opening = form.hidden;
+      EDIT_SECTIONS.forEach(s => {
+        const f = document.getElementById(`edit-${s}-form`);
+        if (f) f.hidden = true;
+      });
+      if (opening) form.hidden = false;
+    }
+
+    async function apiPost(url, body) {
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      return { ok: res.ok, data: await res.json() };
+    }
+
+    function showError(id, msg) {
+      const el = document.getElementById(id);
+      el.textContent = msg;
+      el.hidden = false;
+    }
+
+    function showSaved(id, onDone) {
+      const el = document.getElementById(id);
+      el.hidden = false;
+      setTimeout(() => { el.hidden = true; if (onDone) onDone(); }, 2000);
+    }
+
+    async function saveName() {
+      const name = document.getElementById('name-input').value.trim();
+      document.getElementById('name-error').hidden = true;
+      if (!name) return showError('name-error', 'Name cannot be empty.');
+      const { ok, data } = await apiPost('/api/profile/name', { display_name: name });
+      if (!ok) return showError('name-error', data.error || 'Something went wrong.');
+      document.getElementById('profile-display-name').textContent = name;
+      const initEl = document.getElementById('profile-avatar-initials');
+      if (initEl) initEl.textContent = data.avatar_initial;
+      showSaved('name-saved', () => toggleEdit('name'));
+    }
+
+    async function saveEmail() {
+      const pw = document.getElementById('email-current-pw').value;
+      const email = document.getElementById('email-new').value.trim();
+      document.getElementById('email-error').hidden = true;
+      if (!pw || !email) return showError('email-error', 'All fields are required.');
+      const { ok, data } = await apiPost('/api/profile/email', { current_password: pw, new_email: email });
+      if (!ok) return showError('email-error', data.error || 'Something went wrong.');
+      document.getElementById('profile-display-email').textContent = email;
+      document.getElementById('email-current-pw').value = '';
+      document.getElementById('email-new').value = '';
+      showSaved('email-saved', () => toggleEdit('email'));
+    }
+
+    async function savePassword() {
+      const current = document.getElementById('pw-current').value;
+      const newPw   = document.getElementById('pw-new').value;
+      const confirm = document.getElementById('pw-confirm').value;
+      document.getElementById('pw-error').hidden = true;
+      if (!current || !newPw || !confirm) return showError('pw-error', 'All fields are required.');
+      if (newPw !== confirm) return showError('pw-error', 'New passwords do not match.');
+      const { ok, data } = await apiPost('/api/account/password', {
+        current_password: current, new_password: newPw, confirm_password: confirm
+      });
+      if (!ok) return showError('pw-error', data.error || 'Something went wrong.');
+      ['pw-current','pw-new','pw-confirm'].forEach(id => document.getElementById(id).value = '');
+      showSaved('pw-saved', () => toggleEdit('password'));
+    }
+
+    async function savePhoto() {
+      const fileInput = document.getElementById('photo-file-input');
+      document.getElementById('photo-error').hidden = true;
+      if (!fileInput.files[0]) return showError('photo-error', 'Please select a file.');
+      const file = fileInput.files[0];
+      if (file.size > 2 * 1024 * 1024) return showError('photo-error', 'File must be under 2MB.');
+      if (!['image/jpeg','image/png','image/webp'].includes(file.type)) {
+        return showError('photo-error', 'Only JPG, PNG, and WebP files are allowed.');
+      }
+      const formData = new FormData();
+      formData.append('photo', file);
+      const res = await fetch('/api/account/photo', { method: 'POST', body: formData });
+      const data = await res.json();
+      if (!res.ok) return showError('photo-error', data.error || 'Upload failed.');
+      document.getElementById('profile-avatar-wrap').innerHTML =
+        `<img src="${data.photoPath}" class="profile-avatar profile-avatar--photo" alt="">`;
+      showSaved('photo-saved', () => toggleEdit('photo'));
+    }
+
+    async function removePhoto() {
+      const res = await fetch('/api/account/photo', { method: 'DELETE' });
+      if (!res.ok) return;
+      const initial = '<%= profile.avatar_initial || profile.name.charAt(0).toUpperCase() %>';
+      const season  = '<%= profile.current_season || "" %>';
+      const cls = `profile-avatar${season ? ' season-avatar--' + season : ''}`;
+      document.getElementById('profile-avatar-wrap').innerHTML =
+        `<div class="${cls}" id="profile-avatar-initials">${initial}</div>`;
+      toggleEdit('photo');
+    }
   </script>
 
 </body>

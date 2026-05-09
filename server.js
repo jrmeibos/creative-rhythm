@@ -661,10 +661,46 @@ app.post('/api/onboarding/complete', requireAuth, (req, res) => {
 // ─── Profile ───────────────────────────────────────────────────────────────
 
 app.get('/profile', requireAuth, (req, res) => {
+  const profile = db.getUserFullProfile(req.session.user.id);
   res.render('profile', {
     title: 'My Profile',
-    page: 'profile'
+    page: 'profile',
+    profile
   });
+});
+
+app.post('/api/profile/name', requireAuth, (req, res) => {
+  const { display_name } = req.body;
+  if (!display_name || !display_name.trim()) return res.status(400).json({ error: 'Name is required.' });
+  const name = display_name.trim();
+  if (name.length > 100) return res.status(400).json({ error: 'Name must be under 100 characters.' });
+  db.updateUserName(req.session.user.id, name);
+  req.session.user.name = name;
+  req.session.user.avatar_initial = name.charAt(0).toUpperCase();
+  req.session.save(err => {
+    if (err) return res.status(500).json({ error: 'Session save failed.' });
+    res.json({ ok: true, display_name: name, avatar_initial: name.charAt(0).toUpperCase() });
+  });
+});
+
+app.post('/api/profile/email', requireAuth, async (req, res) => {
+  const { current_password, new_email } = req.body;
+  if (!current_password || !new_email) return res.status(400).json({ error: 'Current password and new email are required.' });
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(new_email.trim())) return res.status(400).json({ error: 'Invalid email address.' });
+  const user = db.getUserByEmail(req.session.user.email);
+  const valid = await bcrypt.compare(current_password, user.password_hash);
+  if (!valid) return res.status(400).json({ error: 'Current password is incorrect.' });
+  try {
+    db.updateUserEmail(req.session.user.id, new_email.trim().toLowerCase());
+    req.session.user.email = new_email.trim().toLowerCase();
+    req.session.save(err => {
+      if (err) return res.status(500).json({ error: 'Session save failed.' });
+      res.json({ ok: true, email: new_email.trim().toLowerCase() });
+    });
+  } catch (e) {
+    if (e.message && e.message.includes('UNIQUE')) return res.status(409).json({ error: 'That email is already in use.' });
+    res.status(500).json({ error: 'Failed to update email.' });
+  }
 });
 
 // ─── Greenhouse ────────────────────────────────────────────────────────────

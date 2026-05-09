@@ -650,6 +650,17 @@ module.exports = {
       .run(name.trim(), email.trim().toLowerCase(), initial, userId);
   },
 
+  updateUserName(userId, name) {
+    const initial = name.trim().charAt(0).toUpperCase();
+    return db.prepare('UPDATE users SET name=?, avatar_initial=? WHERE id=?')
+      .run(name.trim(), initial, userId);
+  },
+
+  updateUserEmail(userId, email) {
+    return db.prepare('UPDATE users SET email=? WHERE id=?')
+      .run(email.trim().toLowerCase(), userId);
+  },
+
   updateUserTimezone(userId, timezone) {
     return db.prepare('UPDATE users SET timezone=? WHERE id=?').run(timezone, userId);
   },
