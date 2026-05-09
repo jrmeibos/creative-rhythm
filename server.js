@@ -691,6 +691,42 @@ function isSeedLocked(seed, user) {
   return getNow(user).getTime() < planted.getTime() + 28 * 24 * 60 * 60 * 1000;
 }
 
+const STAGE_LABELS = {
+  1: { slug: 'just-planted', label: 'Just planted'  },
+  2: { slug: 'first-sprout', label: 'First sprout'  },
+  3: { slug: 'young-plant',  label: 'Young plant'   },
+  4: { slug: 'growing',      label: 'Growing'       },
+  5: { slug: 'established',  label: 'Established'   },
+  6: { slug: 'buds',         label: 'Buds forming'  },
+  7: { slug: 'in-bloom',     label: 'In bloom'      }
+};
+
+function getGardenStage(user) {
+  const activeSeeds = db.prepare(
+    'SELECT * FROM seeds WHERE user_id = ? AND is_active = 1'
+  ).all(user.id);
+  if (!activeSeeds || activeSeeds.length === 0) return null;
+
+  const earliest = activeSeeds.reduce(
+    (min, s) => s.created_at < min.created_at ? s : min,
+    activeSeeds[0]
+  );
+
+  const growthCheckDone = !!db.getAssessment(user.id, 'closing');
+  if (growthCheckDone) return 7;
+
+  const now = getNow(user);
+  const planted = new Date(earliest.created_at);
+  const weeksElapsed = Math.floor((now - planted) / (7 * 24 * 60 * 60 * 1000));
+
+  if (weeksElapsed < 2)  return 1;
+  if (weeksElapsed < 4)  return 2;
+  if (weeksElapsed < 6)  return 3;
+  if (weeksElapsed < 8)  return 4;
+  if (weeksElapsed < 10) return 5;
+  return 6;
+}
+
 app.get('/greenhouse', requireAuth, (req, res) => {
   const userId = req.session.user.id;
 
@@ -740,6 +776,10 @@ app.get('/greenhouse', requireAuth, (req, res) => {
     closing  = db.getAssessment(userId, 'closing');
   }
 
+  const gardenStage = getGardenStage(req.session.user);
+  const stageInfo = gardenStage ? STAGE_LABELS[gardenStage] : null;
+  const courseWeek = getCurrentCourseWeek(req.session.user);
+
   res.render('greenhouse', {
     title: 'The Greenhouse',
     page: 'greenhouse',
@@ -750,7 +790,11 @@ app.get('/greenhouse', requireAuth, (req, res) => {
     opening,
     closing,
     questions: ASSESSMENT_QUESTIONS,
-    closingQuestions: CLOSING_QUESTIONS
+    closingQuestions: CLOSING_QUESTIONS,
+    gardenStage,
+    stageSlug:  stageInfo ? stageInfo.slug  : null,
+    stageLabel: stageInfo ? stageInfo.label : null,
+    weekNumber: courseWeek ? courseWeek.weekNumber : null
   });
 });
 

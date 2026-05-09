@@ -445,6 +445,64 @@ details[open] .gh-planted-summary::before { content: '▾  '; }
   cursor: not-allowed;
 }
 
+/* ─── Plant growth visual ────────────────────────────────────────────────── */
+.garden-visual {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 2rem auto 3rem;
+  padding: 1.5rem 0;
+}
+
+.garden-visual-illustration {
+  width: 200px;
+  height: 280px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.plant-svg {
+  width: 100%;
+  height: auto;
+  transform-origin: 50% 90%;
+  animation: gentle-sway 6s ease-in-out infinite;
+}
+
+@keyframes gentle-sway {
+  0%, 100% { transform: rotate(-0.6deg); }
+  50%       { transform: rotate(0.6deg); }
+}
+
+.garden-visual-caption {
+  margin-top: 1rem;
+  text-align: center;
+}
+
+.caption-stage {
+  display: block;
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 1.25rem;
+  color: var(--color-bloem);
+  margin-bottom: 0.25rem;
+}
+
+.caption-week {
+  display: block;
+  font-family: var(--font-body);
+  font-weight: 300;
+  font-size: 0.85rem;
+  color: var(--color-bloem);
+  opacity: 0.7;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .plant-svg { animation: none; }
+}
+
 /* ─── Then & Now comparison ──────────────────────────────────────────────── */
 .harvest-reveal { padding-top: 0.5rem; }
 

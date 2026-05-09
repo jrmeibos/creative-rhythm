@@ -82,6 +82,22 @@
         <p class="gh-subtitle">Tend what you planted. Watch what grows.</p>
       </header>
 
+      <% if (gardenStage) { %>
+      <section class="garden-visual">
+        <div class="garden-visual-illustration">
+          <img src="/images/greenhouse/stage-<%= gardenStage %>-<%= stageSlug %>.svg"
+               alt="Your garden — <%= stageLabel %>"
+               class="plant-svg" />
+        </div>
+        <p class="garden-visual-caption">
+          <span class="caption-stage"><%= stageLabel %></span>
+          <% if (weekNumber) { %>
+            <span class="caption-week">Week <%= weekNumber %> of 12</span>
+          <% } %>
+        </p>
+      </section>
+      <% } %>
+
       <section class="dash-section">
         <div class="gh-seeds">
           <% for (let n = 1; n <= 3; n++) { %>
