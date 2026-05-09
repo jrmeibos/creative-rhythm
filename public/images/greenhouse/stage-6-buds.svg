@@ -1,0 +1,21 @@
+<svg width="200" height="280" viewBox="0 0 200 280" xmlns="http://www.w3.org/2000/svg">
+  <g>
+    <path d="M 70 240 L 80 270 L 120 270 L 130 240 Z" fill="none" stroke="#705C6C" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+    <line x1="65" y1="240" x2="135" y2="240" stroke="#705C6C" stroke-width="1.8" stroke-linecap="round"/>
+    <ellipse cx="100" cy="240" rx="32" ry="4" fill="#C4A28A" opacity="0.4"/>
+    <path d="M 100 238 Q 98 215 100 190 Q 102 165 98 140 Q 96 115 100 90" fill="none" stroke="#76856C" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M 100 140 Q 110 125 118 115" fill="none" stroke="#76856C" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M 100 160 Q 88 148 80 140" fill="none" stroke="#76856C" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M 99 215 Q 78 205 68 212 Q 78 220 99 215" fill="none" stroke="#76856C" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M 100 215 Q 122 205 132 212 Q 122 220 100 215" fill="none" stroke="#76856C" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M 100 190 Q 82 183 74 189 Q 82 195 100 190" fill="none" stroke="#76856C" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M 100 190 Q 118 183 126 189 Q 118 195 100 190" fill="none" stroke="#76856C" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M 99 165 Q 85 159 79 164" fill="none" stroke="#76856C" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M 100 165 Q 115 159 121 164" fill="none" stroke="#76856C" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M 98 120 Q 90 116 87 120" fill="none" stroke="#76856C" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M 100 120 Q 108 116 111 120" fill="none" stroke="#76856C" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+    <ellipse cx="100" cy="90" rx="3" ry="5" fill="none" stroke="#D8B0AB" stroke-width="1.5" stroke-linecap="round"/>
+    <ellipse cx="118" cy="113" rx="2.5" ry="4" fill="none" stroke="#D8B0AB" stroke-width="1.5" stroke-linecap="round"/>
+    <ellipse cx="80" cy="138" rx="2.5" ry="4" fill="none" stroke="#D8B0AB" stroke-width="1.5" stroke-linecap="round"/>
+  </g>
+</svg>
