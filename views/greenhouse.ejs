@@ -306,11 +306,6 @@
                 <% questions.slice(0, 6).forEach(function(q, idx) { %>
                 <div class="ob-question" id="hq-block-<%= q.id %>">
                   <div class="ob-q-num">0<%= idx + 1 %></div>
-                  <% if (opening && q.type === 'rating' && opening[q.field]) { %>
-                    <p class="harvest-then-note">You said <strong><%= opening[q.field] %></strong> before.</p>
-                  <% } else if (opening && q.type === 'choice' && opening[q.field]) { %>
-                    <p class="harvest-then-note">Before: <em><%= opening[q.field] %></em></p>
-                  <% } %>
                   <p class="ob-q-text"><%= q.text %></p>
                   <% if (q.type === 'choice') { %>
                     <div class="ob-choices">
