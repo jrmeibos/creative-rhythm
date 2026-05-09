@@ -8,27 +8,15 @@ const DB_PATH = process.env.DB_PATH || path.join(__dirname, 'data', 'creative-rh
 const dataDir = path.dirname(DB_PATH);
 if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
 
-// ── Startup diagnostic: volume + DB path verification ─────────────────────
-{
-  const dbExists = fs.existsSync(DB_PATH);
-  const dbSize   = dbExists ? fs.statSync(DB_PATH).size : 0;
-  const dataExists = fs.existsSync('/data');
-  let dataWritable = false;
-  let dataFiles = [];
-  if (dataExists) {
-    try { fs.accessSync('/data', fs.constants.W_OK); dataWritable = true; } catch (_) {}
-    try { dataFiles = fs.readdirSync('/data'); } catch (_) {}
-  }
-  console.log('┌─ DB diagnostic ─────────────────────────────────');
-  console.log(`│  DB_PATH env var:         ${process.env.DB_PATH || '(unset)'}`);
-  console.log(`│  DB_DIR env var:          ${process.env.DB_DIR  || '(unset)'}`);
-  console.log(`│  Resolved database path:  ${DB_PATH}`);
-  console.log(`│  Database file exists:    ${dbExists ? 'yes' : 'NO'}`);
-  console.log(`│  Database file size:      ${dbSize} bytes`);
-  console.log(`│  /data dir exists:        ${dataExists ? 'yes' : 'NO'}`);
-  console.log(`│  /data dir is writable:   ${dataWritable ? 'yes' : 'NO'}`);
-  console.log(`│  Files in /data:          ${dataFiles.length ? dataFiles.join(', ') : '(empty or missing)'}`);
-  console.log('└──────────────────────────────────────────────────');
+// Warn loudly in production if DB_PATH isn't pointing at the Railway Volume.
+// If this fires, data will be written to the ephemeral container filesystem
+// and wiped on every redeploy.
+if (process.env.NODE_ENV === 'production' && (!process.env.DB_PATH || !process.env.DB_PATH.startsWith('/data'))) {
+  console.error('');
+  console.error('⚠️  CRITICAL: DB_PATH is not pointing to /data Volume!');
+  console.error(`   Data will not persist. Current value: ${process.env.DB_PATH || '(unset)'}`);
+  console.error('   Set DB_PATH=/data/creative-rhythm.db in Railway Variables.');
+  console.error('');
 }
 
 const db = new DatabaseSync(DB_PATH);
@@ -919,14 +907,10 @@ module.exports = {
     const initial = name.trim().charAt(0).toUpperCase();
     if (newPassword && newPassword.trim()) {
       const hash = bcrypt.hashSync(newPassword.trim(), 12);
-      console.log(`[admin-pw-reset] DB UPDATE attempted with password_hash for id=${id}`);
-      const result = db.prepare(
+      return db.prepare(
         'UPDATE users SET name=?, email=?, role=?, avatar_initial=?, password_hash=? WHERE id=?'
       ).run(name.trim(), email.trim().toLowerCase(), role, initial, hash, id);
-      console.log(`[admin-pw-reset] DB UPDATE result: changes=${result.changes}`);
-      return result;
     }
-    console.log(`[admin-pw-reset] DB UPDATE attempted WITHOUT password for id=${id}`);
     return db.prepare(
       'UPDATE users SET name=?, email=?, role=?, avatar_initial=? WHERE id=?'
     ).run(name.trim(), email.trim().toLowerCase(), role, initial, id);

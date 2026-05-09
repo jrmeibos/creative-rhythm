@@ -50,9 +50,14 @@ app.use(express.json());
 
 app.set('trust proxy', 1);
 
-const SESSION_DB_PATH = process.env.DB_PATH || path.join(__dirname, 'data', 'creative-rhythm.db');
+// Sessions live in a SEPARATE file from the main DB so two different SQLite
+// libraries (node:sqlite and connect-sqlite3's native sqlite3) never compete
+// for the same file.
+const SESSION_DIR = process.env.DB_PATH
+  ? path.dirname(process.env.DB_PATH)
+  : path.join(__dirname, 'data');
 app.use(session({
-  store: new SQLiteStore({ db: path.basename(SESSION_DB_PATH), dir: path.dirname(SESSION_DB_PATH) }),
+  store: new SQLiteStore({ db: 'sessions.db', dir: SESSION_DIR, table: 'sessions' }),
   secret: process.env.SESSION_SECRET || 'dev-secret-please-change-in-production',
   resave: false,
   saveUninitialized: false,
@@ -952,19 +957,12 @@ app.post('/api/admin/users', requireAdmin, (req, res) => {
 app.put('/api/admin/users/:id', requireAdmin, (req, res) => {
   const id = parseInt(req.params.id);
   const { name, email, role, password } = req.body;
-  console.log(`[admin-pw-reset] received for user_id: ${id}, email: ${email}`);
-  console.log(`[admin-pw-reset] password field present: ${password !== undefined}, non-empty: ${!!(password && password.trim())}`);
   if (!name || !email) return res.status(400).json({ error: 'Name and email are required.' });
   if (!['student', 'admin'].includes(role)) return res.status(400).json({ error: 'Invalid role.' });
   try {
-    const result = db.updateUser(id, name, email, role, password || null);
-    const hashGenerated = !!(password && password.trim());
-    console.log(`[admin-pw-reset] bcrypt hash generated: ${hashGenerated}`);
-    console.log(`[admin-pw-reset] DB rows affected: ${result?.changes ?? 'unknown'}`);
-    console.log(`[admin-pw-reset] result: ${(result?.changes > 0) ? 'success' : 'warning — 0 rows changed'}`);
+    db.updateUser(id, name, email, role, password || null);
     res.json({ ok: true });
   } catch (e) {
-    console.log(`[admin-pw-reset] error: ${e.message}`);
     if (e.message && e.message.includes('UNIQUE')) return res.status(409).json({ error: 'That email is already in use.' });
     res.status(500).json({ error: 'Failed to update user.' });
   }
