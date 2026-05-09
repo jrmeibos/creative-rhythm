@@ -795,7 +795,7 @@ app.get('/greenhouse', requireAuth, (req, res) => {
     gardenStage,
     stageSlug:  stageInfo ? stageInfo.slug  : null,
     stageLabel: stageInfo ? stageInfo.label : null,
-    weekNumber: courseWeek ? courseWeek.weekNumber : null
+    weekNumber: courseWeek ? Math.min(courseWeek.weekNumber || 0, 12) || null : null
   });
 });
 

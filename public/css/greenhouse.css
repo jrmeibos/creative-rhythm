@@ -455,8 +455,8 @@ details[open] .gh-planted-summary::before { content: '▾  '; }
 }
 
 .garden-visual-illustration {
-  width: 200px;
-  height: 280px;
+  width: 240px;
+  height: 380px;
   display: flex;
   align-items: flex-end;
   justify-content: center;
@@ -477,15 +477,6 @@ details[open] .gh-planted-summary::before { content: '▾  '; }
 .garden-visual-caption {
   margin-top: 1rem;
   text-align: center;
-}
-
-.caption-stage {
-  display: block;
-  font-family: var(--font-display);
-  font-style: italic;
-  font-size: 1.25rem;
-  color: var(--color-bloem);
-  margin-bottom: 0.25rem;
 }
 
 .caption-week {
