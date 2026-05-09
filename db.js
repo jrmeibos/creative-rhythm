@@ -348,6 +348,20 @@ db.exec(`
     );
   `);
 
+  // Password reset tokens
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS password_reset_tokens (
+      id         INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id    INTEGER NOT NULL,
+      token      TEXT NOT NULL UNIQUE,
+      expires_at DATETIME NOT NULL,
+      used_at    DATETIME,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (user_id) REFERENCES users(id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_token ON password_reset_tokens(token);
+  `);
+
   // V2: wipe all seeds planted during onboarding — seeds are now planted via Greenhouse after Lesson 1
   const v2SeedsFlag = db.prepare("SELECT value FROM settings WHERE key='seeds_v2_migrated'").get();
   if (!v2SeedsFlag) {
@@ -1272,5 +1286,34 @@ module.exports = {
     const closing  = db.prepare("SELECT * FROM self_assessments WHERE user_id=? AND assessment_type='closing'").get(userId);
     const seeds    = db.prepare('SELECT * FROM seeds WHERE user_id=? ORDER BY seed_number').all(userId);
     return { user, opening, midcourse, closing, seeds };
+  },
+
+  // ─── Password reset tokens ─────────────────────────────────────────────────
+
+  createPasswordResetToken(userId, token, expiresAt) {
+    return db.prepare(
+      'INSERT INTO password_reset_tokens (user_id, token, expires_at) VALUES (?, ?, ?)'
+    ).run(userId, token, expiresAt);
+  },
+
+  findValidPasswordResetToken(token) {
+    return db.prepare(`
+      SELECT * FROM password_reset_tokens
+      WHERE token = ?
+        AND expires_at > datetime('now')
+        AND used_at IS NULL
+    `).get(token) || null;
+  },
+
+  markPasswordResetTokenUsed(tokenId) {
+    return db.prepare(
+      "UPDATE password_reset_tokens SET used_at = datetime('now') WHERE id = ?"
+    ).run(tokenId);
+  },
+
+  deleteExpiredPasswordResetTokens() {
+    return db.prepare(
+      "DELETE FROM password_reset_tokens WHERE expires_at < datetime('now')"
+    ).run();
   },
 };

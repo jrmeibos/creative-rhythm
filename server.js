@@ -3,11 +3,13 @@ const express = require('express');
 const session = require('express-session');
 const SQLiteStore = require('connect-sqlite3')(session);
 const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
 const path = require('path');
 const fs = require('fs');
 const multer = require('multer');
 const db = require('./db');
 const { requireAuth, requireAdmin } = require('./auth');
+const { sendPasswordResetEmail } = require('./email');
 
 // Accounts that see simulated time when Time Travel is active.
 // Admins always see it. Add test email addresses here to extend it.
@@ -150,6 +152,75 @@ app.post('/login', async (req, res) => {
 
 app.get('/logout', (req, res) => {
   req.session.destroy(() => res.redirect('/'));
+});
+
+// ─── Forgot password ───────────────────────────────────────────────────────
+
+app.get('/forgot-password', (req, res) => {
+  if (req.session.user) return res.redirect('/dashboard');
+  res.render('forgot-password', { sent: false, error: null });
+});
+
+app.post('/forgot-password', async (req, res) => {
+  const email = (req.body.email || '').trim().toLowerCase();
+  const renderSent = () => res.render('forgot-password', { sent: true, error: null });
+
+  if (!email) return res.render('forgot-password', { sent: false, error: 'Please enter your email address.' });
+
+  const user = db.getUserByEmail(email);
+  if (!user) return renderSent(); // don't reveal whether address is registered
+
+  const token = crypto.randomBytes(24).toString('hex');
+  const expiresAt = new Date(Date.now() + 60 * 60 * 1000)
+    .toISOString().replace('T', ' ').split('.')[0];
+
+  db.createPasswordResetToken(user.id, token, expiresAt);
+  db.deleteExpiredPasswordResetTokens();
+
+  const baseUrl = process.env.BASE_URL || `${req.protocol}://${req.get('host')}`;
+  const resetLink = `${baseUrl}/reset-password?token=${token}`;
+
+  sendPasswordResetEmail(user.email, resetLink, user.name).catch(err => {
+    console.error('[email] Unhandled error sending reset email:', err);
+  });
+
+  renderSent();
+});
+
+// ─── Reset password ────────────────────────────────────────────────────────
+
+app.get('/reset-password', (req, res) => {
+  if (req.session.user) return res.redirect('/dashboard');
+  const token = (req.query.token || '').trim();
+  if (!token) return res.redirect('/forgot-password');
+
+  const row = db.findValidPasswordResetToken(token);
+  if (!row) {
+    return res.render('reset-password', { valid: false, token: null, error: null, success: false });
+  }
+  res.render('reset-password', { valid: true, token, error: null, success: false });
+});
+
+app.post('/reset-password', async (req, res) => {
+  if (req.session.user) return res.redirect('/dashboard');
+  const { token, new_password, confirm_password } = req.body;
+
+  const invalid = () => res.render('reset-password', { valid: false, token: null, error: null, success: false });
+  const withError = (msg) => res.render('reset-password', { valid: true, token, error: msg, success: false });
+
+  if (!token) return invalid();
+
+  const row = db.findValidPasswordResetToken(token);
+  if (!row) return invalid();
+
+  if (!new_password || !confirm_password) return withError('All fields are required.');
+  if (new_password !== confirm_password) return withError('Passwords do not match.');
+  if (new_password.length < 8) return withError('Password must be at least 8 characters.');
+
+  db.updateUserPassword(row.user_id, new_password);
+  db.markPasswordResetTokenUsed(row.id);
+
+  res.render('reset-password', { valid: true, token: null, error: null, success: true });
 });
 
 // ─── Dashboard ─────────────────────────────────────────────────────────────

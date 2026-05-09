@@ -101,6 +101,23 @@
   letter-spacing: 0.05em;
 }
 
+.login-forgot {
+  margin-top: 1rem;
+  text-align: center;
+}
+
+.login-forgot-link {
+  font-size: 0.8rem;
+  font-weight: 300;
+  color: var(--color-bloem);
+  opacity: 0.75;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  transition: opacity 0.15s;
+}
+
+.login-forgot-link:hover { opacity: 1; }
+
 .login-help {
   margin-top: 1.75rem;
   font-size: 0.8rem;
