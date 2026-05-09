@@ -9,6 +9,12 @@ const multer = require('multer');
 const db = require('./db');
 const { requireAuth, requireAdmin } = require('./auth');
 
+// Accounts that see simulated time when Time Travel is active.
+// Admins always see it. Add test email addresses here to extend it.
+const TEST_ACCOUNT_ALLOWLIST = [
+  'jrmeibos@yahoo.com',
+];
+
 const AVATAR_DIR = path.join(__dirname, 'public', 'uploads', 'avatars');
 if (!fs.existsSync(AVATAR_DIR)) fs.mkdirSync(AVATAR_DIR, { recursive: true });
 
@@ -70,6 +76,14 @@ app.use(session({
 
 app.use((req, res, next) => {
   res.locals.user = req.session.user || null;
+  // Make simulatedToday available in every template for the sidebar banner.
+  // Only set for admins and TEST_ACCOUNT_ALLOWLIST users; everyone else gets null.
+  if (isTimeTravelUser(req.session.user)) {
+    const simulated = db.getSetting('simulated_today');
+    res.locals.simulatedToday = (simulated && simulated.trim()) ? simulated : null;
+  } else {
+    res.locals.simulatedToday = null;
+  }
   next();
 });
 
@@ -621,10 +635,15 @@ app.get('/profile', requireAuth, (req, res) => {
 // ─── Greenhouse ────────────────────────────────────────────────────────────
 
 // Returns the "current" date for business logic.
-// Admins can set simulated_today in DB to test date-gated features without waiting.
-// Students always see real time — simulated_today is ignored for non-admins.
+// Admins and TEST_ACCOUNT_ALLOWLIST users see simulated_today when it's set.
+// All other students always see real time.
+function isTimeTravelUser(user) {
+  if (!user) return false;
+  return user.role === 'admin' || TEST_ACCOUNT_ALLOWLIST.includes(user.email);
+}
+
 function getNow(user) {
-  if (user && user.role === 'admin') {
+  if (isTimeTravelUser(user)) {
     const simulated = db.getSetting('simulated_today');
     if (simulated && simulated.trim()) return new Date(simulated + 'T00:00:00');
   }
@@ -926,6 +945,12 @@ app.post('/api/admin/settings', requireAdmin, (req, res) => {
   if (!allowed.includes(key)) return res.status(400).json({ error: 'Invalid key' });
   db.setSetting(key, value);
   res.json({ ok: true });
+});
+
+app.post('/api/admin/time-travel/clear', requireAdmin, (req, res) => {
+  db.setSetting('simulated_today', '');
+  const ref = req.get('Referer') || '/admin';
+  res.redirect(ref);
 });
 
 app.post('/api/admin/seeds/:id/planted-at', requireAdmin, (req, res) => {

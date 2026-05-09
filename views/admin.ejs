@@ -11,13 +11,6 @@
 
     <main class="main-content">
 
-      <% if (simulatedToday) { %>
-      <div class="admin-tt-banner">
-        <span>⚠️ TIME TRAVEL ACTIVE — Simulated date: <strong><%= simulatedToday %></strong> &nbsp;·&nbsp; Real today: <strong><%= new Date().toISOString().split('T')[0] %></strong></span>
-        <a href="#" class="admin-tt-banner-link" onclick="clearTimeTravel(); return false;">Return to real time</a>
-      </div>
-      <% } %>
-
       <header class="dash-header">
         <div class="dash-greeting">
           <h1 class="dash-greeting-text">Admin</h1>

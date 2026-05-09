@@ -10,6 +10,21 @@
       </a>
     </div>
 
+    <% if (locals.simulatedToday) { %>
+    <div class="sidebar-tt-bar">
+      <span class="sidebar-tt-icon">⏱</span>
+      <div class="sidebar-tt-info">
+        <span class="sidebar-tt-label">Time Travel</span>
+        <span class="sidebar-tt-date"><%= locals.simulatedToday %></span>
+      </div>
+      <% if (user && user.role === 'admin') { %>
+      <form method="POST" action="/api/admin/time-travel/clear" style="margin:0">
+        <button type="submit" class="sidebar-tt-clear" title="Return to real time">✕</button>
+      </form>
+      <% } %>
+    </div>
+    <% } %>
+
     <div class="sidebar-user">
       <a href="/profile" class="sidebar-avatar-link" title="My Profile" aria-label="My Profile">
         <% if (user.profile_photo) { %>

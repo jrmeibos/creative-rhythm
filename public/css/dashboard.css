@@ -2121,3 +2121,66 @@
   margin-right: 0.5rem;
   vertical-align: middle;
 }
+
+/* ─── Sidebar Time Travel bar ─────────────────────────────────────────────── */
+.sidebar-tt-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  background: rgba(245, 158, 11, 0.18);
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  border-radius: 8px;
+  margin: 0 0.875rem 0.75rem;
+  padding: 0.45rem 0.6rem;
+}
+
+.sidebar-tt-icon {
+  font-size: 0.85rem;
+  flex-shrink: 0;
+  opacity: 0.85;
+}
+
+.sidebar-tt-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.05rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.sidebar-tt-label {
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #fef3c7;
+  opacity: 0.8;
+  line-height: 1;
+}
+
+.sidebar-tt-date {
+  font-size: 0.75rem;
+  color: #fef3c7;
+  font-weight: 500;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sidebar-tt-clear {
+  background: none;
+  border: 1px solid rgba(254, 243, 199, 0.35);
+  border-radius: 4px;
+  color: rgba(254, 243, 199, 0.7);
+  font-size: 0.7rem;
+  cursor: pointer;
+  padding: 0.15rem 0.35rem;
+  flex-shrink: 0;
+  line-height: 1;
+  transition: border-color 0.15s, color 0.15s;
+}
+.sidebar-tt-clear:hover {
+  border-color: #fef3c7;
+  color: #fef3c7;
+}
