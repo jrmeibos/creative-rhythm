@@ -348,6 +348,10 @@ db.exec(`
     );
   `);
 
+  // Avatars moved to /data/avatars — old paths pointing to /uploads/avatars/ are now broken.
+  // Reset them so users see initials until they re-upload.
+  db.exec("UPDATE users SET profile_photo = NULL WHERE profile_photo LIKE '/uploads/avatars/%'");
+
   // Password reset tokens
   db.exec(`
     CREATE TABLE IF NOT EXISTS password_reset_tokens (

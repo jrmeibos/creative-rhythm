@@ -17,8 +17,10 @@ const TEST_ACCOUNT_ALLOWLIST = [
   'jrmeibos@yahoo.com',
 ];
 
-const AVATAR_DIR = path.join(__dirname, 'public', 'uploads', 'avatars');
-if (!fs.existsSync(AVATAR_DIR)) fs.mkdirSync(AVATAR_DIR, { recursive: true });
+const AVATAR_DIR = process.env.NODE_ENV === 'production'
+  ? '/data/avatars'
+  : path.join(__dirname, 'public', 'uploads', 'avatars');
+fs.mkdirSync(AVATAR_DIR, { recursive: true });
 
 const upload = multer({
   storage: multer.diskStorage({
@@ -30,8 +32,8 @@ const upload = multer({
   }),
   limits: { fileSize: 5 * 1024 * 1024 },
   fileFilter: (_, file, cb) => {
-    if (['image/jpeg','image/png','image/gif'].includes(file.mimetype)) cb(null, true);
-    else cb(new Error('Only JPG, PNG, and GIF files are allowed.'));
+    if (['image/jpeg','image/png','image/gif','image/webp'].includes(file.mimetype)) cb(null, true);
+    else cb(new Error('Only JPG, PNG, GIF, and WebP files are allowed.'));
   }
 });
 
@@ -116,6 +118,33 @@ app.use((req, res, next) => {
     }
   }
   next();
+});
+
+// ─── Avatar files ─────────────────────────────────────────────────────────
+// In production, avatars live in /data/avatars (Railway volume), not public/.
+// This route serves them with correct content-type headers.
+
+app.get('/avatars/:filename', requireAuth, (req, res) => {
+  const filename = req.params.filename;
+  if (filename.includes('..') || filename.includes('/') || filename.includes('\\')) {
+    return res.status(400).send('Bad request');
+  }
+  const filepath = path.join(AVATAR_DIR, filename);
+  if (!filepath.startsWith(path.resolve(AVATAR_DIR))) {
+    return res.status(400).send('Bad request');
+  }
+  fs.access(filepath, fs.constants.R_OK, err => {
+    if (err) return res.status(404).send('Not found');
+    const ext = path.extname(filename).toLowerCase();
+    const contentType = {
+      '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg',
+      '.png': 'image/png',  '.gif': 'image/gif',
+      '.webp': 'image/webp'
+    }[ext] || 'application/octet-stream';
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Cache-Control', 'public, max-age=300');
+    fs.createReadStream(filepath).pipe(res);
+  });
 });
 
 // ─── Auth ──────────────────────────────────────────────────────────────────
@@ -1036,9 +1065,9 @@ app.post('/api/account/photo', requireAuth, (req, res) => {
     if (!req.file) return res.status(400).json({ error: 'No file uploaded.' });
     const existing = db.getUserFullProfile(req.session.user.id);
     if (existing && existing.profile_photo) {
-      fs.unlink(path.join(__dirname, 'public', existing.profile_photo), () => {});
+      fs.unlink(path.join(AVATAR_DIR, path.basename(existing.profile_photo)), () => {});
     }
-    const photoPath = `/uploads/avatars/${req.file.filename}`;
+    const photoPath = `/avatars/${req.file.filename}`;
     db.updateProfilePhoto(req.session.user.id, photoPath);
     req.session.user.profile_photo = photoPath;
     req.session.save(err2 => {
@@ -1051,7 +1080,7 @@ app.post('/api/account/photo', requireAuth, (req, res) => {
 app.delete('/api/account/photo', requireAuth, (req, res) => {
   const existing = db.getUserFullProfile(req.session.user.id);
   if (existing && existing.profile_photo) {
-    fs.unlink(path.join(__dirname, 'public', existing.profile_photo), () => {});
+    fs.unlink(path.join(AVATAR_DIR, path.basename(existing.profile_photo)), () => {});
   }
   db.removeProfilePhoto(req.session.user.id);
   req.session.user.profile_photo = null;

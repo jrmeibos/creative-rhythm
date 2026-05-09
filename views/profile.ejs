@@ -95,7 +95,7 @@
             <button class="profile-edit-link" type="button" data-section="photo" onclick="toggleEdit('photo')">Update profile picture</button>
             <div class="profile-inline-form" id="edit-photo-form">
               <input type="file" class="profile-inline-file" id="photo-file-input"
-                     accept="image/jpeg,image/png,image/webp">
+                     accept="image/jpeg,image/png,image/gif,image/webp">
               <div class="profile-inline-actions">
                 <button class="profile-inline-save" type="button" onclick="savePhoto()">Upload</button>
                 <button class="profile-inline-cancel" type="button" onclick="closeSection('photo')">Cancel</button>
@@ -244,17 +244,15 @@
       if (!fileInput.files[0]) return showError('photo-error', 'Please select a file.');
       const file = fileInput.files[0];
       if (file.size > 2 * 1024 * 1024) return showError('photo-error', 'File must be under 2MB.');
-      if (!['image/jpeg','image/png','image/webp'].includes(file.type)) {
-        return showError('photo-error', 'Only JPG, PNG, and WebP files are allowed.');
+      if (!['image/jpeg','image/png','image/gif','image/webp'].includes(file.type)) {
+        return showError('photo-error', 'Only JPG, PNG, GIF, and WebP files are allowed.');
       }
       const formData = new FormData();
       formData.append('photo', file);
       const res = await fetch('/api/account/photo', { method: 'POST', body: formData });
       const data = await res.json();
       if (!res.ok) return showError('photo-error', data.error || 'Upload failed.');
-      document.getElementById('profile-avatar-wrap').innerHTML =
-        `<img src="${data.photoPath}" class="profile-avatar profile-avatar--photo" alt="">`;
-      showSaved('photo-saved', () => closeSection('photo'));
+      window.location.reload();
     }
 
     async function removePhoto() {
