@@ -363,50 +363,68 @@
               <h2 class="harvest-reveal-title">Look how far you've grown. 🌿</h2>
               <p class="harvest-reveal-sub">Here is where you started — and where you are now.</p>
 
-              <%
-                const ratingQs = questions.slice(0,6).filter(q => q.type === 'rating');
-                const choiceQs = questions.slice(0,6).filter(q => q.type === 'choice');
-              %>
-
-              <div class="harvest-bars-section">
-                <% ratingQs.forEach(function(q) { %>
-                  <% const then = opening ? (opening[q.field] || 0) : 0; %>
-                  <% const now  = closing[q.field] || 0; %>
-                  <% const improved = now > then; %>
-                  <div class="harvest-bar-item">
-                    <p class="harvest-bar-q"><%= q.text %></p>
-                    <div class="harvest-bar-row">
-                      <span class="harvest-bar-label">Then</span>
-                      <div class="harvest-bar-track">
-                        <div class="harvest-bar-fill harvest-bar-fill--then" style="width:<%= then ? (then/10*100).toFixed(0) : 0 %>%"></div>
-                      </div>
-                      <span class="harvest-bar-score harvest-bar-score--then"><%= then || '—' %></span>
+              <div class="harvest-questions">
+                <% questions.slice(0, 6).forEach(function(q, qi) { %>
+                  <div class="harvest-q-item">
+                    <div class="harvest-q-header">
+                      <span class="harvest-q-num">0<%= qi + 1 %></span>
+                      <p class="harvest-q-text"><%= q.text %></p>
                     </div>
-                    <div class="harvest-bar-row harvest-bar-row--now">
-                      <span class="harvest-bar-label harvest-bar-label--now">Now</span>
-                      <div class="harvest-bar-track">
-                        <div class="harvest-bar-fill" style="width:<%= now ? (now/10*100).toFixed(0) : 0 %>%"></div>
-                      </div>
-                      <span class="harvest-bar-score"><%= now || '—' %></span>
-                      <% if (improved) { %><span class="harvest-bar-improved" title="Improved">✨</span><% } %>
-                    </div>
-                    <p class="harvest-bar-scale"><span><%= q.low %></span><span><%= q.high %></span></p>
-                  </div>
-                <% }); %>
-              </div>
 
-              <div class="harvest-pills-section">
-                <% choiceQs.forEach(function(q) { %>
-                  <% const thenVal = opening ? (opening[q.field] || '') : ''; %>
-                  <% const nowVal  = closing[q.field] || ''; %>
-                  <% const thenLabel = q.choices.find(c => c.val === thenVal); %>
-                  <% const nowLabel  = q.choices.find(c => c.val === nowVal); %>
-                  <div class="harvest-pill-item">
-                    <p class="harvest-pill-q"><%= q.text %></p>
-                    <div class="harvest-pill-row">
-                      <span class="harvest-pill harvest-pill--then">Then — <%= thenVal %><% if (thenLabel) { %>: <%= thenLabel.label %><% } %></span>
-                      <span class="harvest-pill harvest-pill--now">Now — <%= nowVal %><% if (nowLabel) { %>: <%= nowLabel.label %><% } %></span>
-                      <% if (thenVal && nowVal && thenVal === nowVal) { %><span class="harvest-consistent">consistent 🌿</span><% } %>
+                    <div class="harvest-q-body">
+                      <% if (q.type === 'rating') { %>
+                        <%
+                          const rThen = opening ? (parseInt(opening[q.field]) || 0) : 0;
+                          const rNow  = parseInt(closing[q.field]) || 0;
+                          const rDiff = (rThen > 0 && rNow > 0) ? rNow - rThen : null;
+                          const rThenPct = rThen ? ((rThen - 1) / 9 * 100).toFixed(1) : 0;
+                          const rNowPct  = rNow  ? ((rNow  - 1) / 9 * 100).toFixed(1) : 0;
+                        %>
+                        <div class="harvest-rating-row">
+                          <span class="harvest-rating-epoch">Then</span>
+                          <div class="harvest-rating-track">
+                            <div class="harvest-rating-dot" style="left:<%= rThenPct %>%"></div>
+                          </div>
+                          <span class="harvest-rating-score"><%= rThen || '—' %></span>
+                        </div>
+                        <div class="harvest-rating-row">
+                          <span class="harvest-rating-epoch harvest-rating-epoch--now">Now</span>
+                          <div class="harvest-rating-track">
+                            <div class="harvest-rating-dot harvest-rating-dot--now" style="left:<%= rNowPct %>%"></div>
+                          </div>
+                          <span class="harvest-rating-score harvest-rating-score--now"><%= rNow || '—' %></span>
+                          <% if (rDiff !== null) { %>
+                            <span class="harvest-rating-badge harvest-rating-badge--<%= rDiff > 0 ? 'up' : rDiff < 0 ? 'down' : 'same' %>"><%= rDiff > 0 ? '+' : '' %><%= rDiff %> pts</span>
+                          <% } %>
+                        </div>
+                        <p class="harvest-rating-scale"><span><%= q.low %></span><span><%= q.high %></span></p>
+
+                      <% } else { %>
+                        <%
+                          const cThen = opening ? (opening[q.field] || '') : '';
+                          const cNow  = closing[q.field] || '';
+                          const cThenLabel = cThen ? q.choices.find(c => c.val === cThen) : null;
+                          const cNowLabel  = cNow  ? q.choices.find(c => c.val === cNow)  : null;
+                          const cSame = !!(cThen && cNow && cThen === cNow);
+                        %>
+                        <% if (cSame) { %>
+                          <div class="harvest-choice-same">
+                            <span class="harvest-consistent">Consistent 🌿</span>
+                            <p class="harvest-choice-answer"><%= cThenLabel ? cThenLabel.label : cThen %></p>
+                          </div>
+                        <% } else { %>
+                          <div class="harvest-choice-cols">
+                            <div class="harvest-choice-col">
+                              <span class="harvest-choice-epoch">Then</span>
+                              <p class="harvest-choice-answer"><%= cThenLabel ? cThenLabel.label : (cThen || '—') %></p>
+                            </div>
+                            <div class="harvest-choice-col harvest-choice-col--now">
+                              <span class="harvest-choice-epoch harvest-choice-epoch--now">Now</span>
+                              <p class="harvest-choice-answer"><%= cNowLabel ? cNowLabel.label : (cNow || '—') %></p>
+                            </div>
+                          </div>
+                        <% } %>
+                      <% } %>
                     </div>
                   </div>
                 <% }); %>
@@ -424,26 +442,27 @@
 
             <div id="gh-full-answers" class="gh-full-answers is-hidden">
               <h3 class="gh-full-answers-title">Your harvest answers.</h3>
-              <% closingQuestions.forEach(function(q) { %>
-                <% if (q.type === 'text') { %>
-                  <% const answer = closing[q.field]; %>
-                  <% if (answer) { %>
-                  <div class="harvest-open-item">
-                    <p class="harvest-open-label"><%= q.text %></p>
-                    <div class="harvest-open-answer"><%= answer %></div>
-                  </div>
+              <div class="harvest-questions">
+                <% closingQuestions.forEach(function(q, qi) { %>
+                  <% const faVal = closing[q.field]; %>
+                  <% if (faVal) { %>
+                    <div class="harvest-q-item">
+                      <div class="harvest-q-header">
+                        <span class="harvest-q-num"><%= (qi + 7) < 10 ? '0' + (qi + 7) : (qi + 7) %></span>
+                        <p class="harvest-q-text"><%= q.text %></p>
+                      </div>
+                      <div class="harvest-q-body">
+                        <% if (q.type === 'choice') { %>
+                          <% const faChoiceLabel = q.choices.find(c => c.val === faVal); %>
+                          <div class="harvest-open-answer"><%= faChoiceLabel ? faChoiceLabel.label : faVal %></div>
+                        <% } else { %>
+                          <div class="harvest-open-answer"><%= faVal %></div>
+                        <% } %>
+                      </div>
+                    </div>
                   <% } %>
-                <% } else if (q.type === 'choice') { %>
-                  <% const choiceVal = closing[q.field]; %>
-                  <% const choiceLabel = choiceVal ? q.choices.find(c => c.val === choiceVal) : null; %>
-                  <% if (choiceVal) { %>
-                  <div class="harvest-open-item">
-                    <p class="harvest-open-label"><%= q.text %></p>
-                    <div class="harvest-open-answer"><%= choiceLabel ? choiceLabel.label : choiceVal %></div>
-                  </div>
-                  <% } %>
-                <% } %>
-              <% }); %>
+                <% }); %>
+              </div>
             </div>
           <% } %>
         </div>
