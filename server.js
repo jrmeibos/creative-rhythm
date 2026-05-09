@@ -210,6 +210,15 @@ app.get('/goals', requireAuth, (req, res) => {
   const isIntegrationWeek = goals.some(g => g.is_integration_week);
   const history = db.getWeekHistory(userId, 12);
 
+  // Pre-build weekStart → "Week One" label for history pills
+  const courseStartDate = db.getSetting('course_start_date');
+  const weekNames = {};
+  if (courseStartDate) {
+    generate12Weeks(courseStartDate).forEach((ws, i) => {
+      weekNames[ws] = 'Week ' + WEEK_ORDINALS[i];
+    });
+  }
+
   // Compute prev/next week dates
   const weekDate = new Date(weekStart + 'T00:00:00');
   const prevWeek = new Date(weekDate);
@@ -242,6 +251,7 @@ app.get('/goals', requireAuth, (req, res) => {
     prevWeek: prevWeek.toISOString().split('T')[0],
     nextWeek: nextWeek.toISOString().split('T')[0],
     history,
+    weekNames,
     formatWeekLabel,
     weeklyReflection
   });

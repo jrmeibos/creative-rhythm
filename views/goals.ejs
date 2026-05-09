@@ -173,7 +173,7 @@
           <% for (const w of history) { %>
             <% if (w !== weekStart) { %>
               <a href="/goals?week=<%= w %>" class="goals-history-item">
-                Week of <%= formatWeekLabel(w) %>
+                <%= weekNames[w] || 'Week of ' + formatWeekLabel(w) %>
               </a>
             <% } %>
           <% } %>
