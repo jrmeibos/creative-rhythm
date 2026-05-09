@@ -702,10 +702,11 @@ const STAGE_LABELS = {
 };
 
 function getGardenStage(user) {
-  const activeSeeds = db.prepare(
-    'SELECT * FROM seeds WHERE user_id = ? AND is_active = 1'
-  ).all(user.id);
-  if (!activeSeeds || activeSeeds.length === 0) return null;
+  const seedMap = db.getGreenhouseSeeds(user.id);
+  const activeSeeds = [1, 2, 3]
+    .map(n => seedMap[n].replacement || seedMap[n].original)
+    .filter(Boolean);
+  if (activeSeeds.length === 0) return null;
 
   const earliest = activeSeeds.reduce(
     (min, s) => s.created_at < min.created_at ? s : min,
