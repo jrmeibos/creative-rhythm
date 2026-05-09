@@ -196,7 +196,8 @@ app.get('/dashboard', requireAuth, (req, res) => {
 
 app.get('/goals', requireAuth, (req, res) => {
   const userId = req.session.user.id;
-  const currentWeekStart = getWeekStart();
+  const courseWeek = getCurrentCourseWeek(req.session.user);
+  const currentWeekStart = courseWeek.weekStart;
   const requestedWeek = req.query.week || currentWeekStart;
 
   // Validate week format (YYYY-MM-DD)
