@@ -156,7 +156,9 @@ app.get('/logout', (req, res) => {
 
 app.get('/dashboard', requireAuth, (req, res) => {
   const userId = req.session.user.id;
-  const weekStart = getWeekStart();
+  const courseWeek = getCurrentCourseWeek(req.session.user);
+  const weekStart = courseWeek.weekStart;
+  const weekNumber = courseWeek.weekNumber;
   const goals = db.getGoalsForWeek(userId, weekStart);
   const goalsMap = {};
   for (const g of goals) goalsMap[g.category] = g;
@@ -177,6 +179,7 @@ app.get('/dashboard', requireAuth, (req, res) => {
     page: 'dashboard',
     greeting: getGreeting(),
     weekStart,
+    weekNumber,
     weekLabel: formatWeekLabel(weekStart),
     goals: goalsMap,
     goalsData: goalsDataDash,
@@ -1105,6 +1108,40 @@ function getWeekStart() {
   monday.setDate(now.getDate() + diff);
   monday.setHours(0, 0, 0, 0);
   return monday.toISOString().split('T')[0];
+}
+
+// Returns { weekNumber, weekStart, weekEnd } relative to course_start_date.
+// weekNumber is 1-based; 0 means before course start; null means no course start set.
+// Uses getNow(user) so time-travel works correctly.
+function getCurrentCourseWeek(user) {
+  const courseStartStr = db.getSetting('course_start_date');
+  if (!courseStartStr || !courseStartStr.trim()) {
+    const ws = getWeekStart();
+    const we = new Date(ws + 'T00:00:00');
+    we.setDate(we.getDate() + 6);
+    return { weekNumber: null, weekStart: ws, weekEnd: we.toISOString().split('T')[0] };
+  }
+
+  const courseStart = new Date(courseStartStr + 'T00:00:00');
+  const now = getNow(user);
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const daysSinceStart = Math.floor((today - courseStart) / 86400000);
+
+  if (daysSinceStart < 0) {
+    const ws = getWeekStart();
+    const we = new Date(ws + 'T00:00:00');
+    we.setDate(we.getDate() + 6);
+    return { weekNumber: 0, weekStart: ws, weekEnd: we.toISOString().split('T')[0] };
+  }
+
+  const weekIndex = Math.floor(daysSinceStart / 7);
+  const weekNumber = weekIndex + 1;
+  const weekStart = new Date(courseStart);
+  weekStart.setDate(courseStart.getDate() + weekIndex * 7);
+  const ws = weekStart.toISOString().split('T')[0];
+  const weekEnd = new Date(weekStart);
+  weekEnd.setDate(weekStart.getDate() + 6);
+  return { weekNumber, weekStart: ws, weekEnd: weekEnd.toISOString().split('T')[0] };
 }
 
 function formatWeekLabel(weekStart) {

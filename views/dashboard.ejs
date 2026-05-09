@@ -20,6 +20,8 @@
           <p class="dash-week-label">
             <% if (isIntegrationWeek) { %>
               <span class="integration-badge">Integration Week</span> · <%= weekLabel %>
+            <% } else if (weekNumber >= 1) { %>
+              Week <%= weekNumber %> · <%= weekLabel %>
             <% } else { %>
               Week of <%= weekLabel %>
             <% } %>
