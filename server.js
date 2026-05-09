@@ -399,7 +399,7 @@ app.post('/api/lessons/:id/complete', requireAuth, (req, res) => {
 // ─── Community ─────────────────────────────────────────────────────────────
 
 app.get('/community', requireAuth, (req, res) => {
-  const currentWeekStart = getWeekStart();
+  const currentWeekStart = getCurrentCourseWeek(req.session.user).weekStart;
   const courseStartDate  = db.getSetting('course_start_date') || currentWeekStart;
   const weekStarts       = generate12Weeks(courseStartDate);
   const firstWeek        = weekStarts[0];

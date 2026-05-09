@@ -118,8 +118,6 @@
                   <% const goal = w.goalsMap[cat.key] || {}; %>
                   <% const gd   = w.goalsData[cat.key]; %>
                   <% const hasContent = !!(gd.items && gd.items.length > 0); %>
-                  <% const hasReflection = goal.reflection && goal.reflection.trim(); %>
-                  <% const showReflection = hasContent && (hasReflection || goal.completed); %>
 
                   <div class="goal-card goal-card--<%= cat.key %> <%= goal.completed ? 'is-complete' : '' %>"
                        data-category="<%= cat.key %>"
