@@ -151,3 +151,26 @@ if (integrationBtn) {
     if (ok) location.reload();
   });
 }
+
+/* ── Weekly reflection save ───────────────────────────────────────────────── */
+
+const reflSection = document.querySelector('.weekly-reflection');
+if (reflSection) {
+  const weekStart = reflSection.dataset.week;
+  const textarea  = reflSection.querySelector('.weekly-reflection-textarea');
+  const toggleCb  = reflSection.querySelector('.cohort-toggle-cb');
+  const saveBtn   = reflSection.querySelector('.save-weekly-reflection');
+  const savedMsg  = reflSection.querySelector('.reflection-saved-msg');
+
+  saveBtn?.addEventListener('click', async () => {
+    const ok = await post('/api/reflections', {
+      week_start:         weekStart,
+      text:               textarea.value,
+      shared_with_cohort: toggleCb.checked
+    });
+    if (ok && savedMsg) {
+      savedMsg.removeAttribute('hidden');
+      setTimeout(() => savedMsg.setAttribute('hidden', ''), 2000);
+    }
+  });
+}

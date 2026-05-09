@@ -163,32 +163,30 @@
                       </ul>
                     </div>
 
-                    <!-- Reflection preview — reflection pencil inside -->
-                    <% if (showReflection) { %>
-                    <div class="goal-card-reflection">
-                      <div class="goal-card-reflection-header">
-                        <span class="goal-card-reflection-label">My reflection</span>
-                      </div>
-                      <div class="goal-card-reflection-preview" role="button" tabindex="0">
-                        <p class="goal-card-reflection-text" <%= !hasReflection ? 'hidden' : '' %>><%= goal.reflection || '' %></p>
-                        <p class="goal-card-reflection-prompt" <%= hasReflection ? 'hidden' : '' %>>Add a reflection →</p>
-                        <button class="goal-card-reflection-pencil" type="button" aria-label="Edit reflection">
-                          <svg width="10" height="10" viewBox="0 0 13 13" fill="none" aria-hidden="true">
-                            <path d="M9.5 1.5L11.5 3.5L4 11H2V9L9.5 1.5Z" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
-                          </svg>
-                        </button>
-                      </div>
-                      <textarea class="goal-card-reflection-textarea"
-                                data-week="<%= w.weekStart %>" data-category="<%= cat.key %>"
-                                placeholder="How did it go? What did you notice?"
-                                rows="3" hidden><%= goal.reflection || '' %></textarea>
-                    </div>
-                    <% } %>
-
-
                   </div>
                 <% } %>
               </div>
+            <% } %>
+
+            <% if (w.isPastCourseWeek) { %>
+            <section class="weekly-reflection" data-week="<%= w.weekStart %>">
+              <h3 class="weekly-reflection-title">This Week's Reflection</h3>
+              <p class="weekly-reflection-prompt">Looking back — how did this week go?</p>
+              <textarea
+                class="weekly-reflection-textarea"
+                placeholder="What worked? What didn't? What surprised you?"
+                rows="5"><%= w.reflection ? w.reflection.text : '' %></textarea>
+              <div class="reflection-controls">
+                <label class="cohort-toggle">
+                  <input type="checkbox" class="cohort-toggle-cb"
+                         <%= w.reflection && w.reflection.shared_with_cohort ? 'checked' : '' %>>
+                  <span>Share with my cohort 🌿</span>
+                </label>
+                <button class="save-weekly-reflection" type="button">Save reflection</button>
+              </div>
+              <p class="reflection-helper">When shared, your reflection appears on your community card for this week.</p>
+              <p class="reflection-saved-msg" hidden>Saved 🌿</p>
+            </section>
             <% } %>
 
           </div>

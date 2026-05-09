@@ -97,3 +97,28 @@ if (openParam) {
   url.searchParams.delete('open');
   history.replaceState(null, '', url.toString());
 }
+
+/* Weekly reflection save — wired for all past-week panels */
+document.querySelectorAll('.weekly-reflection').forEach(section => {
+  const weekStart = section.dataset.week;
+  const textarea  = section.querySelector('.weekly-reflection-textarea');
+  const toggleCb  = section.querySelector('.cohort-toggle-cb');
+  const saveBtn   = section.querySelector('.save-weekly-reflection');
+  const savedMsg  = section.querySelector('.reflection-saved-msg');
+
+  saveBtn?.addEventListener('click', async () => {
+    const res = await fetch('/api/reflections', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({
+        week_start:         weekStart,
+        text:               textarea.value,
+        shared_with_cohort: toggleCb.checked
+      })
+    });
+    if (res.ok && savedMsg) {
+      savedMsg.removeAttribute('hidden');
+      setTimeout(() => savedMsg.setAttribute('hidden', ''), 2000);
+    }
+  });
+});

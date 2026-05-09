@@ -111,6 +111,18 @@ db.exec(`
     value TEXT NOT NULL DEFAULT ''
   );
 
+  CREATE TABLE IF NOT EXISTS weekly_reflections (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    week_start TEXT NOT NULL,
+    text TEXT DEFAULT '',
+    shared_with_cohort INTEGER DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id),
+    UNIQUE(user_id, week_start)
+  );
+
   CREATE TABLE IF NOT EXISTS seeds (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER NOT NULL,
@@ -1201,6 +1213,32 @@ module.exports = {
 
   setOnboardingComplete(userId) {
     return db.prepare('UPDATE users SET onboarding_completed = 1 WHERE id = ?').run(userId);
+  },
+
+  getWeeklyReflection(userId, weekStart) {
+    return db.prepare('SELECT * FROM weekly_reflections WHERE user_id = ? AND week_start = ?').get(userId, weekStart) || null;
+  },
+
+  getWeeklyReflections(userId, weekStarts) {
+    if (!weekStarts.length) return {};
+    const placeholders = weekStarts.map(() => '?').join(',');
+    const rows = db.prepare(
+      `SELECT * FROM weekly_reflections WHERE user_id = ? AND week_start IN (${placeholders})`
+    ).all(userId, ...weekStarts);
+    const map = {};
+    for (const r of rows) map[r.week_start] = r;
+    return map;
+  },
+
+  upsertWeeklyReflection(userId, weekStart, text, sharedWithCohort) {
+    return db.prepare(`
+      INSERT INTO weekly_reflections (user_id, week_start, text, shared_with_cohort)
+      VALUES (?, ?, ?, ?)
+      ON CONFLICT(user_id, week_start) DO UPDATE SET
+        text = excluded.text,
+        shared_with_cohort = excluded.shared_with_cohort,
+        updated_at = CURRENT_TIMESTAMP
+    `).run(userId, weekStart, text || '', sharedWithCohort ? 1 : 0);
   },
 
   getAllStudentAssessmentStatus() {

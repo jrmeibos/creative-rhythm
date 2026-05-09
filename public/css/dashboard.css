@@ -2184,3 +2184,138 @@
   border-color: #fef3c7;
   color: #fef3c7;
 }
+
+/* ─── Weekly Reflection ────────────────────────────────────────────────────── */
+
+.weekly-reflection {
+  background: var(--color-pearl);
+  border-radius: 12px;
+  padding: 2rem;
+  margin-top: 2rem;
+  border: 1px solid rgba(16, 15, 16, 0.07);
+}
+
+.weekly-reflection-title {
+  font-family: 'Goldage', serif;
+  font-size: 1.2rem;
+  color: var(--color-ink-stained);
+  margin: 0 0 0.4rem;
+  font-weight: 400;
+}
+
+.weekly-reflection-prompt {
+  font-family: 'Jost', sans-serif;
+  font-weight: 300;
+  font-size: 0.9rem;
+  color: var(--color-ink-stained);
+  opacity: 0.65;
+  margin: 0 0 1rem;
+}
+
+.weekly-reflection-textarea {
+  width: 100%;
+  box-sizing: border-box;
+  font-family: 'Jost', sans-serif;
+  font-weight: 300;
+  font-size: 0.95rem;
+  color: var(--color-ink-stained);
+  background: var(--color-blank-page);
+  border: 1px solid rgba(16, 15, 16, 0.12);
+  border-radius: 8px;
+  padding: 0.875rem 1rem;
+  resize: vertical;
+  min-height: 120px;
+  margin-bottom: 1rem;
+  line-height: 1.6;
+}
+
+.weekly-reflection-textarea:focus {
+  outline: none;
+  border-color: var(--color-bloem);
+}
+
+.reflection-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.cohort-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  font-family: 'Jost', sans-serif;
+  font-weight: 400;
+  font-size: 0.9rem;
+  color: var(--color-ink-stained);
+  user-select: none;
+}
+
+.cohort-toggle-cb {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  border: 1.5px solid var(--color-bloem);
+  border-radius: 4px;
+  cursor: pointer;
+  flex-shrink: 0;
+  position: relative;
+  transition: background 0.15s;
+}
+
+.cohort-toggle-cb:checked {
+  background: var(--color-bloem);
+}
+
+.cohort-toggle-cb:checked::after {
+  content: '';
+  position: absolute;
+  left: 4px;
+  top: 1px;
+  width: 5px;
+  height: 9px;
+  border: 2px solid #fff;
+  border-top: none;
+  border-left: none;
+  transform: rotate(45deg);
+}
+
+.save-weekly-reflection {
+  background: var(--color-bloem);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 0.5rem 1.25rem;
+  font-family: 'Jost', sans-serif;
+  font-weight: 400;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.save-weekly-reflection:hover {
+  background: var(--color-bloem-mid);
+}
+
+.reflection-helper {
+  font-family: 'Jost', sans-serif;
+  font-weight: 300;
+  font-size: 0.8rem;
+  color: var(--color-ink-stained);
+  opacity: 0.5;
+  font-style: italic;
+  margin: 0;
+}
+
+.reflection-saved-msg {
+  font-family: 'Jost', sans-serif;
+  font-size: 0.85rem;
+  color: var(--color-understory);
+  margin-top: 0.625rem;
+  margin-bottom: 0;
+}

@@ -138,29 +138,30 @@
               <div class="goal-save-status" id="save-status-<%= cat.key %>"></div>
             </div>
 
-            <!-- Check-in / reflection section -->
-            <div class="goal-full-section goal-checkin-section">
-              <div class="goal-checkin-header">
-                <label class="goal-full-section-label">My reflection</label>
-              </div>
-              <div class="goal-reflection-inset">
-                <textarea
-                  class="goal-full-textarea checkin-textarea"
-                  placeholder="<%= cat.checkinPrompt %>"
-                  data-week="<%= weekStart %>"
-                  data-category="<%= cat.key %>"
-                  rows="3"><%= goal.reflection || '' %></textarea>
-              </div>
-              <% if (goal.reflection_at) { %>
-                <p class="goal-checkin-timestamp">
-                  Last updated <%= new Date(goal.reflection_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) %>
-                </p>
-              <% } %>
-            </div>
-
           </div>
         <% } %>
       </div>
+
+      <% if (isPastWeek) { %>
+      <section class="weekly-reflection" data-week="<%= weekStart %>">
+        <h3 class="weekly-reflection-title">This Week's Reflection</h3>
+        <p class="weekly-reflection-prompt">Looking back — how did this week go?</p>
+        <textarea
+          class="weekly-reflection-textarea"
+          placeholder="What worked? What didn't? What surprised you?"
+          rows="5"><%= weeklyReflection ? weeklyReflection.text : '' %></textarea>
+        <div class="reflection-controls">
+          <label class="cohort-toggle">
+            <input type="checkbox" class="cohort-toggle-cb"
+                   <%= weeklyReflection && weeklyReflection.shared_with_cohort ? 'checked' : '' %>>
+            <span>Share with my cohort 🌿</span>
+          </label>
+          <button class="save-weekly-reflection" type="button">Save reflection</button>
+        </div>
+        <p class="reflection-helper">When shared, your reflection appears on your community card for this week.</p>
+        <p class="reflection-saved-msg" hidden>Saved 🌿</p>
+      </section>
+      <% } %>
 
       <% } %>
 

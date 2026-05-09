@@ -226,6 +226,8 @@ app.get('/goals', requireAuth, (req, res) => {
     goalsDataPage[cat] = parseGoalText(goalsMap[cat]?.goal_text);
   }
 
+  const weeklyReflection = isPastWeek ? db.getWeeklyReflection(userId, weekStart) : null;
+
   res.render('goals', {
     title: 'My Goals',
     page: 'goals',
@@ -240,7 +242,8 @@ app.get('/goals', requireAuth, (req, res) => {
     prevWeek: prevWeek.toISOString().split('T')[0],
     nextWeek: nextWeek.toISOString().split('T')[0],
     history,
-    formatWeekLabel
+    formatWeekLabel,
+    weeklyReflection
   });
 });
 
@@ -294,6 +297,19 @@ app.post('/api/goals/:id/toggle', requireAuth, (req, res) => {
   const result = db.toggleGoalComplete(parseInt(req.params.id), req.session.user.id);
   if (!result) return res.status(404).json({ error: 'Goal not found' });
   res.json({ ok: true });
+});
+
+app.post('/api/reflections', requireAuth, (req, res) => {
+  const { week_start, text, shared_with_cohort } = req.body;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(week_start || '')) {
+    return res.status(400).json({ error: 'Invalid week_start format.' });
+  }
+  const courseWeek = getCurrentCourseWeek(req.session.user);
+  if (week_start >= courseWeek.weekStart) {
+    return res.status(400).json({ error: 'Reflections can only be saved for past weeks.' });
+  }
+  db.upsertWeeklyReflection(req.session.user.id, week_start, text, shared_with_cohort);
+  res.json({ ok: true, updated_at: new Date().toISOString() });
 });
 
 // ─── Season ────────────────────────────────────────────────────────────────
@@ -456,12 +472,14 @@ app.get('/community', requireAuth, (req, res) => {
 // ─── Calendar ──────────────────────────────────────────────────────────────
 
 app.get('/calendar', requireAuth, (req, res) => {
-  const userId         = req.session.user.id;
-  const currentWeekStart = getWeekStart();
-  const courseStartDate  = db.getSetting('course_start_date') || currentWeekStart;
-  const weekStarts       = generate12Weeks(courseStartDate);
-  const allGoalsRaw      = db.getGoalsForWeeks(userId, weekStarts);
-  const cats             = ['curiosity', 'create', 'share', 'connect'];
+  const userId               = req.session.user.id;
+  const currentWeekStart     = getWeekStart();
+  const courseCurrentWeekStart = getCurrentCourseWeek(req.session.user).weekStart;
+  const courseStartDate      = db.getSetting('course_start_date') || currentWeekStart;
+  const weekStarts           = generate12Weeks(courseStartDate);
+  const allGoalsRaw          = db.getGoalsForWeeks(userId, weekStarts);
+  const reflectionsRaw       = db.getWeeklyReflections(userId, weekStarts);
+  const cats                 = ['curiosity', 'create', 'share', 'connect'];
 
   const weeks = weekStarts.map((weekStart, idx) => {
     const goalsMap   = allGoalsRaw[weekStart] || {};
@@ -472,29 +490,32 @@ app.get('/calendar', requireAuth, (req, res) => {
       const gd        = goalsData[cat];
       goalsExist[cat] = !!(gd.items && gd.items.length > 0);
     }
-    const allGoalsSet  = cats.every(cat => goalsExist[cat]);
+    const allGoalsSet   = cats.every(cat => goalsExist[cat]);
     const isIntegration = cats.some(cat => goalsMap[cat]?.is_integration_week);
     return {
       weekStart,
-      weekIndex:     idx,
-      weekName:      'Week ' + WEEK_ORDINALS[idx],
-      dateRange:     formatDateRangeShort(weekStart),
-      isCurrentWeek: weekStart === currentWeekStart,
-      isPastWeek:    weekStart < currentWeekStart,
-      isFutureWeek:  weekStart > currentWeekStart,
+      weekIndex:          idx,
+      weekName:           'Week ' + WEEK_ORDINALS[idx],
+      dateRange:          formatDateRangeShort(weekStart),
+      isCurrentWeek:      weekStart === currentWeekStart,
+      isPastWeek:         weekStart < currentWeekStart,
+      isFutureWeek:       weekStart > currentWeekStart,
+      isPastCourseWeek:   weekStart < courseCurrentWeekStart,
       isIntegration,
       goalsData,
       goalsMap,
       goalsExist,
-      allGoalsSet
+      allGoalsSet,
+      reflection:         reflectionsRaw[weekStart] || null
     };
   });
 
   res.render('calendar', {
-    title:           "Your 12-Week Journey",
-    page:            'calendar',
+    title:                "Your 12-Week Journey",
+    page:                 'calendar',
     weeks,
     currentWeekStart,
+    courseCurrentWeekStart,
     courseStartDate
   });
 });
