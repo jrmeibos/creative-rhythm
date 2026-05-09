@@ -1051,7 +1051,7 @@ module.exports = {
     return map;
   },
 
-  upsertSeed(userId, seedNumber, feeling, looksLike) {
+  upsertSeed(userId, seedNumber, feeling, looksLike, createdAt) {
     // Find existing original seed and update, or insert new
     const existing = db.prepare(
       'SELECT id FROM seeds WHERE user_id=? AND seed_number=? AND is_replacement=0'
@@ -1061,12 +1061,17 @@ module.exports = {
         'UPDATE seeds SET feeling=?, looks_like=?, updated_at=CURRENT_TIMESTAMP WHERE id=?'
       ).run(feeling || '', looksLike || '', existing.id);
     }
+    if (createdAt) {
+      return db.prepare(
+        'INSERT INTO seeds (user_id, seed_number, feeling, looks_like, is_active, is_replacement, created_at) VALUES (?, ?, ?, ?, 1, 0, ?)'
+      ).run(userId, seedNumber, feeling || '', looksLike || '', createdAt);
+    }
     return db.prepare(
       'INSERT INTO seeds (user_id, seed_number, feeling, looks_like, is_active, is_replacement) VALUES (?, ?, ?, ?, 1, 0)'
     ).run(userId, seedNumber, feeling || '', looksLike || '');
   },
 
-  replaceSeeds(userId, seedNumber, feeling, looksLike) {
+  replaceSeeds(userId, seedNumber, feeling, looksLike, createdAt) {
     // Mark current active seed as inactive
     db.prepare(
       'UPDATE seeds SET is_active=0, updated_at=CURRENT_TIMESTAMP WHERE user_id=? AND seed_number=? AND is_active=1'
@@ -1075,7 +1080,11 @@ module.exports = {
     const original = db.prepare(
       'SELECT id FROM seeds WHERE user_id=? AND seed_number=? AND is_replacement=0 ORDER BY id ASC LIMIT 1'
     ).get(userId, seedNumber);
-    // Insert new active replacement
+    if (createdAt) {
+      return db.prepare(
+        'INSERT INTO seeds (user_id, seed_number, feeling, looks_like, is_active, is_replacement, replaces_seed_id, created_at) VALUES (?, ?, ?, ?, 1, 1, ?, ?)'
+      ).run(userId, seedNumber, feeling || '', looksLike || '', original?.id || null, createdAt);
+    }
     return db.prepare(
       'INSERT INTO seeds (user_id, seed_number, feeling, looks_like, is_active, is_replacement, replaces_seed_id) VALUES (?, ?, ?, ?, 1, 1, ?)'
     ).run(userId, seedNumber, feeling || '', looksLike || '', original?.id || null);
@@ -1111,6 +1120,19 @@ module.exports = {
       WHERE s.is_replacement = 0
       ORDER BY u.name ASC, s.seed_number ASC
     `).all();
+  },
+
+  getAllSeedsForAdmin() {
+    return db.prepare(`
+      SELECT s.id, s.user_id, s.seed_number, s.feeling, s.created_at, s.is_active, u.email
+      FROM seeds s
+      JOIN users u ON s.user_id = u.id
+      ORDER BY u.name ASC, s.seed_number ASC, s.id ASC
+    `).all();
+  },
+
+  updateSeedCreatedAt(seedId, dateStr) {
+    return db.prepare("UPDATE seeds SET created_at = ? WHERE id = ?").run(dateStr + ' 00:00:00', seedId);
   },
 
   // ─── Self-Assessments ──────────────────────────────────────────────────────

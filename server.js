@@ -615,10 +615,21 @@ app.get('/profile', requireAuth, (req, res) => {
 
 // ─── Greenhouse ────────────────────────────────────────────────────────────
 
-function isSeedLocked(seed) {
+// Returns the "current" date for business logic.
+// Admins can set simulated_today in DB to test date-gated features without waiting.
+// Students always see real time — simulated_today is ignored for non-admins.
+function getNow(user) {
+  if (user && user.role === 'admin') {
+    const simulated = db.getSetting('simulated_today');
+    if (simulated && simulated.trim()) return new Date(simulated + 'T00:00:00');
+  }
+  return new Date();
+}
+
+function isSeedLocked(seed, user) {
   if (!seed || !seed.created_at) return false;
   const planted = new Date(seed.created_at);
-  return Date.now() < planted.getTime() + 28 * 24 * 60 * 60 * 1000;
+  return getNow(user).getTime() < planted.getTime() + 28 * 24 * 60 * 60 * 1000;
 }
 
 app.get('/greenhouse', requireAuth, (req, res) => {
@@ -641,7 +652,7 @@ app.get('/greenhouse', requireAuth, (req, res) => {
     for (const n of [1, 2, 3]) {
       const entry = seeds[n];
       const activeSeed = entry.replacement || entry.original;
-      entry.locked = isSeedLocked(activeSeed);
+      entry.locked = isSeedLocked(activeSeed, req.session.user);
       if (entry.locked && activeSeed) {
         const unlockMs = new Date(activeSeed.created_at).getTime() + 28 * 24 * 60 * 60 * 1000;
         entry.unlockDate = new Date(unlockMs).toLocaleDateString('en-US', { month: 'long', day: 'numeric' });
@@ -654,7 +665,8 @@ app.get('/greenhouse', requireAuth, (req, res) => {
   let growthCheckUnlocked = false;
   let growthCheckDate = null;
   if (courseStart) {
-    const daysDiff = Math.floor((Date.now() - new Date(courseStart + 'T00:00:00').getTime()) / 86400000);
+    const now = getNow(req.session.user);
+    const daysDiff = Math.floor((now.getTime() - new Date(courseStart + 'T00:00:00').getTime()) / 86400000);
     growthCheckUnlocked = daysDiff >= 77;
     if (!growthCheckUnlocked) {
       const unlockDay = new Date(new Date(courseStart + 'T00:00:00').getTime() + 77 * 86400000);
@@ -692,11 +704,15 @@ app.post('/api/greenhouse/plant', requireAuth, (req, res) => {
   if (!Array.isArray(seeds) || seeds.length !== 3) {
     return res.status(400).json({ error: 'Invalid seeds data.' });
   }
+  // When time travel is active for admin, seeds are planted at the simulated date so
+  // the 4-week lock window aligns with the simulated timeline.
+  const now = getNow(req.session.user);
+  const createdAt = now.toISOString().replace('T', ' ').split('.')[0];
   for (const s of seeds) {
     const num = parseInt(s.seed_number);
     if (![1, 2, 3].includes(num)) return res.status(400).json({ error: 'Invalid seed number.' });
     if (!s.feeling || !s.looks_like) return res.status(400).json({ error: 'All seed fields are required.' });
-    db.upsertSeed(userId, num, s.feeling, s.looks_like);
+    db.upsertSeed(userId, num, s.feeling, s.looks_like, createdAt);
   }
   res.json({ ok: true });
 });
@@ -706,7 +722,7 @@ app.post('/api/seeds/:id/keep', requireAuth, (req, res) => {
   if (!seedId) return res.status(400).json({ error: 'Invalid seed id.' });
   const seed = db.getSeedById(seedId, req.session.user.id);
   if (!seed) return res.status(404).json({ error: 'Seed not found.' });
-  if (isSeedLocked(seed)) return res.status(403).json({ error: 'Seed is still in the lock period.' });
+  if (isSeedLocked(seed, req.session.user)) return res.status(403).json({ error: 'Seed is still in the lock period.' });
   const { kept } = req.body;
   db.keepSeed(seedId, req.session.user.id, !!kept);
   res.json({ ok: true });
@@ -717,10 +733,12 @@ app.post('/api/greenhouse/replace', requireAuth, (req, res) => {
   const num = parseInt(seedNumber);
   if (![1, 2, 3].includes(num)) return res.status(400).json({ error: 'Invalid seed number.' });
   const activeSeed = db.getActiveSeedByNumber(req.session.user.id, num);
-  if (activeSeed && isSeedLocked(activeSeed)) {
+  if (activeSeed && isSeedLocked(activeSeed, req.session.user)) {
     return res.status(403).json({ error: 'Seed is still in the lock period.' });
   }
-  db.replaceSeeds(req.session.user.id, num, feeling, looksLike);
+  const now = getNow(req.session.user);
+  const createdAt = now.toISOString().replace('T', ' ').split('.')[0];
+  db.replaceSeeds(req.session.user.id, num, feeling, looksLike, createdAt);
   res.json({ ok: true });
 });
 
@@ -741,7 +759,8 @@ app.post('/api/harvest', requireAuth, (req, res) => {
   const courseStart = db.getSetting('course_start_date');
   let growthCheckUnlocked = false;
   if (courseStart) {
-    const daysDiff = Math.floor((Date.now() - new Date(courseStart + 'T00:00:00').getTime()) / 86400000);
+    const now = getNow(req.session.user);
+    const daysDiff = Math.floor((now.getTime() - new Date(courseStart + 'T00:00:00').getTime()) / 86400000);
     growthCheckUnlocked = daysDiff >= 77;
   }
   if (!growthCheckUnlocked) return res.status(403).json({ error: 'Growth Check not yet available.' });
@@ -864,6 +883,8 @@ app.get('/admin', requireAdmin, (req, res) => {
   const courseStartDate    = db.getSetting('course_start_date') || '';
   const harvestUnlocked    = db.getSetting('harvest_unlocked') === 'true';
   const midcourseUnlocked  = db.getSetting('midcourse_unlocked') === 'true';
+  const simulatedToday     = db.getSetting('simulated_today') || null;
+  const allSeeds           = db.getAllSeedsForAdmin();
   const studentAssessments = db.getAllStudentAssessmentStatus();
 
   // Attach homework to each lesson for the edit dialog
@@ -887,6 +908,7 @@ app.get('/admin', requireAdmin, (req, res) => {
     users, lessons, resources, lessonStats, lessonHomework, courseStartDate,
     harvestUnlocked, midcourseUnlocked,
     midcourseUnlockDate, closingUnlockDate,
+    simulatedToday, allSeeds,
     studentAssessments,
     questions: ASSESSMENT_QUESTIONS,
     closingQuestions: CLOSING_QUESTIONS
@@ -895,9 +917,18 @@ app.get('/admin', requireAdmin, (req, res) => {
 
 app.post('/api/admin/settings', requireAdmin, (req, res) => {
   const { key, value } = req.body;
-  const allowed = ['course_start_date', 'harvest_unlocked', 'midcourse_unlocked'];
+  const allowed = ['course_start_date', 'harvest_unlocked', 'midcourse_unlocked', 'simulated_today'];
   if (!allowed.includes(key)) return res.status(400).json({ error: 'Invalid key' });
   db.setSetting(key, value);
+  res.json({ ok: true });
+});
+
+app.post('/api/admin/seeds/:id/planted-at', requireAdmin, (req, res) => {
+  const { date } = req.body;
+  if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    return res.status(400).json({ error: 'Invalid date format. Use YYYY-MM-DD.' });
+  }
+  db.updateSeedCreatedAt(parseInt(req.params.id), date);
   res.json({ ok: true });
 });
 
@@ -1020,12 +1051,13 @@ app.delete('/api/admin/resources/:id', requireAdmin, (req, res) => {
 
 // ─── Helpers ───────────────────────────────────────────────────────────────
 
-function getUnlockState() {
+function getUnlockState(user) {
   // Check date-based logic OR manual DB flags — whichever is true wins
   const courseStart = db.getSetting('course_start_date');
   let midcourseDate = false, closingDate = false;
   if (courseStart) {
-    const daysDiff = Math.floor((Date.now() - new Date(courseStart + 'T00:00:00').getTime()) / 86400000);
+    const now = getNow(user);
+    const daysDiff = Math.floor((now.getTime() - new Date(courseStart + 'T00:00:00').getTime()) / 86400000);
     midcourseDate = daysDiff >= 35;
     closingDate   = daysDiff >= 77;
   }

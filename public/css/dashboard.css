@@ -2017,3 +2017,107 @@
   grid-template-columns: 1fr 1fr;
   gap: 0.5rem;
 }
+
+/* ─── Admin Time Travel ───────────────────────────────────────────────────── */
+.admin-tt-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  background: #fef3c7;
+  border: 1.5px solid #f59e0b;
+  border-radius: 8px;
+  padding: 0.6rem 1rem;
+  margin-bottom: 1.25rem;
+  font-size: 0.875rem;
+  color: #92400e;
+}
+
+.admin-tt-banner-link {
+  color: #92400e;
+  text-decoration: underline;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.admin-tt-label {
+  font-size: 0.72rem;
+  font-weight: 400;
+  color: #b45309;
+  margin-left: 0.4rem;
+  letter-spacing: 0.02em;
+}
+
+.admin-tt-row {
+  margin-bottom: 0.75rem;
+}
+
+.admin-tt-quick-btns {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+}
+
+.admin-btn-sm {
+  padding: 0.28rem 0.65rem;
+  border: 1px solid var(--color-bloem);
+  background: transparent;
+  color: var(--color-bloem);
+  border-radius: 6px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.15s, color 0.15s;
+}
+.admin-btn-sm:hover {
+  background: var(--color-bloem);
+  color: #fff;
+}
+.admin-btn-sm--danger {
+  border-color: #dc2626;
+  color: #dc2626;
+}
+.admin-btn-sm--danger:hover {
+  background: #dc2626;
+  color: #fff;
+}
+
+/* ─── Admin Seed Table ────────────────────────────────────────────────────── */
+.admin-seed-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.84rem;
+}
+.admin-seed-table th {
+  text-align: left;
+  padding: 0.35rem 0.5rem;
+  border-bottom: 1.5px solid var(--color-new-growth);
+  font-weight: 600;
+  color: rgba(16, 15, 16, 0.5);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.admin-seed-table td {
+  padding: 0.45rem 0.5rem;
+  border-bottom: 1px solid var(--color-new-growth);
+  vertical-align: middle;
+}
+.admin-seed-table tr:last-child td {
+  border-bottom: none;
+}
+.admin-seed-feeling {
+  color: rgba(16, 15, 16, 0.55);
+  font-style: italic;
+}
+.admin-seed-edit-row {
+  background: var(--color-new-growth);
+  padding: 0.5rem 0.75rem !important;
+}
+.admin-seed-edit-row input[type="date"] {
+  margin-right: 0.5rem;
+  vertical-align: middle;
+}

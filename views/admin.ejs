@@ -11,6 +11,13 @@
 
     <main class="main-content">
 
+      <% if (simulatedToday) { %>
+      <div class="admin-tt-banner">
+        <span>⚠️ TIME TRAVEL ACTIVE — Simulated date: <strong><%= simulatedToday %></strong> &nbsp;·&nbsp; Real today: <strong><%= new Date().toISOString().split('T')[0] %></strong></span>
+        <a href="#" class="admin-tt-banner-link" onclick="clearTimeTravel(); return false;">Return to real time</a>
+      </div>
+      <% } %>
+
       <header class="dash-header">
         <div class="dash-greeting">
           <h1 class="dash-greeting-text">Admin</h1>
@@ -58,6 +65,85 @@
             </div>
           </div>
           <p class="admin-unlock-note">Both unlock automatically based on course start date. No manual action needed.</p>
+        </div>
+      </section>
+
+      <!-- ── Time Travel ──────────────────────────────────────────────────── -->
+      <section class="dash-section" id="section-timetravel">
+        <div class="dash-section-header">
+          <h2 class="dash-section-title">Time Travel <span class="admin-tt-label">⚠️ Testing Only</span></h2>
+        </div>
+
+        <div class="admin-card">
+          <div class="admin-field-group">
+            <label class="admin-field-label">Simulated date</label>
+            <p class="admin-field-hint">
+              <% if (simulatedToday) { %>
+                Active — admin sees <strong><%= simulatedToday %></strong> for all unlock calculations. Students always see real time.
+              <% } else { %>
+                Not active — using real time.
+              <% } %>
+            </p>
+          </div>
+          <div class="admin-tt-row">
+            <div class="admin-field-input-row">
+              <input type="date" id="tt-date-input" class="admin-date-input" value="<%= simulatedToday || '' %>">
+              <button class="admin-save-btn" type="button" onclick="setSimulatedDate()">Set date</button>
+              <span class="admin-save-status" id="tt-status"></span>
+            </div>
+          </div>
+          <div class="admin-tt-quick-btns">
+            <span class="admin-field-hint" style="flex-shrink:0">Quick jumps:</span>
+            <button class="admin-btn-sm" type="button" onclick="jumpToWeek(36)">Jump to Week 6</button>
+            <button class="admin-btn-sm" type="button" onclick="jumpToWeek(50)">Jump to Week 8</button>
+            <button class="admin-btn-sm" type="button" onclick="jumpToWeek(78)">Jump to Week 12</button>
+            <button class="admin-btn-sm admin-btn-sm--danger" type="button" onclick="clearTimeTravel()">Return to real time</button>
+          </div>
+        </div>
+
+        <!-- Seed Time Override -->
+        <div class="admin-card" style="margin-top:1rem">
+          <div class="admin-card-row" style="margin-bottom:0.75rem">
+            <div>
+              <strong>Seed Time Override</strong>
+              <p class="admin-field-hint" style="margin-top:0.2rem">⚠️ Editing planted_at affects the 4-week lock calculation. Use for testing only.</p>
+            </div>
+          </div>
+          <table class="admin-seed-table">
+            <thead>
+              <tr>
+                <th>User</th>
+                <th>Seed #</th>
+                <th>Feeling</th>
+                <th>Planted at</th>
+                <th>Active</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              <% if (allSeeds.length === 0) { %>
+                <tr><td colspan="6" class="admin-empty" style="text-align:left;padding:0.75rem 0.5rem">No seeds planted yet.</td></tr>
+              <% } %>
+              <% for (const s of allSeeds) { %>
+                <tr id="seed-row-<%= s.id %>">
+                  <td><%= s.email %></td>
+                  <td><%= s.seed_number %></td>
+                  <td class="admin-seed-feeling"><%= s.feeling && s.feeling.length > 28 ? s.feeling.slice(0, 28) + '…' : (s.feeling || '—') %></td>
+                  <td id="seed-planted-<%= s.id %>"><%= s.created_at ? s.created_at.slice(0, 10) : '—' %></td>
+                  <td><%= s.is_active ? '✓' : '' %></td>
+                  <td><button class="admin-btn-sm" type="button" onclick="editSeedDate(<%= s.id %>)">Edit</button></td>
+                </tr>
+                <tr id="seed-edit-row-<%= s.id %>" style="display:none">
+                  <td colspan="6" class="admin-seed-edit-row">
+                    <input type="date" id="seed-date-<%= s.id %>" class="admin-date-input" value="<%= s.created_at ? s.created_at.slice(0, 10) : '' %>">
+                    <button class="admin-save-btn" type="button" onclick="saveSeedDate(<%= s.id %>)">Save</button>
+                    <button class="admin-btn-sm" type="button" onclick="cancelSeedEdit(<%= s.id %>)" style="margin-left:0.25rem">Cancel</button>
+                    <span class="admin-save-status" id="seed-status-<%= s.id %>"></span>
+                  </td>
+                </tr>
+              <% } %>
+            </tbody>
+          </table>
         </div>
       </section>
 
@@ -609,6 +695,76 @@
         window.location.reload();
       } else {
         alert('Failed to update setting.');
+      }
+    }
+
+    // ── Time Travel ──────────────────────────────────────────────────────────
+    const TT_COURSE_START = '<%= courseStartDate %>';
+
+    async function setSimulatedDate(dateStr) {
+      const date = dateStr || document.getElementById('tt-date-input').value;
+      if (!date) return;
+      const status = document.getElementById('tt-status');
+      const res = await fetch('/api/admin/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key: 'simulated_today', value: date })
+      });
+      if (res.ok) {
+        status.textContent = 'Saved ✓';
+        status.style.color = 'var(--color-understory)';
+        setTimeout(() => location.reload(), 700);
+      } else {
+        status.textContent = 'Error saving';
+        status.style.color = '#c0392b';
+      }
+    }
+
+    function jumpToWeek(offsetDays) {
+      if (!TT_COURSE_START) {
+        alert('Set a course start date first.');
+        return;
+      }
+      const start = new Date(TT_COURSE_START + 'T00:00:00');
+      const target = new Date(start.getTime() + offsetDays * 86400000);
+      const dateStr = target.toISOString().split('T')[0];
+      document.getElementById('tt-date-input').value = dateStr;
+      setSimulatedDate(dateStr);
+    }
+
+    async function clearTimeTravel() {
+      const res = await fetch('/api/admin/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key: 'simulated_today', value: '' })
+      });
+      if (res.ok) location.reload();
+    }
+
+    // ── Seed Time Override ───────────────────────────────────────────────────
+    function editSeedDate(id) {
+      document.getElementById('seed-edit-row-' + id).style.display = '';
+    }
+
+    function cancelSeedEdit(id) {
+      document.getElementById('seed-edit-row-' + id).style.display = 'none';
+    }
+
+    async function saveSeedDate(id) {
+      const date = document.getElementById('seed-date-' + id).value;
+      const statusEl = document.getElementById('seed-status-' + id);
+      if (!date) return;
+      const res = await fetch('/api/admin/seeds/' + id + '/planted-at', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ date })
+      });
+      if (res.ok) {
+        document.getElementById('seed-planted-' + id).textContent = date;
+        document.getElementById('seed-edit-row-' + id).style.display = 'none';
+      } else {
+        statusEl.textContent = 'Error saving.';
+        statusEl.style.color = '#c0392b';
       }
     }
 
