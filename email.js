@@ -24,6 +24,13 @@ The Creative's Garden`;
 <head><meta charset="utf-8"><title>Reset your password</title></head>
 <body style="font-family: Georgia, serif; background: #FAFAFA; margin: 0; padding: 32px;">
   <div style="max-width: 560px; margin: 0 auto; background: #F2EEE3; padding: 40px; border-radius: 8px;">
+    <div style="text-align: center; margin-bottom: 32px;">
+      <img src="https://www.creativesgarden.com/images/brand/Favicon_3.png"
+           alt="The Creative's Garden"
+           width="80"
+           height="80"
+           style="display: inline-block; max-width: 80px; height: auto;" />
+    </div>
     <h1 style="font-family: Georgia, serif; color: #100F10; font-weight: 400; margin: 0 0 24px; font-size: 24px;">
       Reset your password
     </h1>
