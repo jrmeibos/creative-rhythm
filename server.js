@@ -10,6 +10,7 @@ const multer = require('multer');
 const db = require('./db');
 const { requireAuth, requireAdmin } = require('./auth');
 const { sendPasswordResetEmail } = require('./email');
+const { ANGLES, getAngle, getQuestion } = require('./lib/curiosity-map-questions');
 
 // Accounts that see simulated time when Time Travel is active.
 // Admins always see it. Add test email addresses here to extend it.
@@ -1110,7 +1111,76 @@ app.post('/api/account/preference', requireAuth, (req, res) => {
 // ─── Resources ─────────────────────────────────────────────────────────────
 
 app.get('/resources', requireAuth, (req, res) => {
-  res.render('coming-soon', { title: 'Resources', page: 'resources' });
+  res.render('resources', { title: 'Resources', page: 'resources' });
+});
+
+// ─── Curiosity Map ─────────────────────────────────────────────────────────
+
+app.get('/curiosity-map', requireAuth, (req, res) => {
+  const userId = req.session.user.id;
+  const counts = db.getCuriosityAnswerCounts(userId);
+  const totalAnswered = db.getCuriosityTotalAnswered(userId);
+  res.render('curiosity-map', {
+    title: 'The Curiosity Map',
+    page: 'resources',
+    angles: ANGLES,
+    counts,
+    totalAnswered
+  });
+});
+
+app.get('/curiosity-map/synthesis-coming-soon', requireAuth, (req, res) => {
+  res.render('curiosity-map-synthesis-coming-soon', {
+    title: 'Synthesis — Coming Soon',
+    page: 'resources'
+  });
+});
+
+app.get('/curiosity-map/:angleId', requireAuth, (req, res) => {
+  const angle = getAngle(req.params.angleId);
+  if (!angle) return res.redirect('/curiosity-map');
+  const userId = req.session.user.id;
+  const allAnswers = db.getCuriosityAnswersByUser(userId);
+  const questionIds = new Set(angle.questions.map(q => q.id));
+  const userAnswers = {};
+  for (const row of allAnswers) {
+    if (questionIds.has(row.question_id)) userAnswers[row.question_id] = row.answer_text;
+  }
+  res.render('curiosity-map-angle', {
+    title: angle.name,
+    page: 'resources',
+    angle,
+    userAnswers
+  });
+});
+
+app.get('/curiosity-map/:angleId/:questionId', requireAuth, (req, res) => {
+  const { angleId, questionId } = req.params;
+  const angle = getAngle(angleId);
+  if (!angle) return res.redirect('/curiosity-map');
+  const question = getQuestion(angleId, questionId);
+  if (!question) return res.redirect(`/curiosity-map/${angleId}`);
+  const existingAnswer = db.getCuriosityAnswer(req.session.user.id, questionId);
+  res.render('curiosity-map-question', {
+    title: 'The Curiosity Map',
+    page: 'resources',
+    angle,
+    question,
+    existingAnswer
+  });
+});
+
+app.post('/curiosity-map/:angleId/:questionId', requireAuth, (req, res) => {
+  const { angleId, questionId } = req.params;
+  const angle = getAngle(angleId);
+  if (!angle) return res.redirect('/curiosity-map');
+  const question = getQuestion(angleId, questionId);
+  if (!question) return res.redirect(`/curiosity-map/${angleId}`);
+  const answerText = (req.body.answer_text || '').trim();
+  if (answerText) {
+    db.upsertCuriosityAnswer(req.session.user.id, questionId, answerText);
+  }
+  res.redirect(`/curiosity-map/${angleId}`);
 });
 
 // ─── Admin ─────────────────────────────────────────────────────────────────

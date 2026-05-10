@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <%- include('partials/head') %>
+  <link rel="stylesheet" href="/css/dashboard.css">
+  <link rel="stylesheet" href="/css/curiosity-map.css">
+</head>
+<body class="app-body">
+  <div class="app-layout">
+    <%- include('partials/sidebar') %>
+    <main class="main-content">
+
+      <header class="dash-header">
+        <div class="dash-greeting">
+          <h1 class="dash-greeting-text">Resources</h1>
+        </div>
+      </header>
+
+      <section class="dash-section">
+        <div class="resources-grid">
+
+          <a href="/curiosity-map" class="resource-card">
+            <div class="resource-card-inner">
+              <h2 class="resource-card-title">The Curiosity Map</h2>
+              <p class="resource-card-desc">A reflective resource for finding the threads of what you're actually curious about — before the blank page.</p>
+              <span class="resource-card-link">Open the Map →</span>
+            </div>
+          </a>
+
+        </div>
+      </section>
+
+    </main>
+  </div>
+</body>
+</html>

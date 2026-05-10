@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <%- include('partials/head') %>
+  <link rel="stylesheet" href="/css/dashboard.css">
+  <link rel="stylesheet" href="/css/curiosity-map.css">
+</head>
+<body class="app-body">
+  <div class="app-layout">
+    <%- include('partials/sidebar') %>
+    <main class="main-content">
+
+      <a href="/curiosity-map" class="cm-back-link">← Back to the Map</a>
+
+      <div style="margin-bottom: 2rem;">
+        <h1 class="cm-angle-name"><%= angle.name %></h1>
+        <p class="cm-angle-subtitle"><%= angle.subtitle %></p>
+      </div>
+
+      <div class="cm-question-list">
+        <% angle.questions.forEach(function(q) {
+          const answered = !!userAnswers[q.id];
+        %>
+        <a href="/curiosity-map/<%= angle.id %>/<%= q.id %>"
+           class="cm-question-card<%= answered ? ' cm-question-card--answered' : '' %>">
+          <% if (answered) { %>
+            <span class="cm-question-answered-dot" aria-hidden="true"></span>
+          <% } %>
+          <p class="cm-question-text"><%= q.text %></p>
+          <% if (answered) { %>
+            <span class="cm-question-cta cm-question-cta--edit">Edit your answer</span>
+          <% } else { %>
+            <span class="cm-question-cta">Answer this question →</span>
+          <% } %>
+        </a>
+        <% }); %>
+      </div>
+
+    </main>
+  </div>
+</body>
+</html>

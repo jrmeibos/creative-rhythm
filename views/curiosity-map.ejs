@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <%- include('partials/head') %>
+  <link rel="stylesheet" href="/css/dashboard.css">
+  <link rel="stylesheet" href="/css/curiosity-map.css">
+</head>
+<body class="app-body">
+  <div class="app-layout">
+    <%- include('partials/sidebar') %>
+    <main class="main-content">
+<%
+  const markerPositions = {
+    remembering: { x: 340, y: 220 },
+    noticing:    { x: 170, y: 320 },
+    allowing:    { x: 510, y: 320 },
+    imagining:   { x: 200, y: 530 },
+    knowing:     { x: 480, y: 530 },
+  };
+  const PIN_PATH = 'M 0,4 C -4,0 -12,-6 -12,-16 A 12,12 0 1,1 12,-16 C 12,-6 4,0 0,4 Z';
+%>
+
+      <div class="cm-header">
+        <h1 class="cm-title">The Curiosity Map</h1>
+        <p class="cm-subtitle">Five angles. Thirty-five questions. Answer what sparks you.</p>
+      </div>
+
+      <div class="cm-map-wrap">
+        <svg viewBox="0 0 680 720" width="100%" class="curiosity-map-svg" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="The Curiosity Map">
+
+          <defs>
+            <% angles.forEach(function(angle) { %>
+            <clipPath id="clip-<%= angle.id %>">
+              <path d="<%= PIN_PATH %>"/>
+            </clipPath>
+            <% }); %>
+          </defs>
+
+          <!-- Map background -->
+          <rect width="680" height="720" fill="#F2EEE3" rx="12"/>
+
+          <!-- ── Contour lines ────────────────────────────────────────────── -->
+          <!-- 4 concentric ellipses centered on (340, 410) -->
+          <ellipse cx="340" cy="410" rx="55"  ry="32"  fill="none" stroke="#76856C" stroke-width="0.45" opacity="0.28"/>
+          <ellipse cx="340" cy="410" rx="110" ry="65"  fill="none" stroke="#76856C" stroke-width="0.45" opacity="0.26"/>
+          <ellipse cx="340" cy="410" rx="185" ry="112" fill="none" stroke="#76856C" stroke-width="0.4"  opacity="0.22"/>
+          <ellipse cx="340" cy="410" rx="265" ry="165" fill="none" stroke="#76856C" stroke-width="0.4"  opacity="0.18"/>
+
+          <!-- 8 flowing horizontal contour lines -->
+          <path d="M 0,105 C 110,99  230,112 340,107 C 450,102 570,114 680,108"
+                fill="none" stroke="#76856C" stroke-width="0.45" opacity="0.22"/>
+          <path d="M 0,168 C 130,162 240,174 340,170 C 440,166 560,177 680,171"
+                fill="none" stroke="#76856C" stroke-width="0.45" opacity="0.24"/>
+          <path d="M 0,248 C 120,242 240,254 340,250 C 440,246 560,257 680,251"
+                fill="none" stroke="#76856C" stroke-width="0.4"  opacity="0.22"/>
+          <path d="M 0,348 C 130,341 250,354 340,350 C 430,346 550,358 680,352"
+                fill="none" stroke="#76856C" stroke-width="0.4"  opacity="0.20"/>
+          <path d="M 0,462 C 115,456 235,468 340,464 C 445,460 565,471 680,465"
+                fill="none" stroke="#76856C" stroke-width="0.4"  opacity="0.22"/>
+          <path d="M 0,548 C 140,542 255,554 340,550 C 425,546 545,558 680,551"
+                fill="none" stroke="#76856C" stroke-width="0.45" opacity="0.24"/>
+          <path d="M 0,618 C 120,612 240,624 340,620 C 440,616 560,628 680,622"
+                fill="none" stroke="#76856C" stroke-width="0.4"  opacity="0.20"/>
+          <path d="M 0,678 C 100,672 220,684 340,680 C 460,676 580,688 680,682"
+                fill="none" stroke="#76856C" stroke-width="0.4"  opacity="0.18"/>
+
+          <!-- ── Compass rose ─────────────────────────────────────────────── -->
+          <g transform="translate(610, 165)" opacity="0.30">
+            <line x1="0" y1="-14" x2="0" y2="14"  stroke="#76856C" stroke-width="0.8"/>
+            <line x1="-14" y1="0" x2="14" y2="0"  stroke="#76856C" stroke-width="0.8"/>
+            <circle cx="0" cy="0" r="3.5" fill="none" stroke="#76856C" stroke-width="0.8"/>
+            <text x="0" y="-18" text-anchor="middle" fill="#76856C"
+                  font-size="7" font-family="Jost, sans-serif" font-weight="300">N</text>
+          </g>
+
+          <!-- ── "You are here" center ───────────────────────────────────── -->
+          <text x="340" y="388" text-anchor="middle" fill="#76856C"
+                font-family="Goldage, Georgia, serif" font-style="italic" font-size="11"
+                opacity="0.7">you are here</text>
+          <circle cx="340" cy="410" r="11" fill="none" stroke="#100F10" stroke-width="1" opacity="0.5"/>
+          <circle cx="340" cy="410" r="5"  fill="#100F10" opacity="0.6"/>
+
+          <!-- ── Angle markers ───────────────────────────────────────────── -->
+          <% angles.forEach(function(angle) {
+            const pos   = markerPositions[angle.id];
+            const count = counts[angle.id] || 0;
+            const isFull = count === 7;
+            const fillHeight = Math.round((count / 7) * 32);
+          %>
+          <a href="/curiosity-map/<%= angle.id %>" class="map-marker-link">
+            <g transform="translate(<%= pos.x %>, <%= pos.y %>)" class="map-marker-group">
+
+              <!-- Pin background -->
+              <path d="<%= PIN_PATH %>"
+                    fill="<%= isFull ? '#705C6C' : '#F2EEE3' %>"
+                    stroke="#705C6C" stroke-width="1.5"/>
+
+              <% if (count > 0 && !isFull) { %>
+              <!-- Partial fill -->
+              <rect x="-12" y="<%= 4 - fillHeight %>" width="24" height="<%= fillHeight %>"
+                    fill="#705C6C" clip-path="url(#clip-<%= angle.id %>)"/>
+              <% } %>
+
+              <% if (isFull) { %>
+              <!-- Apricity completion ring -->
+              <ellipse cx="0" cy="-12" rx="18" ry="18"
+                       fill="none" stroke="#F6C95C" stroke-width="2" opacity="0.7"/>
+              <% } %>
+
+              <!-- Angle name label -->
+              <text y="22" text-anchor="middle"
+                    fill="#705C6C"
+                    font-family="Goldage, Georgia, serif"
+                    font-size="11.5"
+                    font-weight="400"><%= angle.name %></text>
+            </g>
+          </a>
+          <% }); %>
+
+        </svg>
+      </div>
+
+      <!-- ── Bottom hint ────────────────────────────────────────────────── -->
+      <div class="cm-hint-wrap" style="margin-top: 1.25rem;">
+        <% if (totalAnswered === 0) { %>
+          <p class="cm-hint-text">Begin anywhere — answer the questions that spark you</p>
+        <% } else if (totalAnswered < 10) { %>
+          <p class="cm-hint-text">
+            <%= totalAnswered %> of 35 answered — answer <%= 10 - totalAnswered %> more to begin synthesizing
+          </p>
+        <% } else { %>
+          <a href="/curiosity-map/synthesis-coming-soon" class="cm-synthesize-link">
+            Ready to synthesize what you've found →
+          </a>
+        <% } %>
+      </div>
+
+    </main>
+  </div>
+</body>
+</html>

@@ -352,6 +352,21 @@ db.exec(`
   // Reset them so users see initials until they re-upload.
   db.exec("UPDATE users SET profile_photo = NULL WHERE profile_photo LIKE '/uploads/avatars/%'");
 
+  // Curiosity Map answers
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS curiosity_map_answers (
+      id          INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id     INTEGER NOT NULL,
+      question_id TEXT NOT NULL,
+      answer_text TEXT NOT NULL,
+      created_at  DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at  DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (user_id) REFERENCES users(id),
+      UNIQUE (user_id, question_id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_cma_user ON curiosity_map_answers(user_id);
+  `);
+
   // Password reset tokens
   db.exec(`
     CREATE TABLE IF NOT EXISTS password_reset_tokens (
@@ -1290,6 +1305,50 @@ module.exports = {
     const closing  = db.prepare("SELECT * FROM self_assessments WHERE user_id=? AND assessment_type='closing'").get(userId);
     const seeds    = db.prepare('SELECT * FROM seeds WHERE user_id=? ORDER BY seed_number').all(userId);
     return { user, opening, midcourse, closing, seeds };
+  },
+
+  // ─── Curiosity Map ─────────────────────────────────────────────────────────
+
+  getCuriosityAnswer(userId, questionId) {
+    return db.prepare(
+      'SELECT * FROM curiosity_map_answers WHERE user_id = ? AND question_id = ?'
+    ).get(userId, questionId) || null;
+  },
+
+  getCuriosityAnswersByUser(userId) {
+    return db.prepare(
+      'SELECT * FROM curiosity_map_answers WHERE user_id = ? ORDER BY question_id ASC'
+    ).all(userId);
+  },
+
+  upsertCuriosityAnswer(userId, questionId, text) {
+    return db.prepare(`
+      INSERT INTO curiosity_map_answers (user_id, question_id, answer_text)
+      VALUES (?, ?, ?)
+      ON CONFLICT(user_id, question_id) DO UPDATE SET
+        answer_text = excluded.answer_text,
+        updated_at  = CURRENT_TIMESTAMP
+    `).run(userId, questionId, text);
+  },
+
+  getCuriosityAnswerCounts(userId) {
+    const prefixMap = { r: 'remembering', n: 'noticing', a: 'allowing', i: 'imagining', k: 'knowing' };
+    const rows = db.prepare(`
+      SELECT SUBSTR(question_id, 1, 1) as prefix, COUNT(*) as count
+      FROM curiosity_map_answers WHERE user_id = ? GROUP BY prefix
+    `).all(userId);
+    const counts = { remembering: 0, noticing: 0, allowing: 0, imagining: 0, knowing: 0 };
+    for (const row of rows) {
+      const angleId = prefixMap[row.prefix];
+      if (angleId) counts[angleId] = row.count;
+    }
+    return counts;
+  },
+
+  getCuriosityTotalAnswered(userId) {
+    return db.prepare(
+      'SELECT COUNT(*) as c FROM curiosity_map_answers WHERE user_id = ?'
+    ).get(userId).c;
   },
 
   // ─── Password reset tokens ─────────────────────────────────────────────────

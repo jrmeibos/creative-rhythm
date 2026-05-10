@@ -1,0 +1,343 @@
+/* ─── Resources page ─────────────────────────────────────────────────────── */
+
+.resources-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1.5rem;
+  max-width: 860px;
+}
+
+.resource-card {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+  background: var(--color-blank-page);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow var(--transition), transform var(--transition);
+}
+
+.resource-card:hover {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+}
+
+.resource-card-inner {
+  padding: 1.75rem 2rem;
+}
+
+.resource-card-title {
+  font-family: var(--font-display);
+  font-size: 1.375rem;
+  font-weight: 400;
+  color: var(--color-bloem);
+  margin-bottom: 0.625rem;
+}
+
+.resource-card-desc {
+  font-size: 0.9rem;
+  font-weight: 300;
+  color: var(--color-understory);
+  line-height: 1.65;
+  margin-bottom: 1.25rem;
+}
+
+.resource-card-link {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 0.9rem;
+  color: var(--color-bloem);
+}
+
+/* ─── Curiosity Map — shared header ─────────────────────────────────────── */
+
+.cm-header {
+  text-align: center;
+  margin-bottom: 2rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid rgba(118, 133, 108, 0.2);
+}
+
+.cm-title {
+  font-family: var(--font-display);
+  font-size: 2rem;
+  font-weight: 400;
+  color: var(--color-ink-stained);
+  margin-bottom: 0.375rem;
+}
+
+.cm-subtitle {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 0.875rem;
+  color: var(--color-bloem);
+  font-weight: 400;
+}
+
+/* ─── Curiosity Map — SVG landing ───────────────────────────────────────── */
+
+.cm-map-wrap {
+  max-width: 680px;
+  margin: 0 auto;
+}
+
+.curiosity-map-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: var(--radius-lg);
+  overflow: visible;
+}
+
+.map-marker-link {
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.map-marker-link:focus { outline: none; }
+
+.map-marker-group {
+  transition: transform 0.15s ease;
+  transform-origin: center;
+}
+
+.map-marker-link:hover .map-marker-group {
+  transform: scale(1.1) translateY(-2px);
+}
+
+/* ─── Curiosity Map — bottom hint ───────────────────────────────────────── */
+
+.cm-hint-wrap {
+  max-width: 680px;
+  margin: 0 auto;
+  padding-top: 1.25rem;
+  border-top: 1px solid rgba(118, 133, 108, 0.2);
+  text-align: center;
+}
+
+.cm-hint-text {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 0.8rem;
+  color: var(--color-understory);
+  font-weight: 400;
+}
+
+.cm-synthesize-link {
+  display: inline-block;
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 0.9rem;
+  color: var(--color-bloem);
+  text-decoration: none;
+  border-bottom: 1px solid rgba(112, 92, 108, 0.3);
+  padding-bottom: 1px;
+  transition: border-color var(--transition), color var(--transition);
+}
+
+.cm-synthesize-link:hover {
+  color: var(--color-bloem-mid);
+  border-color: var(--color-bloem);
+}
+
+/* ─── Curiosity Map — angle page ────────────────────────────────────────── */
+
+.cm-back-link {
+  display: inline-block;
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 0.875rem;
+  color: var(--color-bloem);
+  text-decoration: none;
+  margin-bottom: 1.75rem;
+  opacity: 0.8;
+  transition: opacity var(--transition);
+}
+
+.cm-back-link:hover { opacity: 1; }
+
+.cm-angle-name {
+  font-family: var(--font-display);
+  font-size: 1.75rem;
+  font-weight: 400;
+  color: var(--color-ink-stained);
+  margin-bottom: 0.3rem;
+}
+
+.cm-angle-subtitle {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 0.875rem;
+  color: var(--color-understory);
+  margin-bottom: 2rem;
+}
+
+.cm-question-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  max-width: 680px;
+}
+
+.cm-question-card {
+  display: block;
+  text-decoration: none;
+  background: var(--color-blank-page);
+  border-radius: var(--radius-md);
+  padding: 1.375rem 1.5rem;
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow var(--transition), transform var(--transition);
+  position: relative;
+  color: inherit;
+}
+
+.cm-question-card:hover {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
+}
+
+.cm-question-card--answered {
+  background: var(--color-pearl);
+}
+
+.cm-question-answered-dot {
+  position: absolute;
+  top: 1.125rem;
+  right: 1.25rem;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-apricity);
+}
+
+.cm-question-text {
+  font-size: 0.925rem;
+  font-weight: 300;
+  color: var(--color-ink-stained);
+  line-height: 1.65;
+  margin-bottom: 0.875rem;
+  padding-right: 1.5rem;
+}
+
+.cm-question-cta {
+  font-size: 0.78rem;
+  font-weight: 400;
+  color: var(--color-bloem);
+  opacity: 0.75;
+}
+
+.cm-question-card:hover .cm-question-cta { opacity: 1; }
+
+.cm-question-cta--edit {
+  font-style: italic;
+}
+
+/* ─── Curiosity Map — single question / answer page ─────────────────────── */
+
+.cm-question-page {
+  max-width: 640px;
+}
+
+.cm-question-display {
+  font-family: var(--font-display);
+  font-size: 1.375rem;
+  font-weight: 400;
+  color: var(--color-ink-stained);
+  line-height: 1.45;
+  margin-bottom: 2rem;
+}
+
+.cm-answer-form { }
+
+.cm-answer-textarea {
+  width: 100%;
+  min-height: 200px;
+  padding: 1rem 1.125rem;
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+  font-weight: 300;
+  color: var(--color-ink-stained);
+  background: var(--color-pearl);
+  border: 1.5px solid rgba(118, 133, 108, 0.25);
+  border-radius: var(--radius-md);
+  resize: vertical;
+  outline: none;
+  line-height: 1.7;
+  transition: border-color var(--transition), box-shadow var(--transition);
+  margin-bottom: 1.25rem;
+}
+
+.cm-answer-textarea::placeholder {
+  color: rgba(16, 15, 16, 0.3);
+  font-style: italic;
+}
+
+.cm-answer-textarea:focus {
+  border-color: var(--color-understory);
+  box-shadow: 0 0 0 3px rgba(118, 133, 108, 0.1);
+}
+
+.cm-answer-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.cm-save-btn {
+  font-family: var(--font-display);
+  font-size: 0.95rem;
+  font-style: italic;
+  font-weight: 400;
+  padding: 0.75rem 2rem;
+  border-radius: var(--radius-md);
+  background: var(--color-bloem);
+  color: var(--color-pearl);
+  border: none;
+  cursor: pointer;
+  transition: background var(--transition), box-shadow var(--transition);
+}
+
+.cm-save-btn:hover {
+  background: var(--color-bloem-mid);
+  box-shadow: var(--shadow-sm);
+}
+
+.cm-answer-note {
+  font-size: 0.75rem;
+  font-weight: 300;
+  font-style: italic;
+  color: rgba(16, 15, 16, 0.38);
+  margin-top: 1rem;
+}
+
+/* ─── Synthesis coming-soon placeholder ─────────────────────────────────── */
+
+.cm-coming-soon {
+  max-width: 520px;
+  margin: 4rem auto;
+  text-align: center;
+}
+
+.cm-coming-soon-title {
+  font-family: var(--font-display);
+  font-size: 1.75rem;
+  font-weight: 400;
+  color: var(--color-ink-stained);
+  margin-bottom: 0.75rem;
+}
+
+.cm-coming-soon-body {
+  font-size: 0.9rem;
+  font-weight: 300;
+  color: rgba(16, 15, 16, 0.55);
+  line-height: 1.7;
+  margin-bottom: 2rem;
+}
+
+/* ─── Responsive ─────────────────────────────────────────────────────────── */
+
+@media (max-width: 680px) {
+  .cm-title { font-size: 1.5rem; }
+  .cm-angle-name { font-size: 1.375rem; }
+  .cm-question-display { font-size: 1.125rem; }
+}
