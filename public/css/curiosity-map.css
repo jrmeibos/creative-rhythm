@@ -98,11 +98,12 @@
 
 .map-marker-group {
   transition: transform 0.15s ease;
+  transform-box: fill-box;
   transform-origin: center;
 }
 
 .map-marker-link:hover .map-marker-group {
-  transform: scale(1.1) translateY(-2px);
+  transform: scale(1.05);
 }
 
 /* ─── Curiosity Map — bottom hint ───────────────────────────────────────── */
