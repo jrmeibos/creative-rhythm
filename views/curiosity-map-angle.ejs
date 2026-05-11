@@ -28,6 +28,8 @@
           <% } %>
           <p class="cm-question-text"><%= q.text %></p>
           <% if (answered) { %>
+            <hr class="cm-answer-divider" aria-hidden="true">
+            <div class="cm-answer-preview"><%= userAnswers[q.id].answer_text %></div>
             <span class="cm-question-cta cm-question-cta--edit">Edit your answer</span>
           <% } else { %>
             <span class="cm-question-cta">Answer this question →</span>
