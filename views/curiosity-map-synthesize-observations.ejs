@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <%- include('partials/head') %>
+  <link rel="stylesheet" href="/css/dashboard.css">
+  <link rel="stylesheet" href="/css/curiosity-map.css">
+</head>
+<body class="app-body">
+  <div class="app-layout">
+    <%- include('partials/sidebar') %>
+    <main class="main-content">
+
+      <a href="/curiosity-map/synthesize" class="cm-back-link">← Back to reading</a>
+
+      <div class="cm-synth-page">
+
+        <header class="cm-synth-header">
+          <h1 class="cm-synth-title">A second set of eyes</h1>
+          <p class="cm-synth-subtitle">Optional. An AI assistant can scan your answers for patterns the eye might miss — repeated words, recurring topics, contrasts. It won't name your themes. That's still yours.</p>
+        </header>
+
+        <% if (cachedObservations && cachedObservations.length) { %>
+
+        <!-- Observations already exist -->
+        <div class="cm-obs-card" id="cm-obs-container">
+          <h2 class="cm-obs-card-title">Observations</h2>
+          <ul class="cm-obs-list" id="cm-obs-list">
+            <% cachedObservations.forEach(function(obs) { %>
+            <li class="cm-obs-item"><%= obs %></li>
+            <% }); %>
+          </ul>
+          <p class="cm-obs-note">Notice what these point at. The naming is still yours.</p>
+          <button class="cm-obs-refresh" id="cm-obs-refresh">↻ Get fresh observations</button>
+          <p class="cm-obs-error" id="cm-obs-error"></p>
+        </div>
+
+        <% } else { %>
+
+        <!-- Opt-in card -->
+        <div class="cm-obs-card" id="cm-optin-card">
+          <h2 class="cm-obs-card-title">Want a gentle assist?</h2>
+          <p class="cm-obs-card-body">If you say yes, your answers will be sent to Claude (an AI by Anthropic) just for this scan. The observations will appear here and be saved for your reference. You can synthesize without this — it's only an option, not a requirement.</p>
+          <div class="cm-synth-btn-row">
+            <button class="cm-synth-btn" id="cm-obs-yes-btn">Yes, show me observations</button>
+            <a href="/curiosity-map/synthesize/notice" class="cm-synth-btn cm-synth-btn--outline">No, I'll do this myself</a>
+          </div>
+          <p class="cm-obs-error" id="cm-obs-error"></p>
+        </div>
+
+        <!-- Observations container (hidden until generated) -->
+        <div class="cm-obs-card" id="cm-obs-container" style="display:none;">
+          <h2 class="cm-obs-card-title">Observations</h2>
+          <ul class="cm-obs-list" id="cm-obs-list"></ul>
+          <p class="cm-obs-note">Notice what these point at. The naming is still yours.</p>
+          <button class="cm-obs-refresh" id="cm-obs-refresh">↻ Get fresh observations</button>
+        </div>
+
+        <% } %>
+
+        <div class="cm-synth-nav" id="cm-continue-nav"<% if (!cachedObservations || !cachedObservations.length) { %> style="display:none;"<% } %>>
+          <a href="/curiosity-map/synthesize/notice" class="cm-synth-btn">Continue to noticing →</a>
+          <a href="/curiosity-map/synthesize" class="cm-back-link" style="margin-bottom:0">← Back to reading</a>
+        </div>
+
+      </div>
+
+    </main>
+  </div>
+
+  <script>
+    const optinCard   = document.getElementById('cm-optin-card');
+    const obsContainer = document.getElementById('cm-obs-container');
+    const obsList     = document.getElementById('cm-obs-list');
+    const obsError    = document.getElementById('cm-obs-error');
+    const continueNav = document.getElementById('cm-continue-nav');
+    const yesBtn      = document.getElementById('cm-obs-yes-btn');
+    const refreshBtn  = document.getElementById('cm-obs-refresh');
+
+    async function fetchObservations() {
+      if (yesBtn) { yesBtn.disabled = true; yesBtn.textContent = 'Finding patterns…'; }
+      if (refreshBtn) { refreshBtn.disabled = true; refreshBtn.textContent = '↻ Finding patterns…'; }
+      if (obsError) { obsError.style.display = 'none'; obsError.textContent = ''; }
+
+      try {
+        const res = await fetch('/api/curiosity-map/observations', { method: 'POST' });
+        const data = await res.json();
+        if (!res.ok) {
+          showError(data.error || 'Something went wrong. Try again.');
+          return;
+        }
+        renderObservations(data.observations);
+      } catch(e) {
+        showError('Couldn\'t reach the server. Try again.');
+      } finally {
+        if (yesBtn) { yesBtn.disabled = false; yesBtn.textContent = 'Yes, show me observations'; }
+        if (refreshBtn) { refreshBtn.disabled = false; refreshBtn.textContent = '↻ Get fresh observations'; }
+      }
+    }
+
+    function renderObservations(obs) {
+      obsList.innerHTML = obs.map(function(o) {
+        return '<li class="cm-obs-item">' + escHtml(o) + '</li>';
+      }).join('');
+      if (optinCard) optinCard.style.display = 'none';
+      obsContainer.style.display = '';
+      continueNav.style.display = '';
+    }
+
+    function showError(msg) {
+      if (obsError) { obsError.textContent = msg; obsError.style.display = 'block'; }
+    }
+
+    function escHtml(str) {
+      return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+
+    if (yesBtn) yesBtn.addEventListener('click', fetchObservations);
+    if (refreshBtn) refreshBtn.addEventListener('click', fetchObservations);
+  </script>
+</body>
+</html>

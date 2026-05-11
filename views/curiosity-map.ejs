@@ -132,10 +132,18 @@
           <p class="cm-hint-text">
             <%= totalAnswered %> of 35 answered — answer <%= 10 - totalAnswered %> more to begin synthesizing
           </p>
+        <% } else if (!synthesisState.has_completed_synthesis) { %>
+          <a href="/curiosity-map/synthesize" class="cm-synth-start-btn">Begin synthesizing →</a>
         <% } else { %>
-          <a href="/curiosity-map/synthesis-coming-soon" class="cm-synthesize-link">
-            Ready to synthesize what you've found →
-          </a>
+          <a href="/curiosity-map/threads" class="cm-synth-start-btn">Your threads are mapped. Tend to them →</a>
+          <% if (userThreads.length > 0) { %>
+            <p class="cm-threads-tagline">
+              Your threads right now:
+              <% userThreads.forEach(function(t, i) { %>
+                <a href="/curiosity-map/threads" class="cm-threads-tagline-name"><%= t.name %></a><% if (i < userThreads.length - 1) { %> · <% } %>
+              <% }); %>
+            </p>
+          <% } %>
         <% } %>
       </div>
 

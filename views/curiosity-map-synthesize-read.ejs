@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <%- include('partials/head') %>
+  <link rel="stylesheet" href="/css/dashboard.css">
+  <link rel="stylesheet" href="/css/curiosity-map.css">
+</head>
+<body class="app-body">
+  <div class="app-layout">
+    <%- include('partials/sidebar') %>
+    <main class="main-content">
+
+      <a href="/curiosity-map" class="cm-back-link">← Back to the Map</a>
+
+      <div class="cm-synth-page">
+
+        <header class="cm-synth-header">
+          <h1 class="cm-synth-title">Begin synthesizing</h1>
+          <p class="cm-synth-subtitle">Read what you've written. Slowly. Highlight any phrase that stands out to you — anything that surprises, repeats, or feels true.</p>
+        </header>
+
+        <div class="cm-read-column" id="cm-read-column">
+          <% angles.forEach(function(angle) {
+            const answeredQs = angle.questions.filter(q => userAnswers[q.id]);
+            if (!answeredQs.length) return;
+          %>
+          <section class="cm-read-angle">
+            <h2 class="cm-read-angle-name"><%= angle.name %></h2>
+            <p class="cm-read-angle-sub"><%= angle.subtitle %></p>
+            <% answeredQs.forEach(function(q, qi) { %>
+            <div class="cm-read-qa">
+              <p class="cm-read-question"><%= q.text %></p>
+              <div class="cm-read-answer" data-question-id="<%= q.id %>"><%= userAnswers[q.id] %></div>
+              <% if (qi < answeredQs.length - 1) { %>
+              <hr class="cm-read-sep">
+              <% } %>
+            </div>
+            <% }); %>
+          </section>
+          <% }); %>
+        </div>
+
+        <div class="cm-synth-nav">
+          <a href="/curiosity-map/synthesize/observations" class="cm-synth-btn">Continue to observations →</a>
+          <a href="/curiosity-map" class="cm-back-link" style="margin-bottom:0">← Back to the Map</a>
+        </div>
+
+      </div>
+
+      <!-- Floating highlight button -->
+      <div id="cm-float-btn" class="cm-float-btn" style="display:none;"></div>
+
+    </main>
+  </div>
+
+  <script>
+    const highlights = <%- JSON.stringify(highlights) %>;
+    const floatBtn = document.getElementById('cm-float-btn');
+
+    // ── Restore highlights on page load ───────────────────────────────────
+
+    highlights.forEach(function(h) {
+      restoreHighlight(h.question_id, h.highlighted_text, h.id);
+    });
+
+    function restoreHighlight(questionId, text, highlightId) {
+      const el = document.querySelector('[data-question-id="' + questionId + '"]');
+      if (!el) return;
+      const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT, {
+        acceptNode: function(node) {
+          let p = node.parentNode;
+          while (p && p !== el) {
+            if (p.classList && p.classList.contains('cm-highlight')) return NodeFilter.FILTER_REJECT;
+            p = p.parentNode;
+          }
+          return NodeFilter.FILTER_ACCEPT;
+        }
+      });
+      let node;
+      while ((node = walker.nextNode())) {
+        const idx = node.textContent.indexOf(text);
+        if (idx === -1) continue;
+        const range = document.createRange();
+        range.setStart(node, idx);
+        range.setEnd(node, idx + text.length);
+        const mark = document.createElement('mark');
+        mark.className = 'cm-highlight';
+        mark.dataset.highlightId = String(highlightId);
+        try { range.surroundContents(mark); } catch(e) {}
+        return;
+      }
+    }
+
+    // ── New highlight via drag-select ─────────────────────────────────────
+
+    document.getElementById('cm-read-column').addEventListener('mouseup', function(e) {
+      if (e.target.classList && e.target.classList.contains('cm-highlight')) return;
+      setTimeout(function() {
+        const sel = window.getSelection();
+        if (!sel || sel.isCollapsed) { hideFloat(); return; }
+        const text = sel.toString().trim();
+        if (!text) { hideFloat(); return; }
+
+        let answerEl = null;
+        let node = sel.getRangeAt(0).commonAncestorContainer;
+        if (node.nodeType === 3) node = node.parentNode;
+        while (node && node !== document.getElementById('cm-read-column')) {
+          if (node.dataset && node.dataset.questionId) { answerEl = node; break; }
+          node = node.parentElement;
+        }
+        if (!answerEl) { hideFloat(); return; }
+
+        const questionId = answerEl.dataset.questionId;
+        const range = sel.getRangeAt(0);
+        const rect = range.getBoundingClientRect();
+        showAddBtn(rect, questionId, text, range.cloneRange());
+      }, 10);
+    });
+
+    function showAddBtn(rect, questionId, text, clonedRange) {
+      floatBtn.innerHTML = '<button class="cm-float-add">Highlight this</button>';
+      positionFloat(rect);
+      floatBtn.querySelector('.cm-float-add').addEventListener('click', async function() {
+        try {
+          const res = await fetch('/api/curiosity-map/highlights', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ questionId: questionId, highlightedText: text })
+          });
+          if (!res.ok) { hideFloat(); return; }
+          const data = await res.json();
+          const mark = document.createElement('mark');
+          mark.className = 'cm-highlight';
+          mark.dataset.highlightId = String(data.id);
+          try {
+            clonedRange.surroundContents(mark);
+          } catch(e) {
+            const frag = clonedRange.extractContents();
+            mark.appendChild(frag);
+            clonedRange.insertNode(mark);
+          }
+          window.getSelection().removeAllRanges();
+          hideFloat();
+        } catch(e) { hideFloat(); }
+      });
+    }
+
+    // ── Remove highlight on click ─────────────────────────────────────────
+
+    document.getElementById('cm-read-column').addEventListener('click', function(e) {
+      if (!e.target.classList || !e.target.classList.contains('cm-highlight')) return;
+      const mark = e.target;
+      const highlightId = mark.dataset.highlightId;
+      const rect = mark.getBoundingClientRect();
+      floatBtn.innerHTML = '<button class="cm-float-remove">Remove highlight</button>';
+      positionFloat(rect);
+      floatBtn.querySelector('.cm-float-remove').addEventListener('click', async function() {
+        try {
+          await fetch('/api/curiosity-map/highlights/' + highlightId, { method: 'DELETE' });
+          const parent = mark.parentNode;
+          while (mark.firstChild) parent.insertBefore(mark.firstChild, mark);
+          parent.removeChild(mark);
+          parent.normalize();
+          hideFloat();
+        } catch(e) { hideFloat(); }
+      });
+    });
+
+    function positionFloat(rect) {
+      floatBtn.style.display = 'block';
+      floatBtn.style.top = (rect.bottom + window.scrollY + 8) + 'px';
+      floatBtn.style.position = 'absolute';
+      floatBtn.style.left = Math.max(8, rect.left + rect.width / 2 - 60) + 'px';
+    }
+
+    function hideFloat() {
+      floatBtn.style.display = 'none';
+      floatBtn.innerHTML = '';
+    }
+
+    document.addEventListener('mousedown', function(e) {
+      if (e.target !== floatBtn && !floatBtn.contains(e.target)) hideFloat();
+    });
+  </script>
+</body>
+</html>

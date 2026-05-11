@@ -381,6 +381,47 @@ db.exec(`
     CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_token ON password_reset_tokens(token);
   `);
 
+  // Curiosity Map highlights
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS curiosity_map_highlights (
+      id               INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id          INTEGER NOT NULL,
+      question_id      TEXT    NOT NULL,
+      highlighted_text TEXT    NOT NULL,
+      created_at       DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (user_id) REFERENCES users(id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_cmh_user ON curiosity_map_highlights(user_id);
+  `);
+
+  // Curiosity Map threads
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS curiosity_map_threads (
+      id          INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id     INTEGER NOT NULL,
+      name        TEXT    NOT NULL,
+      description TEXT    DEFAULT '',
+      bullets     TEXT    DEFAULT '[]',
+      sort_order  INTEGER NOT NULL DEFAULT 0,
+      created_at  DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at  DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (user_id) REFERENCES users(id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_cmt_user_order ON curiosity_map_threads(user_id, sort_order);
+  `);
+
+  // Curiosity Map synthesis state
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS curiosity_map_synthesis_state (
+      user_id                 INTEGER PRIMARY KEY,
+      has_seen_observations   INTEGER DEFAULT 0,
+      last_observations       TEXT    DEFAULT NULL,
+      last_observations_at    DATETIME DEFAULT NULL,
+      has_completed_synthesis INTEGER DEFAULT 0,
+      FOREIGN KEY (user_id) REFERENCES users(id)
+    );
+  `);
+
   // V2: wipe all seeds planted during onboarding — seeds are now planted via Greenhouse after Lesson 1
   const v2SeedsFlag = db.prepare("SELECT value FROM settings WHERE key='seeds_v2_migrated'").get();
   if (!v2SeedsFlag) {
@@ -1378,5 +1419,83 @@ module.exports = {
     return db.prepare(
       "DELETE FROM password_reset_tokens WHERE expires_at < datetime('now')"
     ).run();
+  },
+
+  // ─── Curiosity Map highlights ───────────────────────────────────────────────
+
+  getCuriosityHighlights(userId) {
+    return db.prepare(
+      'SELECT * FROM curiosity_map_highlights WHERE user_id = ? ORDER BY created_at ASC'
+    ).all(userId);
+  },
+
+  addCuriosityHighlight(userId, questionId, highlightedText) {
+    return db.prepare(
+      'INSERT INTO curiosity_map_highlights (user_id, question_id, highlighted_text) VALUES (?, ?, ?)'
+    ).run(userId, questionId, highlightedText);
+  },
+
+  removeCuriosityHighlight(highlightId, userId) {
+    return db.prepare(
+      'DELETE FROM curiosity_map_highlights WHERE id = ? AND user_id = ?'
+    ).run(highlightId, userId);
+  },
+
+  // ─── Curiosity Map threads ──────────────────────────────────────────────────
+
+  getCuriosityThreads(userId) {
+    const rows = db.prepare(
+      'SELECT * FROM curiosity_map_threads WHERE user_id = ? ORDER BY sort_order ASC'
+    ).all(userId);
+    return rows.map(r => ({ ...r, bullets: JSON.parse(r.bullets || '[]') }));
+  },
+
+  createCuriosityThread(userId, name, description, bullets, sortOrder) {
+    const bulletsJson = JSON.stringify(Array.isArray(bullets) ? bullets : []);
+    const result = db.prepare(
+      'INSERT INTO curiosity_map_threads (user_id, name, description, bullets, sort_order) VALUES (?, ?, ?, ?, ?)'
+    ).run(userId, name, description || '', bulletsJson, sortOrder || 0);
+    const row = db.prepare('SELECT * FROM curiosity_map_threads WHERE id = ?').get(result.lastInsertRowid);
+    return { ...row, bullets: JSON.parse(row.bullets || '[]') };
+  },
+
+  updateCuriosityThread(threadId, userId, name, description, bullets, sortOrder) {
+    const bulletsJson = JSON.stringify(Array.isArray(bullets) ? bullets : []);
+    return db.prepare(`
+      UPDATE curiosity_map_threads
+      SET name = ?, description = ?, bullets = ?, sort_order = ?, updated_at = CURRENT_TIMESTAMP
+      WHERE id = ? AND user_id = ?
+    `).run(name, description || '', bulletsJson, sortOrder || 0, threadId, userId);
+  },
+
+  deleteCuriosityThread(threadId, userId) {
+    return db.prepare(
+      'DELETE FROM curiosity_map_threads WHERE id = ? AND user_id = ?'
+    ).run(threadId, userId);
+  },
+
+  // ─── Curiosity Map synthesis state ─────────────────────────────────────────
+
+  getSynthesisState(userId) {
+    return db.prepare(
+      'SELECT * FROM curiosity_map_synthesis_state WHERE user_id = ?'
+    ).get(userId) || {
+      user_id: userId,
+      has_seen_observations: 0,
+      last_observations: null,
+      last_observations_at: null,
+      has_completed_synthesis: 0,
+    };
+  },
+
+  upsertSynthesisState(userId, partial) {
+    db.prepare(
+      'INSERT OR IGNORE INTO curiosity_map_synthesis_state (user_id) VALUES (?)'
+    ).run(userId);
+    const fields = Object.keys(partial).map(k => `${k} = ?`).join(', ');
+    if (!fields) return;
+    db.prepare(
+      `UPDATE curiosity_map_synthesis_state SET ${fields} WHERE user_id = ?`
+    ).run(...Object.values(partial), userId);
   },
 };

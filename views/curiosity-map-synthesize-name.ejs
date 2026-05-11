@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <%- include('partials/head') %>
+  <link rel="stylesheet" href="/css/dashboard.css">
+  <link rel="stylesheet" href="/css/curiosity-map.css">
+</head>
+<body class="app-body">
+  <div class="app-layout">
+    <%- include('partials/sidebar') %>
+    <main class="main-content">
+
+      <a href="/curiosity-map/synthesize/notice" class="cm-back-link">← Back to noticing</a>
+
+      <div class="cm-synth-page">
+
+        <header class="cm-synth-header">
+          <h1 class="cm-synth-title">Name your threads</h1>
+          <p class="cm-synth-subtitle">Looking at what you've written and noticed, name 4–6 threads that seem to run through your answers. They don't have to be evenly weighted. Some might be huge and central; others might be smaller and quieter. They don't have to be related to your work or business — they just have to be true. Use your own words. Avoid words that sound like marketing categories.</p>
+        </header>
+
+        <div class="cm-thread-list" id="cm-thread-list">
+
+          <% if (existingThreads.length > 0) { %>
+            <% existingThreads.forEach(function(thread) { %>
+            <div class="cm-thread-card" data-thread-id="<%= thread.id %>">
+              <input type="text" class="cm-thread-name-input" value="<%= thread.name %>" placeholder="Name this thread...">
+              <textarea class="cm-thread-desc" rows="3" placeholder="What's this thread about? In your own words."><%= thread.description %></textarea>
+              <p class="cm-thread-bullets-label">Ideas, examples, sub-threads (optional)</p>
+              <div class="cm-thread-bullets">
+                <% thread.bullets.forEach(function(b) { %>
+                <div class="cm-thread-bullet-row">
+                  <input type="text" class="cm-thread-bullet-input" value="<%= b %>" placeholder="Add detail...">
+                  <button type="button" class="cm-thread-bullet-remove">×</button>
+                </div>
+                <% }); %>
+              </div>
+              <button type="button" class="cm-thread-add-bullet">+ Add bullet</button>
+              <button type="button" class="cm-thread-remove">× Remove thread</button>
+            </div>
+            <% }); %>
+          <% } else { %>
+            <!-- One empty card by default -->
+            <div class="cm-thread-card">
+              <input type="text" class="cm-thread-name-input" placeholder="Name this thread...">
+              <textarea class="cm-thread-desc" rows="3" placeholder="What's this thread about? In your own words."></textarea>
+              <p class="cm-thread-bullets-label">Ideas, examples, sub-threads (optional)</p>
+              <div class="cm-thread-bullets"></div>
+              <button type="button" class="cm-thread-add-bullet">+ Add bullet</button>
+              <button type="button" class="cm-thread-remove">× Remove thread</button>
+            </div>
+          <% } %>
+
+        </div>
+
+        <button type="button" class="cm-add-thread-btn" id="cm-add-thread-btn">+ Add another thread</button>
+
+        <div class="cm-synth-nav">
+          <button type="button" class="cm-synth-btn" id="cm-save-threads">Save my threads →</button>
+          <a href="/curiosity-map/synthesize/notice" class="cm-back-link" style="margin-bottom:0">← Back to noticing</a>
+        </div>
+
+      </div>
+
+    </main>
+  </div>
+
+  <script>
+    function escHtml(str) {
+      return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    // ── Delegated events for card list ────────────────────────────────────
+
+    document.getElementById('cm-thread-list').addEventListener('click', function(e) {
+      const target = e.target;
+      if (target.classList.contains('cm-thread-bullet-remove')) {
+        target.closest('.cm-thread-bullet-row').remove();
+      }
+      if (target.classList.contains('cm-thread-add-bullet')) {
+        addBullet(target.closest('.cm-thread-card'), '');
+      }
+      if (target.classList.contains('cm-thread-remove')) {
+        const card = target.closest('.cm-thread-card');
+        const list = document.getElementById('cm-thread-list');
+        if (list.querySelectorAll('.cm-thread-card').length <= 1) return; // keep at least one
+        card.remove();
+      }
+    });
+
+    // ── Add another thread ────────────────────────────────────────────────
+
+    document.getElementById('cm-add-thread-btn').addEventListener('click', function() {
+      const list = document.getElementById('cm-thread-list');
+      const div = document.createElement('div');
+      div.className = 'cm-thread-card';
+      div.innerHTML = emptyCardHTML();
+      list.appendChild(div);
+      div.querySelector('.cm-thread-name-input').focus();
+      div.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    });
+
+    function emptyCardHTML() {
+      return `
+        <input type="text" class="cm-thread-name-input" placeholder="Name this thread...">
+        <textarea class="cm-thread-desc" rows="3" placeholder="What's this thread about? In your own words."></textarea>
+        <p class="cm-thread-bullets-label">Ideas, examples, sub-threads (optional)</p>
+        <div class="cm-thread-bullets"></div>
+        <button type="button" class="cm-thread-add-bullet">+ Add bullet</button>
+        <button type="button" class="cm-thread-remove">× Remove thread</button>
+      `;
+    }
+
+    function addBullet(card, text) {
+      const bulletsDiv = card.querySelector('.cm-thread-bullets');
+      const row = document.createElement('div');
+      row.className = 'cm-thread-bullet-row';
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.className = 'cm-thread-bullet-input';
+      input.value = text;
+      input.placeholder = 'Add detail...';
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'cm-thread-bullet-remove';
+      btn.textContent = '×';
+      row.appendChild(input);
+      row.appendChild(btn);
+      bulletsDiv.appendChild(row);
+      input.focus();
+    }
+
+    // ── Save all threads ──────────────────────────────────────────────────
+
+    document.getElementById('cm-save-threads').addEventListener('click', async function() {
+      const cards = document.querySelectorAll('#cm-thread-list .cm-thread-card');
+      const threads = [];
+
+      for (let i = 0; i < cards.length; i++) {
+        const card = cards[i];
+        const name = (card.querySelector('.cm-thread-name-input').value || '').trim();
+        if (!name) {
+          card.querySelector('.cm-thread-name-input').focus();
+          return;
+        }
+        const thread = {
+          name,
+          description: card.querySelector('.cm-thread-desc').value || '',
+          bullets: Array.from(card.querySelectorAll('.cm-thread-bullet-input'))
+                       .map(function(i) { return i.value; })
+                       .filter(function(v) { return v.trim(); }),
+          sortOrder: i,
+        };
+        if (card.dataset.threadId) thread.id = parseInt(card.dataset.threadId);
+        threads.push(thread);
+      }
+
+      if (!threads.length) return;
+
+      const btn = this;
+      btn.disabled = true;
+      btn.textContent = 'Saving…';
+
+      try {
+        const res = await fetch('/api/curiosity-map/threads', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ threads }),
+        });
+        const data = await res.json();
+        if (res.ok && data.redirectTo) {
+          window.location.href = data.redirectTo;
+        } else {
+          btn.disabled = false;
+          btn.textContent = 'Save my threads →';
+          if (data.error) alert(data.error);
+        }
+      } catch(e) {
+        btn.disabled = false;
+        btn.textContent = 'Save my threads →';
+      }
+    });
+  </script>
+</body>
+</html>

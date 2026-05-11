@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <%- include('partials/head') %>
+  <link rel="stylesheet" href="/css/dashboard.css">
+  <link rel="stylesheet" href="/css/curiosity-map.css">
+</head>
+<body class="app-body">
+  <div class="app-layout">
+    <%- include('partials/sidebar') %>
+    <main class="main-content">
+
+      <a href="/curiosity-map/synthesize/observations" class="cm-back-link">← Back to observations</a>
+
+      <div class="cm-synth-page">
+
+        <header class="cm-synth-header">
+          <h1 class="cm-synth-title">Notice</h1>
+          <p class="cm-synth-subtitle">Some prompts to slow down with. Answer whichever ones land. These are just for you — they aren't saved.</p>
+        </header>
+
+        <div class="cm-notice-cards">
+
+          <div class="cm-notice-card">
+            <p class="cm-notice-prompt">What's a feeling that keeps showing up across your answers? Name it as a feeling, not a topic.</p>
+            <textarea class="cm-notice-textarea" rows="6" placeholder="Type freely. Nothing here is saved."></textarea>
+          </div>
+
+          <div class="cm-notice-card">
+            <p class="cm-notice-prompt">What's a contradiction you noticed? You wrote one thing here and a different thing there.</p>
+            <textarea class="cm-notice-textarea" rows="6" placeholder="Type freely. Nothing here is saved."></textarea>
+          </div>
+
+          <div class="cm-notice-card">
+            <p class="cm-notice-prompt">What's something that surprised you — you didn't know you cared about that?</p>
+            <textarea class="cm-notice-textarea" rows="6" placeholder="Type freely. Nothing here is saved."></textarea>
+          </div>
+
+          <div class="cm-notice-card">
+            <p class="cm-notice-prompt">If a friend read all of these, what would they say you really care about? In their words, not yours.</p>
+            <textarea class="cm-notice-textarea" rows="6" placeholder="Type freely. Nothing here is saved."></textarea>
+          </div>
+
+        </div>
+
+        <div class="cm-synth-nav">
+          <a href="/curiosity-map/synthesize/name" class="cm-synth-btn">Continue to naming →</a>
+          <a href="/curiosity-map/synthesize/observations" class="cm-back-link" style="margin-bottom:0">← Back to observations</a>
+        </div>
+
+      </div>
+
+    </main>
+  </div>
+</body>
+</html>

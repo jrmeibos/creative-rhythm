@@ -333,28 +333,515 @@
   margin-top: 1rem;
 }
 
-/* ─── Synthesis coming-soon placeholder ─────────────────────────────────── */
+/* ─── Landing: synthesis entry ───────────────────────────────────────────── */
 
-.cm-coming-soon {
-  max-width: 520px;
-  margin: 4rem auto;
-  text-align: center;
+.cm-synth-start-btn {
+  display: inline-block;
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 0.95rem;
+  font-weight: 400;
+  padding: 0.6rem 1.75rem;
+  background: var(--color-bloem);
+  color: var(--color-pearl);
+  border-radius: var(--radius-md);
+  text-decoration: none;
+  transition: background var(--transition), box-shadow var(--transition);
 }
 
-.cm-coming-soon-title {
+.cm-synth-start-btn:hover {
+  background: var(--color-bloem-mid);
+  box-shadow: var(--shadow-sm);
+}
+
+.cm-threads-tagline {
+  margin-top: 0.875rem;
   font-family: var(--font-display);
-  font-size: 1.75rem;
+  font-style: italic;
+  font-size: 0.78rem;
+  color: var(--color-understory);
+}
+
+.cm-threads-tagline-name {
+  color: inherit;
+  text-decoration: none;
+}
+
+.cm-threads-tagline-name:hover { text-decoration: underline; }
+
+/* ─── Synthesis shared layout ────────────────────────────────────────────── */
+
+.cm-synth-page {
+  max-width: 680px;
+}
+
+.cm-synth-header {
+  margin-bottom: 2.5rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid rgba(118, 133, 108, 0.2);
+}
+
+.cm-synth-title {
+  font-family: var(--font-display);
+  font-size: 1.875rem;
   font-weight: 400;
   color: var(--color-ink-stained);
-  margin-bottom: 0.75rem;
+  margin-bottom: 0.625rem;
 }
 
-.cm-coming-soon-body {
+.cm-synth-subtitle {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 0.9rem;
+  color: var(--color-understory);
+  line-height: 1.6;
+}
+
+.cm-synth-btn {
+  display: inline-block;
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 0.95rem;
+  font-weight: 400;
+  padding: 0.75rem 2rem;
+  background: var(--color-bloem);
+  color: var(--color-pearl);
+  border: none;
+  border-radius: var(--radius-md);
+  text-decoration: none;
+  cursor: pointer;
+  transition: background var(--transition), box-shadow var(--transition);
+}
+
+.cm-synth-btn:hover {
+  background: var(--color-bloem-mid);
+  box-shadow: var(--shadow-sm);
+}
+
+.cm-synth-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.cm-synth-btn--outline {
+  background: var(--color-pearl);
+  color: var(--color-bloem);
+  border: 1.5px solid var(--color-bloem);
+}
+
+.cm-synth-btn--outline:hover {
+  background: rgba(112, 92, 108, 0.06);
+  box-shadow: none;
+}
+
+.cm-synth-btn-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.875rem;
+  align-items: center;
+}
+
+.cm-synth-nav {
+  margin-top: 3rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid rgba(118, 133, 108, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+/* ─── Slow-read page ─────────────────────────────────────────────────────── */
+
+.cm-read-column {
+  display: flex;
+  flex-direction: column;
+  gap: 3rem;
+}
+
+.cm-read-angle {
+  /* intentionally spacious */
+}
+
+.cm-read-angle-name {
+  font-family: var(--font-display);
+  font-size: 1.125rem;
+  font-weight: 400;
+  color: var(--color-bloem);
+  margin-bottom: 0.25rem;
+}
+
+.cm-read-angle-sub {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 0.8rem;
+  color: var(--color-understory);
+  margin-bottom: 1.75rem;
+}
+
+.cm-read-qa {
+  margin-bottom: 0;
+}
+
+.cm-read-question {
+  font-size: 0.8rem;
+  font-weight: 300;
+  color: var(--color-understory);
+  line-height: 1.55;
+  margin-bottom: 0.625rem;
+}
+
+.cm-read-answer {
+  font-family: var(--font-body);
+  font-weight: 300;
+  font-size: 0.975rem;
+  color: var(--color-ink-stained);
+  line-height: 1.75;
+  white-space: pre-wrap;
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+.cm-read-sep {
+  border: none;
+  border-top: 1px solid rgba(118, 133, 108, 0.2);
+  margin: 1.75rem 0;
+}
+
+mark.cm-highlight {
+  background: rgba(246, 201, 92, 0.32);
+  border-radius: 2px;
+  padding: 0 1px;
+  cursor: pointer;
+}
+
+.cm-float-btn {
+  position: fixed;
+  z-index: 900;
+  pointer-events: auto;
+}
+
+.cm-float-add,
+.cm-float-remove {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 0.82rem;
+  padding: 0.35rem 0.875rem;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  border: none;
+  transition: background 0.15s;
+  white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+}
+
+.cm-float-add {
+  background: var(--color-bloem);
+  color: var(--color-pearl);
+}
+
+.cm-float-add:hover { background: var(--color-bloem-mid); }
+
+.cm-float-remove {
+  background: var(--color-pearl);
+  color: var(--color-understory);
+  border: 1px solid rgba(118, 133, 108, 0.4);
+  font-style: italic;
+}
+
+.cm-float-remove:hover { background: var(--color-new-growth); }
+
+/* ─── Observations page ──────────────────────────────────────────────────── */
+
+.cm-obs-card {
+  background: var(--color-pearl);
+  border-radius: var(--radius-lg);
+  padding: 2rem 2.25rem;
+  margin-bottom: 2rem;
+}
+
+.cm-obs-card-title {
+  font-family: var(--font-display);
+  font-size: 1.125rem;
+  font-weight: 400;
+  color: var(--color-ink-stained);
+  margin-bottom: 0.875rem;
+}
+
+.cm-obs-card-body {
   font-size: 0.9rem;
   font-weight: 300;
-  color: rgba(16, 15, 16, 0.55);
-  line-height: 1.7;
+  color: var(--color-ink-stained);
+  line-height: 1.65;
+  margin-bottom: 1.5rem;
+}
+
+.cm-obs-error {
+  font-size: 0.82rem;
+  font-style: italic;
+  color: var(--color-understory);
+  margin-top: 0.75rem;
+  display: none;
+}
+
+.cm-obs-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+}
+
+.cm-obs-item {
+  font-size: 0.925rem;
+  font-weight: 300;
+  color: var(--color-ink-stained);
+  line-height: 1.6;
+  padding-left: 1rem;
+  border-left: 2px solid rgba(246, 201, 92, 0.5);
+}
+
+.cm-obs-note {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 0.82rem;
+  color: var(--color-understory);
+  margin-bottom: 1.5rem;
+}
+
+.cm-obs-refresh {
+  font-size: 0.8rem;
+  font-style: italic;
+  color: var(--color-understory);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
+  margin-bottom: 1.5rem;
+  display: block;
+}
+
+/* ─── Notice page ────────────────────────────────────────────────────────── */
+
+.cm-notice-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  margin-bottom: 2.5rem;
+}
+
+.cm-notice-card {
+  background: var(--color-pearl);
+  border-radius: var(--radius-md);
+  padding: 1.5rem 1.75rem;
+}
+
+.cm-notice-prompt {
+  font-family: var(--font-display);
+  font-size: 0.95rem;
+  font-weight: 400;
+  color: var(--color-ink-stained);
+  line-height: 1.5;
+  margin-bottom: 0.875rem;
+}
+
+.cm-notice-textarea {
+  width: 100%;
+  background: var(--color-pearl);
+  border: 1.5px solid rgba(118, 133, 108, 0.28);
+  border-radius: var(--radius-md);
+  padding: 0.875rem 1rem;
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  font-weight: 300;
+  color: var(--color-ink-stained);
+  line-height: 1.65;
+  resize: vertical;
+  outline: none;
+  transition: border-color var(--transition);
+  box-sizing: border-box;
+}
+
+.cm-notice-textarea::placeholder {
+  color: rgba(16, 15, 16, 0.3);
+  font-style: italic;
+}
+
+.cm-notice-textarea:focus {
+  border-color: var(--color-understory);
+  box-shadow: 0 0 0 3px rgba(118, 133, 108, 0.1);
+}
+
+/* ─── Thread cards (name + threads view) ─────────────────────────────────── */
+
+.cm-thread-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
   margin-bottom: 2rem;
+}
+
+.cm-thread-card {
+  background: var(--color-blank-page);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem 1.75rem;
+  box-shadow: var(--shadow-sm);
+  position: relative;
+}
+
+.cm-thread-name-input {
+  width: 100%;
+  font-family: var(--font-display);
+  font-size: 1.125rem;
+  font-weight: 400;
+  color: var(--color-ink-stained);
+  background: transparent;
+  border: none;
+  border-bottom: 1.5px solid rgba(112, 92, 108, 0.2);
+  outline: none;
+  padding: 0.25rem 0;
+  margin-bottom: 1rem;
+  transition: border-color var(--transition);
+  box-sizing: border-box;
+}
+
+.cm-thread-name-input::placeholder { color: rgba(16, 15, 16, 0.3); }
+
+.cm-thread-name-input:focus { border-color: var(--color-bloem); }
+
+.cm-thread-desc {
+  width: 100%;
+  font-family: var(--font-body);
+  font-size: 0.875rem;
+  font-weight: 300;
+  color: var(--color-ink-stained);
+  background: var(--color-pearl);
+  border: 1.5px solid rgba(118, 133, 108, 0.2);
+  border-radius: var(--radius-md);
+  padding: 0.75rem 0.875rem;
+  resize: vertical;
+  outline: none;
+  line-height: 1.65;
+  transition: border-color var(--transition);
+  margin-bottom: 1rem;
+  box-sizing: border-box;
+}
+
+.cm-thread-desc::placeholder { color: rgba(16, 15, 16, 0.3); font-style: italic; }
+
+.cm-thread-desc:focus { border-color: var(--color-understory); }
+
+.cm-thread-bullets-label {
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: rgba(16, 15, 16, 0.45);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 0.5rem;
+}
+
+.cm-thread-bullets {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-bottom: 0.5rem;
+}
+
+.cm-thread-bullet-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.cm-thread-bullet-input {
+  flex: 1;
+  font-family: var(--font-body);
+  font-size: 0.875rem;
+  font-weight: 300;
+  color: var(--color-ink-stained);
+  background: var(--color-pearl);
+  border: 1px solid rgba(118, 133, 108, 0.2);
+  border-radius: var(--radius-sm, 4px);
+  padding: 0.35rem 0.625rem;
+  outline: none;
+  transition: border-color var(--transition);
+}
+
+.cm-thread-bullet-input:focus { border-color: var(--color-understory); }
+
+.cm-thread-bullet-remove {
+  font-size: 1rem;
+  color: rgba(16, 15, 16, 0.3);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0 0.25rem;
+  line-height: 1;
+  transition: color 0.15s;
+}
+
+.cm-thread-bullet-remove:hover { color: var(--color-bloem); }
+
+.cm-thread-add-bullet {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 0.8rem;
+  color: var(--color-understory);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  margin-bottom: 1.25rem;
+  display: block;
+}
+
+.cm-thread-add-bullet:hover { color: var(--color-bloem); }
+
+.cm-thread-remove {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 0.8rem;
+  color: rgba(118, 133, 108, 0.55);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  display: block;
+  text-align: right;
+  width: 100%;
+  transition: color 0.15s;
+}
+
+.cm-thread-remove:hover { color: #9b4d4d; }
+
+.cm-add-thread-btn {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 0.9rem;
+  color: var(--color-bloem);
+  background: none;
+  border: 1.5px solid rgba(112, 92, 108, 0.3);
+  border-radius: var(--radius-md);
+  padding: 0.6rem 1.5rem;
+  cursor: pointer;
+  transition: border-color var(--transition), background var(--transition);
+  margin-bottom: 1.5rem;
+}
+
+.cm-add-thread-btn:hover {
+  border-color: var(--color-bloem);
+  background: rgba(112, 92, 108, 0.04);
+}
+
+.cm-threads-lastmod {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 0.78rem;
+  color: var(--color-understory);
+  margin-bottom: 1.5rem;
 }
 
 /* ─── Responsive ─────────────────────────────────────────────────────────── */

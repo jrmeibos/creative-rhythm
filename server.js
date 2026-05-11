@@ -11,6 +11,12 @@ const db = require('./db');
 const { requireAuth, requireAdmin } = require('./auth');
 const { sendPasswordResetEmail } = require('./email');
 const { ANGLES, getAngle, getQuestion } = require('./lib/curiosity-map-questions');
+const ALL_QUESTION_IDS = new Set(ANGLES.flatMap(a => a.questions.map(q => q.id)));
+
+const Anthropic = require('@anthropic-ai/sdk');
+const anthropicClient = process.env.ANTHROPIC_API_KEY
+  ? new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+  : null;
 
 // Accounts that see simulated time when Time Travel is active.
 // Admins always see it. Add test email addresses here to extend it.
@@ -1120,20 +1126,247 @@ app.get('/curiosity-map', requireAuth, (req, res) => {
   const userId = req.session.user.id;
   const counts = db.getCuriosityAnswerCounts(userId);
   const totalAnswered = db.getCuriosityTotalAnswered(userId);
+  const synthesisState = db.getSynthesisState(userId);
+  const userThreads = synthesisState.has_completed_synthesis ? db.getCuriosityThreads(userId) : [];
   res.render('curiosity-map', {
     title: 'The Curiosity Map',
     page: 'resources',
     angles: ANGLES,
     counts,
-    totalAnswered
+    totalAnswered,
+    synthesisState,
+    userThreads,
   });
 });
 
-app.get('/curiosity-map/synthesis-coming-soon', requireAuth, (req, res) => {
-  res.render('curiosity-map-synthesis-coming-soon', {
-    title: 'Synthesis — Coming Soon',
-    page: 'resources'
+// ─── Curiosity Map synthesis flow ──────────────────────────────────────────
+
+function requireSynthesisEligible(req, res, next) {
+  if (db.getCuriosityTotalAnswered(req.session.user.id) < 10) {
+    return res.redirect('/curiosity-map');
+  }
+  next();
+}
+
+app.get('/curiosity-map/synthesize', requireAuth, requireSynthesisEligible, (req, res) => {
+  const userId = req.session.user.id;
+  const allAnswers = db.getCuriosityAnswersByUser(userId);
+  const userAnswers = {};
+  for (const row of allAnswers) userAnswers[row.question_id] = row.answer_text;
+  const highlights = db.getCuriosityHighlights(userId);
+  res.render('curiosity-map-synthesize-read', {
+    title: 'Begin Synthesizing',
+    page: 'resources',
+    angles: ANGLES,
+    userAnswers,
+    highlights,
   });
+});
+
+app.get('/curiosity-map/synthesize/observations', requireAuth, requireSynthesisEligible, (req, res) => {
+  const synthesisState = db.getSynthesisState(req.session.user.id);
+  const cachedObservations = synthesisState.last_observations
+    ? synthesisState.last_observations.split('\n').filter(Boolean)
+    : null;
+  res.render('curiosity-map-synthesize-observations', {
+    title: 'Observations',
+    page: 'resources',
+    synthesisState,
+    cachedObservations,
+  });
+});
+
+app.get('/curiosity-map/synthesize/notice', requireAuth, requireSynthesisEligible, (req, res) => {
+  res.render('curiosity-map-synthesize-notice', {
+    title: 'Notice',
+    page: 'resources',
+  });
+});
+
+app.get('/curiosity-map/synthesize/name', requireAuth, requireSynthesisEligible, (req, res) => {
+  const existingThreads = db.getCuriosityThreads(req.session.user.id);
+  res.render('curiosity-map-synthesize-name', {
+    title: 'Name Your Threads',
+    page: 'resources',
+    existingThreads,
+  });
+});
+
+app.get('/curiosity-map/threads', requireAuth, (req, res) => {
+  const threads = db.getCuriosityThreads(req.session.user.id);
+  let lastUpdated = null;
+  if (threads.length) {
+    const latest = threads.reduce((a, b) => (a.updated_at > b.updated_at ? a : b));
+    lastUpdated = latest.updated_at ? String(latest.updated_at).slice(0, 10) : null;
+  }
+  res.render('curiosity-map-threads', {
+    title: 'Your Threads',
+    page: 'resources',
+    threads,
+    lastUpdated,
+  });
+});
+
+// ─── Curiosity Map API: highlights ─────────────────────────────────────────
+
+app.post('/api/curiosity-map/highlights', requireAuth, (req, res) => {
+  const { questionId, highlightedText } = req.body;
+  if (!ALL_QUESTION_IDS.has(questionId)) return res.status(400).json({ error: 'Invalid question.' });
+  const text = (highlightedText || '').trim();
+  if (!text) return res.status(400).json({ error: 'Highlight text is required.' });
+  const result = db.addCuriosityHighlight(req.session.user.id, questionId, text);
+  res.json({ id: result.lastInsertRowid, questionId, highlightedText: text });
+});
+
+app.delete('/api/curiosity-map/highlights/:id', requireAuth, (req, res) => {
+  db.removeCuriosityHighlight(Number(req.params.id), req.session.user.id);
+  res.json({ ok: true });
+});
+
+// ─── Curiosity Map API: AI observations ────────────────────────────────────
+
+app.post('/api/curiosity-map/observations', requireAuth, async (req, res) => {
+  if (!anthropicClient) {
+    return res.status(503).json({ error: "AI observations aren't configured right now. Skip this step." });
+  }
+  const userId = req.session.user.id;
+  const allAnswers = db.getCuriosityAnswersByUser(userId);
+  const highlights = db.getCuriosityHighlights(userId);
+
+  // Build answers map for prompt
+  const answersMap = {};
+  for (const row of allAnswers) answersMap[row.question_id] = row.answer_text;
+
+  let userMsg = 'Here are a person\'s reflective answers, organized by angle. After that, the specific phrases they highlighted as standing out.\n\n--- Answers ---\n\n';
+  for (const angle of ANGLES) {
+    const answered = angle.questions.filter(q => answersMap[q.id]);
+    if (!answered.length) continue;
+    userMsg += `## ${angle.name}\n\n`;
+    for (const q of answered) {
+      userMsg += `Q: ${q.text}\nA: ${answersMap[q.id]}\n\n`;
+    }
+  }
+
+  if (highlights.length > 0) {
+    const questionTextMap = {};
+    for (const angle of ANGLES) for (const q of angle.questions) questionTextMap[q.id] = q.text;
+    userMsg += '--- Highlights ---\n\n';
+    for (const h of highlights) {
+      userMsg += `- "${h.highlighted_text}" (from: ${questionTextMap[h.question_id] || h.question_id})\n`;
+    }
+    userMsg += '\n';
+  }
+
+  userMsg += 'Now provide 3 to 6 observations following the rules in your system prompt.';
+
+  const systemPrompt = `You are a quiet observer. Your task is to read a person's reflective answers to a set of questions and point at things their eye might miss. You are NOT an interpreter, analyst, or theme-namer.
+
+What you DO:
+- Notice repeated words across answers
+- Notice recurring topics or subjects
+- Notice contrasts (one answer says one thing, another says the opposite)
+- Notice phrases that appear similar across different questions
+- Surface what's already on the page, not what it might mean
+
+What you DO NOT do:
+- Suggest themes, categories, or pillars
+- Interpret what the patterns "mean"
+- Suggest what the person is "really" curious about
+- Use therapy or coaching language
+- Use marketing or brand-strategy language
+- Make psychological inferences
+- Summarize or conclude
+
+Format:
+- 3 to 6 single-sentence observations
+- One per line
+- No preamble, no header, no closing summary
+- No bullet points or numbering — just the sentences`;
+
+  try {
+    const message = await anthropicClient.messages.create({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 512,
+      system: systemPrompt,
+      messages: [{ role: 'user', content: userMsg }],
+    });
+    const text = message.content[0].text.trim();
+    const observations = text.split('\n').map(l => l.trim()).filter(Boolean);
+    db.upsertSynthesisState(userId, {
+      has_seen_observations: 1,
+      last_observations: observations.join('\n'),
+      last_observations_at: new Date().toISOString(),
+    });
+    res.json({ observations });
+  } catch (err) {
+    console.error('[observations] Anthropic error:', err.message || err);
+    res.status(500).json({ error: "Couldn't generate observations right now. Try again in a moment." });
+  }
+});
+
+// ─── Curiosity Map API: threads ─────────────────────────────────────────────
+
+app.post('/api/curiosity-map/threads', requireAuth, (req, res) => {
+  const userId = req.session.user.id;
+
+  // Bulk save from naming page
+  if (Array.isArray(req.body.threads)) {
+    const threads = req.body.threads;
+    for (const t of threads) {
+      if (!String(t.name || '').trim()) {
+        return res.status(400).json({ error: 'Each thread needs a name.' });
+      }
+    }
+    const existing = db.getCuriosityThreads(userId);
+    const submittedIds = new Set(threads.filter(t => t.id).map(t => Number(t.id)));
+    // Delete threads not in submission
+    for (const e of existing) {
+      if (!submittedIds.has(e.id)) db.deleteCuriosityThread(e.id, userId);
+    }
+    // Upsert each
+    for (let i = 0; i < threads.length; i++) {
+      const t = threads[i];
+      const name = String(t.name).trim();
+      const desc = t.description || '';
+      const bullets = Array.isArray(t.bullets) ? t.bullets.filter(b => String(b).trim()) : [];
+      if (t.id) {
+        db.updateCuriosityThread(Number(t.id), userId, name, desc, bullets, i);
+      } else {
+        db.createCuriosityThread(userId, name, desc, bullets, i);
+      }
+    }
+    db.upsertSynthesisState(userId, { has_completed_synthesis: 1 });
+    return res.json({ ok: true, redirectTo: '/curiosity-map/threads' });
+  }
+
+  // Single create from threads view
+  const name = String(req.body.name || '').trim();
+  if (!name) return res.status(400).json({ error: 'Thread name is required.' });
+  const thread = db.createCuriosityThread(
+    userId, name,
+    req.body.description || '',
+    Array.isArray(req.body.bullets) ? req.body.bullets : [],
+    Number(req.body.sortOrder) || 0
+  );
+  res.json(thread);
+});
+
+app.put('/api/curiosity-map/threads/:id', requireAuth, (req, res) => {
+  const name = String(req.body.name || '').trim();
+  if (!name) return res.status(400).json({ error: 'Thread name is required.' });
+  db.updateCuriosityThread(
+    Number(req.params.id), req.session.user.id,
+    name,
+    req.body.description || '',
+    Array.isArray(req.body.bullets) ? req.body.bullets : [],
+    Number(req.body.sortOrder) || 0
+  );
+  res.json({ ok: true });
+});
+
+app.delete('/api/curiosity-map/threads/:id', requireAuth, (req, res) => {
+  db.deleteCuriosityThread(Number(req.params.id), req.session.user.id);
+  res.json({ ok: true });
 });
 
 app.get('/curiosity-map/:angleId', requireAuth, (req, res) => {
