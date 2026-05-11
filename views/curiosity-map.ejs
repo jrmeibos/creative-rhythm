@@ -26,7 +26,9 @@
       </div>
 
       <div class="cm-map-wrap">
-        <svg viewBox="0 0 680 720" width="100%" class="curiosity-map-svg" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="The Curiosity Map">
+        <svg viewBox="0 0 680 720" width="100%" class="curiosity-map-svg" xmlns="http://www.w3.org/2000/svg">
+          <title>The Curiosity Map</title>
+          <desc>An interactive map showing five angles of reflective inquiry. Click an angle marker to explore its questions.</desc>
 
           <defs>
             <% angles.forEach(function(angle) { %>
@@ -88,31 +90,33 @@
             const fillHeight = Math.round((count / 7) * 32);
           %>
           <a href="/curiosity-map/<%= angle.id %>" class="map-marker-link">
-            <g transform="translate(<%= pos.x %>, <%= pos.y %>)" class="map-marker-group">
+            <g transform="translate(<%= pos.x %>, <%= pos.y %>)">
+              <g class="map-marker-group">
 
-              <!-- Pin background -->
-              <path d="<%= PIN_PATH %>"
-                    fill="<%= isFull ? '#705C6C' : '#F2EEE3' %>"
-                    stroke="#705C6C" stroke-width="1.5"/>
+                <!-- Pin background -->
+                <path d="<%= PIN_PATH %>"
+                      fill="<%= isFull ? '#705C6C' : '#F2EEE3' %>"
+                      stroke="#705C6C" stroke-width="1.5"/>
 
-              <% if (count > 0 && !isFull) { %>
-              <!-- Partial fill -->
-              <rect x="-12" y="<%= 4 - fillHeight %>" width="24" height="<%= fillHeight %>"
-                    fill="#705C6C" clip-path="url(#clip-<%= angle.id %>)"/>
-              <% } %>
+                <% if (count > 0 && !isFull) { %>
+                <!-- Partial fill -->
+                <rect x="-12" y="<%= 4 - fillHeight %>" width="24" height="<%= fillHeight %>"
+                      fill="#705C6C" clip-path="url(#clip-<%= angle.id %>)"/>
+                <% } %>
 
-              <% if (isFull) { %>
-              <!-- Apricity completion ring -->
-              <ellipse cx="0" cy="-12" rx="18" ry="18"
-                       fill="none" stroke="#F6C95C" stroke-width="2" opacity="0.7"/>
-              <% } %>
+                <% if (isFull) { %>
+                <!-- Apricity completion ring -->
+                <ellipse cx="0" cy="-12" rx="18" ry="18"
+                         fill="none" stroke="#F6C95C" stroke-width="2" opacity="0.7"/>
+                <% } %>
 
-              <!-- Angle name label -->
-              <text y="22" text-anchor="middle"
-                    fill="#705C6C"
-                    font-family="Goldage, Georgia, serif"
-                    font-size="11.5"
-                    font-weight="400"><%= angle.name %></text>
+                <!-- Angle name label -->
+                <text y="22" text-anchor="middle"
+                      fill="#705C6C"
+                      font-family="Goldage, Georgia, serif"
+                      font-size="11.5"
+                      font-weight="400"><%= angle.name %></text>
+              </g>
             </g>
           </a>
           <% }); %>
