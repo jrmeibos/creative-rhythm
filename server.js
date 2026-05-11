@@ -1225,6 +1225,88 @@ app.get('/admin', requireAdmin, (req, res) => {
   });
 });
 
+// ─── Admin: Curiosity Map export ──────────────────────────────────────────────
+
+app.get('/admin/curiosity-map-export', requireAdmin, (req, res) => {
+  const allUsers = db.getAllUsers();
+  const users = allUsers.map(u => ({
+    ...u,
+    answeredCount: db.getCuriosityTotalAnswered(u.id),
+  }));
+  res.render('admin-curiosity-map-export', {
+    title: 'Export Curiosity Map Answers',
+    page: 'admin',
+    users,
+  });
+});
+
+app.get('/admin/curiosity-map-export/:userId', requireAdmin, (req, res) => {
+  const user = db.getUserById(Number(req.params.userId));
+  if (!user) return res.redirect('/admin/curiosity-map-export');
+
+  const allAnswers = db.getCuriosityAnswersByUser(user.id);
+  const answersMap = {};
+  for (const row of allAnswers) answersMap[row.question_id] = row;
+
+  const today = new Date().toISOString().slice(0, 10);
+
+  const fmtDate = raw => {
+    if (!raw) return today;
+    const s = String(raw);
+    return s.length >= 10 ? s.slice(0, 10) : today;
+  };
+
+  const lines = [];
+
+  lines.push('# The Curiosity Map', '');
+  lines.push(`*An export of ${user.name}'s reflections*`);
+  lines.push(`*Generated on ${today}*`, '');
+  lines.push('---', '');
+
+  const unanswered = {};
+
+  for (const angle of ANGLES) {
+    const answeredQs = angle.questions.filter(q => answersMap[q.id]);
+    const unansweredQs = angle.questions.filter(q => !answersMap[q.id]);
+
+    if (unansweredQs.length > 0) unanswered[angle.name] = unansweredQs;
+
+    if (answeredQs.length === 0) continue;
+
+    lines.push(`## ${angle.name}`, '');
+    lines.push(`*${angle.subtitle}*`, '');
+
+    for (const q of answeredQs) {
+      const row = answersMap[q.id];
+      lines.push(`### ${q.text}`, '');
+      lines.push(`*Answered ${fmtDate(row.updated_at)}*`, '');
+      lines.push(row.answer_text, '');
+      lines.push('---', '');
+    }
+  }
+
+  const unansweredAngles = Object.keys(unanswered);
+  if (unansweredAngles.length > 0) {
+    lines.push('## Not Yet Answered', '');
+    lines.push('*Questions you haven\'t answered yet — return to them when something pulls you.*', '');
+    for (const angleName of unansweredAngles) {
+      lines.push(`### ${angleName}`, '');
+      for (const q of unanswered[angleName]) {
+        lines.push(`- ${q.text}`);
+      }
+      lines.push('');
+    }
+  }
+
+  const raw = user.name || '';
+  const safeName = raw.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '') || `user-${user.id}`;
+  const filename = `curiosity-map-${safeName}-${today}.md`;
+
+  res.setHeader('Content-Type', 'text/markdown; charset=utf-8');
+  res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+  res.send(lines.join('\n'));
+});
+
 app.post('/api/admin/settings', requireAdmin, (req, res) => {
   const { key, value } = req.body;
   const allowed = ['course_start_date', 'harvest_unlocked', 'midcourse_unlocked', 'simulated_today'];

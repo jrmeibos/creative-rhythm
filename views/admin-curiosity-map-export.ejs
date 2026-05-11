@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <%- include('partials/head') %>
+  <link rel="stylesheet" href="/css/dashboard.css">
+  <link rel="stylesheet" href="/css/curiosity-map.css">
+</head>
+<body class="app-body">
+  <div class="app-layout">
+    <%- include('partials/sidebar') %>
+    <main class="main-content">
+
+      <header class="dash-header">
+        <div class="dash-greeting">
+          <h1 class="dash-greeting-text">Export Curiosity Map Answers</h1>
+          <p class="dash-week-label">Download a Markdown file of any user's reflections.</p>
+        </div>
+      </header>
+
+      <section class="dash-section">
+        <div class="admin-card">
+          <table class="admin-seed-table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Answered</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              <% users.forEach(function(u) { %>
+              <tr>
+                <td><%= u.name %></td>
+                <td><%= u.email %></td>
+                <td><%= u.answeredCount %> of 35</td>
+                <td>
+                  <a href="/admin/curiosity-map-export/<%= u.id %>" class="admin-btn-sm">
+                    Download .md
+                  </a>
+                </td>
+              </tr>
+              <% }); %>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <p style="margin-top: 1rem;">
+        <a href="/admin" class="cm-back-link">← Back to Admin</a>
+      </p>
+
+    </main>
+  </div>
+</body>
+</html>
