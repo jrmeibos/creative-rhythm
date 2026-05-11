@@ -3,7 +3,7 @@
 <head>
   <%- include('partials/head') %>
   <link rel="stylesheet" href="/css/dashboard.css">
-  <link rel="stylesheet" href="/css/curiosity-map.css">
+  <link rel="stylesheet" href="/css/seed-packets.css">
 </head>
 <body class="app-body">
   <div class="app-layout">
@@ -12,7 +12,7 @@
 
       <header class="dash-header">
         <div class="dash-greeting">
-          <h1 class="dash-greeting-text">Export Curiosity Map Answers</h1>
+          <h1 class="dash-greeting-text">Export Seed Packet Answers</h1>
           <p class="dash-week-label">Download a Markdown file of any user's reflections.</p>
         </div>
       </header>
@@ -35,7 +35,7 @@
                 <td><%= u.email %></td>
                 <td><%= u.answeredCount %> of 35</td>
                 <td>
-                  <a href="/admin/curiosity-map-export/<%= u.id %>" class="admin-btn-sm">
+                  <a href="/admin/seed-packets-export/<%= u.id %>" class="admin-btn-sm">
                     Download .md
                   </a>
                 </td>

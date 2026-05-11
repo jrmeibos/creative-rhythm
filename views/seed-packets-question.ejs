@@ -3,20 +3,20 @@
 <head>
   <%- include('partials/head') %>
   <link rel="stylesheet" href="/css/dashboard.css">
-  <link rel="stylesheet" href="/css/curiosity-map.css">
+  <link rel="stylesheet" href="/css/seed-packets.css">
 </head>
 <body class="app-body">
   <div class="app-layout">
     <%- include('partials/sidebar') %>
     <main class="main-content">
 
-      <a href="/curiosity-map/<%= angle.id %>" class="cm-back-link">← Back to <%= angle.name %></a>
+      <a href="/seed-packets/<%= angle.id %>" class="cm-back-link">← Back to <%= angle.name %></a>
 
       <div class="cm-question-page">
 
         <p class="cm-question-display"><%= question.text %></p>
 
-        <form action="/curiosity-map/<%= angle.id %>/<%= question.id %>" method="POST" class="cm-answer-form">
+        <form action="/seed-packets/<%= angle.id %>/<%= question.id %>" method="POST" class="cm-answer-form">
           <textarea
             name="answer_text"
             class="cm-answer-textarea"

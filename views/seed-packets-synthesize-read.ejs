@@ -3,14 +3,14 @@
 <head>
   <%- include('partials/head') %>
   <link rel="stylesheet" href="/css/dashboard.css">
-  <link rel="stylesheet" href="/css/curiosity-map.css">
+  <link rel="stylesheet" href="/css/seed-packets.css">
 </head>
 <body class="app-body">
   <div class="app-layout">
     <%- include('partials/sidebar') %>
     <main class="main-content">
 
-      <a href="/curiosity-map" class="cm-back-link">← Back to the Map</a>
+      <a href="/seed-packets" class="cm-back-link">← Back to the Map</a>
 
       <div class="cm-synth-page">
 
@@ -41,8 +41,8 @@
         </div>
 
         <div class="cm-synth-nav">
-          <a href="/curiosity-map/synthesize/observations" class="cm-synth-btn">Continue to observations →</a>
-          <a href="/curiosity-map" class="cm-back-link" style="margin-bottom:0">← Back to the Map</a>
+          <a href="/seed-packets/synthesize/observations" class="cm-synth-btn">Continue to observations →</a>
+          <a href="/seed-packets" class="cm-back-link" style="margin-bottom:0">← Back to the Map</a>
         </div>
 
       </div>
@@ -122,7 +122,7 @@
       positionFloat(rect);
       floatBtn.querySelector('.cm-float-add').addEventListener('click', async function() {
         try {
-          const res = await fetch('/api/curiosity-map/highlights', {
+          const res = await fetch('/api/seed-packets/highlights', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ questionId: questionId, highlightedText: text })
@@ -156,7 +156,7 @@
       positionFloat(rect);
       floatBtn.querySelector('.cm-float-remove').addEventListener('click', async function() {
         try {
-          await fetch('/api/curiosity-map/highlights/' + highlightId, { method: 'DELETE' });
+          await fetch('/api/seed-packets/highlights/' + highlightId, { method: 'DELETE' });
           const parent = mark.parentNode;
           while (mark.firstChild) parent.insertBefore(mark.firstChild, mark);
           parent.removeChild(mark);

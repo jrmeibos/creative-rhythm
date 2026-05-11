@@ -3,14 +3,14 @@
 <head>
   <%- include('partials/head') %>
   <link rel="stylesheet" href="/css/dashboard.css">
-  <link rel="stylesheet" href="/css/curiosity-map.css">
+  <link rel="stylesheet" href="/css/seed-packets.css">
 </head>
 <body class="app-body">
   <div class="app-layout">
     <%- include('partials/sidebar') %>
     <main class="main-content">
 
-      <a href="/curiosity-map" class="cm-back-link">← Back to the Map</a>
+      <a href="/seed-packets" class="cm-back-link">← Back to the Map</a>
 
       <div class="cm-synth-page">
 
@@ -81,7 +81,7 @@
       const data = getThreadData(card);
       if (!data.name) return;
       try {
-        await fetch('/api/curiosity-map/threads/' + threadId, {
+        await fetch('/api/seed-packets/threads/' + threadId, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(data),
@@ -121,7 +121,7 @@
         const threadId = card.dataset.threadId;
         if (threadId) {
           try {
-            await fetch('/api/curiosity-map/threads/' + threadId, { method: 'DELETE' });
+            await fetch('/api/seed-packets/threads/' + threadId, { method: 'DELETE' });
           } catch(e) {}
         }
         card.remove();
@@ -172,7 +172,7 @@
     document.getElementById('cm-add-thread-btn').addEventListener('click', async function() {
       const sortOrder = document.querySelectorAll('.cm-thread-card').length;
       try {
-        const res = await fetch('/api/curiosity-map/threads', {
+        const res = await fetch('/api/seed-packets/threads', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ name: 'New thread', description: '', bullets: [], sortOrder }),

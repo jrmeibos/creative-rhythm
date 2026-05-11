@@ -10,7 +10,7 @@ const multer = require('multer');
 const db = require('./db');
 const { requireAuth, requireAdmin } = require('./auth');
 const { sendPasswordResetEmail } = require('./email');
-const { ANGLES, getAngle, getQuestion } = require('./lib/curiosity-map-questions');
+const { ANGLES, getAngle, getQuestion } = require('./lib/seed-packet-questions');
 const ALL_QUESTION_IDS = new Set(ANGLES.flatMap(a => a.questions.map(q => q.id)));
 
 const Anthropic = require('@anthropic-ai/sdk');
@@ -1120,16 +1120,16 @@ app.get('/resources', requireAuth, (req, res) => {
   res.render('resources', { title: 'Resources', page: 'resources' });
 });
 
-// ─── Curiosity Map ─────────────────────────────────────────────────────────
+// ─── Seed Packets ───────────────────────────────────────────────────────────
 
-app.get('/curiosity-map', requireAuth, (req, res) => {
+app.get('/seed-packets', requireAuth, (req, res) => {
   const userId = req.session.user.id;
-  const counts = db.getCuriosityAnswerCounts(userId);
-  const totalAnswered = db.getCuriosityTotalAnswered(userId);
-  const synthesisState = db.getSynthesisState(userId);
-  const userThreads = synthesisState.has_completed_synthesis ? db.getCuriosityThreads(userId) : [];
-  res.render('curiosity-map', {
-    title: 'The Curiosity Map',
+  const counts = db.getSeedPacketAnswerCounts(userId);
+  const totalAnswered = db.getSeedPacketTotalAnswered(userId);
+  const synthesisState = db.getSeedPacketSynthesisState(userId);
+  const userThreads = synthesisState.has_completed_synthesis ? db.getSeedPacketThreads(userId) : [];
+  res.render('seed-packets', {
+    title: 'Seed Packets',
     page: 'resources',
     angles: ANGLES,
     counts,
@@ -1139,22 +1139,35 @@ app.get('/curiosity-map', requireAuth, (req, res) => {
   });
 });
 
-// ─── Curiosity Map synthesis flow ──────────────────────────────────────────
+// ─── Seed Packets: 301 redirects for old /curiosity-map/* URLs ──────────────
+
+app.get('/curiosity-map', (req, res) => res.redirect(301, '/seed-packets'));
+app.get('/curiosity-map/synthesize', (req, res) => res.redirect(301, '/seed-packets/synthesize'));
+app.get('/curiosity-map/synthesize/observations', (req, res) => res.redirect(301, '/seed-packets/synthesize/observations'));
+app.get('/curiosity-map/synthesize/notice', (req, res) => res.redirect(301, '/seed-packets/synthesize/notice'));
+app.get('/curiosity-map/synthesize/name', (req, res) => res.redirect(301, '/seed-packets/synthesize/name'));
+app.get('/curiosity-map/threads', (req, res) => res.redirect(301, '/seed-packets/threads'));
+app.get('/curiosity-map/:angleId/:questionId', (req, res) =>
+  res.redirect(301, `/seed-packets/${req.params.angleId}/${req.params.questionId}`));
+app.get('/curiosity-map/:angleId', (req, res) =>
+  res.redirect(301, `/seed-packets/${req.params.angleId}`));
+
+// ─── Seed Packets: synthesis flow ───────────────────────────────────────────
 
 function requireSynthesisEligible(req, res, next) {
-  if (db.getCuriosityTotalAnswered(req.session.user.id) < 10) {
-    return res.redirect('/curiosity-map');
+  if (db.getSeedPacketTotalAnswered(req.session.user.id) < 10) {
+    return res.redirect('/seed-packets');
   }
   next();
 }
 
-app.get('/curiosity-map/synthesize', requireAuth, requireSynthesisEligible, (req, res) => {
+app.get('/seed-packets/synthesize', requireAuth, requireSynthesisEligible, (req, res) => {
   const userId = req.session.user.id;
-  const allAnswers = db.getCuriosityAnswersByUser(userId);
+  const allAnswers = db.getSeedPacketAnswersByUser(userId);
   const userAnswers = {};
   for (const row of allAnswers) userAnswers[row.question_id] = row.answer_text;
-  const highlights = db.getCuriosityHighlights(userId);
-  res.render('curiosity-map-synthesize-read', {
+  const highlights = db.getSeedPacketHighlights(userId);
+  res.render('seed-packets-synthesize-read', {
     title: 'Begin Synthesizing',
     page: 'resources',
     angles: ANGLES,
@@ -1163,12 +1176,12 @@ app.get('/curiosity-map/synthesize', requireAuth, requireSynthesisEligible, (req
   });
 });
 
-app.get('/curiosity-map/synthesize/observations', requireAuth, requireSynthesisEligible, (req, res) => {
-  const synthesisState = db.getSynthesisState(req.session.user.id);
+app.get('/seed-packets/synthesize/observations', requireAuth, requireSynthesisEligible, (req, res) => {
+  const synthesisState = db.getSeedPacketSynthesisState(req.session.user.id);
   const cachedObservations = synthesisState.last_observations
     ? synthesisState.last_observations.split('\n').filter(Boolean)
     : null;
-  res.render('curiosity-map-synthesize-observations', {
+  res.render('seed-packets-synthesize-observations', {
     title: 'Observations',
     page: 'resources',
     synthesisState,
@@ -1176,30 +1189,30 @@ app.get('/curiosity-map/synthesize/observations', requireAuth, requireSynthesisE
   });
 });
 
-app.get('/curiosity-map/synthesize/notice', requireAuth, requireSynthesisEligible, (req, res) => {
-  res.render('curiosity-map-synthesize-notice', {
+app.get('/seed-packets/synthesize/notice', requireAuth, requireSynthesisEligible, (req, res) => {
+  res.render('seed-packets-synthesize-notice', {
     title: 'Notice',
     page: 'resources',
   });
 });
 
-app.get('/curiosity-map/synthesize/name', requireAuth, requireSynthesisEligible, (req, res) => {
-  const existingThreads = db.getCuriosityThreads(req.session.user.id);
-  res.render('curiosity-map-synthesize-name', {
+app.get('/seed-packets/synthesize/name', requireAuth, requireSynthesisEligible, (req, res) => {
+  const existingThreads = db.getSeedPacketThreads(req.session.user.id);
+  res.render('seed-packets-synthesize-name', {
     title: 'Name Your Threads',
     page: 'resources',
     existingThreads,
   });
 });
 
-app.get('/curiosity-map/threads', requireAuth, (req, res) => {
-  const threads = db.getCuriosityThreads(req.session.user.id);
+app.get('/seed-packets/threads', requireAuth, (req, res) => {
+  const threads = db.getSeedPacketThreads(req.session.user.id);
   let lastUpdated = null;
   if (threads.length) {
     const latest = threads.reduce((a, b) => (a.updated_at > b.updated_at ? a : b));
     lastUpdated = latest.updated_at ? String(latest.updated_at).slice(0, 10) : null;
   }
-  res.render('curiosity-map-threads', {
+  res.render('seed-packets-threads', {
     title: 'Your Threads',
     page: 'resources',
     threads,
@@ -1207,31 +1220,31 @@ app.get('/curiosity-map/threads', requireAuth, (req, res) => {
   });
 });
 
-// ─── Curiosity Map API: highlights ─────────────────────────────────────────
+// ─── Seed Packets API: highlights ───────────────────────────────────────────
 
-app.post('/api/curiosity-map/highlights', requireAuth, (req, res) => {
+app.post('/api/seed-packets/highlights', requireAuth, (req, res) => {
   const { questionId, highlightedText } = req.body;
   if (!ALL_QUESTION_IDS.has(questionId)) return res.status(400).json({ error: 'Invalid question.' });
   const text = (highlightedText || '').trim();
   if (!text) return res.status(400).json({ error: 'Highlight text is required.' });
-  const result = db.addCuriosityHighlight(req.session.user.id, questionId, text);
+  const result = db.addSeedPacketHighlight(req.session.user.id, questionId, text);
   res.json({ id: result.lastInsertRowid, questionId, highlightedText: text });
 });
 
-app.delete('/api/curiosity-map/highlights/:id', requireAuth, (req, res) => {
-  db.removeCuriosityHighlight(Number(req.params.id), req.session.user.id);
+app.delete('/api/seed-packets/highlights/:id', requireAuth, (req, res) => {
+  db.removeSeedPacketHighlight(Number(req.params.id), req.session.user.id);
   res.json({ ok: true });
 });
 
-// ─── Curiosity Map API: AI observations ────────────────────────────────────
+// ─── Seed Packets API: AI observations ──────────────────────────────────────
 
-app.post('/api/curiosity-map/observations', requireAuth, async (req, res) => {
+app.post('/api/seed-packets/observations', requireAuth, async (req, res) => {
   if (!anthropicClient) {
     return res.status(503).json({ error: "AI observations aren't configured right now. Skip this step." });
   }
   const userId = req.session.user.id;
-  const allAnswers = db.getCuriosityAnswersByUser(userId);
-  const highlights = db.getCuriosityHighlights(userId);
+  const allAnswers = db.getSeedPacketAnswersByUser(userId);
+  const highlights = db.getSeedPacketHighlights(userId);
 
   // Build answers map for prompt
   const answersMap = {};
@@ -1292,7 +1305,7 @@ Format:
     });
     const text = message.content[0].text.trim();
     const observations = text.split('\n').map(l => l.trim()).filter(Boolean);
-    db.upsertSynthesisState(userId, {
+    db.upsertSeedPacketSynthesisState(userId, {
       has_seen_observations: 1,
       last_observations: observations.join('\n'),
       last_observations_at: new Date().toISOString(),
@@ -1304,9 +1317,9 @@ Format:
   }
 });
 
-// ─── Curiosity Map API: threads ─────────────────────────────────────────────
+// ─── Seed Packets API: threads ───────────────────────────────────────────────
 
-app.post('/api/curiosity-map/threads', requireAuth, (req, res) => {
+app.post('/api/seed-packets/threads', requireAuth, (req, res) => {
   const userId = req.session.user.id;
 
   // Bulk save from naming page
@@ -1317,11 +1330,11 @@ app.post('/api/curiosity-map/threads', requireAuth, (req, res) => {
         return res.status(400).json({ error: 'Each thread needs a name.' });
       }
     }
-    const existing = db.getCuriosityThreads(userId);
+    const existing = db.getSeedPacketThreads(userId);
     const submittedIds = new Set(threads.filter(t => t.id).map(t => Number(t.id)));
     // Delete threads not in submission
     for (const e of existing) {
-      if (!submittedIds.has(e.id)) db.deleteCuriosityThread(e.id, userId);
+      if (!submittedIds.has(e.id)) db.deleteSeedPacketThread(e.id, userId);
     }
     // Upsert each
     for (let i = 0; i < threads.length; i++) {
@@ -1330,19 +1343,19 @@ app.post('/api/curiosity-map/threads', requireAuth, (req, res) => {
       const desc = t.description || '';
       const bullets = Array.isArray(t.bullets) ? t.bullets.filter(b => String(b).trim()) : [];
       if (t.id) {
-        db.updateCuriosityThread(Number(t.id), userId, name, desc, bullets, i);
+        db.updateSeedPacketThread(Number(t.id), userId, name, desc, bullets, i);
       } else {
-        db.createCuriosityThread(userId, name, desc, bullets, i);
+        db.createSeedPacketThread(userId, name, desc, bullets, i);
       }
     }
-    db.upsertSynthesisState(userId, { has_completed_synthesis: 1 });
-    return res.json({ ok: true, redirectTo: '/curiosity-map/threads' });
+    db.upsertSeedPacketSynthesisState(userId, { has_completed_synthesis: 1 });
+    return res.json({ ok: true, redirectTo: '/seed-packets/threads' });
   }
 
   // Single create from threads view
   const name = String(req.body.name || '').trim();
   if (!name) return res.status(400).json({ error: 'Thread name is required.' });
-  const thread = db.createCuriosityThread(
+  const thread = db.createSeedPacketThread(
     userId, name,
     req.body.description || '',
     Array.isArray(req.body.bullets) ? req.body.bullets : [],
@@ -1351,10 +1364,10 @@ app.post('/api/curiosity-map/threads', requireAuth, (req, res) => {
   res.json(thread);
 });
 
-app.put('/api/curiosity-map/threads/:id', requireAuth, (req, res) => {
+app.put('/api/seed-packets/threads/:id', requireAuth, (req, res) => {
   const name = String(req.body.name || '').trim();
   if (!name) return res.status(400).json({ error: 'Thread name is required.' });
-  db.updateCuriosityThread(
+  db.updateSeedPacketThread(
     Number(req.params.id), req.session.user.id,
     name,
     req.body.description || '',
@@ -1364,22 +1377,22 @@ app.put('/api/curiosity-map/threads/:id', requireAuth, (req, res) => {
   res.json({ ok: true });
 });
 
-app.delete('/api/curiosity-map/threads/:id', requireAuth, (req, res) => {
-  db.deleteCuriosityThread(Number(req.params.id), req.session.user.id);
+app.delete('/api/seed-packets/threads/:id', requireAuth, (req, res) => {
+  db.deleteSeedPacketThread(Number(req.params.id), req.session.user.id);
   res.json({ ok: true });
 });
 
-app.get('/curiosity-map/:angleId', requireAuth, (req, res) => {
+app.get('/seed-packets/:angleId', requireAuth, (req, res) => {
   const angle = getAngle(req.params.angleId);
-  if (!angle) return res.redirect('/curiosity-map');
+  if (!angle) return res.redirect('/seed-packets');
   const userId = req.session.user.id;
-  const allAnswers = db.getCuriosityAnswersByUser(userId);
+  const allAnswers = db.getSeedPacketAnswersByUser(userId);
   const questionIds = new Set(angle.questions.map(q => q.id));
   const userAnswers = {};
   for (const row of allAnswers) {
     if (questionIds.has(row.question_id)) userAnswers[row.question_id] = row.answer_text;
   }
-  res.render('curiosity-map-angle', {
+  res.render('seed-packets-angle', {
     title: angle.name,
     page: 'resources',
     angle,
@@ -1387,15 +1400,15 @@ app.get('/curiosity-map/:angleId', requireAuth, (req, res) => {
   });
 });
 
-app.get('/curiosity-map/:angleId/:questionId', requireAuth, (req, res) => {
+app.get('/seed-packets/:angleId/:questionId', requireAuth, (req, res) => {
   const { angleId, questionId } = req.params;
   const angle = getAngle(angleId);
-  if (!angle) return res.redirect('/curiosity-map');
+  if (!angle) return res.redirect('/seed-packets');
   const question = getQuestion(angleId, questionId);
-  if (!question) return res.redirect(`/curiosity-map/${angleId}`);
-  const existingAnswer = db.getCuriosityAnswer(req.session.user.id, questionId);
-  res.render('curiosity-map-question', {
-    title: 'The Curiosity Map',
+  if (!question) return res.redirect(`/seed-packets/${angleId}`);
+  const existingAnswer = db.getSeedPacketAnswer(req.session.user.id, questionId);
+  res.render('seed-packets-question', {
+    title: 'Seed Packets',
     page: 'resources',
     angle,
     question,
@@ -1403,17 +1416,17 @@ app.get('/curiosity-map/:angleId/:questionId', requireAuth, (req, res) => {
   });
 });
 
-app.post('/curiosity-map/:angleId/:questionId', requireAuth, (req, res) => {
+app.post('/seed-packets/:angleId/:questionId', requireAuth, (req, res) => {
   const { angleId, questionId } = req.params;
   const angle = getAngle(angleId);
-  if (!angle) return res.redirect('/curiosity-map');
+  if (!angle) return res.redirect('/seed-packets');
   const question = getQuestion(angleId, questionId);
-  if (!question) return res.redirect(`/curiosity-map/${angleId}`);
+  if (!question) return res.redirect(`/seed-packets/${angleId}`);
   const answerText = (req.body.answer_text || '').trim();
   if (answerText) {
-    db.upsertCuriosityAnswer(req.session.user.id, questionId, answerText);
+    db.upsertSeedPacketAnswer(req.session.user.id, questionId, answerText);
   }
-  res.redirect(`/curiosity-map/${angleId}`);
+  res.redirect(`/seed-packets/${angleId}`);
 });
 
 // ─── Admin ─────────────────────────────────────────────────────────────────
@@ -1458,26 +1471,30 @@ app.get('/admin', requireAdmin, (req, res) => {
   });
 });
 
-// ─── Admin: Curiosity Map export ──────────────────────────────────────────────
+// ─── Admin: Seed Packets export ───────────────────────────────────────────────
 
-app.get('/admin/curiosity-map-export', requireAdmin, (req, res) => {
+app.get('/admin/curiosity-map-export', requireAdmin, (req, res) => res.redirect(301, '/admin/seed-packets-export'));
+app.get('/admin/curiosity-map-export/:userId', requireAdmin, (req, res) =>
+  res.redirect(301, `/admin/seed-packets-export/${req.params.userId}`));
+
+app.get('/admin/seed-packets-export', requireAdmin, (req, res) => {
   const allUsers = db.getAllUsers();
   const users = allUsers.map(u => ({
     ...u,
-    answeredCount: db.getCuriosityTotalAnswered(u.id),
+    answeredCount: db.getSeedPacketTotalAnswered(u.id),
   }));
-  res.render('admin-curiosity-map-export', {
-    title: 'Export Curiosity Map Answers',
+  res.render('admin-seed-packets-export', {
+    title: 'Export Seed Packet Answers',
     page: 'admin',
     users,
   });
 });
 
-app.get('/admin/curiosity-map-export/:userId', requireAdmin, (req, res) => {
+app.get('/admin/seed-packets-export/:userId', requireAdmin, (req, res) => {
   const user = db.getUserById(Number(req.params.userId));
-  if (!user) return res.redirect('/admin/curiosity-map-export');
+  if (!user) return res.redirect('/admin/seed-packets-export');
 
-  const allAnswers = db.getCuriosityAnswersByUser(user.id);
+  const allAnswers = db.getSeedPacketAnswersByUser(user.id);
   const answersMap = {};
   for (const row of allAnswers) answersMap[row.question_id] = row;
 
@@ -1491,7 +1508,7 @@ app.get('/admin/curiosity-map-export/:userId', requireAdmin, (req, res) => {
 
   const lines = [];
 
-  lines.push('# The Curiosity Map', '');
+  lines.push('# Seed Packets', '');
   lines.push(`*An export of ${user.name}'s reflections*`);
   lines.push(`*Generated on ${today}*`, '');
   lines.push('---', '');
@@ -1533,7 +1550,7 @@ app.get('/admin/curiosity-map-export/:userId', requireAdmin, (req, res) => {
 
   const raw = user.name || '';
   const safeName = raw.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '') || `user-${user.id}`;
-  const filename = `curiosity-map-${safeName}-${today}.md`;
+  const filename = `seed-packets-${safeName}-${today}.md`;
 
   res.setHeader('Content-Type', 'text/markdown; charset=utf-8');
   res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);

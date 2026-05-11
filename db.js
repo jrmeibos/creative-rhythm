@@ -352,9 +352,21 @@ db.exec(`
   // Reset them so users see initials until they re-upload.
   db.exec("UPDATE users SET profile_photo = NULL WHERE profile_photo LIKE '/uploads/avatars/%'");
 
-  // Curiosity Map answers
+  // Rename curiosity_map_* → seed_packet_* (idempotent — runs only once)
+  for (const [oldName, newName] of [
+    ['curiosity_map_answers',        'seed_packet_answers'],
+    ['curiosity_map_highlights',      'seed_packet_highlights'],
+    ['curiosity_map_threads',         'seed_packet_threads'],
+    ['curiosity_map_synthesis_state', 'seed_packet_synthesis_state'],
+  ]) {
+    const hasOld = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name=?").get(oldName);
+    const hasNew = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name=?").get(newName);
+    if (hasOld && !hasNew) db.exec(`ALTER TABLE ${oldName} RENAME TO ${newName}`);
+  }
+
+  // Seed Packet answers
   db.exec(`
-    CREATE TABLE IF NOT EXISTS curiosity_map_answers (
+    CREATE TABLE IF NOT EXISTS seed_packet_answers (
       id          INTEGER PRIMARY KEY AUTOINCREMENT,
       user_id     INTEGER NOT NULL,
       question_id TEXT NOT NULL,
@@ -364,7 +376,7 @@ db.exec(`
       FOREIGN KEY (user_id) REFERENCES users(id),
       UNIQUE (user_id, question_id)
     );
-    CREATE INDEX IF NOT EXISTS idx_cma_user ON curiosity_map_answers(user_id);
+    CREATE INDEX IF NOT EXISTS idx_spa_user ON seed_packet_answers(user_id);
   `);
 
   // Password reset tokens
@@ -381,9 +393,9 @@ db.exec(`
     CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_token ON password_reset_tokens(token);
   `);
 
-  // Curiosity Map highlights
+  // Seed Packet highlights
   db.exec(`
-    CREATE TABLE IF NOT EXISTS curiosity_map_highlights (
+    CREATE TABLE IF NOT EXISTS seed_packet_highlights (
       id               INTEGER PRIMARY KEY AUTOINCREMENT,
       user_id          INTEGER NOT NULL,
       question_id      TEXT    NOT NULL,
@@ -391,12 +403,12 @@ db.exec(`
       created_at       DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (user_id) REFERENCES users(id)
     );
-    CREATE INDEX IF NOT EXISTS idx_cmh_user ON curiosity_map_highlights(user_id);
+    CREATE INDEX IF NOT EXISTS idx_sph_user ON seed_packet_highlights(user_id);
   `);
 
-  // Curiosity Map threads
+  // Seed Packet threads
   db.exec(`
-    CREATE TABLE IF NOT EXISTS curiosity_map_threads (
+    CREATE TABLE IF NOT EXISTS seed_packet_threads (
       id          INTEGER PRIMARY KEY AUTOINCREMENT,
       user_id     INTEGER NOT NULL,
       name        TEXT    NOT NULL,
@@ -407,12 +419,12 @@ db.exec(`
       updated_at  DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (user_id) REFERENCES users(id)
     );
-    CREATE INDEX IF NOT EXISTS idx_cmt_user_order ON curiosity_map_threads(user_id, sort_order);
+    CREATE INDEX IF NOT EXISTS idx_spt_user_order ON seed_packet_threads(user_id, sort_order);
   `);
 
-  // Curiosity Map synthesis state
+  // Seed Packet synthesis state
   db.exec(`
-    CREATE TABLE IF NOT EXISTS curiosity_map_synthesis_state (
+    CREATE TABLE IF NOT EXISTS seed_packet_synthesis_state (
       user_id                 INTEGER PRIMARY KEY,
       has_seen_observations   INTEGER DEFAULT 0,
       last_observations       TEXT    DEFAULT NULL,
@@ -1348,23 +1360,23 @@ module.exports = {
     return { user, opening, midcourse, closing, seeds };
   },
 
-  // ─── Curiosity Map ─────────────────────────────────────────────────────────
+  // ─── Seed Packets ──────────────────────────────────────────────────────────
 
-  getCuriosityAnswer(userId, questionId) {
+  getSeedPacketAnswer(userId, questionId) {
     return db.prepare(
-      'SELECT * FROM curiosity_map_answers WHERE user_id = ? AND question_id = ?'
+      'SELECT * FROM seed_packet_answers WHERE user_id = ? AND question_id = ?'
     ).get(userId, questionId) || null;
   },
 
-  getCuriosityAnswersByUser(userId) {
+  getSeedPacketAnswersByUser(userId) {
     return db.prepare(
-      'SELECT * FROM curiosity_map_answers WHERE user_id = ? ORDER BY question_id ASC'
+      'SELECT * FROM seed_packet_answers WHERE user_id = ? ORDER BY question_id ASC'
     ).all(userId);
   },
 
-  upsertCuriosityAnswer(userId, questionId, text) {
+  upsertSeedPacketAnswer(userId, questionId, text) {
     return db.prepare(`
-      INSERT INTO curiosity_map_answers (user_id, question_id, answer_text)
+      INSERT INTO seed_packet_answers (user_id, question_id, answer_text)
       VALUES (?, ?, ?)
       ON CONFLICT(user_id, question_id) DO UPDATE SET
         answer_text = excluded.answer_text,
@@ -1372,11 +1384,11 @@ module.exports = {
     `).run(userId, questionId, text);
   },
 
-  getCuriosityAnswerCounts(userId) {
+  getSeedPacketAnswerCounts(userId) {
     const prefixMap = { r: 'remembering', n: 'noticing', a: 'allowing', i: 'imagining', k: 'knowing' };
     const rows = db.prepare(`
       SELECT SUBSTR(question_id, 1, 1) as prefix, COUNT(*) as count
-      FROM curiosity_map_answers WHERE user_id = ? GROUP BY prefix
+      FROM seed_packet_answers WHERE user_id = ? GROUP BY prefix
     `).all(userId);
     const counts = { remembering: 0, noticing: 0, allowing: 0, imagining: 0, knowing: 0 };
     for (const row of rows) {
@@ -1386,9 +1398,9 @@ module.exports = {
     return counts;
   },
 
-  getCuriosityTotalAnswered(userId) {
+  getSeedPacketTotalAnswered(userId) {
     return db.prepare(
-      'SELECT COUNT(*) as c FROM curiosity_map_answers WHERE user_id = ?'
+      'SELECT COUNT(*) as c FROM seed_packet_answers WHERE user_id = ?'
     ).get(userId).c;
   },
 
@@ -1421,64 +1433,64 @@ module.exports = {
     ).run();
   },
 
-  // ─── Curiosity Map highlights ───────────────────────────────────────────────
+  // ─── Seed Packet highlights ─────────────────────────────────────────────────
 
-  getCuriosityHighlights(userId) {
+  getSeedPacketHighlights(userId) {
     return db.prepare(
-      'SELECT * FROM curiosity_map_highlights WHERE user_id = ? ORDER BY created_at ASC'
+      'SELECT * FROM seed_packet_highlights WHERE user_id = ? ORDER BY created_at ASC'
     ).all(userId);
   },
 
-  addCuriosityHighlight(userId, questionId, highlightedText) {
+  addSeedPacketHighlight(userId, questionId, highlightedText) {
     return db.prepare(
-      'INSERT INTO curiosity_map_highlights (user_id, question_id, highlighted_text) VALUES (?, ?, ?)'
+      'INSERT INTO seed_packet_highlights (user_id, question_id, highlighted_text) VALUES (?, ?, ?)'
     ).run(userId, questionId, highlightedText);
   },
 
-  removeCuriosityHighlight(highlightId, userId) {
+  removeSeedPacketHighlight(highlightId, userId) {
     return db.prepare(
-      'DELETE FROM curiosity_map_highlights WHERE id = ? AND user_id = ?'
+      'DELETE FROM seed_packet_highlights WHERE id = ? AND user_id = ?'
     ).run(highlightId, userId);
   },
 
-  // ─── Curiosity Map threads ──────────────────────────────────────────────────
+  // ─── Seed Packet threads ────────────────────────────────────────────────────
 
-  getCuriosityThreads(userId) {
+  getSeedPacketThreads(userId) {
     const rows = db.prepare(
-      'SELECT * FROM curiosity_map_threads WHERE user_id = ? ORDER BY sort_order ASC'
+      'SELECT * FROM seed_packet_threads WHERE user_id = ? ORDER BY sort_order ASC'
     ).all(userId);
     return rows.map(r => ({ ...r, bullets: JSON.parse(r.bullets || '[]') }));
   },
 
-  createCuriosityThread(userId, name, description, bullets, sortOrder) {
+  createSeedPacketThread(userId, name, description, bullets, sortOrder) {
     const bulletsJson = JSON.stringify(Array.isArray(bullets) ? bullets : []);
     const result = db.prepare(
-      'INSERT INTO curiosity_map_threads (user_id, name, description, bullets, sort_order) VALUES (?, ?, ?, ?, ?)'
+      'INSERT INTO seed_packet_threads (user_id, name, description, bullets, sort_order) VALUES (?, ?, ?, ?, ?)'
     ).run(userId, name, description || '', bulletsJson, sortOrder || 0);
-    const row = db.prepare('SELECT * FROM curiosity_map_threads WHERE id = ?').get(result.lastInsertRowid);
+    const row = db.prepare('SELECT * FROM seed_packet_threads WHERE id = ?').get(result.lastInsertRowid);
     return { ...row, bullets: JSON.parse(row.bullets || '[]') };
   },
 
-  updateCuriosityThread(threadId, userId, name, description, bullets, sortOrder) {
+  updateSeedPacketThread(threadId, userId, name, description, bullets, sortOrder) {
     const bulletsJson = JSON.stringify(Array.isArray(bullets) ? bullets : []);
     return db.prepare(`
-      UPDATE curiosity_map_threads
+      UPDATE seed_packet_threads
       SET name = ?, description = ?, bullets = ?, sort_order = ?, updated_at = CURRENT_TIMESTAMP
       WHERE id = ? AND user_id = ?
     `).run(name, description || '', bulletsJson, sortOrder || 0, threadId, userId);
   },
 
-  deleteCuriosityThread(threadId, userId) {
+  deleteSeedPacketThread(threadId, userId) {
     return db.prepare(
-      'DELETE FROM curiosity_map_threads WHERE id = ? AND user_id = ?'
+      'DELETE FROM seed_packet_threads WHERE id = ? AND user_id = ?'
     ).run(threadId, userId);
   },
 
-  // ─── Curiosity Map synthesis state ─────────────────────────────────────────
+  // ─── Seed Packet synthesis state ───────────────────────────────────────────
 
-  getSynthesisState(userId) {
+  getSeedPacketSynthesisState(userId) {
     return db.prepare(
-      'SELECT * FROM curiosity_map_synthesis_state WHERE user_id = ?'
+      'SELECT * FROM seed_packet_synthesis_state WHERE user_id = ?'
     ).get(userId) || {
       user_id: userId,
       has_seen_observations: 0,
@@ -1488,14 +1500,14 @@ module.exports = {
     };
   },
 
-  upsertSynthesisState(userId, partial) {
+  upsertSeedPacketSynthesisState(userId, partial) {
     db.prepare(
-      'INSERT OR IGNORE INTO curiosity_map_synthesis_state (user_id) VALUES (?)'
+      'INSERT OR IGNORE INTO seed_packet_synthesis_state (user_id) VALUES (?)'
     ).run(userId);
     const fields = Object.keys(partial).map(k => `${k} = ?`).join(', ');
     if (!fields) return;
     db.prepare(
-      `UPDATE curiosity_map_synthesis_state SET ${fields} WHERE user_id = ?`
+      `UPDATE seed_packet_synthesis_state SET ${fields} WHERE user_id = ?`
     ).run(...Object.values(partial), userId);
   },
 };

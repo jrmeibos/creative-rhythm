@@ -3,7 +3,7 @@
 <head>
   <%- include('partials/head') %>
   <link rel="stylesheet" href="/css/dashboard.css">
-  <link rel="stylesheet" href="/css/curiosity-map.css">
+  <link rel="stylesheet" href="/css/seed-packets.css">
 </head>
 <body class="app-body">
   <div class="app-layout">
@@ -21,13 +21,13 @@
 %>
 
       <div class="cm-header">
-        <h1 class="cm-title">The Curiosity Map</h1>
+        <h1 class="cm-title">Seed Packets</h1>
         <p class="cm-subtitle">Five angles. Thirty-five questions. Answer what sparks you.</p>
       </div>
 
       <div class="cm-map-wrap">
-        <svg viewBox="0 0 680 720" width="100%" class="curiosity-map-svg" xmlns="http://www.w3.org/2000/svg">
-          <title>The Curiosity Map</title>
+        <svg viewBox="0 0 680 720" width="100%" class="seed-packets-svg" xmlns="http://www.w3.org/2000/svg">
+          <title>Seed Packets</title>
           <desc>An interactive map showing five angles of reflective inquiry. Click an angle marker to explore its questions.</desc>
 
           <defs>
@@ -89,9 +89,9 @@
             const isFull = count === 7;
             const fillHeight = Math.round((count / 7) * 32);
           %>
-          <a href="/curiosity-map/<%= angle.id %>" class="map-marker-link">
+          <a href="/seed-packets/<%= angle.id %>" class="packet-marker-link">
             <g transform="translate(<%= pos.x %>, <%= pos.y %>)">
-              <g class="map-marker-group">
+              <g class="packet-marker-group">
 
                 <!-- Pin background -->
                 <path d="<%= PIN_PATH %>"
@@ -133,14 +133,14 @@
             <%= totalAnswered %> of 35 answered — answer <%= 10 - totalAnswered %> more to begin synthesizing
           </p>
         <% } else if (!synthesisState.has_completed_synthesis) { %>
-          <a href="/curiosity-map/synthesize" class="cm-synth-start-btn">Begin synthesizing →</a>
+          <a href="/seed-packets/synthesize" class="cm-synth-start-btn">Begin synthesizing →</a>
         <% } else { %>
-          <a href="/curiosity-map/threads" class="cm-synth-start-btn">Your threads are mapped. Tend to them →</a>
+          <a href="/seed-packets/threads" class="cm-synth-start-btn">Your threads are mapped. Tend to them →</a>
           <% if (userThreads.length > 0) { %>
             <p class="cm-threads-tagline">
               Your threads right now:
               <% userThreads.forEach(function(t, i) { %>
-                <a href="/curiosity-map/threads" class="cm-threads-tagline-name"><%= t.name %></a><% if (i < userThreads.length - 1) { %> · <% } %>
+                <a href="/seed-packets/threads" class="cm-threads-tagline-name"><%= t.name %></a><% if (i < userThreads.length - 1) { %> · <% } %>
               <% }); %>
             </p>
           <% } %>

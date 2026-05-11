@@ -3,14 +3,14 @@
 <head>
   <%- include('partials/head') %>
   <link rel="stylesheet" href="/css/dashboard.css">
-  <link rel="stylesheet" href="/css/curiosity-map.css">
+  <link rel="stylesheet" href="/css/seed-packets.css">
 </head>
 <body class="app-body">
   <div class="app-layout">
     <%- include('partials/sidebar') %>
     <main class="main-content">
 
-      <a href="/curiosity-map/synthesize/notice" class="cm-back-link">← Back to noticing</a>
+      <a href="/seed-packets/synthesize/notice" class="cm-back-link">← Back to noticing</a>
 
       <div class="cm-synth-page">
 
@@ -57,7 +57,7 @@
 
         <div class="cm-synth-nav">
           <button type="button" class="cm-synth-btn" id="cm-save-threads">Save my threads →</button>
-          <a href="/curiosity-map/synthesize/notice" class="cm-back-link" style="margin-bottom:0">← Back to noticing</a>
+          <a href="/seed-packets/synthesize/notice" class="cm-back-link" style="margin-bottom:0">← Back to noticing</a>
         </div>
 
       </div>
@@ -162,7 +162,7 @@
       btn.textContent = 'Saving…';
 
       try {
-        const res = await fetch('/api/curiosity-map/threads', {
+        const res = await fetch('/api/seed-packets/threads', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ threads }),

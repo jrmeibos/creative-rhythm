@@ -81,7 +81,7 @@
   margin: 0 auto;
 }
 
-.curiosity-map-svg {
+.seed-packets-svg {
   display: block;
   width: 100%;
   height: auto;
@@ -89,20 +89,20 @@
   overflow: visible;
 }
 
-.map-marker-link {
+.packet-marker-link {
   cursor: pointer;
   text-decoration: none;
 }
 
-.map-marker-link:focus { outline: none; }
+.packet-marker-link:focus { outline: none; }
 
-.map-marker-group {
+.packet-marker-group {
   transition: transform 0.15s ease;
   transform-box: fill-box;
   transform-origin: center;
 }
 
-.map-marker-link:hover .map-marker-group {
+.packet-marker-link:hover .packet-marker-group {
   transform: scale(1.05);
 }
 
