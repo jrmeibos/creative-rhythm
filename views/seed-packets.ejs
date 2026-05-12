@@ -150,10 +150,11 @@
           <p class="cm-hint-text">Begin anywhere — answer at least 10 questions. The more the better.</p>
         <% } else if (totalAnswered < 10) { %>
           <p class="cm-hint-text">
-            <%= totalAnswered %> of 35 seeds gathered — gather <%= 10 - totalAnswered %> more to identify your seeds
+            <%= totalAnswered %> of 35 questions answered — answer <%= 10 - totalAnswered %> more to identify your seeds
           </p>
         <% } else if (!synthesisState.has_completed_synthesis) { %>
-          <a href="/seed-packets/synthesize" class="cm-synth-start-btn">Ready to identify your seeds →</a>
+          <p class="cm-hint-text"><%= totalAnswered %> of 35 questions answered</p>
+          <a href="/seed-packets/synthesize" class="cm-synth-start-btn" style="margin-top:0.75rem;">Ready to identify your seeds →</a>
         <% } else { %>
           <a href="/seed-packets/threads" class="cm-synth-start-btn">Your threads are mapped. Tend to them →</a>
           <% if (userThreads.length > 0) { %>
