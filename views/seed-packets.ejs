@@ -22,7 +22,7 @@
 
       <div class="cm-header">
         <h1 class="cm-title">Seed Packets</h1>
-        <p class="cm-subtitle">Five angles. Thirty-five questions. Answer what sparks you.</p>
+        <p class="cm-subtitle">Five different angles. Thirty-five questions. Gather what's already alive in you.</p>
       </div>
 
       <div class="cm-map-wrap">
@@ -127,13 +127,13 @@
       <!-- ── Bottom hint ────────────────────────────────────────────────── -->
       <div class="cm-hint-wrap" style="margin-top: 1.25rem;">
         <% if (totalAnswered === 0) { %>
-          <p class="cm-hint-text">Begin anywhere — answer the questions that spark you</p>
+          <p class="cm-hint-text">Begin anywhere — answer at least 10 questions. The more the better.</p>
         <% } else if (totalAnswered < 10) { %>
           <p class="cm-hint-text">
-            <%= totalAnswered %> of 35 answered — answer <%= 10 - totalAnswered %> more to begin synthesizing
+            <%= totalAnswered %> of 35 seeds gathered — gather <%= 10 - totalAnswered %> more to identify your seeds
           </p>
         <% } else if (!synthesisState.has_completed_synthesis) { %>
-          <a href="/seed-packets/synthesize" class="cm-synth-start-btn">Begin synthesizing →</a>
+          <a href="/seed-packets/synthesize" class="cm-synth-start-btn">Ready to identify your seeds →</a>
         <% } else { %>
           <a href="/seed-packets/threads" class="cm-synth-start-btn">Your threads are mapped. Tend to them →</a>
           <% if (userThreads.length > 0) { %>

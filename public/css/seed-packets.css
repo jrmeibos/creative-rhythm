@@ -49,7 +49,7 @@
   color: var(--color-bloem);
 }
 
-/* ─── Curiosity Map — shared header ─────────────────────────────────────── */
+/* ─── Seed Packets — shared header ─────────────────────────────────────── */
 
 .cm-header {
   text-align: center;
@@ -74,7 +74,7 @@
   font-weight: 400;
 }
 
-/* ─── Curiosity Map — SVG landing ───────────────────────────────────────── */
+/* ─── Seed Packets — SVG landing ───────────────────────────────────────── */
 
 .cm-map-wrap {
   max-width: 680px;
@@ -106,7 +106,7 @@
   transform: scale(1.05);
 }
 
-/* ─── Curiosity Map — bottom hint ───────────────────────────────────────── */
+/* ─── Seed Packets — bottom hint ───────────────────────────────────────── */
 
 .cm-hint-wrap {
   max-width: 680px;
@@ -141,7 +141,7 @@
   border-color: var(--color-bloem);
 }
 
-/* ─── Curiosity Map — angle page ────────────────────────────────────────── */
+/* ─── Seed Packets — angle page ────────────────────────────────────────── */
 
 .cm-back-link {
   display: inline-block;
@@ -255,7 +255,7 @@
   margin-bottom: 0.25rem;
 }
 
-/* ─── Curiosity Map — single question / answer page ─────────────────────── */
+/* ─── Seed Packets — single question / answer page ─────────────────────── */
 
 .cm-question-page {
   max-width: 640px;
