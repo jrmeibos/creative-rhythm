@@ -9,16 +9,6 @@
   <div class="app-layout">
     <%- include('partials/sidebar') %>
     <main class="main-content">
-<%
-  const markerPositions = {
-    remembering: { x: 340, y: 220 },
-    noticing:    { x: 170, y: 320 },
-    allowing:    { x: 510, y: 320 },
-    imagining:   { x: 200, y: 530 },
-    knowing:     { x: 480, y: 530 },
-  };
-  const PIN_PATH = 'M 0,4 C -4,0 -12,-6 -12,-16 A 12,12 0 1,1 12,-16 C 12,-6 4,0 0,4 Z';
-%>
 
       <div class="cm-header">
         <h1 class="cm-title">Seed Packets</h1>
@@ -26,96 +16,126 @@
       </div>
 
       <div class="cm-map-wrap">
-        <svg viewBox="0 0 680 720" width="100%" class="seed-packets-svg" xmlns="http://www.w3.org/2000/svg">
+        <svg viewBox="0 0 920 560" width="100%" preserveAspectRatio="xMidYMid meet"
+             class="seed-packets-svg" xmlns="http://www.w3.org/2000/svg">
           <title>Seed Packets</title>
-          <desc>An interactive map showing five angles of reflective inquiry. Click an angle marker to explore its questions.</desc>
+          <desc>Five seed packets on a shelf, each representing an angle of self-inquiry. Click a packet to explore its questions.</desc>
 
           <defs>
-            <% angles.forEach(function(angle) { %>
-            <clipPath id="clip-<%= angle.id %>">
-              <path d="<%= PIN_PATH %>"/>
-            </clipPath>
-            <% }); %>
+            <!-- Sparse seeds (count 2–3) -->
+            <pattern id="seeds-3of7" patternUnits="userSpaceOnUse" width="28" height="18">
+              <ellipse cx="7"  cy="7"  rx="3.5" ry="1.8" transform="rotate(-30  7  7)" fill="#705C6C" opacity="0.65"/>
+              <ellipse cx="21" cy="13" rx="3.5" ry="1.8" transform="rotate( 25 21 13)" fill="#705C6C" opacity="0.65"/>
+            </pattern>
+            <!-- Medium seeds (count 4–6) -->
+            <pattern id="seeds-many" patternUnits="userSpaceOnUse" width="18" height="13">
+              <ellipse cx="5"  cy="5"  rx="3"   ry="1.6" transform="rotate(-20  5  5)" fill="#705C6C" opacity="0.72"/>
+              <ellipse cx="14" cy="9"  rx="3"   ry="1.6" transform="rotate( 30 14  9)" fill="#705C6C" opacity="0.72"/>
+            </pattern>
+            <!-- Dense seeds (count 7) -->
+            <pattern id="seeds-full" patternUnits="userSpaceOnUse" width="11" height="8">
+              <ellipse cx="3" cy="3" rx="2.5" ry="1.3" transform="rotate(-15  3  3)" fill="#705C6C" opacity="0.78"/>
+              <ellipse cx="8" cy="6" rx="2.5" ry="1.3" transform="rotate( 35  8  6)" fill="#705C6C" opacity="0.78"/>
+            </pattern>
+            <!-- Soft shadow under each packet -->
+            <radialGradient id="packet-shadow" cx="50%" cy="50%" r="50%">
+              <stop offset="0%"   stop-color="#705C6C" stop-opacity="0.18"/>
+              <stop offset="100%" stop-color="#705C6C" stop-opacity="0"/>
+            </radialGradient>
           </defs>
 
-          <!-- Map background -->
-          <rect width="680" height="720" fill="#F2EEE3" rx="12"/>
+          <!-- Background -->
+          <rect width="920" height="560" fill="#F2EEE3"/>
 
-          <!-- ── Contour lines ────────────────────────────────────────────── -->
-          <!-- 4 concentric ellipses centered on (340, 410) -->
-          <ellipse cx="340" cy="410" rx="55"  ry="32"  fill="none" stroke="#76856C" stroke-width="0.45" opacity="0.28"/>
-          <ellipse cx="340" cy="410" rx="110" ry="65"  fill="none" stroke="#76856C" stroke-width="0.45" opacity="0.26"/>
-          <ellipse cx="340" cy="410" rx="185" ry="112" fill="none" stroke="#76856C" stroke-width="0.4"  opacity="0.22"/>
-          <ellipse cx="340" cy="410" rx="265" ry="165" fill="none" stroke="#76856C" stroke-width="0.4"  opacity="0.18"/>
+          <!-- Shadows (before shelf so line renders on top) -->
+          <ellipse cx="155" cy="465" rx="68" ry="6" fill="url(#packet-shadow)"/>
+          <ellipse cx="315" cy="465" rx="68" ry="6" fill="url(#packet-shadow)"/>
+          <ellipse cx="475" cy="465" rx="68" ry="6" fill="url(#packet-shadow)"/>
+          <ellipse cx="635" cy="465" rx="68" ry="6" fill="url(#packet-shadow)"/>
+          <ellipse cx="795" cy="465" rx="68" ry="6" fill="url(#packet-shadow)"/>
 
-          <!-- 8 flowing horizontal contour lines -->
-          <path d="M 0,105 C 110,99  230,112 340,107 C 450,102 570,114 680,108"
-                fill="none" stroke="#76856C" stroke-width="0.45" opacity="0.22"/>
-          <path d="M 0,168 C 130,162 240,174 340,170 C 440,166 560,177 680,171"
-                fill="none" stroke="#76856C" stroke-width="0.45" opacity="0.24"/>
-          <path d="M 0,248 C 120,242 240,254 340,250 C 440,246 560,257 680,251"
-                fill="none" stroke="#76856C" stroke-width="0.4"  opacity="0.22"/>
-          <path d="M 0,348 C 130,341 250,354 340,350 C 430,346 550,358 680,352"
-                fill="none" stroke="#76856C" stroke-width="0.4"  opacity="0.20"/>
-          <path d="M 0,462 C 115,456 235,468 340,464 C 445,460 565,471 680,465"
-                fill="none" stroke="#76856C" stroke-width="0.4"  opacity="0.22"/>
-          <path d="M 0,548 C 140,542 255,554 340,550 C 425,546 545,558 680,551"
-                fill="none" stroke="#76856C" stroke-width="0.45" opacity="0.24"/>
-          <path d="M 0,618 C 120,612 240,624 340,620 C 440,616 560,628 680,622"
-                fill="none" stroke="#76856C" stroke-width="0.4"  opacity="0.20"/>
-          <path d="M 0,678 C 100,672 220,684 340,680 C 460,676 580,688 680,682"
-                fill="none" stroke="#76856C" stroke-width="0.4"  opacity="0.18"/>
+          <!-- Shelf -->
+          <line x1="60" y1="465" x2="860" y2="465" stroke="#705C6C" stroke-width="1" opacity="0.35"/>
 
-          <!-- ── Compass rose ─────────────────────────────────────────────── -->
-          <g transform="translate(610, 165)" opacity="0.30">
-            <line x1="0" y1="-14" x2="0" y2="14"  stroke="#76856C" stroke-width="0.8"/>
-            <line x1="-14" y1="0" x2="14" y2="0"  stroke="#76856C" stroke-width="0.8"/>
-            <circle cx="0" cy="0" r="3.5" fill="none" stroke="#76856C" stroke-width="0.8"/>
-            <text x="0" y="-18" text-anchor="middle" fill="#76856C"
-                  font-size="7" font-family="Jost, sans-serif" font-weight="300">N</text>
-          </g>
-
-          <!-- ── "You are here" center ───────────────────────────────────── -->
-          <text x="340" y="388" text-anchor="middle" fill="#76856C"
-                font-family="Goldage, Georgia, serif" font-style="italic" font-size="11"
-                opacity="0.7">you are here</text>
-          <circle cx="340" cy="410" r="11" fill="none" stroke="#100F10" stroke-width="1" opacity="0.5"/>
-          <circle cx="340" cy="410" r="5"  fill="#100F10" opacity="0.6"/>
-
-          <!-- ── Angle markers ───────────────────────────────────────────── -->
-          <% angles.forEach(function(angle) {
-            const pos   = markerPositions[angle.id];
-            const count = counts[angle.id] || 0;
-            const isFull = count === 7;
-            const fillHeight = Math.round((count / 7) * 32);
+          <!-- ── Five packets ──────────────────────────────────────────── -->
+          <%
+          const packetSlots = [
+            { id: 'remembering', tx: 85  },
+            { id: 'noticing',    tx: 245 },
+            { id: 'allowing',    tx: 405 },
+            { id: 'imagining',   tx: 565 },
+            { id: 'knowing',     tx: 725 },
+          ];
+          const dotDX = [-36, -24, -12, 0, 12, 24, 36];
+          const PACKET_TY = 225;
           %>
-          <a href="/seed-packets/<%= angle.id %>" class="packet-marker-link">
-            <g transform="translate(<%= pos.x %>, <%= pos.y %>)">
-              <g class="packet-marker-group">
 
-                <!-- Pin background -->
-                <path d="<%= PIN_PATH %>"
-                      fill="<%= isFull ? '#705C6C' : '#F2EEE3' %>"
-                      stroke="#705C6C" stroke-width="1.5"/>
-
-                <% if (count > 0 && !isFull) { %>
-                <!-- Partial fill -->
-                <rect x="-12" y="<%= 4 - fillHeight %>" width="24" height="<%= fillHeight %>"
-                      fill="#705C6C" clip-path="url(#clip-<%= angle.id %>)"/>
-                <% } %>
+          <% packetSlots.forEach(function(slot) {
+            const angle = angles.find(function(a) { return a.id === slot.id; });
+            if (!angle) return;
+            const count   = counts[angle.id] || 0;
+            const isFull  = count === 7;
+            const shortSub = angle.subtitle.split(' — ')[0];
+          %>
+          <a href="/seed-packets/<%= angle.id %>" class="packet-link">
+            <g transform="translate(<%= slot.tx %>, <%= PACKET_TY %>)">
+              <g class="packet-group">
 
                 <% if (isFull) { %>
-                <!-- Apricity completion ring -->
-                <ellipse cx="0" cy="-12" rx="18" ry="18"
-                         fill="none" stroke="#F6C95C" stroke-width="2" opacity="0.7"/>
+                <!-- Apricity completion ring — drawn before rect so it sits behind -->
+                <rect x="-6" y="-24" width="152" height="270" rx="5"
+                      fill="none" stroke="#F6C95C" stroke-width="2.5" opacity="0.7"/>
                 <% } %>
 
-                <!-- Angle name label -->
-                <text y="22" text-anchor="middle"
-                      fill="#705C6C"
+                <!-- Packet body -->
+                <rect x="0" y="0" width="140" height="240" rx="3"
+                      fill="#FAFAFA" stroke="#705C6C" stroke-width="1.2"/>
+
+                <!-- Flap -->
+                <path d="M 0 0 L 70 -18 L 140 0 L 140 22 L 0 22 Z"
+                      fill="#FAFAFA" stroke="#705C6C" stroke-width="1.2"/>
+
+                <!-- Shadow under flap fold -->
+                <line x1="0" y1="22" x2="140" y2="22"
+                      stroke="#705C6C" stroke-width="0.5" opacity="0.4"/>
+
+                <!-- Seeds through opening -->
+                <% if (count === 1) { %>
+                <ellipse cx="70" cy="12" rx="2.5" ry="1.5" fill="#705C6C" opacity="0.7"/>
+                <% } else if (count >= 2 && count <= 3) { %>
+                <rect x="4" y="14" width="132" height="22" fill="url(#seeds-3of7)"/>
+                <% } else if (count >= 4 && count <= 6) { %>
+                <rect x="4" y="12" width="132" height="22" fill="url(#seeds-many)"/>
+                <% } else if (count === 7) { %>
+                <rect x="4" y="12" width="132" height="22" fill="url(#seeds-full)"/>
+                <% } %>
+
+                <!-- Angle name -->
+                <text x="70" y="95" text-anchor="middle"
                       font-family="Goldage, Georgia, serif"
-                      font-size="11.5"
-                      font-weight="400"><%= angle.name %></text>
+                      font-size="18" font-weight="400"
+                      fill="#100F10"><%= angle.name %></text>
+
+                <!-- Thin separator -->
+                <line x1="30" y1="112" x2="110" y2="112"
+                      stroke="#76856C" stroke-width="0.5" opacity="0.5"/>
+
+                <!-- Short subtitle (text before the em dash) -->
+                <text x="70" y="130" text-anchor="middle"
+                      font-family="Goldage, Georgia, serif"
+                      font-style="italic" font-size="9"
+                      textLength="120" lengthAdjust="spacingAndGlyphs"
+                      fill="#76856C"><%= shortSub %></text>
+
+                <!-- 7 progress dots -->
+                <g transform="translate(70, 200)">
+                  <% dotDX.forEach(function(dx, i) { %>
+                  <circle cx="<%= dx %>" cy="0" r="3"
+                          fill="#705C6C"
+                          opacity="<%= i < count ? '1' : '0.2' %>"/>
+                  <% }); %>
+                </g>
+
               </g>
             </g>
           </a>
@@ -124,7 +144,7 @@
         </svg>
       </div>
 
-      <!-- ── Bottom hint ────────────────────────────────────────────────── -->
+      <!-- ── Bottom hint ──────────────────────────────────────────────────── -->
       <div class="cm-hint-wrap" style="margin-top: 1.25rem;">
         <% if (totalAnswered === 0) { %>
           <p class="cm-hint-text">Begin anywhere — answer at least 10 questions. The more the better.</p>

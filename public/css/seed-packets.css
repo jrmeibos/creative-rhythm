@@ -77,7 +77,7 @@
 /* ─── Seed Packets — SVG landing ───────────────────────────────────────── */
 
 .cm-map-wrap {
-  max-width: 680px;
+  max-width: 920px;
   margin: 0 auto;
 }
 
@@ -89,27 +89,28 @@
   overflow: visible;
 }
 
-.packet-marker-link {
+.packet-link {
   cursor: pointer;
   text-decoration: none;
 }
 
-.packet-marker-link:focus { outline: none; }
+.packet-link:focus { outline: none; }
 
-.packet-marker-group {
-  transition: transform 0.15s ease;
+.packet-group {
+  transition: transform 0.2s ease;
   transform-box: fill-box;
   transform-origin: center;
 }
 
-.packet-marker-link:hover .packet-marker-group {
-  transform: scale(1.05);
+.packet-link:hover .packet-group,
+.packet-link:focus-visible .packet-group {
+  transform: scale(1.03);
 }
 
 /* ─── Seed Packets — bottom hint ───────────────────────────────────────── */
 
 .cm-hint-wrap {
-  max-width: 680px;
+  max-width: 920px;
   margin: 0 auto;
   padding-top: 1.25rem;
   border-top: 1px solid rgba(118, 133, 108, 0.2);
