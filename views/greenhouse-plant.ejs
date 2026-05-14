@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <%- include('partials/head') %>
+  <link rel="stylesheet" href="/css/dashboard.css">
+  <link rel="stylesheet" href="/css/greenhouse.css">
+  <link rel="stylesheet" href="/css/lessons.css">
+  <link rel="stylesheet" href="/css/onboarding.css">
+</head>
+<body class="app-body">
+  <div class="app-layout">
+    <%- include('partials/sidebar') %>
+    <main class="main-content" id="main">
+
+      <a href="/greenhouse" class="lesson-back">← Back to Greenhouse</a>
+
+      <div class="gh-plant-form">
+        <h1 class="gh-plant-title">Plant a goal in Bed <%= bed %></h1>
+
+        <div class="ob-seeds">
+          <div class="ob-seed-card">
+            <div class="ob-seed-cols">
+              <div class="ob-seed-field">
+                <label class="ob-seed-label" for="feeling">🌱 The feeling</label>
+                <textarea id="feeling" class="ob-seed-textarea"
+                          rows="4" placeholder="How do I want to feel?"></textarea>
+              </div>
+              <div class="ob-seed-field">
+                <label class="ob-seed-label" for="looks">🌿 What it looks like</label>
+                <textarea id="looks" class="ob-seed-textarea"
+                          rows="4" placeholder="What might this make possible?"></textarea>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <p class="ob-error" id="plant-error" hidden>Please fill in both fields before planting.</p>
+        <div class="ob-actions">
+          <button class="ob-btn ob-btn--primary" id="plant-btn" onclick="plantGoal(<%= bed %>)">Plant this goal →</button>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <script>
+    async function plantGoal(bed) {
+      const feeling   = document.getElementById('feeling').value.trim();
+      const looksLike = document.getElementById('looks').value.trim();
+      const errEl     = document.getElementById('plant-error');
+      errEl.hidden = true;
+
+      if (!feeling || !looksLike) {
+        errEl.hidden = false;
+        return;
+      }
+
+      const btn = document.getElementById('plant-btn');
+      btn.disabled = true;
+      btn.textContent = 'Planting…';
+
+      const res = await fetch('/api/greenhouse/plant-bed', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ bed, feeling, looksLike })
+      });
+
+      if (res.ok) {
+        window.location.href = '/greenhouse';
+      } else {
+        btn.disabled = false;
+        btn.textContent = 'Plant this goal →';
+        errEl.textContent = 'Something went wrong. Please try again.';
+        errEl.hidden = false;
+      }
+    }
+  </script>
+</body>
+</html>

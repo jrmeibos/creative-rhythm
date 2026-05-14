@@ -914,6 +914,12 @@ app.get('/greenhouse', requireAuth, (req, res) => {
   else if (plantedCount === 0) state = 'plant';
   else                    state = 'tending';
 
+  // Load empty bed positions for plant state
+  let emptyBedPositions = null;
+  if (state === 'plant') {
+    emptyBedPositions = db.getEmptyBedPositions(userId);
+  }
+
   // Load seeds only when tending
   let seeds = null;
   if (state === 'tending') {
@@ -975,7 +981,39 @@ app.get('/greenhouse', requireAuth, (req, res) => {
     weekNumber,
     curricularSeason,
     isWinterLocked,
+    emptyBedPositions,
   });
+});
+
+app.get('/greenhouse/plant', requireAuth, (req, res) => {
+  const userId = req.session.user.id;
+  if (!db.getLessonCompletion(userId, 1)) return res.redirect('/greenhouse');
+  const bed = parseInt(req.query.bed);
+  if (![1, 2, 3].includes(bed)) return res.redirect('/greenhouse');
+  res.render('greenhouse-plant', {
+    title: `Plant a goal in Bed ${bed}`,
+    page: 'greenhouse',
+    bed,
+  });
+});
+
+app.post('/api/greenhouse/plant-bed', requireAuth, (req, res) => {
+  const userId = req.session.user.id;
+  if (!db.getLessonCompletion(userId, 1)) {
+    return res.status(403).json({ error: 'Complete Lesson 1 first.' });
+  }
+  const { bed, feeling, looksLike } = req.body;
+  const bedNum = parseInt(bed);
+  if (![1, 2, 3].includes(bedNum)) {
+    return res.status(400).json({ error: 'Invalid bed number.' });
+  }
+  if (!feeling || !looksLike) {
+    return res.status(400).json({ error: 'Both fields are required.' });
+  }
+  const now = getNow(req.session.user);
+  const createdAt = now.toISOString().replace('T', ' ').split('.')[0];
+  db.upsertSeed(userId, bedNum, feeling, looksLike, createdAt, bedNum);
+  res.json({ ok: true });
 });
 
 app.post('/api/greenhouse/plant', requireAuth, (req, res) => {

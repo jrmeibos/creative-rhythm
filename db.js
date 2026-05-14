@@ -315,6 +315,13 @@ db.exec(`
     console.log('✓ Migrated: added kept_at to seeds');
   }
 
+  // Seeds: add bed_position for three-bed Greenhouse flow (Phase 3A)
+  const seedColsBed = db.prepare("PRAGMA table_info(seeds)").all().map(r => r.name);
+  if (!seedColsBed.includes('bed_position')) {
+    db.exec("ALTER TABLE seeds ADD COLUMN bed_position INTEGER DEFAULT NULL");
+    console.log('✓ Migrated: added bed_position to seeds');
+  }
+
   // Default settings for unlock flags
   db.prepare("INSERT OR IGNORE INTO settings (key, value) VALUES ('midcourse_unlocked', 'false')").run();
   db.prepare("INSERT OR IGNORE INTO settings (key, value) VALUES ('harvest_unlocked', 'false')").run();
@@ -1195,7 +1202,7 @@ module.exports = {
     return map;
   },
 
-  upsertSeed(userId, seedNumber, feeling, looksLike, createdAt) {
+  upsertSeed(userId, seedNumber, feeling, looksLike, createdAt, bedPosition = null) {
     // Find existing original seed and update, or insert new
     const existing = db.prepare(
       'SELECT id FROM seeds WHERE user_id=? AND seed_number=? AND is_replacement=0'
@@ -1207,12 +1214,12 @@ module.exports = {
     }
     if (createdAt) {
       return db.prepare(
-        'INSERT INTO seeds (user_id, seed_number, feeling, looks_like, is_active, is_replacement, created_at) VALUES (?, ?, ?, ?, 1, 0, ?)'
-      ).run(userId, seedNumber, feeling || '', looksLike || '', createdAt);
+        'INSERT INTO seeds (user_id, seed_number, feeling, looks_like, is_active, is_replacement, created_at, bed_position) VALUES (?, ?, ?, ?, 1, 0, ?, ?)'
+      ).run(userId, seedNumber, feeling || '', looksLike || '', createdAt, bedPosition);
     }
     return db.prepare(
-      'INSERT INTO seeds (user_id, seed_number, feeling, looks_like, is_active, is_replacement) VALUES (?, ?, ?, ?, 1, 0)'
-    ).run(userId, seedNumber, feeling || '', looksLike || '');
+      'INSERT INTO seeds (user_id, seed_number, feeling, looks_like, is_active, is_replacement, bed_position) VALUES (?, ?, ?, ?, 1, 0, ?)'
+    ).run(userId, seedNumber, feeling || '', looksLike || '', bedPosition);
   },
 
   replaceSeeds(userId, seedNumber, feeling, looksLike, createdAt) {
@@ -1254,6 +1261,13 @@ module.exports = {
     return db.prepare(
       'SELECT COUNT(*) as c FROM seeds WHERE user_id = ? AND is_replacement = 0'
     ).get(userId).c;
+  },
+
+  getEmptyBedPositions(userId) {
+    const filled = db.prepare(
+      'SELECT DISTINCT bed_position FROM seeds WHERE user_id = ? AND bed_position IS NOT NULL'
+    ).all(userId).map(r => r.bed_position);
+    return [1, 2, 3].filter(n => !filled.includes(n));
   },
 
   getAllUsersSeeds() {
