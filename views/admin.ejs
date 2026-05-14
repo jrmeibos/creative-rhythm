@@ -98,7 +98,7 @@
         <div class="admin-card" style="margin-top:1rem">
           <div class="admin-card-row" style="margin-bottom:0.75rem">
             <div>
-              <strong>Seed Time Override</strong>
+              <strong>Goal Time Override</strong>
               <p class="admin-field-hint" style="margin-top:0.2rem">⚠️ Editing planted_at affects the 4-week lock calculation. Use for testing only.</p>
             </div>
           </div>
@@ -106,7 +106,7 @@
             <thead>
               <tr>
                 <th>User</th>
-                <th>Seed #</th>
+                <th>Goal #</th>
                 <th>Feeling</th>
                 <th>Planted at</th>
                 <th>Active</th>
@@ -114,10 +114,10 @@
               </tr>
             </thead>
             <tbody>
-              <% if (allSeeds.length === 0) { %>
-                <tr><td colspan="6" class="admin-empty" style="text-align:left;padding:0.75rem 0.5rem">No seeds planted yet.</td></tr>
+              <% if (allGoals.length === 0) { %>
+                <tr><td colspan="6" class="admin-empty" style="text-align:left;padding:0.75rem 0.5rem">No goals planted yet.</td></tr>
               <% } %>
-              <% for (const s of allSeeds) { %>
+              <% for (const s of allGoals) { %>
                 <tr id="seed-row-<%= s.id %>">
                   <td><%= s.email %></td>
                   <td><%= s.seed_number %></td>
@@ -284,7 +284,7 @@
               <tr>
                 <th>Gardener</th>
                 <th>Opening</th>
-                <th>Seeds</th>
+                <th>Goals</th>
                 <th>Mid-course</th>
                 <th>Closing</th>
                 <th></th>
@@ -307,10 +307,10 @@
                     <% } %>
                   </td>
                   <td>
-                    <% if (s.seeds_count >= 3) { %>
+                    <% if (s.goals_count >= 3) { %>
                       <span class="assess-status assess-status--done">✓ Planted</span>
-                    <% } else if (s.seeds_count > 0) { %>
-                      <span class="assess-status assess-status--partial"><%= s.seeds_count %>/3</span>
+                    <% } else if (s.goals_count > 0) { %>
+                      <span class="assess-status assess-status--partial"><%= s.goals_count %>/3</span>
                     <% } else { %>
                       <span class="assess-status assess-status--pending">Pending</span>
                     <% } %>
@@ -628,9 +628,9 @@
 
       let html = '';
 
-      if (data.seeds && data.seeds.length) {
-        html += '<h4 style="font-weight:700;margin:0.75rem 0 0.5rem;color:var(--color-bloem)">Seeds</h4>';
-        for (const s of data.seeds) {
+      if (data.goals && data.goals.length) {
+        html += '<h4 style="font-weight:700;margin:0.75rem 0 0.5rem;color:var(--color-bloem)">Goals</h4>';
+        for (const s of data.goals) {
           const status = s.status === 'replaced' ? ' <em style="color:#D4956A">(replaced)</em>' : '';
           html += `<div style="margin-bottom:0.5rem"><strong>Seed ${s.seed_number}${status}:</strong> ${s.feeling || '—'} / ${s.looks_like || '—'}`;
           if (s.status === 'replaced' && (s.updated_feeling || s.updated_looks_like)) {
@@ -747,7 +747,7 @@
       const date = document.getElementById('seed-date-' + id).value;
       const statusEl = document.getElementById('seed-status-' + id);
       if (!date) return;
-      const res = await fetch('/api/admin/seeds/' + id + '/planted-at', {
+      const res = await fetch('/api/admin/goals/' + id + '/planted-at', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ date })

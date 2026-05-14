@@ -856,9 +856,9 @@ function getNow(user) {
   return new Date();
 }
 
-function isSeedLocked(seed, user) {
-  if (!seed || !seed.created_at) return false;
-  const planted = new Date(seed.created_at);
+function isGoalLocked(goal, user) {
+  if (!goal || !goal.created_at) return false;
+  const planted = new Date(goal.created_at);
   return getNow(user).getTime() < planted.getTime() + 28 * 24 * 60 * 60 * 1000;
 }
 
@@ -875,16 +875,16 @@ const STAGE_LABELS = {
 function getGardenStage(user) {
   const now = getNow(user);
 
-  const seedMap = db.getGreenhouseSeeds(user.id);
-  const activeSeeds = [1, 2, 3]
-    .map(n => seedMap[n].replacement || seedMap[n].original)
+  const goalMap = db.getGreenhouseGoals(user.id);
+  const activeGoals = [1, 2, 3]
+    .map(n => goalMap[n].replacement || goalMap[n].original)
     .filter(Boolean)
     .filter(s => new Date(s.created_at) <= now);
-  if (activeSeeds.length === 0) return null;
+  if (activeGoals.length === 0) return null;
 
-  const earliest = activeSeeds.reduce(
+  const earliest = activeGoals.reduce(
     (min, s) => s.created_at < min.created_at ? s : min,
-    activeSeeds[0]
+    activeGoals[0]
   );
 
   const closing = db.getAssessment(user.id, 'closing');
@@ -915,7 +915,7 @@ app.get('/greenhouse', requireAuth, (req, res) => {
       title: 'The Greenhouse',
       page: 'greenhouse',
       state: 'welcome',
-      seeds: null, growthCheckUnlocked: false, growthCheckDate: null,
+      goals: null, growthCheckUnlocked: false, growthCheckDate: null,
       opening: null, closing: null,
       questions: ASSESSMENT_QUESTIONS, closingQuestions: CLOSING_QUESTIONS,
       gardenStage: null, stageSlug: null, stageLabel: null,
@@ -924,8 +924,8 @@ app.get('/greenhouse', requireAuth, (req, res) => {
     });
   }
 
-  // State: beds-empty → tending (based on whether any seeds exist)
-  const plantedCount = db.getPlantedSeedCount(userId);
+  // State: beds-empty → tending (based on whether any goals exist)
+  const plantedCount = db.getPlantedGoalCount(userId);
 
   let state;
   if (plantedCount === 0) state = 'beds-empty';
@@ -937,17 +937,17 @@ app.get('/greenhouse', requireAuth, (req, res) => {
     emptyBedPositions = db.getEmptyBedPositions(userId);
   }
 
-  // Load seeds only when tending
-  let seeds = null;
+  // Load goals only when tending
+  let goals = null;
   if (state === 'tending') {
-    seeds = db.getGreenhouseSeeds(userId);
+    goals = db.getGreenhouseGoals(userId);
     // Attach lock status to each slot
     for (const n of [1, 2, 3]) {
-      const entry = seeds[n];
-      const activeSeed = entry.replacement || entry.original;
-      entry.locked = isSeedLocked(activeSeed, req.session.user);
-      if (entry.locked && activeSeed) {
-        const unlockMs = new Date(activeSeed.created_at).getTime() + 28 * 24 * 60 * 60 * 1000;
+      const entry = goals[n];
+      const activeGoal = entry.replacement || entry.original;
+      entry.locked = isGoalLocked(activeGoal, req.session.user);
+      if (entry.locked && activeGoal) {
+        const unlockMs = new Date(activeGoal.created_at).getTime() + 28 * 24 * 60 * 60 * 1000;
         entry.unlockDate = new Date(unlockMs).toLocaleDateString('en-US', { month: 'long', day: 'numeric' });
       }
     }
@@ -985,7 +985,7 @@ app.get('/greenhouse', requireAuth, (req, res) => {
     title: 'The Greenhouse',
     page: 'greenhouse',
     state,
-    seeds,
+    goals,
     growthCheckUnlocked,
     growthCheckDate,
     opening,
@@ -1029,7 +1029,7 @@ app.post('/api/greenhouse/plant-bed', requireAuth, (req, res) => {
   }
   const now = getNow(req.session.user);
   const createdAt = now.toISOString().replace('T', ' ').split('.')[0];
-  db.upsertSeed(userId, bedNum, feeling, looksLike, createdAt, bedNum);
+  db.upsertGreenhouseGoal(userId, bedNum, feeling, looksLike, createdAt, bedNum);
   res.json({ ok: true });
 });
 
@@ -1050,19 +1050,21 @@ app.post('/api/greenhouse/plant', requireAuth, (req, res) => {
     const num = parseInt(s.seed_number);
     if (![1, 2, 3].includes(num)) return res.status(400).json({ error: 'Invalid seed number.' });
     if (!s.feeling || !s.looks_like) return res.status(400).json({ error: 'All seed fields are required.' });
-    db.upsertSeed(userId, num, s.feeling, s.looks_like, createdAt);
+    db.upsertGreenhouseGoal(userId, num, s.feeling, s.looks_like, createdAt);
   }
   res.json({ ok: true });
 });
 
-app.post('/api/seeds/:id/keep', requireAuth, (req, res) => {
-  const seedId = parseInt(req.params.id);
-  if (!seedId) return res.status(400).json({ error: 'Invalid seed id.' });
-  const seed = db.getSeedById(seedId, req.session.user.id);
-  if (!seed) return res.status(404).json({ error: 'Seed not found.' });
-  if (isSeedLocked(seed, req.session.user)) return res.status(403).json({ error: 'Seed is still in the lock period.' });
+app.post('/api/seeds/:id/keep', requireAuth, (req, res) => res.redirect(301, '/api/goals/' + req.params.id + '/keep'));
+
+app.post('/api/goals/:id/keep', requireAuth, (req, res) => {
+  const goalId = parseInt(req.params.id);
+  if (!goalId) return res.status(400).json({ error: 'Invalid goal id.' });
+  const goal = db.getGoalById(goalId, req.session.user.id);
+  if (!goal) return res.status(404).json({ error: 'Goal not found.' });
+  if (isGoalLocked(goal, req.session.user)) return res.status(403).json({ error: 'Goal is still in the lock period.' });
   const { kept } = req.body;
-  db.keepSeed(seedId, req.session.user.id, !!kept);
+  db.keepGoal(goalId, req.session.user.id, !!kept);
   res.json({ ok: true });
 });
 
@@ -1070,20 +1072,20 @@ app.post('/api/greenhouse/replace', requireAuth, (req, res) => {
   const { seedNumber, feeling, looksLike } = req.body;
   const num = parseInt(seedNumber);
   if (![1, 2, 3].includes(num)) return res.status(400).json({ error: 'Invalid seed number.' });
-  const activeSeed = db.getActiveSeedByNumber(req.session.user.id, num);
-  if (activeSeed && isSeedLocked(activeSeed, req.session.user)) {
-    return res.status(403).json({ error: 'Seed is still in the lock period.' });
+  const activeGoal = db.getActiveGoalByNumber(req.session.user.id, num);
+  if (activeGoal && isGoalLocked(activeGoal, req.session.user)) {
+    return res.status(403).json({ error: 'Goal is still in the lock period.' });
   }
   const now = getNow(req.session.user);
   const createdAt = now.toISOString().replace('T', ' ').split('.')[0];
-  db.replaceSeeds(req.session.user.id, num, feeling, looksLike, createdAt);
+  db.replaceGoals(req.session.user.id, num, feeling, looksLike, createdAt);
   res.json({ ok: true });
 });
 
 app.post('/api/greenhouse/update', requireAuth, (req, res) => {
   const { seedId, feeling, looksLike } = req.body;
   if (!seedId) return res.status(400).json({ error: 'seedId required.' });
-  db.updateSeedById(parseInt(seedId), req.session.user.id, feeling, looksLike);
+  db.updateGoalById(parseInt(seedId), req.session.user.id, feeling, looksLike);
   res.json({ ok: true });
 });
 
@@ -1405,7 +1407,7 @@ app.get('/admin', requireAdmin, (req, res) => {
   const harvestUnlocked    = db.getSetting('harvest_unlocked') === 'true';
   const midcourseUnlocked  = db.getSetting('midcourse_unlocked') === 'true';
   const simulatedToday     = db.getSetting('simulated_today') || null;
-  const allSeeds           = db.getAllSeedsForAdmin();
+  const allGoals           = db.getAllGoalsForAdmin();
   const studentAssessments = db.getAllStudentAssessmentStatus();
 
   // Attach homework to each lesson for the edit dialog
@@ -1429,7 +1431,7 @@ app.get('/admin', requireAdmin, (req, res) => {
     users, lessons, resources, lessonStats, lessonHomework, courseStartDate,
     harvestUnlocked, midcourseUnlocked,
     midcourseUnlockDate, closingUnlockDate,
-    simulatedToday, allSeeds,
+    simulatedToday, allGoals,
     studentAssessments,
     questions: ASSESSMENT_QUESTIONS,
     closingQuestions: CLOSING_QUESTIONS
@@ -1536,12 +1538,14 @@ app.post('/api/admin/time-travel/clear', requireAdmin, (req, res) => {
   res.redirect(ref);
 });
 
-app.post('/api/admin/seeds/:id/planted-at', requireAdmin, (req, res) => {
+app.post('/api/admin/seeds/:id/planted-at', requireAdmin, (req, res) => res.redirect(301, '/api/admin/goals/' + req.params.id + '/planted-at'));
+
+app.post('/api/admin/goals/:id/planted-at', requireAdmin, (req, res) => {
   const { date } = req.body;
   if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
     return res.status(400).json({ error: 'Invalid date format. Use YYYY-MM-DD.' });
   }
-  db.updateSeedCreatedAt(parseInt(req.params.id), date);
+  db.updateGoalCreatedAt(parseInt(req.params.id), date);
   res.json({ ok: true });
 });
 

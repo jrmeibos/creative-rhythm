@@ -123,7 +123,7 @@ db.exec(`
     UNIQUE(user_id, week_start)
   );
 
-  CREATE TABLE IF NOT EXISTS seeds (
+  CREATE TABLE IF NOT EXISTS goals (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER NOT NULL,
     seed_number INTEGER NOT NULL,
@@ -158,6 +158,26 @@ db.exec(`
 
 // Migrate existing databases to add new columns
 (function migrate() {
+  // 3B-i: Rename seeds → goals (Greenhouse planted commitments vocabulary migration)
+  {
+    const goalsTableExists = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='goals'").get();
+    const seedsTableExists = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='seeds'").get();
+    if (!goalsTableExists && seedsTableExists) {
+      // First migration: rename seeds → goals
+      db.exec('ALTER TABLE seeds RENAME TO goals');
+      console.log('✓ Migrated: renamed seeds → goals (Greenhouse planted commitments)');
+    } else if (goalsTableExists && seedsTableExists) {
+      // Post-migration: CREATE TABLE IF NOT EXISTS seeds created an empty orphan seeds table; drop it
+      const orphanCount = db.prepare('SELECT COUNT(*) as c FROM seeds').get().c;
+      if (orphanCount === 0) {
+        db.exec('DROP TABLE seeds');
+      } else {
+        throw new Error('Both seeds and goals tables have data — resolve manually before starting server');
+      }
+    }
+    // else: only goals exists (normal post-migration state) — nothing to do
+  }
+
   const goalCols = db.prepare("PRAGMA table_info(weekly_goals)").all().map(r => r.name);
   if (!goalCols.includes('reflection')) {
     db.exec("ALTER TABLE weekly_goals ADD COLUMN reflection TEXT DEFAULT ''");
@@ -248,25 +268,25 @@ db.exec(`
     console.log('✓ Migrated: added q12_text to self_assessments');
   }
 
-  // Seeds: add legacy tending columns if missing (for tables created before the rebuild)
-  const seedCols = db.prepare("PRAGMA table_info(seeds)").all().map(r => r.name);
+  // Goals: add legacy tending columns if missing (for tables created before the rebuild)
+  const seedCols = db.prepare("PRAGMA table_info(goals)").all().map(r => r.name);
   if (!seedCols.includes('status')) {
-    db.exec("ALTER TABLE seeds ADD COLUMN status TEXT DEFAULT 'active'");
-    console.log('✓ Migrated: added status to seeds');
+    db.exec("ALTER TABLE goals ADD COLUMN status TEXT DEFAULT 'active'");
+    console.log('✓ Migrated: added status to goals');
   }
   if (!seedCols.includes('updated_feeling')) {
-    db.exec("ALTER TABLE seeds ADD COLUMN updated_feeling TEXT DEFAULT ''");
-    console.log('✓ Migrated: added updated_feeling to seeds');
+    db.exec("ALTER TABLE goals ADD COLUMN updated_feeling TEXT DEFAULT ''");
+    console.log('✓ Migrated: added updated_feeling to goals');
   }
   if (!seedCols.includes('updated_looks_like')) {
-    db.exec("ALTER TABLE seeds ADD COLUMN updated_looks_like TEXT DEFAULT ''");
-    console.log('✓ Migrated: added updated_looks_like to seeds');
+    db.exec("ALTER TABLE goals ADD COLUMN updated_looks_like TEXT DEFAULT ''");
+    console.log('✓ Migrated: added updated_looks_like to goals');
   }
 
-  // Seeds: rebuild to support multi-row replacements (removes UNIQUE constraint)
-  const seedCols2 = db.prepare("PRAGMA table_info(seeds)").all().map(r => r.name);
+  // Goals: rebuild to support multi-row replacements (removes UNIQUE constraint)
+  const seedCols2 = db.prepare("PRAGMA table_info(goals)").all().map(r => r.name);
   if (!seedCols2.includes('is_active')) {
-    const existingSeeds = db.prepare('SELECT * FROM seeds').all();
+    const existingSeeds = db.prepare('SELECT * FROM goals').all();
     const hasStatus  = seedCols2.includes('status');
     const hasUpdated = seedCols2.includes('updated_feeling');
     db.exec(`
@@ -303,23 +323,23 @@ db.exec(`
         s.created_at, s.updated_at
       );
     }
-    db.exec('DROP TABLE seeds');
-    db.exec('ALTER TABLE seeds_new RENAME TO seeds');
-    console.log('✓ Migrated: rebuilt seeds table with multi-row replacement support');
+    db.exec('DROP TABLE goals');
+    db.exec('ALTER TABLE seeds_new RENAME TO goals');
+    console.log('✓ Migrated: rebuilt goals table with multi-row replacement support');
   }
 
-  // Seeds: add kept_at for "keep growing" persistence
-  const seedColsFinal = db.prepare("PRAGMA table_info(seeds)").all().map(r => r.name);
+  // Goals: add kept_at for "keep growing" persistence
+  const seedColsFinal = db.prepare("PRAGMA table_info(goals)").all().map(r => r.name);
   if (!seedColsFinal.includes('kept_at')) {
-    db.exec("ALTER TABLE seeds ADD COLUMN kept_at DATETIME");
-    console.log('✓ Migrated: added kept_at to seeds');
+    db.exec("ALTER TABLE goals ADD COLUMN kept_at DATETIME");
+    console.log('✓ Migrated: added kept_at to goals');
   }
 
-  // Seeds: add bed_position for three-bed Greenhouse flow (Phase 3A)
-  const seedColsBed = db.prepare("PRAGMA table_info(seeds)").all().map(r => r.name);
+  // Goals: add bed_position for three-bed Greenhouse flow (Phase 3A)
+  const seedColsBed = db.prepare("PRAGMA table_info(goals)").all().map(r => r.name);
   if (!seedColsBed.includes('bed_position')) {
-    db.exec("ALTER TABLE seeds ADD COLUMN bed_position INTEGER DEFAULT NULL");
-    console.log('✓ Migrated: added bed_position to seeds');
+    db.exec("ALTER TABLE goals ADD COLUMN bed_position INTEGER DEFAULT NULL");
+    console.log('✓ Migrated: added bed_position to goals');
   }
 
   // Users: add has_visited_greenhouse for first-visit welcome gate
@@ -476,12 +496,12 @@ db.exec(`
     console.log('✓ Migrated: Added curricular_season to lessons');
   }
 
-  // V2: wipe all seeds planted during onboarding — seeds are now planted via Greenhouse after Lesson 1
+  // V2: wipe all goals planted during onboarding — goals are now planted via Greenhouse after Lesson 1
   const v2SeedsFlag = db.prepare("SELECT value FROM settings WHERE key='seeds_v2_migrated'").get();
   if (!v2SeedsFlag) {
-    db.exec('DELETE FROM seeds');
+    db.exec('DELETE FROM goals');
     db.prepare("INSERT OR IGNORE INTO settings (key, value) VALUES ('seeds_v2_migrated', 'true')").run();
-    console.log('✓ Migrated: Wiped seed data — V2 model resets all seeds; users will re-plant after Lesson 1');
+    console.log('✓ Migrated: Wiped goal data — V2 model resets all goals; users will re-plant after Lesson 1');
   }
 })();
 
@@ -746,7 +766,7 @@ function seedLesson1Homework() {
   db.prepare('INSERT INTO lesson_homework (lesson_id, position, title, link_url, link_label) VALUES (?, ?, ?, ?, ?)')
     .run(lesson.id, 1, 'Choose your current season on the dashboard.', '/dashboard', 'Go to Dashboard');
   db.prepare('INSERT INTO lesson_homework (lesson_id, position, title, link_url, link_label) VALUES (?, ?, ?, ?, ?)')
-    .run(lesson.id, 2, 'Plant your three seeds in The Greenhouse.', '/greenhouse', 'Open The Greenhouse');
+    .run(lesson.id, 2, 'Plant your three goals in The Greenhouse.', '/greenhouse', 'Open The Greenhouse');
   console.log('✓ Seeded Lesson 1 homework tasks');
 }
 
@@ -1081,7 +1101,7 @@ module.exports = {
     db.prepare('DELETE FROM community_posts WHERE user_id=?').run(id);
     db.prepare('DELETE FROM lesson_completions WHERE user_id=?').run(id);
     db.prepare('DELETE FROM weekly_goals WHERE user_id=?').run(id);
-    db.prepare('DELETE FROM seeds WHERE user_id=?').run(id);
+    db.prepare('DELETE FROM goals WHERE user_id=?').run(id);
     db.prepare('DELETE FROM self_assessments WHERE user_id=?').run(id);
     return db.prepare('DELETE FROM users WHERE id=?').run(id);
   },
@@ -1191,19 +1211,19 @@ module.exports = {
     return db.prepare('DELETE FROM resources WHERE id=?').run(id);
   },
 
-  // ─── Seeds ─────────────────────────────────────────────────────────────────
+  // ─── Goals ─────────────────────────────────────────────────────────────────
 
-  getUserSeeds(userId) {
-    // Returns the original (non-replacement) seed per seed_number — used by profile route
+  getUserGoals(userId) {
+    // Returns the original (non-replacement) goal per seed_number — used by profile route
     return db.prepare(
-      'SELECT * FROM seeds WHERE user_id=? AND is_replacement=0 ORDER BY seed_number ASC'
+      'SELECT * FROM goals WHERE user_id=? AND is_replacement=0 ORDER BY seed_number ASC'
     ).all(userId);
   },
 
-  getGreenhouseSeeds(userId) {
+  getGreenhouseGoals(userId) {
     // Returns { 1: { original, replacement }, 2: ..., 3: ... }
     const all = db.prepare(
-      'SELECT * FROM seeds WHERE user_id=? ORDER BY seed_number ASC, id ASC'
+      'SELECT * FROM goals WHERE user_id=? ORDER BY seed_number ASC, id ASC'
     ).all(userId);
     const map = { 1: { original: null, replacement: null },
                   2: { original: null, replacement: null },
@@ -1218,95 +1238,95 @@ module.exports = {
     return map;
   },
 
-  upsertSeed(userId, seedNumber, feeling, looksLike, createdAt, bedPosition = null) {
-    // Find existing original seed and update, or insert new
+  upsertGreenhouseGoal(userId, seedNumber, feeling, looksLike, createdAt, bedPosition = null) {
+    // Find existing original goal and update, or insert new
     const existing = db.prepare(
-      'SELECT id FROM seeds WHERE user_id=? AND seed_number=? AND is_replacement=0'
+      'SELECT id FROM goals WHERE user_id=? AND seed_number=? AND is_replacement=0'
     ).get(userId, seedNumber);
     if (existing) {
       return db.prepare(
-        'UPDATE seeds SET feeling=?, looks_like=?, updated_at=CURRENT_TIMESTAMP WHERE id=?'
+        'UPDATE goals SET feeling=?, looks_like=?, updated_at=CURRENT_TIMESTAMP WHERE id=?'
       ).run(feeling || '', looksLike || '', existing.id);
     }
     if (createdAt) {
       return db.prepare(
-        'INSERT INTO seeds (user_id, seed_number, feeling, looks_like, is_active, is_replacement, created_at, bed_position) VALUES (?, ?, ?, ?, 1, 0, ?, ?)'
+        'INSERT INTO goals (user_id, seed_number, feeling, looks_like, is_active, is_replacement, created_at, bed_position) VALUES (?, ?, ?, ?, 1, 0, ?, ?)'
       ).run(userId, seedNumber, feeling || '', looksLike || '', createdAt, bedPosition);
     }
     return db.prepare(
-      'INSERT INTO seeds (user_id, seed_number, feeling, looks_like, is_active, is_replacement, bed_position) VALUES (?, ?, ?, ?, 1, 0, ?)'
+      'INSERT INTO goals (user_id, seed_number, feeling, looks_like, is_active, is_replacement, bed_position) VALUES (?, ?, ?, ?, 1, 0, ?)'
     ).run(userId, seedNumber, feeling || '', looksLike || '', bedPosition);
   },
 
-  replaceSeeds(userId, seedNumber, feeling, looksLike, createdAt) {
-    // Mark current active seed as inactive
+  replaceGoals(userId, seedNumber, feeling, looksLike, createdAt) {
+    // Mark current active goal as inactive
     db.prepare(
-      'UPDATE seeds SET is_active=0, updated_at=CURRENT_TIMESTAMP WHERE user_id=? AND seed_number=? AND is_active=1'
+      'UPDATE goals SET is_active=0, updated_at=CURRENT_TIMESTAMP WHERE user_id=? AND seed_number=? AND is_active=1'
     ).run(userId, seedNumber);
-    // Get original seed id for the replaces_seed_id reference
+    // Get original goal id for the replaces_seed_id reference
     const original = db.prepare(
-      'SELECT id FROM seeds WHERE user_id=? AND seed_number=? AND is_replacement=0 ORDER BY id ASC LIMIT 1'
+      'SELECT id FROM goals WHERE user_id=? AND seed_number=? AND is_replacement=0 ORDER BY id ASC LIMIT 1'
     ).get(userId, seedNumber);
     if (createdAt) {
       return db.prepare(
-        'INSERT INTO seeds (user_id, seed_number, feeling, looks_like, is_active, is_replacement, replaces_seed_id, created_at) VALUES (?, ?, ?, ?, 1, 1, ?, ?)'
+        'INSERT INTO goals (user_id, seed_number, feeling, looks_like, is_active, is_replacement, replaces_seed_id, created_at) VALUES (?, ?, ?, ?, 1, 1, ?, ?)'
       ).run(userId, seedNumber, feeling || '', looksLike || '', original?.id || null, createdAt);
     }
     return db.prepare(
-      'INSERT INTO seeds (user_id, seed_number, feeling, looks_like, is_active, is_replacement, replaces_seed_id) VALUES (?, ?, ?, ?, 1, 1, ?)'
+      'INSERT INTO goals (user_id, seed_number, feeling, looks_like, is_active, is_replacement, replaces_seed_id) VALUES (?, ?, ?, ?, 1, 1, ?)'
     ).run(userId, seedNumber, feeling || '', looksLike || '', original?.id || null);
   },
 
-  updateSeedById(seedId, userId, feeling, looksLike) {
+  updateGoalById(seedId, userId, feeling, looksLike) {
     return db.prepare(
-      'UPDATE seeds SET feeling=?, looks_like=?, updated_at=CURRENT_TIMESTAMP WHERE id=? AND user_id=?'
+      'UPDATE goals SET feeling=?, looks_like=?, updated_at=CURRENT_TIMESTAMP WHERE id=? AND user_id=?'
     ).run(feeling || '', looksLike || '', seedId, userId);
   },
 
-  getSeedById(seedId, userId) {
-    return db.prepare('SELECT * FROM seeds WHERE id = ? AND user_id = ?').get(seedId, userId);
+  getGoalById(seedId, userId) {
+    return db.prepare('SELECT * FROM goals WHERE id = ? AND user_id = ?').get(seedId, userId);
   },
 
-  getActiveSeedByNumber(userId, seedNumber) {
+  getActiveGoalByNumber(userId, seedNumber) {
     return db.prepare(
-      'SELECT * FROM seeds WHERE user_id = ? AND seed_number = ? AND is_active = 1 ORDER BY id DESC LIMIT 1'
+      'SELECT * FROM goals WHERE user_id = ? AND seed_number = ? AND is_active = 1 ORDER BY id DESC LIMIT 1'
     ).get(userId, seedNumber);
   },
 
-  getPlantedSeedCount(userId) {
+  getPlantedGoalCount(userId) {
     return db.prepare(
-      'SELECT COUNT(*) as c FROM seeds WHERE user_id = ? AND is_replacement = 0'
+      'SELECT COUNT(*) as c FROM goals WHERE user_id = ? AND is_replacement = 0'
     ).get(userId).c;
   },
 
   getEmptyBedPositions(userId) {
     const filled = db.prepare(
-      'SELECT DISTINCT bed_position FROM seeds WHERE user_id = ? AND bed_position IS NOT NULL'
+      'SELECT DISTINCT bed_position FROM goals WHERE user_id = ? AND bed_position IS NOT NULL'
     ).all(userId).map(r => r.bed_position);
     return [1, 2, 3].filter(n => !filled.includes(n));
   },
 
-  getAllUsersSeeds() {
+  getAllUsersGoals() {
     return db.prepare(`
       SELECT s.*, u.name as user_name, u.avatar_initial
-      FROM seeds s
+      FROM goals s
       JOIN users u ON s.user_id = u.id
       WHERE s.is_replacement = 0
       ORDER BY u.name ASC, s.seed_number ASC
     `).all();
   },
 
-  getAllSeedsForAdmin() {
+  getAllGoalsForAdmin() {
     return db.prepare(`
       SELECT s.id, s.user_id, s.seed_number, s.feeling, s.created_at, s.is_active, u.email
-      FROM seeds s
+      FROM goals s
       JOIN users u ON s.user_id = u.id
       ORDER BY u.name ASC, s.seed_number ASC, s.id ASC
     `).all();
   },
 
-  updateSeedCreatedAt(seedId, dateStr) {
-    return db.prepare("UPDATE seeds SET created_at = ? WHERE id = ?").run(dateStr + ' 00:00:00', seedId);
+  updateGoalCreatedAt(seedId, dateStr) {
+    return db.prepare("UPDATE goals SET created_at = ? WHERE id = ?").run(dateStr + ' 00:00:00', seedId);
   },
 
   // ─── Self-Assessments ──────────────────────────────────────────────────────
@@ -1347,14 +1367,14 @@ module.exports = {
       harvest_reflection || '');
   },
 
-  keepSeed(seedId, userId, kept) {
+  keepGoal(seedId, userId, kept) {
     if (kept) {
       return db.prepare(
-        'UPDATE seeds SET kept_at=CURRENT_TIMESTAMP, updated_at=CURRENT_TIMESTAMP WHERE id=? AND user_id=?'
+        'UPDATE goals SET kept_at=CURRENT_TIMESTAMP, updated_at=CURRENT_TIMESTAMP WHERE id=? AND user_id=?'
       ).run(seedId, userId);
     }
     return db.prepare(
-      'UPDATE seeds SET kept_at=NULL, updated_at=CURRENT_TIMESTAMP WHERE id=? AND user_id=?'
+      'UPDATE goals SET kept_at=NULL, updated_at=CURRENT_TIMESTAMP WHERE id=? AND user_id=?'
     ).run(seedId, userId);
   },
 
@@ -1402,7 +1422,7 @@ module.exports = {
         (SELECT completed_at FROM self_assessments WHERE user_id=u.id AND assessment_type='opening') as opening_at,
         (SELECT completed_at FROM self_assessments WHERE user_id=u.id AND assessment_type='midcourse') as midcourse_at,
         (SELECT completed_at FROM self_assessments WHERE user_id=u.id AND assessment_type='closing') as closing_at,
-        (SELECT COUNT(*) FROM seeds WHERE user_id=u.id AND (feeling!='' OR looks_like!='')) as seeds_count
+        (SELECT COUNT(*) FROM goals WHERE user_id=u.id AND (feeling!='' OR looks_like!='')) as goals_count
       FROM users u
       WHERE u.role = 'student'
       ORDER BY u.name ASC
@@ -1414,8 +1434,8 @@ module.exports = {
     const opening  = db.prepare("SELECT * FROM self_assessments WHERE user_id=? AND assessment_type='opening'").get(userId);
     const midcourse = db.prepare("SELECT * FROM self_assessments WHERE user_id=? AND assessment_type='midcourse'").get(userId);
     const closing  = db.prepare("SELECT * FROM self_assessments WHERE user_id=? AND assessment_type='closing'").get(userId);
-    const seeds    = db.prepare('SELECT * FROM seeds WHERE user_id=? ORDER BY seed_number').all(userId);
-    return { user, opening, midcourse, closing, seeds };
+    const goals    = db.prepare('SELECT * FROM goals WHERE user_id=? ORDER BY seed_number').all(userId);
+    return { user, opening, midcourse, closing, goals };
   },
 
   // ─── Seed Packets ──────────────────────────────────────────────────────────

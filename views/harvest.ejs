@@ -33,13 +33,13 @@
         <!-- Seeds reveal -->
         <section class="dash-section">
           <div class="dash-section-header">
-            <h2 class="dash-section-title harvest-reveal-heading">These are the seeds you planted.</h2>
+            <h2 class="dash-section-title harvest-reveal-heading">These are the goals you planted.</h2>
           </div>
           <div class="harvest-seeds-grid">
             <% for (let n = 1; n <= 3; n++) { %>
               <% const s = seedsMap[n]; %>
               <div class="harvest-seed-card">
-                <span class="harvest-seed-num">Seed <%= ['One','Two','Three'][n-1] %></span>
+                <span class="harvest-seed-num">Goal <%= ['One','Two','Three'][n-1] %></span>
                 <% if (s && s.feeling) { %>
                   <div class="harvest-seed-field">
                     <span class="harvest-seed-field-label">🌱 The feeling</span>
@@ -53,7 +53,7 @@
                   </div>
                 <% } %>
                 <% if (!s || (!s.feeling && !s.looks_like)) { %>
-                  <p class="harvest-seed-empty">No seed planted here.</p>
+                  <p class="harvest-seed-empty">No goal planted here.</p>
                 <% } %>
               </div>
             <% } %>
@@ -116,7 +116,7 @@
             <!-- Harvest reflection -->
             <div class="harvest-reflection-block">
               <h3 class="harvest-reflection-title">The Harvest</h3>
-              <p class="harvest-reflection-prompt">Look back at the seeds you planted. What grew? What surprised you? What are you still tending?</p>
+              <p class="harvest-reflection-prompt">Look back at the goals you planted. What grew? What surprised you? What are you still tending?</p>
               <textarea class="ob-textarea harvest-reflection-ta" data-field="harvest_reflection"
                         rows="8" placeholder="Write as much or as little as feels true."></textarea>
             </div>

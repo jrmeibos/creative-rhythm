@@ -25,7 +25,7 @@
         <h1 class="gh-locked-title">The Greenhouse</h1>
         <div class="gh-welcome-body">
           <p>Here is your greenhouse.</p>
-          <p>In the coming weeks, we will plant seeds here — goals that you want to work on during our time together.</p>
+          <p>In the coming weeks, we will plant goals here — intentions for what you want to work on during our time together.</p>
           <p>But for now, this season is about figuring out what you want to plant. We will start with reflecting, knowing that this intentionality will set us up for success in the rest of the course.</p>
         </div>
         <form method="POST" action="/greenhouse/enter" style="margin-top:2rem">
@@ -42,7 +42,7 @@
         <% if (isWinterLocked) { %>
         <p class="gh-subtitle">A quiet greenhouse. Beds wait for Spring.</p>
         <% } else { %>
-        <p class="gh-subtitle">Plant three seeds. What do you hope to grow?</p>
+        <p class="gh-subtitle">Plant three goals. What do you hope to grow?</p>
         <% } %>
       </header>
 
@@ -62,7 +62,7 @@
             </div>
           <% } %>
         </div>
-        <p class="gh-beds-caption">You can plant up to three goals. Plant them one at a time, in whatever order feels right.</p>
+        <p class="gh-beds-caption">You can plant up to three goals here. Plant them one at a time, in whatever order feels right.</p>
       </section>
 
       <% } else { %>
@@ -90,7 +90,7 @@
       <% } %>
 
       <% if (closing) { %>
-      <!-- ── Growth Check: Then & Now (above seeds) ────────────────────────── -->
+      <!-- ── Growth Check: Then & Now (above goals) ────────────────────────── -->
       <section class="dash-section">
         <div class="gh-growth-check">
           <h2 class="gh-growth-check-title">Growth Check</h2>
@@ -205,7 +205,7 @@
       <section class="dash-section">
         <div class="gh-seeds">
           <% for (let n = 1; n <= 3; n++) { %>
-            <% const entry = seeds[n] || { original: null, replacement: null, locked: false }; %>
+            <% const entry = goals[n] || { original: null, replacement: null, locked: false }; %>
             <% const orig = entry.original; %>
             <% const repl = entry.replacement; %>
             <% const isLocked = entry.locked; %>
@@ -213,7 +213,7 @@
             <% const isKept = orig && !!orig.kept_at; %>
 
             <div class="gh-seed-card" id="gh-card-<%= n %>">
-              <div class="gh-seed-num">Seed <%= seedLabel %></div>
+              <div class="gh-seed-num">Goal <%= seedLabel %></div>
 
               <% if (isLocked) { %>
                 <!-- ── Locked: 28-day tending period ── -->
@@ -240,7 +240,7 @@
                     </div>
                   </div>
                   <div>
-                    <span class="gh-updated-tag">New seed planted</span>
+                    <span class="gh-updated-tag">New goal planted</span>
                     <div class="gh-seed-row" style="margin-top:0.5rem">
                       <div class="gh-col">
                         <span class="gh-col-label">The feeling</span>
@@ -283,9 +283,9 @@
 
                 <div class="gh-active-block" id="gh-active-<%= n %>">
                   <div class="gh-active-header">
-                    <span class="gh-updated-tag">New seed planted</span>
+                    <span class="gh-updated-tag">New goal planted</span>
                     <button class="gh-pencil-btn" type="button"
-                            aria-label="Edit this seed"
+                            aria-label="Edit this goal"
                             onclick="openEdit(<%= repl.id %>, <%= n %>, '<%= (repl.feeling || '').replace(/'/g, "\\'") %>', '<%= (repl.looks_like || '').replace(/'/g, "\\'") %>')">
                       <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
                         <path d="M9.5 2.5L11.5 4.5L4.5 11.5H2.5v-2L9.5 2.5Z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/>
@@ -326,7 +326,7 @@
                   <div class="gh-active-header">
                     <% if (orig) { %>
                     <button class="gh-pencil-btn" type="button"
-                            aria-label="Edit this seed"
+                            aria-label="Edit this goal"
                             onclick="openEdit(<%= orig.id %>, <%= n %>, '<%= (orig.feeling || '').replace(/'/g, "\\'") %>', '<%= (orig.looks_like || '').replace(/'/g, "\\'") %>')">
                       <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
                         <path d="M9.5 2.5L11.5 4.5L4.5 11.5H2.5v-2L9.5 2.5Z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/>
@@ -364,7 +364,7 @@
 
                 <div class="gh-actions<%= (isKept || !orig) ? ' is-hidden' : '' %>" id="gh-actions-<%= n %>">
                   <% if (orig) { %>
-                    <button class="gh-keep-btn" type="button" onclick="keepSeed(<%= orig.id %>, <%= n %>)">Keep growing 🌿</button>
+                    <button class="gh-keep-btn" type="button" onclick="keepGoal(<%= orig.id %>, <%= n %>)">Keep growing 🌿</button>
                   <% } %>
                   <button class="gh-replace-btn" type="button" onclick="openReplace(<%= n %>)">Plant something new 🌱</button>
                 </div>
@@ -372,7 +372,7 @@
                 <div class="gh-kept-confirm<%= isKept ? '' : ' is-hidden' %>" id="gh-kept-<%= n %>">
                   <span class="gh-kept-badge">Still growing 🌿</span>
                   <% if (orig) { %>
-                    <button class="gh-undo-keep" type="button" onclick="unkeepSeed(<%= orig.id %>, <%= n %>)">Undo</button>
+                    <button class="gh-undo-keep" type="button" onclick="unkeepGoal(<%= orig.id %>, <%= n %>)">Undo</button>
                   <% } %>
                 </div>
 
@@ -389,7 +389,7 @@
                     </div>
                   </div>
                   <div class="gh-edit-footer">
-                    <button class="gh-save-btn" type="button" onclick="saveReplace(<%= n %>)">Plant this seed 🌱</button>
+                    <button class="gh-save-btn" type="button" onclick="saveReplace(<%= n %>)">Plant this goal 🌱</button>
                     <button class="gh-cancel-btn" type="button" onclick="cancelReplace(<%= n %>)">Cancel</button>
                   </div>
                 </div>
@@ -489,7 +489,7 @@
   </div>
 
   <script>
-    // ── Plant seeds ──────────────────────────────────────────────────────────
+    // ── Plant goals ──────────────────────────────────────────────────────────
     async function plantSeeds() {
       const errEl = document.getElementById('seeds-error');
       if (errEl) errEl.hidden = true;
@@ -519,12 +519,12 @@
         window.location.href = '/greenhouse';
       } else {
         btn.disabled = false;
-        btn.textContent = 'Plant my seeds 🌱';
+        btn.textContent = 'Plant my goals 🌱';
         if (errEl) { errEl.textContent = 'Something went wrong. Please try again.'; errEl.hidden = false; }
       }
     }
 
-    // ── Edit existing seed ───────────────────────────────────────────────────
+    // ── Edit existing goal ───────────────────────────────────────────────────
     function openEdit(seedId, n, feeling, looksLike) {
       document.getElementById('gh-ef-feeling-' + n).value = feeling;
       document.getElementById('gh-ef-looks-' + n).value   = looksLike;
@@ -554,9 +554,9 @@
       }
     }
 
-    // ── Keep seed ────────────────────────────────────────────────────────────
-    async function keepSeed(seedId, n) {
-      const res = await fetch('/api/seeds/' + seedId + '/keep', {
+    // ── Keep goal ────────────────────────────────────────────────────────────
+    async function keepGoal(goalId, n) {
+      const res = await fetch('/api/goals/' + goalId + '/keep', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ kept: true })
       });
@@ -568,8 +568,8 @@
       }
     }
 
-    async function unkeepSeed(seedId, n) {
-      const res = await fetch('/api/seeds/' + seedId + '/keep', {
+    async function unkeepGoal(goalId, n) {
+      const res = await fetch('/api/goals/' + goalId + '/keep', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ kept: false })
       });
@@ -581,7 +581,7 @@
       }
     }
 
-    // ── Replace seed ─────────────────────────────────────────────────────────
+    // ── Replace goal ─────────────────────────────────────────────────────────
     function openReplace(n) {
       document.getElementById('gh-actions-' + n).classList.add('is-hidden');
       document.getElementById('gh-replace-' + n).classList.remove('is-hidden');
@@ -608,7 +608,7 @@
       if (res.ok) {
         window.location.reload();
       } else {
-        btn.disabled = false; btn.textContent = 'Plant this seed 🌱';
+        btn.disabled = false; btn.textContent = 'Plant this goal 🌱';
         alert('Could not save. Please try again.');
       }
     }
