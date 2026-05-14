@@ -434,6 +434,22 @@ db.exec(`
     );
   `);
 
+  // Seed Packet seeds (named synthesis output, replaces threads)
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS seed_packet_seeds (
+      id          INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id     INTEGER NOT NULL,
+      name        TEXT    NOT NULL,
+      description TEXT    DEFAULT '',
+      bullets     TEXT    DEFAULT '[]',
+      sort_order  INTEGER NOT NULL DEFAULT 0,
+      created_at  DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at  DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (user_id) REFERENCES users(id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_spse_user_order ON seed_packet_seeds(user_id, sort_order);
+  `);
+
   // V2: wipe all seeds planted during onboarding — seeds are now planted via Greenhouse after Lesson 1
   const v2SeedsFlag = db.prepare("SELECT value FROM settings WHERE key='seeds_v2_migrated'").get();
   if (!v2SeedsFlag) {
@@ -1484,6 +1500,45 @@ module.exports = {
     return db.prepare(
       'DELETE FROM seed_packet_threads WHERE id = ? AND user_id = ?'
     ).run(threadId, userId);
+  },
+
+  // ─── Seed Packet seeds ──────────────────────────────────────────────────────
+
+  getSeedPacketSeeds(userId) {
+    const rows = db.prepare(
+      'SELECT * FROM seed_packet_seeds WHERE user_id = ? ORDER BY sort_order ASC, id ASC'
+    ).all(userId);
+    return rows.map(r => ({ ...r, bullets: JSON.parse(r.bullets || '[]') }));
+  },
+
+  getSeedPacketSeedsCount(userId) {
+    return db.prepare(
+      'SELECT COUNT(*) as c FROM seed_packet_seeds WHERE user_id = ?'
+    ).get(userId).c;
+  },
+
+  createSeedPacketSeed(userId, name, description, bullets, sortOrder) {
+    const bulletsJson = JSON.stringify(Array.isArray(bullets) ? bullets : []);
+    const result = db.prepare(
+      'INSERT INTO seed_packet_seeds (user_id, name, description, bullets, sort_order) VALUES (?, ?, ?, ?, ?)'
+    ).run(userId, name, description || '', bulletsJson, sortOrder || 0);
+    const row = db.prepare('SELECT * FROM seed_packet_seeds WHERE id = ?').get(result.lastInsertRowid);
+    return { ...row, bullets: JSON.parse(row.bullets || '[]') };
+  },
+
+  updateSeedPacketSeed(seedId, userId, name, description, bullets, sortOrder) {
+    const bulletsJson = JSON.stringify(Array.isArray(bullets) ? bullets : []);
+    return db.prepare(`
+      UPDATE seed_packet_seeds
+      SET name = ?, description = ?, bullets = ?, sort_order = ?, updated_at = CURRENT_TIMESTAMP
+      WHERE id = ? AND user_id = ?
+    `).run(name, description || '', bulletsJson, sortOrder || 0, seedId, userId);
+  },
+
+  deleteSeedPacketSeed(seedId, userId) {
+    return db.prepare(
+      'DELETE FROM seed_packet_seeds WHERE id = ? AND user_id = ?'
+    ).run(seedId, userId);
   },
 
   // ─── Seed Packet synthesis state ───────────────────────────────────────────

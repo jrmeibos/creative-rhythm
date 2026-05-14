@@ -10,63 +10,53 @@
     <%- include('partials/sidebar') %>
     <main class="main-content">
 
-      <a href="/seed-packets/synthesize" class="cm-back-link">← Back to reading your answers</a>
+      <a href="/seed-packets" class="cm-back-link">← Back to the Seed Packets</a>
 
       <div class="cm-synth-page">
 
         <header class="cm-synth-header">
-          <h1 class="cm-synth-title">Name your seeds</h1>
-          <p class="cm-synth-subtitle">What keeps showing up? Give each thread a name. Start anywhere — you can rename and add more any time.</p>
+          <h1 class="cm-synth-title">Your seeds</h1>
+          <p class="cm-synth-subtitle">Not a final answer — just what's true right now. Return to revise whenever something shifts.</p>
         </header>
 
+        <% if (lastUpdated) { %>
+        <p class="cm-seeds-lastmod">Last updated: <%= lastUpdated %></p>
+        <% } %>
+
+        <div class="cm-seed-list" id="cm-seed-list">
+          <% seeds.forEach(function(seed) { %>
+          <div class="cm-seed-card" data-seed-id="<%= seed.id %>" data-sort-order="<%= seed.sort_order %>">
+            <input type="text" class="cm-seed-name-input" value="<%= seed.name %>" placeholder="Name this seed...">
+            <textarea class="cm-seed-desc" rows="3" placeholder="What's this seed about? In your own words."><%= seed.description %></textarea>
+            <p class="cm-seed-bullets-label">Notes, examples, details (optional)</p>
+            <div class="cm-seed-bullets">
+              <% seed.bullets.forEach(function(b) { %>
+              <div class="cm-seed-bullet-row">
+                <input type="text" class="cm-seed-bullet-input" value="<%= b %>" placeholder="Add a note...">
+                <button type="button" class="cm-seed-bullet-remove">×</button>
+              </div>
+              <% }); %>
+            </div>
+            <button type="button" class="cm-seed-add-bullet">+ Add note</button>
+            <button type="button" class="cm-seed-remove">× Remove seed</button>
+          </div>
+          <% }); %>
+        </div>
+
+        <button type="button" class="cm-add-seed-btn" id="cm-add-seed-btn">+ Add a seed</button>
+
         <% if (highlights.length > 0) { %>
-        <div class="cm-highlights-bank">
-          <p class="cm-highlights-bank-label">Your highlights — drag one onto a seed card to add it as a note</p>
-          <div class="cm-highlights-chips" id="cm-highlights-chips">
+        <div class="cm-highlights-bank cm-highlights-bank--collapsible" style="margin-top: 2.5rem; padding-top: 2rem; border-top: 1px solid rgba(118,133,108,0.15);">
+          <button type="button" class="cm-highlights-toggle" id="cm-highlights-toggle">
+            ▶ Your highlights (<%= highlights.length %>)
+          </button>
+          <div class="cm-highlights-chips" id="cm-highlights-chips" style="display:none; margin-top: 0.75rem;">
             <% highlights.forEach(function(h) { %>
-            <span class="cm-highlight-chip" draggable="true" data-text="<%= h.highlighted_text.replace(/"/g, '&quot;') %>"><%= h.highlighted_text %></span>
+            <span class="cm-highlight-chip"><%= h.highlighted_text %></span>
             <% }); %>
           </div>
         </div>
         <% } %>
-
-        <div class="cm-seed-list" id="cm-seed-list">
-          <% if (existingSeeds.length > 0) { %>
-            <% existingSeeds.forEach(function(seed) { %>
-            <div class="cm-seed-card" data-seed-id="<%= seed.id %>" data-sort-order="<%= seed.sort_order %>">
-              <input type="text" class="cm-seed-name-input" value="<%= seed.name %>" placeholder="Name this seed...">
-              <textarea class="cm-seed-desc" rows="3" placeholder="What's this seed about? In your own words."><%= seed.description %></textarea>
-              <p class="cm-seed-bullets-label">Notes, examples, details (optional)</p>
-              <div class="cm-seed-bullets">
-                <% seed.bullets.forEach(function(b) { %>
-                <div class="cm-seed-bullet-row">
-                  <input type="text" class="cm-seed-bullet-input" value="<%= b %>" placeholder="Add a note...">
-                  <button type="button" class="cm-seed-bullet-remove">×</button>
-                </div>
-                <% }); %>
-              </div>
-              <button type="button" class="cm-seed-add-bullet">+ Add note</button>
-              <button type="button" class="cm-seed-remove">× Remove seed</button>
-            </div>
-            <% }); %>
-          <% } else { %>
-            <!-- One empty unsaved card to get started -->
-            <div class="cm-seed-card cm-seed-card--unsaved">
-              <input type="text" class="cm-seed-name-input" placeholder="Name this seed...">
-              <textarea class="cm-seed-desc" rows="3" placeholder="What's this seed about? In your own words."></textarea>
-              <p class="cm-seed-bullets-label">Notes, examples, details (optional)</p>
-              <div class="cm-seed-bullets"></div>
-              <button type="button" class="cm-seed-add-bullet">+ Add note</button>
-            </div>
-          <% } %>
-        </div>
-
-        <button type="button" class="cm-add-seed-btn" id="cm-add-seed-btn">+ Name another seed</button>
-
-        <div class="cm-synth-nav">
-          <a href="/seed-packets/seeds" class="cm-synth-btn">View your seeds →</a>
-          <a href="/seed-packets/synthesize" class="cm-back-link" style="margin-bottom:0">← Back to reading your answers</a>
-        </div>
 
       </div>
 
@@ -100,33 +90,15 @@
 
     async function saveSeed(card) {
       const seedId = card.dataset.seedId;
+      if (!seedId) return;
       const data = getSeedData(card);
       if (!data.name) return;
-
-      // Card has an id — update it
-      if (seedId) {
-        try {
-          await fetch('/api/seed-packets/seeds/' + seedId, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(data),
-          });
-        } catch(e) {}
-        return;
-      }
-
-      // Unsaved card — create it
       try {
-        const res = await fetch('/api/seed-packets/seeds', {
-          method: 'POST',
+        await fetch('/api/seed-packets/seeds/' + seedId, {
+          method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(data),
         });
-        const seed = await res.json();
-        card.dataset.seedId = String(seed.id);
-        card.classList.remove('cm-seed-card--unsaved');
-        // Attach remove button now that we have an id
-        attachRemoveListener(card);
       } catch(e) {}
     }
 
@@ -137,7 +109,6 @@
         el.addEventListener('input', function() { debouncedSave(card); });
       });
       refreshBulletListeners(card);
-      attachDropListeners(card);
     }
 
     function refreshBulletListeners(card) {
@@ -156,8 +127,7 @@
 
     function attachRemoveListener(card) {
       const btn = card.querySelector('.cm-seed-remove');
-      if (!btn || btn.dataset.listenerAttached) return;
-      btn.dataset.listenerAttached = '1';
+      if (!btn) return;
       btn.addEventListener('click', async function() {
         if (!confirm('Remove this seed?')) return;
         const seedId = card.dataset.seedId;
@@ -170,8 +140,7 @@
 
     function attachAddBulletListener(card) {
       const btn = card.querySelector('.cm-seed-add-bullet');
-      if (!btn || btn.dataset.listenerAttached) return;
-      btn.dataset.listenerAttached = '1';
+      if (!btn) return;
       btn.addEventListener('click', function() { addBulletToCard(card, ''); });
     }
 
@@ -200,51 +169,13 @@
       debouncedSave(card);
     }
 
-    // ── Drag highlight chips → drop onto seed card ────────────────────────────
+    // ── Attach listeners to existing cards ────────────────────────────────────
 
-    function attachDropListeners(card) {
-      card.addEventListener('dragover', function(e) {
-        if (!e.dataTransfer.types.includes('text/plain')) return;
-        e.preventDefault();
-        card.classList.add('cm-seed-card--drop-over');
-      });
-      card.addEventListener('dragleave', function(e) {
-        if (!card.contains(e.relatedTarget)) card.classList.remove('cm-seed-card--drop-over');
-      });
-      card.addEventListener('drop', function(e) {
-        e.preventDefault();
-        card.classList.remove('cm-seed-card--drop-over');
-        const text = e.dataTransfer.getData('text/plain').trim();
-        if (!text) return;
-        addBulletToCard(card, text);
-      });
-    }
-
-    document.querySelectorAll('.cm-highlight-chip').forEach(function(chip) {
-      chip.addEventListener('dragstart', function(e) {
-        e.dataTransfer.setData('text/plain', chip.dataset.text || chip.textContent.trim());
-        chip.classList.add('cm-highlight-chip--dragging');
-      });
-      chip.addEventListener('dragend', function() {
-        chip.classList.remove('cm-highlight-chip--dragging');
-      });
-    });
-
-    // ── Attach listeners to existing saved cards ──────────────────────────────
-
-    document.querySelectorAll('.cm-seed-card[data-seed-id]').forEach(function(card) {
+    document.querySelectorAll('.cm-seed-card').forEach(function(card) {
       attachCardListeners(card);
       attachRemoveListener(card);
       attachAddBulletListener(card);
     });
-
-    // ── Attach listeners to the initial unsaved card (if present) ─────────────
-
-    const unsavedCard = document.querySelector('.cm-seed-card--unsaved');
-    if (unsavedCard) {
-      attachCardListeners(unsavedCard);
-      attachAddBulletListener(unsavedCard);
-    }
 
     // ── Add a new seed ────────────────────────────────────────────────────────
 
@@ -289,6 +220,18 @@
       attachRemoveListener(div);
       attachAddBulletListener(div);
       return div;
+    }
+
+    // ── Highlights bank toggle ────────────────────────────────────────────────
+
+    const toggleBtn = document.getElementById('cm-highlights-toggle');
+    const chipsEl = document.getElementById('cm-highlights-chips');
+    if (toggleBtn && chipsEl) {
+      toggleBtn.addEventListener('click', function() {
+        const open = chipsEl.style.display !== 'none';
+        chipsEl.style.display = open ? 'none' : 'flex';
+        toggleBtn.textContent = toggleBtn.textContent.replace(open ? '▼' : '▶', open ? '▶' : '▼');
+      });
     }
   </script>
 </body>

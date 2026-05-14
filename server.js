@@ -1126,27 +1126,28 @@ app.get('/seed-packets', requireAuth, (req, res) => {
   const userId = req.session.user.id;
   const counts = db.getSeedPacketAnswerCounts(userId);
   const totalAnswered = db.getSeedPacketTotalAnswered(userId);
-  const synthesisState = db.getSeedPacketSynthesisState(userId);
-  const userThreads = synthesisState.has_completed_synthesis ? db.getSeedPacketThreads(userId) : [];
+  const userSeeds = db.getSeedPacketSeeds(userId);
   res.render('seed-packets', {
     title: 'Seed Packets',
     page: 'resources',
     angles: ANGLES,
     counts,
     totalAnswered,
-    synthesisState,
-    userThreads,
+    userSeeds,
   });
 });
 
-// ─── Seed Packets: 301 redirects for old /curiosity-map/* URLs ──────────────
+// ─── Seed Packets: 301 redirects for old URLs ───────────────────────────────
 
 app.get('/curiosity-map', (req, res) => res.redirect(301, '/seed-packets'));
 app.get('/curiosity-map/synthesize', (req, res) => res.redirect(301, '/seed-packets/synthesize'));
-app.get('/curiosity-map/synthesize/observations', (req, res) => res.redirect(301, '/seed-packets/synthesize/observations'));
-app.get('/curiosity-map/synthesize/notice', (req, res) => res.redirect(301, '/seed-packets/synthesize/notice'));
+app.get('/curiosity-map/synthesize/observations', (req, res) => res.redirect(301, '/seed-packets/synthesize'));
+app.get('/curiosity-map/synthesize/notice', (req, res) => res.redirect(301, '/seed-packets/synthesize/name'));
 app.get('/curiosity-map/synthesize/name', (req, res) => res.redirect(301, '/seed-packets/synthesize/name'));
-app.get('/curiosity-map/threads', (req, res) => res.redirect(301, '/seed-packets/threads'));
+app.get('/curiosity-map/threads', (req, res) => res.redirect(301, '/seed-packets/seeds'));
+app.get('/seed-packets/synthesize/observations', (req, res) => res.redirect(301, '/seed-packets/synthesize'));
+app.get('/seed-packets/synthesize/notice', (req, res) => res.redirect(301, '/seed-packets/synthesize/name'));
+app.get('/seed-packets/threads', (req, res) => res.redirect(301, '/seed-packets/seeds'));
 app.get('/curiosity-map/:angleId/:questionId', (req, res) =>
   res.redirect(301, `/seed-packets/${req.params.angleId}/${req.params.questionId}`));
 app.get('/curiosity-map/:angleId', (req, res) =>
@@ -1176,46 +1177,32 @@ app.get('/seed-packets/synthesize', requireAuth, requireSynthesisEligible, (req,
   });
 });
 
-app.get('/seed-packets/synthesize/observations', requireAuth, requireSynthesisEligible, (req, res) => {
-  const synthesisState = db.getSeedPacketSynthesisState(req.session.user.id);
-  const cachedObservations = synthesisState.last_observations
-    ? synthesisState.last_observations.split('\n').filter(Boolean)
-    : null;
-  res.render('seed-packets-synthesize-observations', {
-    title: 'Observations',
-    page: 'resources',
-    synthesisState,
-    cachedObservations,
-  });
-});
-
-app.get('/seed-packets/synthesize/notice', requireAuth, requireSynthesisEligible, (req, res) => {
-  res.render('seed-packets-synthesize-notice', {
-    title: 'Notice',
-    page: 'resources',
-  });
-});
-
 app.get('/seed-packets/synthesize/name', requireAuth, requireSynthesisEligible, (req, res) => {
-  const existingThreads = db.getSeedPacketThreads(req.session.user.id);
+  const userId = req.session.user.id;
+  const existingSeeds = db.getSeedPacketSeeds(userId);
+  const highlights = db.getSeedPacketHighlights(userId);
   res.render('seed-packets-synthesize-name', {
-    title: 'Name Your Threads',
+    title: 'Name Your Seeds',
     page: 'resources',
-    existingThreads,
+    existingSeeds,
+    highlights,
   });
 });
 
-app.get('/seed-packets/threads', requireAuth, (req, res) => {
-  const threads = db.getSeedPacketThreads(req.session.user.id);
+app.get('/seed-packets/seeds', requireAuth, (req, res) => {
+  const userId = req.session.user.id;
+  const seeds = db.getSeedPacketSeeds(userId);
+  const highlights = db.getSeedPacketHighlights(userId);
   let lastUpdated = null;
-  if (threads.length) {
-    const latest = threads.reduce((a, b) => (a.updated_at > b.updated_at ? a : b));
+  if (seeds.length) {
+    const latest = seeds.reduce((a, b) => (a.updated_at > b.updated_at ? a : b));
     lastUpdated = latest.updated_at ? String(latest.updated_at).slice(0, 10) : null;
   }
-  res.render('seed-packets-threads', {
-    title: 'Your Threads',
+  res.render('seed-packets-seeds', {
+    title: 'Your Seeds',
     page: 'resources',
-    threads,
+    seeds,
+    highlights,
     lastUpdated,
   });
 });
@@ -1236,138 +1223,25 @@ app.delete('/api/seed-packets/highlights/:id', requireAuth, (req, res) => {
   res.json({ ok: true });
 });
 
-// ─── Seed Packets API: AI observations ──────────────────────────────────────
+// ─── Seed Packets API: seeds ─────────────────────────────────────────────────
 
-app.post('/api/seed-packets/observations', requireAuth, async (req, res) => {
-  if (!anthropicClient) {
-    return res.status(503).json({ error: "AI observations aren't configured right now. Skip this step." });
-  }
+app.post('/api/seed-packets/seeds', requireAuth, (req, res) => {
   const userId = req.session.user.id;
-  const allAnswers = db.getSeedPacketAnswersByUser(userId);
-  const highlights = db.getSeedPacketHighlights(userId);
-
-  // Build answers map for prompt
-  const answersMap = {};
-  for (const row of allAnswers) answersMap[row.question_id] = row.answer_text;
-
-  let userMsg = 'Here are a person\'s reflective answers, organized by angle. After that, the specific phrases they highlighted as standing out.\n\n--- Answers ---\n\n';
-  for (const angle of ANGLES) {
-    const answered = angle.questions.filter(q => answersMap[q.id]);
-    if (!answered.length) continue;
-    userMsg += `## ${angle.name}\n\n`;
-    for (const q of answered) {
-      userMsg += `Q: ${q.text}\nA: ${answersMap[q.id]}\n\n`;
-    }
-  }
-
-  if (highlights.length > 0) {
-    const questionTextMap = {};
-    for (const angle of ANGLES) for (const q of angle.questions) questionTextMap[q.id] = q.text;
-    userMsg += '--- Highlights ---\n\n';
-    for (const h of highlights) {
-      userMsg += `- "${h.highlighted_text}" (from: ${questionTextMap[h.question_id] || h.question_id})\n`;
-    }
-    userMsg += '\n';
-  }
-
-  userMsg += 'Now provide 3 to 6 observations following the rules in your system prompt.';
-
-  const systemPrompt = `You are a quiet observer. Your task is to read a person's reflective answers to a set of questions and point at things their eye might miss. You are NOT an interpreter, analyst, or theme-namer.
-
-What you DO:
-- Notice repeated words across answers
-- Notice recurring topics or subjects
-- Notice contrasts (one answer says one thing, another says the opposite)
-- Notice phrases that appear similar across different questions
-- Surface what's already on the page, not what it might mean
-
-What you DO NOT do:
-- Suggest themes, categories, or pillars
-- Interpret what the patterns "mean"
-- Suggest what the person is "really" curious about
-- Use therapy or coaching language
-- Use marketing or brand-strategy language
-- Make psychological inferences
-- Summarize or conclude
-
-Format:
-- 3 to 6 single-sentence observations
-- One per line
-- No preamble, no header, no closing summary
-- No bullet points or numbering — just the sentences`;
-
-  try {
-    const message = await anthropicClient.messages.create({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 512,
-      system: systemPrompt,
-      messages: [{ role: 'user', content: userMsg }],
-    });
-    const text = message.content[0].text.trim();
-    const observations = text.split('\n').map(l => l.trim()).filter(Boolean);
-    db.upsertSeedPacketSynthesisState(userId, {
-      has_seen_observations: 1,
-      last_observations: observations.join('\n'),
-      last_observations_at: new Date().toISOString(),
-    });
-    res.json({ observations });
-  } catch (err) {
-    console.error('[observations] Anthropic error:', err.message || err);
-    res.status(500).json({ error: "Couldn't generate observations right now. Try again in a moment." });
-  }
-});
-
-// ─── Seed Packets API: threads ───────────────────────────────────────────────
-
-app.post('/api/seed-packets/threads', requireAuth, (req, res) => {
-  const userId = req.session.user.id;
-
-  // Bulk save from naming page
-  if (Array.isArray(req.body.threads)) {
-    const threads = req.body.threads;
-    for (const t of threads) {
-      if (!String(t.name || '').trim()) {
-        return res.status(400).json({ error: 'Each thread needs a name.' });
-      }
-    }
-    const existing = db.getSeedPacketThreads(userId);
-    const submittedIds = new Set(threads.filter(t => t.id).map(t => Number(t.id)));
-    // Delete threads not in submission
-    for (const e of existing) {
-      if (!submittedIds.has(e.id)) db.deleteSeedPacketThread(e.id, userId);
-    }
-    // Upsert each
-    for (let i = 0; i < threads.length; i++) {
-      const t = threads[i];
-      const name = String(t.name).trim();
-      const desc = t.description || '';
-      const bullets = Array.isArray(t.bullets) ? t.bullets.filter(b => String(b).trim()) : [];
-      if (t.id) {
-        db.updateSeedPacketThread(Number(t.id), userId, name, desc, bullets, i);
-      } else {
-        db.createSeedPacketThread(userId, name, desc, bullets, i);
-      }
-    }
-    db.upsertSeedPacketSynthesisState(userId, { has_completed_synthesis: 1 });
-    return res.json({ ok: true, redirectTo: '/seed-packets/threads' });
-  }
-
-  // Single create from threads view
   const name = String(req.body.name || '').trim();
-  if (!name) return res.status(400).json({ error: 'Thread name is required.' });
-  const thread = db.createSeedPacketThread(
+  if (!name) return res.status(400).json({ error: 'Seed name is required.' });
+  const seed = db.createSeedPacketSeed(
     userId, name,
     req.body.description || '',
     Array.isArray(req.body.bullets) ? req.body.bullets : [],
     Number(req.body.sortOrder) || 0
   );
-  res.json(thread);
+  res.json(seed);
 });
 
-app.put('/api/seed-packets/threads/:id', requireAuth, (req, res) => {
+app.put('/api/seed-packets/seeds/:id', requireAuth, (req, res) => {
   const name = String(req.body.name || '').trim();
-  if (!name) return res.status(400).json({ error: 'Thread name is required.' });
-  db.updateSeedPacketThread(
+  if (!name) return res.status(400).json({ error: 'Seed name is required.' });
+  db.updateSeedPacketSeed(
     Number(req.params.id), req.session.user.id,
     name,
     req.body.description || '',
@@ -1377,8 +1251,8 @@ app.put('/api/seed-packets/threads/:id', requireAuth, (req, res) => {
   res.json({ ok: true });
 });
 
-app.delete('/api/seed-packets/threads/:id', requireAuth, (req, res) => {
-  db.deleteSeedPacketThread(Number(req.params.id), req.session.user.id);
+app.delete('/api/seed-packets/seeds/:id', requireAuth, (req, res) => {
+  db.deleteSeedPacketSeed(Number(req.params.id), req.session.user.id);
   res.json({ ok: true });
 });
 

@@ -152,19 +152,17 @@
           <p class="cm-hint-text">
             <%= totalAnswered %> of 35 questions answered — answer <%= 10 - totalAnswered %> more to identify your seeds
           </p>
-        <% } else if (!synthesisState.has_completed_synthesis) { %>
+        <% } else if (userSeeds.length === 0) { %>
           <p class="cm-hint-text"><%= totalAnswered %> of 35 questions answered</p>
           <a href="/seed-packets/synthesize" class="cm-synth-start-btn" style="margin-top:0.75rem;">Ready to identify your seeds →</a>
         <% } else { %>
-          <a href="/seed-packets/threads" class="cm-synth-start-btn">Your threads are mapped. Tend to them →</a>
-          <% if (userThreads.length > 0) { %>
-            <p class="cm-threads-tagline">
-              Your threads right now:
-              <% userThreads.forEach(function(t, i) { %>
-                <a href="/seed-packets/threads" class="cm-threads-tagline-name"><%= t.name %></a><% if (i < userThreads.length - 1) { %> · <% } %>
-              <% }); %>
-            </p>
-          <% } %>
+          <a href="/seed-packets/seeds" class="cm-synth-start-btn">Your seeds are named. Tend to them →</a>
+          <p class="cm-seeds-tagline">
+            Your seeds right now:
+            <% userSeeds.forEach(function(s, i) { %>
+              <a href="/seed-packets/seeds" class="cm-seeds-tagline-name"><%= s.name %></a><% if (i < userSeeds.length - 1) { %> · <% } %>
+            <% }); %>
+          </p>
         <% } %>
       </div>
 
