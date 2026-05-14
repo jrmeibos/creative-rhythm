@@ -873,10 +873,13 @@ const STAGE_LABELS = {
 };
 
 function getGardenStage(user) {
+  const now = getNow(user);
+
   const seedMap = db.getGreenhouseSeeds(user.id);
   const activeSeeds = [1, 2, 3]
     .map(n => seedMap[n].replacement || seedMap[n].original)
-    .filter(Boolean);
+    .filter(Boolean)
+    .filter(s => new Date(s.created_at) <= now);
   if (activeSeeds.length === 0) return null;
 
   const earliest = activeSeeds.reduce(
@@ -884,10 +887,10 @@ function getGardenStage(user) {
     activeSeeds[0]
   );
 
-  const growthCheckDone = !!db.getAssessment(user.id, 'closing');
+  const closing = db.getAssessment(user.id, 'closing');
+  const growthCheckDone = closing && new Date(closing.completed_at) <= now;
   if (growthCheckDone) return 7;
 
-  const now = getNow(user);
   const planted = new Date(earliest.created_at);
   const weeksElapsed = Math.floor((now - planted) / (7 * 24 * 60 * 60 * 1000));
 
