@@ -167,12 +167,38 @@ db.exec(`
       db.exec('ALTER TABLE seeds RENAME TO goals');
       console.log('✓ Migrated: renamed seeds → goals (Greenhouse planted commitments)');
     } else if (goalsTableExists && seedsTableExists) {
-      // Post-migration: CREATE TABLE IF NOT EXISTS seeds created an empty orphan seeds table; drop it
-      const orphanCount = db.prepare('SELECT COUNT(*) as c FROM seeds').get().c;
-      if (orphanCount === 0) {
+      const goalsCount = db.prepare('SELECT COUNT(*) as c FROM goals').get().c;
+      const seedsCount = db.prepare('SELECT COUNT(*) as c FROM seeds').get().c;
+
+      if (goalsCount === 0 && seedsCount > 0) {
+        // Schema block pre-created an empty goals table before the migration IIFE ran.
+        // goals is empty, seeds has real data — copy seeds → goals then drop seeds.
+        const goalsCols = db.prepare('PRAGMA table_info(goals)').all().map(r => r.name);
+        const seedsCols = db.prepare('PRAGMA table_info(seeds)').all().map(r => r.name);
+        const commonCols = goalsCols.filter(c => seedsCols.includes(c));
+        const droppedCols = seedsCols.filter(c => !goalsCols.includes(c));
+        if (droppedCols.length > 0) {
+          console.warn(`⚠️  seeds → goals migration: seeds had columns not in goals (data not carried over): ${droppedCols.join(', ')}`);
+        }
+        const colList = commonCols.join(', ');
+        db.exec(`INSERT INTO goals (${colList}) SELECT ${colList} FROM seeds`);
+        const migratedCount = db.prepare('SELECT COUNT(*) as c FROM goals').get().c;
+        if (migratedCount !== seedsCount) {
+          throw new Error(`seeds → goals copy failed: expected ${seedsCount} rows but got ${migratedCount}`);
+        }
         db.exec('DROP TABLE seeds');
-      } else {
+        console.log(`✓ Migrated: copied ${migratedCount} rows from seeds → goals, dropped seeds table`);
+      } else if (goalsCount > 0 && seedsCount === 0) {
+        // Migration previously completed but seeds table wasn't dropped. Clean it up.
+        db.exec('DROP TABLE seeds');
+        console.log('✓ Cleanup: dropped empty seeds table (migration was already complete)');
+      } else if (goalsCount > 0 && seedsCount > 0) {
+        // True conflict — both tables have data. Cannot auto-resolve.
         throw new Error('Both seeds and goals tables have data — resolve manually before starting server');
+      } else {
+        // Both empty. Drop seeds as cleanup.
+        db.exec('DROP TABLE seeds');
+        console.log('✓ Cleanup: dropped empty seeds table');
       }
     }
     // else: only goals exists (normal post-migration state) — nothing to do
