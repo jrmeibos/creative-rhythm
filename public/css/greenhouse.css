@@ -740,10 +740,10 @@ details[open] .gh-planted-summary::before { content: '▾  '; }
 }
 
 .gh-welcome-body p {
-  font-family: var(--font-display);
-  font-size: 1rem;
-  font-weight: 400;
-  color: var(--color-ink-stained);
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+  font-weight: 300;
+  color: rgba(16, 15, 16, 0.75);
   line-height: 1.8;
   margin: 0 0 1.1rem;
 }

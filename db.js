@@ -322,6 +322,13 @@ db.exec(`
     console.log('✓ Migrated: added bed_position to seeds');
   }
 
+  // Users: add has_visited_greenhouse for first-visit welcome gate
+  const userColsGH = db.prepare("PRAGMA table_info(users)").all().map(r => r.name);
+  if (!userColsGH.includes('has_visited_greenhouse')) {
+    db.exec("ALTER TABLE users ADD COLUMN has_visited_greenhouse INTEGER DEFAULT 0");
+    console.log('✓ Migrated: added has_visited_greenhouse to users');
+  }
+
   // Default settings for unlock flags
   db.prepare("INSERT OR IGNORE INTO settings (key, value) VALUES ('midcourse_unlocked', 'false')").run();
   db.prepare("INSERT OR IGNORE INTO settings (key, value) VALUES ('harvest_unlocked', 'false')").run();
@@ -755,6 +762,15 @@ module.exports = {
 
   getUserById(id) {
     return db.prepare('SELECT id, name, email, role, avatar_initial, current_season, profile_photo FROM users WHERE id = ?').get(id);
+  },
+
+  hasVisitedGreenhouse(userId) {
+    const row = db.prepare('SELECT has_visited_greenhouse FROM users WHERE id = ?').get(userId);
+    return !!(row && row.has_visited_greenhouse);
+  },
+
+  markGreenhouseVisited(userId) {
+    db.prepare('UPDATE users SET has_visited_greenhouse = 1 WHERE id = ?').run(userId);
   },
 
   getAllUsers() {

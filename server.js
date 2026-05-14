@@ -905,18 +905,35 @@ function getGardenStage(user) {
 app.get('/greenhouse', requireAuth, (req, res) => {
   const userId = req.session.user.id;
 
-  // State: empty → plant → tending (based on student progress)
-  const lesson1Done = !!db.getLessonCompletion(userId, 1);
-  const plantedCount = lesson1Done ? db.getPlantedSeedCount(userId) : 0;
+  // Welcome gate: first-visit only
+  const hasVisited = db.hasVisitedGreenhouse(userId);
+  if (!hasVisited) {
+    const courseWeek = getCurrentCourseWeek(req.session.user);
+    const weekNumber = courseWeek ? Math.min(courseWeek.weekNumber || 0, 12) || null : null;
+    const curricularSeason = getCurricularSeason(weekNumber);
+    return res.render('greenhouse', {
+      title: 'The Greenhouse',
+      page: 'greenhouse',
+      state: 'welcome',
+      seeds: null, growthCheckUnlocked: false, growthCheckDate: null,
+      opening: null, closing: null,
+      questions: ASSESSMENT_QUESTIONS, closingQuestions: CLOSING_QUESTIONS,
+      gardenStage: null, stageSlug: null, stageLabel: null,
+      weekNumber, curricularSeason, isWinterLocked: false,
+      emptyBedPositions: null,
+    });
+  }
+
+  // State: beds-empty → tending (based on whether any seeds exist)
+  const plantedCount = db.getPlantedSeedCount(userId);
 
   let state;
-  if (!lesson1Done)       state = 'empty';
-  else if (plantedCount === 0) state = 'plant';
+  if (plantedCount === 0) state = 'beds-empty';
   else                    state = 'tending';
 
-  // Load empty bed positions for plant state
+  // Load empty bed positions for beds-empty state
   let emptyBedPositions = null;
-  if (state === 'plant') {
+  if (state === 'beds-empty') {
     emptyBedPositions = db.getEmptyBedPositions(userId);
   }
 
@@ -962,7 +979,7 @@ app.get('/greenhouse', requireAuth, (req, res) => {
   const courseWeek = getCurrentCourseWeek(req.session.user);
   const weekNumber = courseWeek ? Math.min(courseWeek.weekNumber || 0, 12) || null : null;
   const curricularSeason = getCurricularSeason(weekNumber);
-  const isWinterLocked = curricularSeason === 'winter' && state === 'plant';
+  const isWinterLocked = curricularSeason === 'winter' && state === 'beds-empty';
 
   res.render('greenhouse', {
     title: 'The Greenhouse',
@@ -985,9 +1002,12 @@ app.get('/greenhouse', requireAuth, (req, res) => {
   });
 });
 
+app.post('/greenhouse/enter', requireAuth, (req, res) => {
+  db.markGreenhouseVisited(req.session.user.id);
+  res.redirect('/greenhouse');
+});
+
 app.get('/greenhouse/plant', requireAuth, (req, res) => {
-  const userId = req.session.user.id;
-  if (!db.getLessonCompletion(userId, 1)) return res.redirect('/greenhouse');
   const bed = parseInt(req.query.bed);
   if (![1, 2, 3].includes(bed)) return res.redirect('/greenhouse');
   res.render('greenhouse-plant', {
@@ -999,9 +1019,6 @@ app.get('/greenhouse/plant', requireAuth, (req, res) => {
 
 app.post('/api/greenhouse/plant-bed', requireAuth, (req, res) => {
   const userId = req.session.user.id;
-  if (!db.getLessonCompletion(userId, 1)) {
-    return res.status(403).json({ error: 'Complete Lesson 1 first.' });
-  }
   const { bed, feeling, looksLike } = req.body;
   const bedNum = parseInt(bed);
   if (![1, 2, 3].includes(bedNum)) {

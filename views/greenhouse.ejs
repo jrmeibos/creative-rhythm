@@ -11,8 +11,8 @@
     <%- include('partials/sidebar') %>
     <main class="main-content" id="main">
 
-      <% if (state === 'empty') { %>
-      <!-- ══ EMPTY STATE ════════════════════════════════════════════════════ -->
+      <% if (state === 'welcome') { %>
+      <!-- ══ WELCOME (first visit) ═════════════════════════════════════════ -->
       <div class="gh-locked">
         <div class="gh-locked-icon" aria-hidden="true">
           <svg viewBox="0 0 80 96" width="72" height="86" fill="none">
@@ -28,11 +28,13 @@
           <p>In the coming weeks, we will plant seeds here — goals that you want to work on during our time together.</p>
           <p>But for now, this season is about figuring out what you want to plant. We will start with reflecting, knowing that this intentionality will set us up for success in the rest of the course.</p>
         </div>
-        <a href="/lessons/welcome-to-the-rhythm" class="ob-btn ob-btn--primary" style="display:inline-block;margin-top:2rem;text-decoration:none">Go to Lesson 1 →</a>
+        <form method="POST" action="/greenhouse/enter" style="margin-top:2rem">
+          <button type="submit" class="ob-btn ob-btn--primary">Enter Your Greenhouse →</button>
+        </form>
       </div>
 
-      <% } else if (state === 'plant') { %>
-      <!-- ══ PLANT SEEDS STATE ═══════════════════════════════════════════════ -->
+      <% } else if (state === 'beds-empty') { %>
+      <!-- ══ BEDS EMPTY STATE ═══════════════════════════════════════════════ -->
       <header class="dash-header">
         <div class="dash-greeting">
           <h1 class="dash-greeting-text">The Greenhouse</h1>
@@ -53,7 +55,7 @@
               <% if (!isBedEmpty) { %>
                 <span class="gh-bed-filled-note">Planted</span>
               <% } else if (isWinterLocked) { %>
-                <p class="gh-bed-winter-note">Beds open in Spring</p>
+                <p class="gh-bed-winter-note">It's currently Winter. Come back in Spring to plant your goals.</p>
               <% } else { %>
                 <a href="/greenhouse/plant?bed=<%= n %>" class="gh-bed-cta">+ plant a goal</a>
               <% } %>
