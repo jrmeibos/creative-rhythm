@@ -450,6 +450,18 @@ db.exec(`
     CREATE INDEX IF NOT EXISTS idx_spse_user_order ON seed_packet_seeds(user_id, sort_order);
   `);
 
+  // Add curricular_season column to lessons (idempotent)
+  const hasLessonSeason = db.prepare("PRAGMA table_info(lessons)").all().some(c => c.name === 'curricular_season');
+  if (!hasLessonSeason) {
+    db.exec("ALTER TABLE lessons ADD COLUMN curricular_season TEXT DEFAULT NULL");
+    const seasons = ['winter','winter','winter','spring','spring','spring','summer','summer','summer','autumn','autumn','autumn'];
+    const lessons = db.prepare('SELECT id FROM lessons ORDER BY sort_order ASC, id ASC').all();
+    lessons.forEach((l, i) => {
+      if (i < seasons.length) db.prepare('UPDATE lessons SET curricular_season = ? WHERE id = ?').run(seasons[i], l.id);
+    });
+    console.log('✓ Migrated: Added curricular_season to lessons');
+  }
+
   // V2: wipe all seeds planted during onboarding — seeds are now planted via Greenhouse after Lesson 1
   const v2SeedsFlag = db.prepare("SELECT value FROM settings WHERE key='seeds_v2_migrated'").get();
   if (!v2SeedsFlag) {

@@ -33,7 +33,11 @@
         <div class="lesson-article-meta">
           <span>~<%= lesson.estimated_read_time %> min read</span>
           <span class="lesson-article-meta-dot"></span>
-          <span>The Creative's Garden</span>
+          <span>Lesson <%= lessonNumber %> of 12</span>
+          <% if (curricularSeasonLabel) { %>
+          <span class="lesson-article-meta-dot"></span>
+          <span class="curricular-season-label"><%= curricularSeasonLabel %></span>
+          <% } %>
         </div>
 
         <!-- 1. Video (if available) -->

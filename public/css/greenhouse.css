@@ -732,3 +732,20 @@ details[open] .gh-planted-summary::before { content: '▾  '; }
   .harvest-choice-cols { grid-template-columns: 1fr; }
   .harvest-rating-row { grid-template-columns: 2.5rem 1fr 1.75rem auto; gap: 0.5rem; }
 }
+
+/* ─── Winter lock (curricular weeks 1-3) ─────────────────────────────────── */
+
+.gh-seed-card--winter-locked {
+  background: rgba(242, 238, 227, 0.5);
+  border: 1.5px dashed rgba(112, 92, 108, 0.25);
+  opacity: 0.8;
+}
+
+.gh-winter-note {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 0.85rem;
+  color: var(--color-understory);
+  line-height: 1.6;
+  margin-top: 0.5rem;
+}

@@ -23,7 +23,7 @@
       <div class="cal-grid">
         <% for (const w of weeks) { %>
           <button
-            class="cal-tile <%= w.isCurrentWeek ? 'cal-tile--current' : w.isPastWeek ? 'cal-tile--past' : 'cal-tile--future' %>"
+            class="cal-tile <%= w.isCurrentWeek ? 'cal-tile--current' : w.isPastWeek ? 'cal-tile--past' : 'cal-tile--future' %><% if (w.curricularSeason && !w.isCurrentWeek) { %> cal-tile--season-<%= w.curricularSeason %><% } %>"
             data-week="<%= w.weekStart %>"
             type="button"
             aria-expanded="false">
@@ -42,6 +42,10 @@
               <span class="cal-dot cal-dot--share <%= w.goalsExist.share ? 'is-set' : '' %>"></span>
               <span class="cal-dot cal-dot--connect <%= w.goalsExist.connect ? 'is-set' : '' %>"></span>
             </div>
+
+            <% if (w.curricularSeasonLabel) { %>
+              <span class="cal-tile-season"><%= w.curricularSeasonLabel %></span>
+            <% } %>
 
             <% if (w.isIntegration) { %>
               <span class="cal-tile-intg">Integration Week</span>

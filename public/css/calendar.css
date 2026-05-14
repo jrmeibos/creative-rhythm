@@ -249,3 +249,37 @@
 @media (max-width: 420px) {
   .cal-grid { grid-template-columns: 1fr; }
 }
+
+/* ─── Curricular season tinting (non-current tiles only) ─────────────────── */
+
+.cal-tile--season-winter {
+  background: rgba(235, 232, 224, 0.7);
+}
+
+.cal-tile--season-spring {
+  background: rgba(230, 235, 224, 0.6);
+}
+
+.cal-tile--season-summer {
+  background: rgba(246, 201, 92, 0.07);
+}
+
+.cal-tile--season-autumn {
+  background: rgba(169, 144, 164, 0.08);
+}
+
+/* ─── Season label inside tile ───────────────────────────────────────────── */
+
+.cal-tile-season {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 0.7rem;
+  color: var(--color-understory);
+  opacity: 0.8;
+  margin-top: auto;
+  padding-top: 0.25rem;
+}
+
+.cal-tile--current .cal-tile-season {
+  color: rgba(242, 238, 227, 0.7);
+}

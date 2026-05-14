@@ -37,9 +37,27 @@
         <div class="dash-greeting">
           <h1 class="dash-greeting-text">The Greenhouse</h1>
         </div>
+        <% if (isWinterLocked) { %>
+        <p class="gh-subtitle">A quiet greenhouse. Beds wait for Spring.</p>
+        <% } else { %>
         <p class="gh-subtitle">Plant three seeds. What do you hope to grow?</p>
+        <% } %>
       </header>
 
+      <% if (isWinterLocked) { %>
+      <!-- ── Winter lock: show empty dashed beds, no plant CTA ──────────────── -->
+      <section class="dash-section">
+        <div class="gh-seeds">
+          <% for (let n = 1; n <= 3; n++) { %>
+          <div class="gh-seed-card gh-seed-card--winter-locked">
+            <div class="gh-seed-num">Seed <%= ['One', 'Two', 'Three'][n - 1] %></div>
+            <p class="gh-winter-note">Beds open in Spring. For now, rest. Listen. Gather your seeds.</p>
+          </div>
+          <% } %>
+        </div>
+      </section>
+
+      <% } else { %>
       <section class="dash-section">
         <p class="gh-plant-intro">Start with how you want to <em>feel</em> — the concrete outcomes will follow. These seeds will stay with you through the whole course. At the end, you'll return to see what grew.</p>
 
@@ -72,6 +90,7 @@
           <button class="ob-btn ob-btn--primary" id="plant-btn" onclick="plantSeeds()">Plant my seeds 🌱</button>
         </div>
       </section>
+      <% } %>
 
       <% } else { %>
       <!-- ══ TENDING STATE ════════════════════════════════════════════════ -->
@@ -91,7 +110,7 @@
         </div>
         <% if (weekNumber) { %>
         <p class="garden-visual-caption">
-          <span class="caption-week">Week <%= weekNumber %> of 12</span>
+          <span class="caption-week">Week <%= weekNumber %> of 12</span><% if (curricularSeason) { %> · <span class="curricular-season-label"><%= curricularSeason.charAt(0).toUpperCase() + curricularSeason.slice(1) %></span><% } %>
         </p>
         <% } %>
       </section>

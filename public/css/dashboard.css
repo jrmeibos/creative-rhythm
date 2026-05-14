@@ -2319,3 +2319,22 @@
   margin-top: 0.625rem;
   margin-bottom: 0;
 }
+
+/* ─── Curricular season label (shared, used on Dashboard, Goals, Lesson, Greenhouse) */
+
+.curricular-season-label {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: inherit;
+  color: var(--color-understory);
+  font-weight: 400;
+}
+
+.week-nav-week-num {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 0.78rem;
+  color: var(--color-understory);
+  display: block;
+  margin-top: 0.1rem;
+}

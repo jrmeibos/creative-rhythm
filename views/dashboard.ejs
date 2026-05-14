@@ -19,9 +19,9 @@
           </h1>
           <p class="dash-week-label">
             <% if (isIntegrationWeek) { %>
-              <span class="integration-badge">Integration Week</span> · <%= weekLabel %>
+              <span class="integration-badge">Integration Week</span><% if (curricularSeasonLabel) { %> · <span class="curricular-season-label"><%= curricularSeasonLabel %></span><% } %> · <%= weekLabel %>
             <% } else if (weekNumber >= 1) { %>
-              Week <%= weekNumber %> · <%= weekLabel %>
+              Week <%= weekNumber %> of 12<% if (curricularSeasonLabel) { %> · <span class="curricular-season-label"><%= curricularSeasonLabel %></span><% } %> · <%= weekLabel %>
             <% } else { %>
               Week of <%= weekLabel %>
             <% } %>

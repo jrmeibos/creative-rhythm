@@ -11,6 +11,7 @@ const db = require('./db');
 const { requireAuth, requireAdmin } = require('./auth');
 const { sendPasswordResetEmail } = require('./email');
 const { ANGLES, getAngle, getQuestion } = require('./lib/seed-packet-questions');
+const { getCurricularSeason, getCurricularSeasonLabel } = require('./lib/curricular-season');
 const ALL_QUESTION_IDS = new Set(ANGLES.flatMap(a => a.questions.map(q => q.id)));
 
 const Anthropic = require('@anthropic-ai/sdk');
@@ -281,6 +282,9 @@ app.get('/dashboard', requireAuth, (req, res) => {
     goalsDataDash[cat] = parseGoalText(goalsMap[cat]?.goal_text);
   }
 
+  const curricularSeason = getCurricularSeason(weekNumber);
+  const curricularSeasonLabel = getCurricularSeasonLabel(curricularSeason);
+
   res.render('dashboard', {
     title: 'Dashboard',
     page: 'dashboard',
@@ -288,6 +292,8 @@ app.get('/dashboard', requireAuth, (req, res) => {
     weekStart,
     weekNumber,
     weekLabel: formatWeekLabel(weekStart),
+    curricularSeason,
+    curricularSeasonLabel,
     goals: goalsMap,
     goalsData: goalsDataDash,
     currentLesson,
@@ -344,12 +350,22 @@ app.get('/goals', requireAuth, (req, res) => {
 
   const weeklyReflection = isPastWeek ? db.getWeeklyReflection(userId, weekStart) : null;
 
+  // Determine curricular season for the viewed week
+  const allWeekStarts = courseStartDate ? generate12Weeks(courseStartDate) : [];
+  const viewedWeekIdx = allWeekStarts.indexOf(weekStart);
+  const viewedWeekNumber = viewedWeekIdx >= 0 ? viewedWeekIdx + 1 : null;
+  const curricularSeason = getCurricularSeason(viewedWeekNumber);
+  const curricularSeasonLabel = getCurricularSeasonLabel(curricularSeason);
+
   res.render('goals', {
     title: 'My Goals',
     page: 'goals',
     weekStart,
     weekLabel: formatWeekLabel(weekStart),
     currentWeekStart,
+    viewedWeekNumber,
+    curricularSeason,
+    curricularSeasonLabel,
     goals: goalsMap,
     goalsData: goalsDataPage,
     isIntegrationWeek,
@@ -485,6 +501,9 @@ app.get('/lessons/:slug', requireAuth, (req, res) => {
   const nextLesson = idx < allLessons.length - 1 ? allLessons[idx + 1] : null;
   const homework = db.getHomeworkForLesson(lesson.id);
   const homeworkDone = new Set(db.getHomeworkCompletions(req.session.user.id, lesson.id));
+  const lessonNumber = idx + 1;
+  const curricularSeason = getCurricularSeason(lessonNumber);
+  const curricularSeasonLabel = getCurricularSeasonLabel(curricularSeason);
   res.render('lesson', {
     title: lesson.title,
     page: 'lessons',
@@ -493,7 +512,10 @@ app.get('/lessons/:slug', requireAuth, (req, res) => {
     prevLesson,
     nextLesson,
     homework,
-    homeworkDone
+    homeworkDone,
+    lessonNumber,
+    curricularSeason,
+    curricularSeasonLabel,
   });
 });
 
@@ -609,9 +631,13 @@ app.get('/calendar', requireAuth, (req, res) => {
     }
     const allGoalsSet   = cats.every(cat => goalsExist[cat]);
     const isIntegration = cats.some(cat => goalsMap[cat]?.is_integration_week);
+    const weekNum = idx + 1;
+    const curricularSeason = getCurricularSeason(weekNum);
+    const curricularSeasonLabel = getCurricularSeasonLabel(curricularSeason);
     return {
       weekStart,
       weekIndex:          idx,
+      weekNum,
       weekName:           'Week ' + WEEK_ORDINALS[idx],
       dateRange:          formatDateRangeShort(weekStart),
       isCurrentWeek:      weekStart === currentWeekStart,
@@ -619,6 +645,8 @@ app.get('/calendar', requireAuth, (req, res) => {
       isFutureWeek:       weekStart > currentWeekStart,
       isPastCourseWeek:   weekStart < courseCurrentWeekStart,
       isIntegration,
+      curricularSeason,
+      curricularSeasonLabel,
       goalsData,
       goalsMap,
       goalsExist,
@@ -923,6 +951,9 @@ app.get('/greenhouse', requireAuth, (req, res) => {
   const gardenStage = getGardenStage(req.session.user);
   const stageInfo = gardenStage ? STAGE_LABELS[gardenStage] : null;
   const courseWeek = getCurrentCourseWeek(req.session.user);
+  const weekNumber = courseWeek ? Math.min(courseWeek.weekNumber || 0, 12) || null : null;
+  const curricularSeason = getCurricularSeason(weekNumber);
+  const isWinterLocked = curricularSeason === 'winter' && state === 'plant';
 
   res.render('greenhouse', {
     title: 'The Greenhouse',
@@ -938,7 +969,9 @@ app.get('/greenhouse', requireAuth, (req, res) => {
     gardenStage,
     stageSlug:  stageInfo ? stageInfo.slug  : null,
     stageLabel: stageInfo ? stageInfo.label : null,
-    weekNumber: courseWeek ? Math.min(courseWeek.weekNumber || 0, 12) || null : null
+    weekNumber,
+    curricularSeason,
+    isWinterLocked,
   });
 });
 
