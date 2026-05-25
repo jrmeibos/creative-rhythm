@@ -158,51 +158,56 @@ db.exec(`
 
 // Migrate existing databases to add new columns
 (function migrate() {
-  // 3B-i: Rename seeds → goals (Greenhouse planted commitments vocabulary migration)
-  {
-    const goalsTableExists = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='goals'").get();
-    const seedsTableExists = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='seeds'").get();
-    if (!goalsTableExists && seedsTableExists) {
-      // First migration: rename seeds → goals
-      db.exec('ALTER TABLE seeds RENAME TO goals');
-      console.log('✓ Migrated: renamed seeds → goals (Greenhouse planted commitments)');
-    } else if (goalsTableExists && seedsTableExists) {
-      const goalsCount = db.prepare('SELECT COUNT(*) as c FROM goals').get().c;
-      const seedsCount = db.prepare('SELECT COUNT(*) as c FROM seeds').get().c;
+  try {
+    // 3B-i: Rename seeds → goals (Greenhouse planted commitments vocabulary migration)
+    //
+    // Idempotency notes:
+    // - The schema block above always runs CREATE TABLE IF NOT EXISTS goals
+    //   with the *old* UNIQUE(user_id, seed_number) constraint. If `seeds`
+    //   already exists with post-rebuild multi-row data (replacements), copying
+    //   via INSERT will violate that constraint and crash the migration.
+    // - So when we see "stub goals + populated seeds", we drop the stub and
+    //   rename seeds → goals, letting the post-rename schema (no UNIQUE,
+    //   includes replacement columns) survive intact. The downstream
+    //   "rebuild + add columns" migrations below are already idempotent and
+    //   run cleanly on the renamed table.
+    {
+      const goalsTableExists = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='goals'").get();
+      const seedsTableExists = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='seeds'").get();
 
-      if (goalsCount === 0 && seedsCount > 0) {
-        // Schema block pre-created an empty goals table before the migration IIFE ran.
-        // goals is empty, seeds has real data — copy seeds → goals then drop seeds.
-        const goalsCols = db.prepare('PRAGMA table_info(goals)').all().map(r => r.name);
-        const seedsCols = db.prepare('PRAGMA table_info(seeds)').all().map(r => r.name);
-        const commonCols = goalsCols.filter(c => seedsCols.includes(c));
-        const droppedCols = seedsCols.filter(c => !goalsCols.includes(c));
-        if (droppedCols.length > 0) {
-          console.warn(`⚠️  seeds → goals migration: seeds had columns not in goals (data not carried over): ${droppedCols.join(', ')}`);
+      if (!goalsTableExists && seedsTableExists) {
+        db.exec('ALTER TABLE seeds RENAME TO goals');
+        console.log('✓ Migrated: renamed seeds → goals (Greenhouse planted commitments)');
+      } else if (goalsTableExists && seedsTableExists) {
+        const goalsCount = db.prepare('SELECT COUNT(*) as c FROM goals').get().c;
+        const seedsCount = db.prepare('SELECT COUNT(*) as c FROM seeds').get().c;
+        const goalsHasReplCol = db.prepare("PRAGMA table_info(goals)").all().some(c => c.name === 'is_replacement');
+
+        if (goalsCount === 0 && seedsCount > 0 && !goalsHasReplCol) {
+          // Goals is the freshly-created stub from this boot's schema block,
+          // carrying the old UNIQUE(user_id, seed_number) constraint. Seeds is
+          // the real data (likely already rebuilt to multi-row form). Drop the
+          // stub and rename — preserves seeds' current schema and contents.
+          db.exec('DROP TABLE goals');
+          db.exec('ALTER TABLE seeds RENAME TO goals');
+          console.log('✓ Migrated: dropped stub goals, renamed seeds → goals (preserved schema)');
+        } else if (goalsCount > 0 && seedsCount === 0) {
+          db.exec('DROP TABLE seeds');
+          console.log('✓ Cleanup: dropped empty seeds table (migration was already complete)');
+        } else if (goalsCount === 0 && seedsCount === 0) {
+          db.exec('DROP TABLE seeds');
+          console.log('✓ Cleanup: dropped empty seeds table');
+        } else {
+          // goalsCount > 0 && seedsCount > 0 — true conflict, or goals already
+          // has is_replacement column. Don't crash boot; leave both tables in
+          // place and warn loudly. Manual cleanup may be needed.
+          console.warn('⚠️  Both seeds and goals tables have data — leaving both in place.');
+          console.warn('   goals rows: ' + goalsCount + ', seeds rows: ' + seedsCount);
+          console.warn('   Resolve manually: choose canonical source, then DROP the other.');
         }
-        const colList = commonCols.join(', ');
-        db.exec(`INSERT INTO goals (${colList}) SELECT ${colList} FROM seeds`);
-        const migratedCount = db.prepare('SELECT COUNT(*) as c FROM goals').get().c;
-        if (migratedCount !== seedsCount) {
-          throw new Error(`seeds → goals copy failed: expected ${seedsCount} rows but got ${migratedCount}`);
-        }
-        db.exec('DROP TABLE seeds');
-        console.log(`✓ Migrated: copied ${migratedCount} rows from seeds → goals, dropped seeds table`);
-      } else if (goalsCount > 0 && seedsCount === 0) {
-        // Migration previously completed but seeds table wasn't dropped. Clean it up.
-        db.exec('DROP TABLE seeds');
-        console.log('✓ Cleanup: dropped empty seeds table (migration was already complete)');
-      } else if (goalsCount > 0 && seedsCount > 0) {
-        // True conflict — both tables have data. Cannot auto-resolve.
-        throw new Error('Both seeds and goals tables have data — resolve manually before starting server');
-      } else {
-        // Both empty. Drop seeds as cleanup.
-        db.exec('DROP TABLE seeds');
-        console.log('✓ Cleanup: dropped empty seeds table');
       }
+      // else: only goals exists (normal post-migration state) — nothing to do
     }
-    // else: only goals exists (normal post-migration state) — nothing to do
-  }
 
   const goalCols = db.prepare("PRAGMA table_info(weekly_goals)").all().map(r => r.name);
   if (!goalCols.includes('reflection')) {
@@ -538,6 +543,18 @@ db.exec(`
     db.prepare("INSERT OR IGNORE INTO settings (key, value) VALUES ('seeds_v2_migrated', 'true')").run();
     console.log('✓ Migrated: Wiped goal data — V2 model resets all goals; users will re-plant after Lesson 1');
   }
+  } catch (err) {
+    // Boot survives migration failure. Some queries may fail at runtime if
+    // expected columns/tables aren't where they should be — check this log.
+    console.error('');
+    console.error('━'.repeat(70));
+    console.error('⚠️  DB MIGRATION FAILED — app will boot with current schema state');
+    console.error('   Error:', err && err.message);
+    if (err && err.stack) console.error(err.stack);
+    console.error('   Check Railway logs and run /admin/export to back up before retrying.');
+    console.error('━'.repeat(70));
+    console.error('');
+  }
 })();
 
 function seedDefaultAccounts() {
@@ -805,10 +822,26 @@ function seedLesson1Homework() {
   console.log('✓ Seeded Lesson 1 homework tasks');
 }
 
-syncAdminAccount();
-seedDefaultAccounts();
-seedLessons();
-seedLesson1Homework();
+// Each init call wrapped so a failure (often caused by an upstream migration
+// not finishing) logs loudly but lets the app boot anyway. Pairs with the
+// try/catch around migrate() above.
+function safeInit(label, fn) {
+  try {
+    fn();
+  } catch (err) {
+    console.error('');
+    console.error('━'.repeat(70));
+    console.error(`⚠️  INIT STEP FAILED: ${label} — app will boot without this step`);
+    console.error('   Error:', err && err.message);
+    if (err && err.stack) console.error(err.stack);
+    console.error('━'.repeat(70));
+    console.error('');
+  }
+}
+safeInit('syncAdminAccount',    syncAdminAccount);
+safeInit('seedDefaultAccounts', seedDefaultAccounts);
+safeInit('seedLessons',         seedLessons);
+safeInit('seedLesson1Homework', seedLesson1Homework);
 
 module.exports = {
   getUserByEmail(email) {
