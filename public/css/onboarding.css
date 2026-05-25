@@ -403,6 +403,23 @@
   margin: 0;
 }
 
+.ob-seed-example {
+  font-family: var(--font-body);
+  font-size: 0.78rem;
+  font-weight: 300;
+  font-style: italic;
+  color: rgba(16, 15, 16, 0.45);
+  line-height: 1.45;
+  margin: 0;
+}
+
+/* Plant-a-goal page only: subtle separation between the 4 beds in one card. */
+.gh-plant-card .ob-seed-field + .ob-seed-field {
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid rgba(16, 15, 16, 0.07);
+}
+
 .ob-seed-textarea {
   width: 100%;
   background: rgba(112, 92, 108, 0.04);
