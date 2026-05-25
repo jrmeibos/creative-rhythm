@@ -1408,6 +1408,26 @@ module.exports = {
     `).all();
   },
 
+  // Owner-only export helpers — read-only, SELECT only.
+  // Used by GET /admin/export. Never called during migrations or boot.
+  getAllUsersForExport() {
+    return db.prepare(`
+      SELECT id, name, email, role, current_season,
+             onboarding_completed, has_visited_greenhouse,
+             created_at
+      FROM users
+      ORDER BY id ASC
+    `).all();
+  },
+
+  getAllGoalsForExport() {
+    return db.prepare(`
+      SELECT *
+      FROM goals
+      ORDER BY user_id ASC, seed_number ASC, id ASC
+    `).all();
+  },
+
   updateGoalCreatedAt(seedId, dateStr) {
     return db.prepare("UPDATE goals SET created_at = ? WHERE id = ?").run(dateStr + ' 00:00:00', seedId);
   },

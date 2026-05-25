@@ -1450,6 +1450,25 @@ app.get('/admin/curiosity-map-export', requireAdmin, (req, res) => res.redirect(
 app.get('/admin/curiosity-map-export/:userId', requireAdmin, (req, res) =>
   res.redirect(301, `/admin/seed-packets-export/${req.params.userId}`));
 
+// ─── Owner export: read-only JSON backup of all goal data ─────────────────
+app.get('/admin/export', requireAdmin, (req, res) => {
+  // READ-ONLY: only SELECT statements; no writes, no schema changes.
+  const users = db.getAllUsersForExport();
+  const goals = db.getAllGoalsForExport();
+
+  const payload = {
+    exported_at: new Date().toISOString(),
+    row_counts: { users: users.length, goals: goals.length },
+    users,
+    goals,
+  };
+
+  const date = new Date().toISOString().slice(0, 10);
+  res.setHeader('Content-Type', 'application/json; charset=utf-8');
+  res.setHeader('Content-Disposition', `attachment; filename="creative-rhythm-goals-export-${date}.json"`);
+  res.send(JSON.stringify(payload, null, 2));
+});
+
 app.get('/admin/seed-packets-export', requireAdmin, (req, res) => {
   const allUsers = db.getAllUsers();
   const users = allUsers.map(u => ({
