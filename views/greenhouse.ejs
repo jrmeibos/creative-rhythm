@@ -202,6 +202,40 @@
       </section>
       <% } %>
 
+      <%
+        // Render a goal's facets (4-row stack for new goals, 2-row fallback for legacy).
+        function renderFacets(g, faded) {
+          const labelCls = faded ? 'gh-col-label gh-col-label--faded' : 'gh-col-label';
+          const textCls  = faded ? 'gh-col-text gh-col-text--faded'   : 'gh-col-text';
+          const esc = s => String(s == null ? '' : s)
+            .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+          if (!g) {
+            return '<p class="' + textCls + '"><em class="gh-empty">Not yet planted</em></p>';
+          }
+          const hasFacets = g.soil || g.seed || g.water || g.bloom;
+          const hasLegacy = g.feeling || g.looks_like;
+          if (!hasFacets && !hasLegacy) {
+            return '<p class="' + textCls + '"><em class="gh-empty">Not yet planted</em></p>';
+          }
+          const rows = hasFacets ? [
+            ['🪴 The Soil',  "where you're starting",   g.soil],
+            ['🌱 The Seed',  "what you're growing",     g.seed],
+            ['💧 The Water', "how you'll tend it",      g.water],
+            ['🌸 The Bloom', 'what success looks like', g.bloom],
+          ] : [
+            ['The feeling',        null, g.feeling],
+            ['What it looks like', null, g.looks_like],
+          ];
+          return '<div class="gh-seed-stack">' + rows.map(([label, descriptor, val]) =>
+            '<div>' +
+              '<span class="' + labelCls + '">' + label + '</span>' +
+              (descriptor ? '<p class="gh-col-descriptor">' + descriptor + '</p>' : '') +
+              '<p class="' + textCls + '">' + esc(val) + '</p>' +
+            '</div>'
+          ).join('') + '</div>';
+        }
+      %>
+
       <section class="dash-section">
         <div class="gh-seeds">
           <% for (let n = 1; n <= 3; n++) { %>
@@ -228,57 +262,23 @@
                 <% if (repl) { %>
                   <div class="gh-original-block">
                     <span class="gh-original-label">Originally planted</span>
-                    <div class="gh-seed-row gh-seed-row--faded">
-                      <div class="gh-col">
-                        <span class="gh-col-label gh-col-label--faded">The feeling</span>
-                        <p class="gh-col-text gh-col-text--faded"><%= orig?.feeling || '' %></p>
-                      </div>
-                      <div class="gh-col">
-                        <span class="gh-col-label gh-col-label--faded">What it looks like</span>
-                        <p class="gh-col-text gh-col-text--faded"><%= orig?.looks_like || '' %></p>
-                      </div>
-                    </div>
+                    <%- renderFacets(orig, true) %>
                   </div>
                   <div>
                     <span class="gh-updated-tag">New goal planted</span>
-                    <div class="gh-seed-row" style="margin-top:0.5rem">
-                      <div class="gh-col">
-                        <span class="gh-col-label">The feeling</span>
-                        <p class="gh-col-text"><%= repl.feeling || '' %></p>
-                      </div>
-                      <div class="gh-col">
-                        <span class="gh-col-label">What it looks like</span>
-                        <p class="gh-col-text"><%= repl.looks_like || '' %></p>
-                      </div>
+                    <div style="margin-top:0.5rem">
+                      <%- renderFacets(repl, false) %>
                     </div>
                   </div>
                 <% } else if (orig) { %>
-                  <div class="gh-seed-row">
-                    <div class="gh-col">
-                      <span class="gh-col-label">The feeling</span>
-                      <p class="gh-col-text"><%= orig.feeling || '' %></p>
-                    </div>
-                    <div class="gh-col">
-                      <span class="gh-col-label">What it looks like</span>
-                      <p class="gh-col-text"><%= orig.looks_like || '' %></p>
-                    </div>
-                  </div>
+                  <%- renderFacets(orig, false) %>
                 <% } %>
 
               <% } else if (repl) { %>
                 <!-- ── Replaced: show original greyed, replacement active ── -->
                 <div class="gh-original-block">
                   <span class="gh-original-label">Originally planted</span>
-                  <div class="gh-seed-row gh-seed-row--faded">
-                    <div class="gh-col">
-                      <span class="gh-col-label gh-col-label--faded">The feeling</span>
-                      <p class="gh-col-text gh-col-text--faded"><%= orig?.feeling || '' %></p>
-                    </div>
-                    <div class="gh-col">
-                      <span class="gh-col-label gh-col-label--faded">What it looks like</span>
-                      <p class="gh-col-text gh-col-text--faded"><%= orig?.looks_like || '' %></p>
-                    </div>
-                  </div>
+                  <%- renderFacets(orig, true) %>
                 </div>
 
                 <div class="gh-active-block" id="gh-active-<%= n %>">
@@ -286,33 +286,17 @@
                     <span class="gh-updated-tag">New goal planted</span>
                     <button class="gh-pencil-btn" type="button"
                             aria-label="Edit this goal"
-                            onclick="openEdit(<%= repl.id %>, <%= n %>, '<%= (repl.feeling || '').replace(/'/g, "\\'") %>', '<%= (repl.looks_like || '').replace(/'/g, "\\'") %>')">
+                            onclick="openEdit(<%= JSON.stringify({id: repl.id, n: n, soil: repl.soil || '', seed: repl.seed || '', water: repl.water || '', bloom: repl.bloom || '', feeling: repl.feeling || '', looks_like: repl.looks_like || ''}) %>)">
                       <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
                         <path d="M9.5 2.5L11.5 4.5L4.5 11.5H2.5v-2L9.5 2.5Z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/>
                       </svg>
                     </button>
                   </div>
-                  <div class="gh-seed-row" id="gh-view-<%= n %>">
-                    <div class="gh-col">
-                      <span class="gh-col-label">The feeling</span>
-                      <p class="gh-col-text"><%= repl.feeling || '' %></p>
-                    </div>
-                    <div class="gh-col">
-                      <span class="gh-col-label">What it looks like</span>
-                      <p class="gh-col-text"><%= repl.looks_like || '' %></p>
-                    </div>
+                  <div id="gh-view-<%= n %>">
+                    <%- renderFacets(repl, false) %>
                   </div>
                   <div class="gh-edit-form is-hidden" id="gh-edit-<%= n %>">
-                    <div class="gh-seed-row gh-seed-row--inputs">
-                      <div class="gh-col">
-                        <label class="gh-col-label" for="gh-ef-feeling-<%= n %>">The feeling</label>
-                        <textarea class="gh-textarea" id="gh-ef-feeling-<%= n %>" rows="3"></textarea>
-                      </div>
-                      <div class="gh-col">
-                        <label class="gh-col-label" for="gh-ef-looks-<%= n %>">What it looks like</label>
-                        <textarea class="gh-textarea" id="gh-ef-looks-<%= n %>" rows="3"></textarea>
-                      </div>
-                    </div>
+                    <%- include('partials/greenhouse-facet-fields', { n: n, prefix: 'gh-ef' }) %>
                     <div class="gh-edit-footer">
                       <button class="gh-save-btn" type="button" onclick="saveEdit(<%= repl.id %>, <%= n %>)">Save</button>
                       <button class="gh-cancel-btn" type="button" onclick="cancelEdit(<%= n %>)">Cancel</button>
@@ -327,34 +311,18 @@
                     <% if (orig) { %>
                     <button class="gh-pencil-btn" type="button"
                             aria-label="Edit this goal"
-                            onclick="openEdit(<%= orig.id %>, <%= n %>, '<%= (orig.feeling || '').replace(/'/g, "\\'") %>', '<%= (orig.looks_like || '').replace(/'/g, "\\'") %>')">
+                            onclick="openEdit(<%= JSON.stringify({id: orig.id, n: n, soil: orig.soil || '', seed: orig.seed || '', water: orig.water || '', bloom: orig.bloom || '', feeling: orig.feeling || '', looks_like: orig.looks_like || ''}) %>)">
                       <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
                         <path d="M9.5 2.5L11.5 4.5L4.5 11.5H2.5v-2L9.5 2.5Z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/>
                       </svg>
                     </button>
                     <% } %>
                   </div>
-                  <div class="gh-seed-row" id="gh-view-<%= n %>">
-                    <div class="gh-col">
-                      <span class="gh-col-label">The feeling</span>
-                      <p class="gh-col-text"><%- orig?.feeling || '<em class="gh-empty">Not yet planted</em>' %></p>
-                    </div>
-                    <div class="gh-col">
-                      <span class="gh-col-label">What it looks like</span>
-                      <p class="gh-col-text"><%- orig?.looks_like || '<em class="gh-empty">Not yet planted</em>' %></p>
-                    </div>
+                  <div id="gh-view-<%= n %>">
+                    <%- renderFacets(orig, false) %>
                   </div>
                   <div class="gh-edit-form is-hidden" id="gh-edit-<%= n %>">
-                    <div class="gh-seed-row gh-seed-row--inputs">
-                      <div class="gh-col">
-                        <label class="gh-col-label" for="gh-ef-feeling-<%= n %>">The feeling</label>
-                        <textarea class="gh-textarea" id="gh-ef-feeling-<%= n %>" rows="3"></textarea>
-                      </div>
-                      <div class="gh-col">
-                        <label class="gh-col-label" for="gh-ef-looks-<%= n %>">What it looks like</label>
-                        <textarea class="gh-textarea" id="gh-ef-looks-<%= n %>" rows="3"></textarea>
-                      </div>
-                    </div>
+                    <%- include('partials/greenhouse-facet-fields', { n: n, prefix: 'gh-ef' }) %>
                     <div class="gh-edit-footer">
                       <button class="gh-save-btn" type="button" onclick="saveEdit(<%= orig ? orig.id : 0 %>, <%= n %>)">Save</button>
                       <button class="gh-cancel-btn" type="button" onclick="cancelEdit(<%= n %>)">Cancel</button>
@@ -378,16 +346,7 @@
 
                 <div class="gh-replace-form is-hidden" id="gh-replace-<%= n %>">
                   <p class="gh-replace-label">What are you planting now?</p>
-                  <div class="gh-seed-row gh-seed-row--inputs">
-                    <div class="gh-col">
-                      <label class="gh-col-label" for="gh-rf-feeling-<%= n %>">The feeling</label>
-                      <textarea class="gh-textarea" id="gh-rf-feeling-<%= n %>" rows="3" placeholder="How do I want to feel?"></textarea>
-                    </div>
-                    <div class="gh-col">
-                      <label class="gh-col-label" for="gh-rf-looks-<%= n %>">What it looks like</label>
-                      <textarea class="gh-textarea" id="gh-rf-looks-<%= n %>" rows="3" placeholder="What might this make possible?"></textarea>
-                    </div>
-                  </div>
+                  <%- include('partials/greenhouse-facet-fields', { n: n, prefix: 'gh-rf' }) %>
                   <div class="gh-edit-footer">
                     <button class="gh-save-btn" type="button" onclick="saveReplace(<%= n %>)">Plant this goal 🌱</button>
                     <button class="gh-cancel-btn" type="button" onclick="cancelReplace(<%= n %>)">Cancel</button>
@@ -525,9 +484,14 @@
     }
 
     // ── Edit existing goal ───────────────────────────────────────────────────
-    function openEdit(seedId, n, feeling, looksLike) {
-      document.getElementById('gh-ef-feeling-' + n).value = feeling;
-      document.getElementById('gh-ef-looks-' + n).value   = looksLike;
+    function openEdit(data) {
+      const n = data.n;
+      const hasFacets = data.soil || data.seed || data.water || data.bloom;
+      // Legacy goals (only feeling/looks_like): best-effort map onto seed + bloom.
+      document.getElementById('gh-ef-soil-'  + n).value = hasFacets ? data.soil  : '';
+      document.getElementById('gh-ef-seed-'  + n).value = hasFacets ? data.seed  : (data.feeling    || '');
+      document.getElementById('gh-ef-water-' + n).value = hasFacets ? data.water : '';
+      document.getElementById('gh-ef-bloom-' + n).value = hasFacets ? data.bloom : (data.looks_like || '');
       document.getElementById('gh-view-' + n).classList.add('is-hidden');
       document.getElementById('gh-edit-' + n).classList.remove('is-hidden');
     }
@@ -538,13 +502,19 @@
     }
 
     async function saveEdit(seedId, n) {
-      const feeling   = document.getElementById('gh-ef-feeling-' + n).value.trim();
-      const looksLike = document.getElementById('gh-ef-looks-' + n).value.trim();
+      const soil  = document.getElementById('gh-ef-soil-'  + n).value.trim();
+      const seed  = document.getElementById('gh-ef-seed-'  + n).value.trim();
+      const water = document.getElementById('gh-ef-water-' + n).value.trim();
+      const bloom = document.getElementById('gh-ef-bloom-' + n).value.trim();
+      if (!soil || !seed || !water || !bloom) {
+        alert('Please fill in all four fields before saving.');
+        return;
+      }
       const btn = document.querySelector('#gh-edit-' + n + ' .gh-save-btn');
       btn.disabled = true; btn.textContent = 'Saving…';
       const res = await fetch('/api/greenhouse/update', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ seedId, feeling, looksLike })
+        body: JSON.stringify({ seedId, soil, seed, water, bloom })
       });
       if (res.ok) {
         window.location.reload();
@@ -593,17 +563,20 @@
     }
 
     async function saveReplace(n) {
-      const feeling   = document.getElementById('gh-rf-feeling-' + n).value.trim();
-      const looksLike = document.getElementById('gh-rf-looks-' + n).value.trim();
-      if (!feeling && !looksLike) {
-        document.getElementById('gh-rf-feeling-' + n).focus();
+      const soil  = document.getElementById('gh-rf-soil-'  + n).value.trim();
+      const seed  = document.getElementById('gh-rf-seed-'  + n).value.trim();
+      const water = document.getElementById('gh-rf-water-' + n).value.trim();
+      const bloom = document.getElementById('gh-rf-bloom-' + n).value.trim();
+      if (!soil || !seed || !water || !bloom) {
+        document.getElementById('gh-rf-soil-' + n).focus();
+        alert('Please fill in all four fields before planting.');
         return;
       }
       const btn = document.querySelector('#gh-replace-' + n + ' .gh-save-btn');
       btn.disabled = true; btn.textContent = 'Planting…';
       const res = await fetch('/api/greenhouse/replace', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ seedNumber: n, feeling, looksLike })
+        body: JSON.stringify({ seedNumber: n, soil, seed, water, bloom })
       });
       if (res.ok) {
         window.location.reload();

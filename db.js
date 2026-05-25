@@ -368,6 +368,15 @@ db.exec(`
     console.log('✓ Migrated: added bed_position to goals');
   }
 
+  // Goals: add 4-facet columns (soil/seed/water/bloom) for Greenhouse planting flow
+  const seedColsFacets = db.prepare("PRAGMA table_info(goals)").all().map(r => r.name);
+  for (const col of ['soil', 'seed', 'water', 'bloom']) {
+    if (!seedColsFacets.includes(col)) {
+      db.exec(`ALTER TABLE goals ADD COLUMN ${col} TEXT DEFAULT ''`);
+      console.log(`✓ Migrated: added ${col} to goals`);
+    }
+  }
+
   // Users: add has_visited_greenhouse for first-visit welcome gate
   const userColsGH = db.prepare("PRAGMA table_info(users)").all().map(r => r.name);
   if (!userColsGH.includes('has_visited_greenhouse')) {
@@ -1309,6 +1318,51 @@ module.exports = {
     ).run(feeling || '', looksLike || '', seedId, userId);
   },
 
+  upsertGreenhouseGoalFacets(userId, seedNumber, facets, createdAt, bedPosition = null) {
+    const { soil = '', seed = '', water = '', bloom = '' } = facets;
+    const existing = db.prepare(
+      'SELECT id FROM goals WHERE user_id=? AND seed_number=? AND is_replacement=0'
+    ).get(userId, seedNumber);
+    if (existing) {
+      return db.prepare(
+        'UPDATE goals SET soil=?, seed=?, water=?, bloom=?, updated_at=CURRENT_TIMESTAMP WHERE id=?'
+      ).run(soil, seed, water, bloom, existing.id);
+    }
+    if (createdAt) {
+      return db.prepare(
+        'INSERT INTO goals (user_id, seed_number, soil, seed, water, bloom, is_active, is_replacement, created_at, bed_position) VALUES (?, ?, ?, ?, ?, ?, 1, 0, ?, ?)'
+      ).run(userId, seedNumber, soil, seed, water, bloom, createdAt, bedPosition);
+    }
+    return db.prepare(
+      'INSERT INTO goals (user_id, seed_number, soil, seed, water, bloom, is_active, is_replacement, bed_position) VALUES (?, ?, ?, ?, ?, ?, 1, 0, ?)'
+    ).run(userId, seedNumber, soil, seed, water, bloom, bedPosition);
+  },
+
+  replaceGoalsFacets(userId, seedNumber, facets, createdAt) {
+    const { soil = '', seed = '', water = '', bloom = '' } = facets;
+    db.prepare(
+      'UPDATE goals SET is_active=0, updated_at=CURRENT_TIMESTAMP WHERE user_id=? AND seed_number=? AND is_active=1'
+    ).run(userId, seedNumber);
+    const original = db.prepare(
+      'SELECT id FROM goals WHERE user_id=? AND seed_number=? AND is_replacement=0 ORDER BY id ASC LIMIT 1'
+    ).get(userId, seedNumber);
+    if (createdAt) {
+      return db.prepare(
+        'INSERT INTO goals (user_id, seed_number, soil, seed, water, bloom, is_active, is_replacement, replaces_seed_id, created_at) VALUES (?, ?, ?, ?, ?, ?, 1, 1, ?, ?)'
+      ).run(userId, seedNumber, soil, seed, water, bloom, original?.id || null, createdAt);
+    }
+    return db.prepare(
+      'INSERT INTO goals (user_id, seed_number, soil, seed, water, bloom, is_active, is_replacement, replaces_seed_id) VALUES (?, ?, ?, ?, ?, ?, 1, 1, ?)'
+    ).run(userId, seedNumber, soil, seed, water, bloom, original?.id || null);
+  },
+
+  updateGoalByIdFacets(seedId, userId, facets) {
+    const { soil = '', seed = '', water = '', bloom = '' } = facets;
+    return db.prepare(
+      'UPDATE goals SET soil=?, seed=?, water=?, bloom=?, updated_at=CURRENT_TIMESTAMP WHERE id=? AND user_id=?'
+    ).run(soil, seed, water, bloom, seedId, userId);
+  },
+
   getGoalById(seedId, userId) {
     return db.prepare('SELECT * FROM goals WHERE id = ? AND user_id = ?').get(seedId, userId);
   },
@@ -1344,7 +1398,10 @@ module.exports = {
 
   getAllGoalsForAdmin() {
     return db.prepare(`
-      SELECT s.id, s.user_id, s.seed_number, s.feeling, s.created_at, s.is_active, u.email
+      SELECT s.id, s.user_id, s.seed_number,
+             s.feeling, s.looks_like,
+             s.soil, s.seed, s.water, s.bloom,
+             s.created_at, s.is_active, u.email
       FROM goals s
       JOIN users u ON s.user_id = u.id
       ORDER BY u.name ASC, s.seed_number ASC, s.id ASC

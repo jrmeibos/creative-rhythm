@@ -19,22 +19,30 @@
 
         <div class="ob-seeds">
           <div class="ob-seed-card">
-            <div class="ob-seed-cols">
-              <div class="ob-seed-field">
-                <label class="ob-seed-label" for="feeling">🌱 The feeling</label>
-                <textarea id="feeling" class="ob-seed-textarea"
-                          rows="4" placeholder="How do I want to feel?"></textarea>
-              </div>
-              <div class="ob-seed-field">
-                <label class="ob-seed-label" for="looks">🌿 What it looks like</label>
-                <textarea id="looks" class="ob-seed-textarea"
-                          rows="4" placeholder="What might this make possible?"></textarea>
-              </div>
+            <div class="ob-seed-field">
+              <label class="ob-seed-label" for="gp-soil">🪴 The Soil — Where you're starting</label>
+              <p class="ob-seed-prompt">Start by naming the feeling, experience, or pattern you hope to shift away from.</p>
+              <textarea id="gp-soil" class="ob-seed-textarea" rows="3"></textarea>
+            </div>
+            <div class="ob-seed-field">
+              <label class="ob-seed-label" for="gp-seed">🌱 The Seed — What you're growing</label>
+              <p class="ob-seed-prompt">What's a change you want to work towards? Name the feeling or way of being you're reaching for.</p>
+              <textarea id="gp-seed" class="ob-seed-textarea" rows="3"></textarea>
+            </div>
+            <div class="ob-seed-field">
+              <label class="ob-seed-label" for="gp-water">💧 The Water — How you'll tend it</label>
+              <p class="ob-seed-prompt">What does this change ask from you?</p>
+              <textarea id="gp-water" class="ob-seed-textarea" rows="3"></textarea>
+            </div>
+            <div class="ob-seed-field">
+              <label class="ob-seed-label" for="gp-bloom">🌸 The Bloom — What success looks like</label>
+              <p class="ob-seed-prompt">Picture a regular day once this change has taken root. What are you doing differently?</p>
+              <textarea id="gp-bloom" class="ob-seed-textarea" rows="3"></textarea>
             </div>
           </div>
         </div>
 
-        <p class="ob-error" id="plant-error" hidden>Please fill in both fields before planting.</p>
+        <p class="ob-error" id="plant-error" hidden>Please fill in all four fields before planting.</p>
         <div class="ob-actions">
           <button class="ob-btn ob-btn--primary" id="plant-btn" onclick="plantGoal(<%= bed %>)">Plant this goal →</button>
         </div>
@@ -45,12 +53,15 @@
 
   <script>
     async function plantGoal(bed) {
-      const feeling   = document.getElementById('feeling').value.trim();
-      const looksLike = document.getElementById('looks').value.trim();
-      const errEl     = document.getElementById('plant-error');
+      const soil  = document.getElementById('gp-soil').value.trim();
+      const seed  = document.getElementById('gp-seed').value.trim();
+      const water = document.getElementById('gp-water').value.trim();
+      const bloom = document.getElementById('gp-bloom').value.trim();
+      const errEl = document.getElementById('plant-error');
       errEl.hidden = true;
 
-      if (!feeling || !looksLike) {
+      if (!soil || !seed || !water || !bloom) {
+        errEl.textContent = 'Please fill in all four fields before planting.';
         errEl.hidden = false;
         return;
       }
@@ -62,7 +73,7 @@
       const res = await fetch('/api/greenhouse/plant-bed', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ bed, feeling, looksLike })
+        body: JSON.stringify({ bed, soil, seed, water, bloom })
       });
 
       if (res.ok) {

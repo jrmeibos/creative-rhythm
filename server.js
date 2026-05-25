@@ -1019,17 +1019,17 @@ app.get('/greenhouse/plant', requireAuth, (req, res) => {
 
 app.post('/api/greenhouse/plant-bed', requireAuth, (req, res) => {
   const userId = req.session.user.id;
-  const { bed, feeling, looksLike } = req.body;
+  const { bed, soil, seed, water, bloom } = req.body;
   const bedNum = parseInt(bed);
   if (![1, 2, 3].includes(bedNum)) {
     return res.status(400).json({ error: 'Invalid bed number.' });
   }
-  if (!feeling || !looksLike) {
-    return res.status(400).json({ error: 'Both fields are required.' });
+  if (!soil || !seed || !water || !bloom) {
+    return res.status(400).json({ error: 'All four fields are required.' });
   }
   const now = getNow(req.session.user);
   const createdAt = now.toISOString().replace('T', ' ').split('.')[0];
-  db.upsertGreenhouseGoal(userId, bedNum, feeling, looksLike, createdAt, bedNum);
+  db.upsertGreenhouseGoalFacets(userId, bedNum, { soil, seed, water, bloom }, createdAt, bedNum);
   res.json({ ok: true });
 });
 
@@ -1069,23 +1069,29 @@ app.post('/api/goals/:id/keep', requireAuth, (req, res) => {
 });
 
 app.post('/api/greenhouse/replace', requireAuth, (req, res) => {
-  const { seedNumber, feeling, looksLike } = req.body;
+  const { seedNumber, soil, seed, water, bloom } = req.body;
   const num = parseInt(seedNumber);
   if (![1, 2, 3].includes(num)) return res.status(400).json({ error: 'Invalid seed number.' });
+  if (!soil || !seed || !water || !bloom) {
+    return res.status(400).json({ error: 'All four fields are required.' });
+  }
   const activeGoal = db.getActiveGoalByNumber(req.session.user.id, num);
   if (activeGoal && isGoalLocked(activeGoal, req.session.user)) {
     return res.status(403).json({ error: 'Goal is still in the lock period.' });
   }
   const now = getNow(req.session.user);
   const createdAt = now.toISOString().replace('T', ' ').split('.')[0];
-  db.replaceGoals(req.session.user.id, num, feeling, looksLike, createdAt);
+  db.replaceGoalsFacets(req.session.user.id, num, { soil, seed, water, bloom }, createdAt);
   res.json({ ok: true });
 });
 
 app.post('/api/greenhouse/update', requireAuth, (req, res) => {
-  const { seedId, feeling, looksLike } = req.body;
+  const { seedId, soil, seed, water, bloom } = req.body;
   if (!seedId) return res.status(400).json({ error: 'seedId required.' });
-  db.updateGoalById(parseInt(seedId), req.session.user.id, feeling, looksLike);
+  if (!soil || !seed || !water || !bloom) {
+    return res.status(400).json({ error: 'All four fields are required.' });
+  }
+  db.updateGoalByIdFacets(parseInt(seedId), req.session.user.id, { soil, seed, water, bloom });
   res.json({ ok: true });
 });
 

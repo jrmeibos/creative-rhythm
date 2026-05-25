@@ -394,6 +394,15 @@
   letter-spacing: 0.04em;
 }
 
+.ob-seed-prompt {
+  font-family: var(--font-body);
+  font-size: 0.82rem;
+  font-weight: 300;
+  color: rgba(16, 15, 16, 0.65);
+  line-height: 1.4;
+  margin: 0;
+}
+
 .ob-seed-textarea {
   width: 100%;
   background: rgba(112, 92, 108, 0.04);

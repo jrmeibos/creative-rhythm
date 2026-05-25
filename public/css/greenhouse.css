@@ -94,6 +94,26 @@
   margin-bottom: 0.75rem;
 }
 
+/* ─── Vertical stack (4-facet goals) ─────────────────────────────────────── */
+.gh-seed-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.gh-seed-stack--inputs {
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.gh-facet-prompt {
+  font-size: 0.78rem;
+  font-weight: 300;
+  color: rgba(16, 15, 16, 0.55);
+  line-height: 1.4;
+  margin: -0.15rem 0 0.4rem 0;
+}
+
 /* ─── Column labels and text ─────────────────────────────────────────────── */
 .gh-col-label {
   display: block;
@@ -116,6 +136,14 @@
 }
 
 .gh-col-text--faded { color: rgba(16, 15, 16, 0.3); }
+
+.gh-col-descriptor {
+  font-size: 0.75rem;
+  font-weight: 300;
+  color: rgba(16, 15, 16, 0.42);
+  line-height: 1.4;
+  margin: -0.2rem 0 0.45rem 0;
+}
 
 .gh-empty {
   font-style: italic;

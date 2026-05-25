@@ -38,21 +38,39 @@
           <div class="harvest-seeds-grid">
             <% for (let n = 1; n <= 3; n++) { %>
               <% const s = seedsMap[n]; %>
+              <% const hasFacets = s && (s.soil || s.seed || s.water || s.bloom); %>
+              <% const hasLegacy = s && (s.feeling || s.looks_like); %>
               <div class="harvest-seed-card">
                 <span class="harvest-seed-num">Goal <%= ['One','Two','Three'][n-1] %></span>
-                <% if (s && s.feeling) { %>
-                  <div class="harvest-seed-field">
-                    <span class="harvest-seed-field-label">🌱 The feeling</span>
-                    <p class="harvest-seed-field-text"><%= s.feeling %></p>
-                  </div>
-                <% } %>
-                <% if (s && s.looks_like) { %>
-                  <div class="harvest-seed-field">
-                    <span class="harvest-seed-field-label">🌿 What it looks like</span>
-                    <p class="harvest-seed-field-text"><%= s.looks_like %></p>
-                  </div>
-                <% } %>
-                <% if (!s || (!s.feeling && !s.looks_like)) { %>
+                <% if (hasFacets) { %>
+                  <% const facetRows = [
+                    ['🪴 The Soil',  s.soil],
+                    ['🌱 The Seed',  s.seed],
+                    ['💧 The Water', s.water],
+                    ['🌸 The Bloom', s.bloom],
+                  ]; %>
+                  <% facetRows.forEach(([label, val]) => { %>
+                    <% if (val) { %>
+                      <div class="harvest-seed-field">
+                        <span class="harvest-seed-field-label"><%= label %></span>
+                        <p class="harvest-seed-field-text"><%= val %></p>
+                      </div>
+                    <% } %>
+                  <% }); %>
+                <% } else if (hasLegacy) { %>
+                  <% if (s.feeling) { %>
+                    <div class="harvest-seed-field">
+                      <span class="harvest-seed-field-label">🌱 The feeling</span>
+                      <p class="harvest-seed-field-text"><%= s.feeling %></p>
+                    </div>
+                  <% } %>
+                  <% if (s.looks_like) { %>
+                    <div class="harvest-seed-field">
+                      <span class="harvest-seed-field-label">🌿 What it looks like</span>
+                      <p class="harvest-seed-field-text"><%= s.looks_like %></p>
+                    </div>
+                  <% } %>
+                <% } else { %>
                   <p class="harvest-seed-empty">No goal planted here.</p>
                 <% } %>
               </div>

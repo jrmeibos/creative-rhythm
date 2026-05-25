@@ -121,7 +121,8 @@
                 <tr id="seed-row-<%= s.id %>">
                   <td><%= s.email %></td>
                   <td><%= s.seed_number %></td>
-                  <td class="admin-seed-feeling"><%= s.feeling && s.feeling.length > 28 ? s.feeling.slice(0, 28) + '…' : (s.feeling || '—') %></td>
+                  <% const previewText = s.seed || s.feeling || ''; %>
+                  <td class="admin-seed-feeling"><%= previewText.length > 28 ? previewText.slice(0, 28) + '…' : (previewText || '—') %></td>
                   <td id="seed-planted-<%= s.id %>"><%= s.created_at ? s.created_at.slice(0, 10) : '—' %></td>
                   <td><%= s.is_active ? '✓' : '' %></td>
                   <td><button class="admin-btn-sm" type="button" onclick="editSeedDate(<%= s.id %>)">Edit</button></td>
@@ -630,11 +631,23 @@
 
       if (data.goals && data.goals.length) {
         html += '<h4 style="font-weight:700;margin:0.75rem 0 0.5rem;color:var(--color-bloem)">Goals</h4>';
+        const esc = v => String(v == null ? '' : v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
         for (const s of data.goals) {
           const status = s.status === 'replaced' ? ' <em style="color:#D4956A">(replaced)</em>' : '';
-          html += `<div style="margin-bottom:0.5rem"><strong>Seed ${s.seed_number}${status}:</strong> ${s.feeling || '—'} / ${s.looks_like || '—'}`;
+          const hasFacets = s.soil || s.seed || s.water || s.bloom;
+          html += `<div style="margin-bottom:0.75rem"><strong>Seed ${s.seed_number}${status}:</strong>`;
+          if (hasFacets) {
+            html += '<div style="margin-left:1rem;margin-top:0.25rem">';
+            html += `<div>🪴 <strong>Soil:</strong> ${esc(s.soil)  || '—'}</div>`;
+            html += `<div>🌱 <strong>Seed:</strong> ${esc(s.seed)  || '—'}</div>`;
+            html += `<div>💧 <strong>Water:</strong> ${esc(s.water) || '—'}</div>`;
+            html += `<div>🌸 <strong>Bloom:</strong> ${esc(s.bloom) || '—'}</div>`;
+            html += '</div>';
+          } else {
+            html += ` ${esc(s.feeling) || '—'} / ${esc(s.looks_like) || '—'}`;
+          }
           if (s.status === 'replaced' && (s.updated_feeling || s.updated_looks_like)) {
-            html += `<br><span style="color:#D4956A">↳ New: ${s.updated_feeling || '—'} / ${s.updated_looks_like || '—'}</span>`;
+            html += `<br><span style="color:#D4956A">↳ New: ${esc(s.updated_feeling) || '—'} / ${esc(s.updated_looks_like) || '—'}</span>`;
           }
           html += '</div>';
         }
