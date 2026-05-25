@@ -13,7 +13,8 @@ function requireAdmin(req, res, next) {
     return res.status(403).render('error', {
       title: 'Access Denied',
       message: "You don't have permission to view this page.",
-      user: req.session.user
+      user: req.session.user,
+      page: 'error'
     });
   }
   next();
