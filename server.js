@@ -395,7 +395,7 @@ app.get('/goals', requireAuth, (req, res) => {
   const curricularSeasonLabel = getCurricularSeasonLabel(curricularSeason);
 
   res.render('goals', {
-    title: 'My Goals',
+    title: 'Weekly Intentions',
     page: 'goals',
     weekStart,
     weekLabel: formatWeekLabel(weekStart),
