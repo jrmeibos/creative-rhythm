@@ -389,6 +389,16 @@ db.exec(`
     console.log('✓ Migrated: added has_visited_greenhouse to users');
   }
 
+  // Users: add last_recorded_date for the Dashboard "I recorded today" memory.
+  // A single overwritable YYYY-MM-DD string per user — not a count, streak, or
+  // history. When today's date equals this column, the card renders in its
+  // done state; once the (time-travel-aware) date rolls over, it resets.
+  const userColsRec = db.prepare("PRAGMA table_info(users)").all().map(r => r.name);
+  if (!userColsRec.includes('last_recorded_date')) {
+    db.exec("ALTER TABLE users ADD COLUMN last_recorded_date TEXT");
+    console.log('✓ Migrated: added last_recorded_date to users');
+  }
+
   // Default settings for unlock flags
   db.prepare("INSERT OR IGNORE INTO settings (key, value) VALUES ('midcourse_unlocked', 'false')").run();
   db.prepare("INSERT OR IGNORE INTO settings (key, value) VALUES ('harvest_unlocked', 'false')").run();
@@ -1583,6 +1593,21 @@ module.exports = {
     return db.prepare(
       'SELECT id, created_at, season, prompt, reflection_text FROM cuttings WHERE user_id = ? ORDER BY created_at DESC'
     ).all(userId);
+  },
+
+  // Recording memory: a single overwritable YYYY-MM-DD per user.
+  // Not a streak, not a count, not a history — one column, set & forget.
+  markRecordedToday(userId, dateStr) {
+    return db.prepare(
+      'UPDATE users SET last_recorded_date = ? WHERE id = ?'
+    ).run(dateStr, userId);
+  },
+
+  getLastRecordedDate(userId) {
+    const row = db.prepare(
+      'SELECT last_recorded_date FROM users WHERE id = ?'
+    ).get(userId);
+    return row ? row.last_recorded_date : null;
   },
 
   getAllStudentAssessmentStatus() {

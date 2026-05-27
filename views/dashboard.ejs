@@ -78,12 +78,12 @@
             "What's true for you today? Talk to the camera for as long or as little as feels honest. This one's only for you."
           </p>
 
-          <!-- Resting state: invitation -->
-          <div class="recording-card-state" id="recording-state-rest">
+          <!-- Resting state: invitation. Hidden on load if user already recorded today. -->
+          <div class="recording-card-state<%= recordedToday ? ' is-hidden' : '' %>" id="recording-state-rest">
             <button type="button" class="recording-card-btn" id="recording-recorded-btn">I recorded today</button>
           </div>
 
-          <!-- Reflect state: optional one-line capture -->
+          <!-- Reflect state: optional one-line capture. Always hidden on load -->
           <div class="recording-card-state recording-card-reflect is-hidden" id="recording-state-reflect">
             <p class="recording-reflect-q">What did you notice today?</p>
             <p class="recording-reflect-help">A sentence is plenty — or skip it.</p>
@@ -94,8 +94,8 @@
             </div>
           </div>
 
-          <!-- Done state: gentle close -->
-          <div class="recording-card-state is-hidden" id="recording-state-done">
+          <!-- Done state: visible on load if user already recorded today. -->
+          <div class="recording-card-state<%= recordedToday ? '' : ' is-hidden' %>" id="recording-state-done">
             <p class="recording-done-text">See you tomorrow.</p>
           </div>
         </div>
@@ -269,6 +269,10 @@
       recordedBtn.addEventListener('click', () => {
         show(reflect);
         textEl.focus();
+        // Stamp today's date so the card remembers across navigation —
+        // even if the student skips the reflection. Non-blocking: failure
+        // here is acceptable, UI still works for this session.
+        fetch('/dashboard/recorded-today', { method: 'POST' }).catch(() => {});
       });
 
       skipBtn.addEventListener('click', () => {

@@ -285,6 +285,11 @@ app.get('/dashboard', requireAuth, (req, res) => {
   const curricularSeason = getCurricularSeason(weekNumber);
   const curricularSeasonLabel = getCurricularSeasonLabel(curricularSeason);
 
+  // Recording card initial state: did this user mark "recorded" today already?
+  // "Today" uses the time-travel-aware now so admin Time Travel rolls it over.
+  const today = toLocalDateString(getNow(req.session.user));
+  const recordedToday = db.getLastRecordedDate(req.session.user.id) === today;
+
   res.render('dashboard', {
     title: 'Dashboard',
     page: 'dashboard',
@@ -301,6 +306,7 @@ app.get('/dashboard', requireAuth, (req, res) => {
     completedCount,
     totalLessons: allLessons.length,
     isIntegrationWeek,
+    recordedToday,
     quote: getRotatingQuote()
   });
 });
@@ -308,6 +314,9 @@ app.get('/dashboard', requireAuth, (req, res) => {
 // ─── Daily recording practice: save an optional reflection ("cutting") ─────
 // No video is uploaded or stored — only the reflection text is persisted.
 // Empty / whitespace-only text is treated as a skip and inserts nothing.
+// Also stamps users.last_recorded_date so the card remembers the user
+// recorded today, even if they reach this endpoint without hitting the
+// /dashboard/recorded-today route first (belt-and-suspenders, idempotent).
 app.post('/dashboard/cutting', requireAuth, (req, res) => {
   const text = (req.body && typeof req.body.reflection_text === 'string')
     ? req.body.reflection_text.trim()
@@ -315,10 +324,22 @@ app.post('/dashboard/cutting', requireAuth, (req, res) => {
   if (!text) {
     return res.json({ saved: false });
   }
+  const now = getNow(req.session.user);
+  const today = toLocalDateString(now);
   const courseWeek = getCurrentCourseWeek(req.session.user);
   const season = getCurricularSeason(courseWeek.weekNumber);
   db.createCutting(req.session.user.id, season, 'What did you notice today?', text);
+  db.markRecordedToday(req.session.user.id, today);
   res.json({ saved: true });
+});
+
+// ─── Mark "I recorded today" — stamp the date so the card remembers ────────
+// Independent of saving a reflection. Setting the same date twice is a no-op
+// (idempotent UPDATE). Resets naturally when today's date changes.
+app.post('/dashboard/recorded-today', requireAuth, (req, res) => {
+  const today = toLocalDateString(getNow(req.session.user));
+  db.markRecordedToday(req.session.user.id, today);
+  res.json({ ok: true, date: today });
 });
 
 // ─── Goals ─────────────────────────────────────────────────────────────────
@@ -870,6 +891,16 @@ function getNow(user) {
     if (simulated && simulated.trim()) return new Date(simulated + 'T00:00:00');
   }
   return new Date();
+}
+
+// "Today" as a wall-clock YYYY-MM-DD string from a Date — local components
+// (not UTC) so it matches how `simulated_today` is parsed and how a student
+// experiences their own day.
+function toLocalDateString(d) {
+  const yyyy = d.getFullYear();
+  const mm   = String(d.getMonth() + 1).padStart(2, '0');
+  const dd   = String(d.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
 }
 
 function isGoalLocked(goal, user) {
