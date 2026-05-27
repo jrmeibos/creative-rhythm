@@ -74,12 +74,12 @@
             <p class="recording-card-season"><%= curricularSeasonLabel.toUpperCase() %></p>
           <% } %>
           <h2 class="recording-card-heading">Today's recording</h2>
-          <p class="recording-card-prompt">
-            "What's true for you today? Talk to the camera for as long or as little as feels honest. This one's only for you."
-          </p>
 
           <!-- Resting state: invitation. Hidden on load if user already recorded today. -->
           <div class="recording-card-state<%= recordedToday ? ' is-hidden' : '' %>" id="recording-state-rest">
+            <p class="recording-card-prompt">
+              "What's true for you today? Talk to the camera for as long or as little as feels honest. This one's only for you."
+            </p>
             <button type="button" class="recording-card-btn" id="recording-recorded-btn">I recorded today</button>
           </div>
 
@@ -96,7 +96,7 @@
 
           <!-- Done state: visible on load if user already recorded today. -->
           <div class="recording-card-state<%= recordedToday ? '' : ' is-hidden' %>" id="recording-state-done">
-            <p class="recording-done-text">See you tomorrow.</p>
+            <p class="recording-done-text">Tended for today. Until next time.</p>
           </div>
         </div>
       </section>
