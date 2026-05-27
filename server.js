@@ -305,6 +305,22 @@ app.get('/dashboard', requireAuth, (req, res) => {
   });
 });
 
+// ─── Daily recording practice: save an optional reflection ("cutting") ─────
+// No video is uploaded or stored — only the reflection text is persisted.
+// Empty / whitespace-only text is treated as a skip and inserts nothing.
+app.post('/dashboard/cutting', requireAuth, (req, res) => {
+  const text = (req.body && typeof req.body.reflection_text === 'string')
+    ? req.body.reflection_text.trim()
+    : '';
+  if (!text) {
+    return res.json({ saved: false });
+  }
+  const courseWeek = getCurrentCourseWeek(req.session.user);
+  const season = getCurricularSeason(courseWeek.weekNumber);
+  db.createCutting(req.session.user.id, season, 'What did you notice today?', text);
+  res.json({ saved: true });
+});
+
 // ─── Goals ─────────────────────────────────────────────────────────────────
 
 app.get('/goals', requireAuth, (req, res) => {

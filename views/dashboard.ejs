@@ -67,6 +67,40 @@
         </div>
       </section>
 
+      <!-- Daily recording practice -->
+      <section class="dash-section">
+        <div class="recording-card" id="recording-card">
+          <% if (curricularSeasonLabel) { %>
+            <p class="recording-card-season"><%= curricularSeasonLabel.toUpperCase() %></p>
+          <% } %>
+          <h2 class="recording-card-heading">Today's recording</h2>
+          <p class="recording-card-prompt">
+            "What's true for you today? Talk to the camera for as long or as little as feels honest. This one's only for you."
+          </p>
+
+          <!-- Resting state: invitation -->
+          <div class="recording-card-state" id="recording-state-rest">
+            <button type="button" class="recording-card-btn" id="recording-recorded-btn">I recorded today</button>
+          </div>
+
+          <!-- Reflect state: optional one-line capture -->
+          <div class="recording-card-state recording-card-reflect is-hidden" id="recording-state-reflect">
+            <p class="recording-reflect-q">What did you notice today?</p>
+            <p class="recording-reflect-help">A sentence is plenty — or skip it.</p>
+            <textarea id="recording-reflect-text" class="recording-reflect-textarea" rows="3" placeholder=""></textarea>
+            <div class="recording-reflect-actions">
+              <button type="button" class="recording-card-btn" id="recording-save-btn">Save</button>
+              <button type="button" class="recording-card-btn-secondary" id="recording-skip-btn">Skip</button>
+            </div>
+          </div>
+
+          <!-- Done state: gentle close -->
+          <div class="recording-card-state is-hidden" id="recording-state-done">
+            <p class="recording-done-text">See you tomorrow.</p>
+          </div>
+        </div>
+      </section>
+
       <!-- 4 C's goals preview -->
       <section class="dash-section">
         <div class="dash-section-header">
@@ -218,6 +252,49 @@
         document.querySelector('.season-first-prompt')?.remove();
       });
     });
+
+    // ── Daily recording practice ──────────────────────────────────────────
+    (function () {
+      const rest    = document.getElementById('recording-state-rest');
+      const reflect = document.getElementById('recording-state-reflect');
+      const done    = document.getElementById('recording-state-done');
+      const recordedBtn = document.getElementById('recording-recorded-btn');
+      const saveBtn = document.getElementById('recording-save-btn');
+      const skipBtn = document.getElementById('recording-skip-btn');
+      const textEl  = document.getElementById('recording-reflect-text');
+      if (!rest || !reflect || !done || !recordedBtn || !saveBtn || !skipBtn || !textEl) return;
+
+      const show = el => { rest.classList.add('is-hidden'); reflect.classList.add('is-hidden'); done.classList.add('is-hidden'); el.classList.remove('is-hidden'); };
+
+      recordedBtn.addEventListener('click', () => {
+        show(reflect);
+        textEl.focus();
+      });
+
+      skipBtn.addEventListener('click', () => {
+        // Skip → no POST. Empty text = same as skip; we never persist empty.
+        textEl.value = '';
+        show(done);
+      });
+
+      saveBtn.addEventListener('click', async () => {
+        const text = textEl.value.trim();
+        if (!text) { show(done); return; }   // empty save = skip, no row created
+        saveBtn.disabled = true;
+        try {
+          const res = await fetch('/dashboard/cutting', {
+            method:  'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body:    JSON.stringify({ reflection_text: text })
+          });
+          if (!res.ok) throw new Error('save failed');
+          show(done);
+        } catch (e) {
+          saveBtn.disabled = false;
+          alert('Could not save. Please try again.');
+        }
+      });
+    })();
   </script>
 </body>
 </html>

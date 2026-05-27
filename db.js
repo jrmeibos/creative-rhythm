@@ -422,6 +422,23 @@ db.exec(`
     );
   `);
 
+  // Cuttings: daily reflection captures from the Dashboard recording practice.
+  // Presence-only — only days the student chose to write a reflection exist here.
+  // No video is uploaded or stored; only the optional text + season stamp.
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS cuttings (
+      id              INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id         INTEGER NOT NULL,
+      created_at      DATETIME DEFAULT CURRENT_TIMESTAMP,
+      season          TEXT,
+      prompt          TEXT,
+      reflection_text TEXT,
+      FOREIGN KEY (user_id) REFERENCES users(id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_cuttings_user_created
+      ON cuttings (user_id, created_at);
+  `);
+
   // Avatars moved to /data/avatars — old paths pointing to /uploads/avatars/ are now broken.
   // Reset them so users see initials until they re-upload.
   db.exec("UPDATE users SET profile_photo = NULL WHERE profile_photo LIKE '/uploads/avatars/%'");
@@ -1550,6 +1567,14 @@ module.exports = {
         shared_with_cohort = excluded.shared_with_cohort,
         updated_at = CURRENT_TIMESTAMP
     `).run(userId, weekStart, text || '', sharedWithCohort ? 1 : 0);
+  },
+
+  // Cuttings: daily reflection from the Dashboard recording practice.
+  // Caller is responsible for trimming + empty-check; this just inserts.
+  createCutting(userId, season, prompt, reflectionText) {
+    return db.prepare(
+      'INSERT INTO cuttings (user_id, season, prompt, reflection_text) VALUES (?, ?, ?, ?)'
+    ).run(userId, season || null, prompt || null, reflectionText);
   },
 
   getAllStudentAssessmentStatus() {
