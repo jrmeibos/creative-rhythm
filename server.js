@@ -11,7 +11,7 @@ const db = require('./db');
 const { requireAuth, requireAdmin } = require('./auth');
 const { sendPasswordResetEmail } = require('./email');
 const { ANGLES, getAngle, getQuestion } = require('./lib/seed-packet-questions');
-const { getCurricularSeason, getCurricularSeasonLabel } = require('./lib/curricular-season');
+const { getCurricularSeason, getCurricularSeasonLabel, getCurricularSeasonDescriptor } = require('./lib/curricular-season');
 const ALL_QUESTION_IDS = new Set(ANGLES.flatMap(a => a.questions.map(q => q.id)));
 
 const Anthropic = require('@anthropic-ai/sdk');
@@ -1030,6 +1030,49 @@ app.get('/greenhouse/plant', requireAuth, (req, res) => {
     title: `Plant a goal in Bed ${bed}`,
     page: 'greenhouse',
     bed,
+  });
+});
+
+// ─── Cuttings archive: read-only, season-grouped reflections (Build 2) ────
+app.get('/greenhouse/cuttings', requireAuth, (req, res) => {
+  const cuttings = db.getCuttingsForUser(req.session.user.id);
+
+  // Group by season slug. null/empty -> '_other_' bucket.
+  const buckets = {};
+  for (const c of cuttings) {
+    const key = c.season || '_other_';
+    if (!buckets[key]) buckets[key] = [];
+    buckets[key].push(c);
+  }
+
+  // Render in curricular order: Winter → Spring → Summer → Autumn.
+  // Empty seasons omitted entirely (presence-only).
+  const ORDER = ['winter', 'spring', 'summer', 'autumn'];
+  const seasonGroups = ORDER
+    .filter(s => buckets[s] && buckets[s].length)
+    .map(s => ({
+      season:     s,
+      label:      getCurricularSeasonLabel(s),
+      descriptor: getCurricularSeasonDescriptor(s),
+      entries:    buckets[s],
+    }));
+
+  // Null/unknown-season cuttings get a quiet "Other" group at the end.
+  if (buckets._other_ && buckets._other_.length) {
+    seasonGroups.push({
+      season:     null,
+      label:      'Other',
+      descriptor: '',
+      entries:    buckets._other_,
+    });
+  }
+
+  res.render('greenhouse-cuttings', {
+    title: 'Cuttings',
+    page: 'greenhouse',
+    user: req.session.user,
+    totalCount: cuttings.length,
+    seasonGroups,
   });
 });
 

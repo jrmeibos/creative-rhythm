@@ -900,3 +900,159 @@ details[open] .gh-planted-summary::before { content: '▾  '; }
   line-height: 1.6;
   margin-top: 0.5rem;
 }
+
+/* ─── Cuttings entry point on Greenhouse page ───────────────────────────── */
+
+.gh-cuttings-link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+  background: var(--color-blank-page);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  text-decoration: none;
+  color: inherit;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.gh-cuttings-link:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(16, 15, 16, 0.08);
+}
+
+.gh-cuttings-link-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.gh-cuttings-link-label {
+  font-family: var(--font-display);
+  font-size: 1rem;
+  font-weight: 400;
+  color: var(--color-bloem);
+}
+
+.gh-cuttings-link-desc {
+  font-family: var(--font-body);
+  font-size: 0.82rem;
+  font-weight: 300;
+  color: rgba(16, 15, 16, 0.55);
+}
+
+.gh-cuttings-link-arrow {
+  font-size: 1.15rem;
+  color: var(--color-bloem);
+  opacity: 0.65;
+  flex-shrink: 0;
+}
+
+/* ─── Cuttings archive page ─────────────────────────────────────────────── */
+
+.cuttings-header {
+  margin-bottom: 2.5rem;
+}
+
+.cuttings-title {
+  font-family: var(--font-display);
+  font-size: 2.25rem;
+  font-weight: 400;
+  color: var(--color-ink-stained);
+  margin: 0 0 0.5rem;
+}
+
+.cuttings-intro {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 1.05rem;
+  font-weight: 400;
+  color: rgba(16, 15, 16, 0.65);
+  margin: 0;
+  max-width: 38rem;
+}
+
+.cuttings-season-group {
+  margin-bottom: 3rem;
+}
+
+.cuttings-season-header {
+  margin-bottom: 1.25rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid rgba(16, 15, 16, 0.08);
+}
+
+.cuttings-season-label {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 400;
+  color: var(--color-bloem);
+  margin: 0 0 0.15rem;
+}
+
+.cuttings-season-descriptor {
+  font-family: var(--font-body);
+  font-size: 0.82rem;
+  font-weight: 300;
+  letter-spacing: 0.04em;
+  color: rgba(16, 15, 16, 0.5);
+  margin: 0;
+  text-transform: lowercase;
+}
+
+.cuttings-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.cutting-entry {
+  background: var(--color-blank-page);
+  border-radius: var(--radius-md);
+  padding: 1.1rem 1.4rem 1.2rem;
+  box-shadow: var(--shadow-sm);
+}
+
+.cutting-date {
+  font-family: var(--font-body);
+  font-size: 0.74rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(16, 15, 16, 0.45);
+  margin: 0 0 0.45rem;
+}
+
+.cutting-text {
+  font-family: var(--font-body);
+  font-size: 1rem;
+  font-weight: 300;
+  line-height: 1.6;
+  color: var(--color-ink-stained);
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+/* Whole-page empty state */
+.cuttings-empty {
+  margin-top: 1rem;
+  padding: 2.25rem 2rem;
+  background: var(--color-blank-page);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  max-width: 42rem;
+}
+
+.cuttings-empty-text {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 1.05rem;
+  font-weight: 400;
+  line-height: 1.6;
+  color: rgba(16, 15, 16, 0.6);
+  margin: 0;
+}
+

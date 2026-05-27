@@ -1577,6 +1577,14 @@ module.exports = {
     ).run(userId, season || null, prompt || null, reflectionText);
   },
 
+  // Read-only: all cuttings for a user, newest first. Used by Build 2's
+  // Greenhouse cuttings archive — caller groups by season before rendering.
+  getCuttingsForUser(userId) {
+    return db.prepare(
+      'SELECT id, created_at, season, prompt, reflection_text FROM cuttings WHERE user_id = ? ORDER BY created_at DESC'
+    ).all(userId);
+  },
+
   getAllStudentAssessmentStatus() {
     return db.prepare(`
       SELECT u.id, u.name, u.avatar_initial, u.role,

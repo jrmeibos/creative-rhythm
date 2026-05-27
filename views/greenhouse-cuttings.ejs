@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <%- include('partials/head') %>
+  <link rel="stylesheet" href="/css/dashboard.css">
+  <link rel="stylesheet" href="/css/greenhouse.css">
+</head>
+<body class="app-body">
+  <div class="app-layout">
+    <%- include('partials/sidebar') %>
+    <main class="main-content" id="main">
+
+      <a href="/greenhouse" class="lesson-back">← Back to Greenhouse</a>
+
+      <header class="cuttings-header">
+        <h1 class="cuttings-title">Cuttings</h1>
+        <p class="cuttings-intro">Small things you noticed, gathered as you tended your practice.</p>
+      </header>
+
+      <% if (totalCount === 0) { %>
+
+        <!-- ── Whole-page empty state ─────────────────────────────────── -->
+        <section class="cuttings-empty">
+          <p class="cuttings-empty-text">
+            Nothing gathered yet. After you record, you can note what you noticed — and it'll be kept here.
+          </p>
+        </section>
+
+      <% } else { %>
+
+        <% seasonGroups.forEach(function (group) { %>
+          <section class="cuttings-season-group cuttings-season-group--<%= group.season || 'other' %>">
+            <header class="cuttings-season-header">
+              <h2 class="cuttings-season-label"><%= group.label %></h2>
+              <% if (group.descriptor) { %>
+                <p class="cuttings-season-descriptor"><%= group.descriptor %></p>
+              <% } %>
+            </header>
+
+            <ul class="cuttings-list">
+              <% group.entries.forEach(function (c) { %>
+                <%
+                  // Gentle date formatting: "Tuesday, May 14"
+                  let dateLabel = '';
+                  try {
+                    const d = new Date(c.created_at.replace(' ', 'T') + 'Z');
+                    dateLabel = d.toLocaleDateString('en-US', {
+                      weekday: 'long', month: 'long', day: 'numeric',
+                    });
+                  } catch (_) {
+                    dateLabel = c.created_at || '';
+                  }
+                %>
+                <li class="cutting-entry">
+                  <p class="cutting-date"><%= dateLabel %></p>
+                  <p class="cutting-text"><%= c.reflection_text %></p>
+                </li>
+              <% }); %>
+            </ul>
+          </section>
+        <% }); %>
+
+      <% } %>
+
+    </main>
+  </div>
+</body>
+</html>
