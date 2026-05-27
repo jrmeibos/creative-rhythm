@@ -179,7 +179,8 @@ app.post('/login', async (req, res) => {
     id: user.id, name: user.name, email: user.email, role: user.role,
     avatar_initial: user.avatar_initial, current_season: user.current_season || null,
     onboarding_completed: !!user.onboarding_completed,
-    profile_photo: user.profile_photo || null
+    profile_photo: user.profile_photo || null,
+    timezone: user.timezone || null
   };
   if (user.role !== 'admin' && !user.onboarding_completed) {
     return res.redirect('/onboarding');
@@ -340,6 +341,32 @@ app.post('/dashboard/recorded-today', requireAuth, (req, res) => {
   const today = toLocalDateString(getNow(req.session.user));
   db.markRecordedToday(req.session.user.id, today);
   res.json({ ok: true, date: today });
+});
+
+// ─── Capture user's browser timezone ───────────────────────────────────────
+// Fired on every authenticated page load from the sidebar partial. Stores the
+// IANA TZ string so getNow() can compute the user's wall-clock "today" — fixes
+// the daily recording card not resetting at the user's local midnight. Follow-
+// the-body: if a student travels, their next page load updates their stored TZ.
+// Session must be saved before responding (resave: false + cached
+// req.session.user means a mutation alone won't flush to the session store).
+app.post('/api/timezone', requireAuth, (req, res) => {
+  const tz = (req.body && typeof req.body.timezone === 'string')
+    ? req.body.timezone.trim()
+    : '';
+  if (!tz) return res.json({ ok: false });
+
+  try {
+    new Intl.DateTimeFormat('en-US', { timeZone: tz });
+  } catch (e) {
+    return res.json({ ok: false });
+  }
+
+  if (req.session.user.timezone === tz) return res.json({ ok: true, unchanged: true });
+
+  db.setUserTimezone(req.session.user.id, tz);
+  req.session.user.timezone = tz;
+  req.session.save(() => res.json({ ok: true, timezone: tz }));
 });
 
 // ─── Goals ─────────────────────────────────────────────────────────────────
@@ -886,11 +913,46 @@ function isTimeTravelUser(user) {
 }
 
 function getNow(user) {
+  // Step 1: pick the instant — time travel first, real clock otherwise.
+  let now;
   if (isTimeTravelUser(user)) {
     const simulated = db.getSetting('simulated_today');
-    if (simulated && simulated.trim()) return new Date(simulated + 'T00:00:00');
+    now = (simulated && simulated.trim())
+      ? new Date(simulated + 'T00:00:00')
+      : new Date();
+  } else {
+    now = new Date();
   }
-  return new Date();
+
+  // Step 2: re-project the instant into the user's wall-clock TZ so that
+  // .getFullYear()/.getMonth()/.getDate() (used by toLocalDateString) reflect
+  // the user's local midnight rollover, not the server's. NULL timezone =
+  // legacy user who hasn't loaded a page since this shipped — fall back to
+  // server time silently.
+  const tz = user && user.timezone;
+  if (!tz) return now;
+
+  try {
+    const parts = new Intl.DateTimeFormat('en-US', {
+      timeZone: tz,
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', second: '2-digit',
+      hour12: false
+    }).formatToParts(now);
+    const pick = (type) => parts.find(p => p.type === type).value;
+    let hour = parseInt(pick('hour'), 10);
+    if (hour === 24) hour = 0; // en-US hour12:false reports midnight as "24"
+    return new Date(
+      parseInt(pick('year'),   10),
+      parseInt(pick('month'),  10) - 1,
+      parseInt(pick('day'),    10),
+      hour,
+      parseInt(pick('minute'), 10),
+      parseInt(pick('second'), 10)
+    );
+  } catch (e) {
+    return now;
+  }
 }
 
 // "Today" as a wall-clock YYYY-MM-DD string from a Date — local components

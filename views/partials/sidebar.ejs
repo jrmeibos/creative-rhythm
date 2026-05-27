@@ -146,3 +146,23 @@
 
   </div>
 </aside>
+
+<script>
+  // Capture the browser's IANA timezone on every authenticated page load.
+  // Server uses this to compute the user's wall-clock "today" so date-
+  // sensitive UI (e.g. the daily recording card) rolls over at the user's
+  // local midnight, not the server's. Fire-and-forget; silently no-ops if
+  // the browser is too old to support Intl.DateTimeFormat resolvedOptions.
+  (function () {
+    try {
+      var tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      if (!tz) return;
+      fetch('/api/timezone', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ timezone: tz }),
+        credentials: 'same-origin'
+      }).catch(function () {});
+    } catch (e) {}
+  })();
+</script>

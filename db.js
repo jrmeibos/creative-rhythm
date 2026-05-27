@@ -399,6 +399,15 @@ db.exec(`
     console.log('✓ Migrated: added last_recorded_date to users');
   }
 
+  // Users: add IANA timezone so getNow() can compute the user's local
+  // wall-clock for date comparisons. NULL until the browser first posts
+  // /api/timezone; getNow() falls back to server time when NULL.
+  const userColsTz = db.prepare("PRAGMA table_info(users)").all().map(r => r.name);
+  if (!userColsTz.includes('timezone')) {
+    db.exec("ALTER TABLE users ADD COLUMN timezone TEXT");
+    console.log('✓ Migrated: added timezone to users');
+  }
+
   // Default settings for unlock flags
   db.prepare("INSERT OR IGNORE INTO settings (key, value) VALUES ('midcourse_unlocked', 'false')").run();
   db.prepare("INSERT OR IGNORE INTO settings (key, value) VALUES ('harvest_unlocked', 'false')").run();
@@ -1608,6 +1617,15 @@ module.exports = {
       'SELECT last_recorded_date FROM users WHERE id = ?'
     ).get(userId);
     return row ? row.last_recorded_date : null;
+  },
+
+  getUserTimezone(userId) {
+    const row = db.prepare('SELECT timezone FROM users WHERE id = ?').get(userId);
+    return row ? row.timezone : null;
+  },
+
+  setUserTimezone(userId, tz) {
+    return db.prepare('UPDATE users SET timezone = ? WHERE id = ?').run(tz, userId);
   },
 
   getAllStudentAssessmentStatus() {
