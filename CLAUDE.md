@@ -4,7 +4,7 @@
 
 **Name:** The Creative's Garden
 **Owner:** Julia Meibos (The Meibos Touch)
-**Purpose:** A private course platform for a pilot cohort of creative entrepreneurs learning "soul-led visibility" — showing up online authentically without burning out. Covers the 4 C's: Curiosity, Create, Share, Connect.
+**Purpose:** A private course platform for a pilot cohort of creative entrepreneurs learning "soul-led visibility" — showing up online authentically without burning out. Structured around four categories: Curiosity, Create, Share, Connect.
 **Scale:** ~6 students, internal tool first, designed to later sell as a public course.
 
 **Live URL:** Deployed on Railway (check Railway dashboard for current URL)
@@ -63,9 +63,9 @@ All defined as CSS custom properties in `public/css/main.css`:
 
 ---
 
-## The 4 C's Framework
+## Intention Categories
 
-The four intention categories that structure the entire course and all goal-setting:
+The four intention categories that structure the entire course and all goal-setting — Curiosity, Create, Share, Connect:
 
 | Category | Season | Background color | Text color |
 |---|---|---|---|
@@ -105,7 +105,7 @@ From within `views/partials/`, use `include('season-icon', ...)` without the `pa
 | Route | View | Notes |
 |---|---|---|
 | `GET /dashboard` | `dashboard.ejs` | Weekly goals, season selector, progress |
-| `GET /goals` | `goals.ejs` | Full goal cards for all 4 C's |
+| `GET /goals` | `goals.ejs` | Full goal cards for Curiosity, Create, Share, Connect |
 | `GET /calendar` | `calendar.ejs` | 12-week view with goal status dots |
 | `GET /lessons` | `lessons.ejs` | Lesson index |
 | `GET /lessons/:slug` | `lesson.ejs` | Individual lesson |
