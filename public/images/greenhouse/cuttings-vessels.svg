@@ -1,0 +1,66 @@
+<svg width="320" height="220" viewBox="0 0 320 220" xmlns="http://www.w3.org/2000/svg">
+  <!-- Soft surface line — peers with the greenhouse-floor line in stage SVGs -->
+  <line x1="20" y1="195" x2="300" y2="195" stroke="#B8B0AB" stroke-width="1.2" stroke-linecap="round" opacity="0.55"/>
+
+  <!-- ── Vessel 1: narrow bud vase, left ─────────────────────────────────── -->
+  <g>
+    <!-- glass outline -->
+    <path d="M 58 195 L 58 110 Q 58 100 64 98 L 82 98 Q 88 100 88 110 L 88 195 Z"
+          fill="none" stroke="#A8B9A4" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+    <!-- water line -->
+    <line x1="60" y1="150" x2="86" y2="150" stroke="#A8B9A4" stroke-width="1.1" stroke-linecap="round" opacity="0.7"/>
+    <!-- stem rising -->
+    <path d="M 73 98 Q 73 75 73 50" fill="none" stroke="#76856C" stroke-width="1.6" stroke-linecap="round"/>
+    <!-- leaves on stem -->
+    <path d="M 73 78 Q 62 74 58 80 Q 65 82 73 78" fill="none" stroke="#76856C" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M 73 62 Q 84 58 88 64 Q 81 66 73 62" fill="none" stroke="#76856C" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+    <!-- roots in water -->
+    <path d="M 73 98 Q 71 120 68 148" fill="none" stroke="#76856C" stroke-width="1.2" stroke-linecap="round" opacity="0.75"/>
+    <path d="M 73 98 Q 75 122 78 148" fill="none" stroke="#76856C" stroke-width="1.2" stroke-linecap="round" opacity="0.75"/>
+    <path d="M 73 108 Q 66 128 63 148" fill="none" stroke="#76856C" stroke-width="1.0" stroke-linecap="round" opacity="0.55"/>
+  </g>
+
+  <!-- ── Vessel 2: wider jar, center ─────────────────────────────────────── -->
+  <g>
+    <!-- glass outline -->
+    <path d="M 130 195 L 130 95 Q 130 86 138 84 L 182 84 Q 190 86 190 95 L 190 195 Z"
+          fill="none" stroke="#A8B9A4" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+    <!-- rim highlight -->
+    <line x1="132" y1="88" x2="188" y2="88" stroke="#A8B9A4" stroke-width="1.0" stroke-linecap="round" opacity="0.7"/>
+    <!-- water line -->
+    <line x1="132" y1="145" x2="188" y2="145" stroke="#A8B9A4" stroke-width="1.1" stroke-linecap="round" opacity="0.7"/>
+    <!-- left stem -->
+    <path d="M 152 84 Q 148 62 142 38" fill="none" stroke="#76856C" stroke-width="1.6" stroke-linecap="round"/>
+    <!-- right stem -->
+    <path d="M 170 84 Q 174 62 180 38" fill="none" stroke="#76856C" stroke-width="1.6" stroke-linecap="round"/>
+    <!-- leaves left -->
+    <path d="M 147 64 Q 136 60 132 66 Q 139 68 147 64" fill="none" stroke="#76856C" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M 144 48 Q 154 44 158 49 Q 151 52 144 48" fill="none" stroke="#76856C" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+    <!-- leaves right -->
+    <path d="M 175 64 Q 186 60 190 66 Q 183 68 175 64" fill="none" stroke="#76856C" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M 178 48 Q 168 44 164 49 Q 171 52 178 48" fill="none" stroke="#76856C" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+    <!-- roots -->
+    <path d="M 152 84 Q 150 115 148 143" fill="none" stroke="#76856C" stroke-width="1.2" stroke-linecap="round" opacity="0.75"/>
+    <path d="M 170 84 Q 172 115 174 143" fill="none" stroke="#76856C" stroke-width="1.2" stroke-linecap="round" opacity="0.75"/>
+    <path d="M 152 98 Q 142 122 138 142" fill="none" stroke="#76856C" stroke-width="1.0" stroke-linecap="round" opacity="0.55"/>
+    <path d="M 170 98 Q 180 122 184 142" fill="none" stroke="#76856C" stroke-width="1.0" stroke-linecap="round" opacity="0.55"/>
+    <path d="M 161 92 Q 161 118 161 142" fill="none" stroke="#76856C" stroke-width="1.0" stroke-linecap="round" opacity="0.55"/>
+  </g>
+
+  <!-- ── Vessel 3: slim bottle with narrow neck, right ───────────────────── -->
+  <g>
+    <!-- bottle outline (body + shoulder + neck) -->
+    <path d="M 228 195 L 228 110 Q 228 102 232 100 L 236 92 L 236 70 Q 240 68 244 68 Q 248 68 248 70 L 248 92 L 252 100 Q 256 102 256 110 L 256 195 Z"
+          fill="none" stroke="#A8B9A4" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+    <!-- water line -->
+    <line x1="230" y1="152" x2="254" y2="152" stroke="#A8B9A4" stroke-width="1.1" stroke-linecap="round" opacity="0.7"/>
+    <!-- stem emerging from neck -->
+    <path d="M 242 68 Q 242 50 242 32" fill="none" stroke="#76856C" stroke-width="1.6" stroke-linecap="round"/>
+    <!-- leaves -->
+    <path d="M 242 52 Q 232 48 228 54 Q 234 56 242 52" fill="none" stroke="#76856C" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M 242 38 Q 252 34 256 40 Q 249 42 242 38" fill="none" stroke="#76856C" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+    <!-- roots in narrow body -->
+    <path d="M 242 110 Q 240 130 237 150" fill="none" stroke="#76856C" stroke-width="1.2" stroke-linecap="round" opacity="0.75"/>
+    <path d="M 242 110 Q 244 130 247 150" fill="none" stroke="#76856C" stroke-width="1.2" stroke-linecap="round" opacity="0.75"/>
+  </g>
+</svg>
