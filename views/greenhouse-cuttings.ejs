@@ -17,6 +17,10 @@
         <p class="cuttings-intro">Small things you noticed, gathered as you tended your practice.</p>
       </header>
 
+      <% if (locals.emptyExportNotice) { %>
+        <p class="cuttings-export-notice">Nothing to export yet — your cuttings will appear here as you record.</p>
+      <% } %>
+
       <% if (totalCount === 0) { %>
 
         <!-- ── Whole-page empty state ─────────────────────────────────── -->
@@ -59,6 +63,12 @@
             </ul>
           </section>
         <% }); %>
+
+        <footer class="cuttings-footer">
+          <a href="/greenhouse/cuttings/export" class="cuttings-export-link">
+            Download your cuttings as a PDF ↓
+          </a>
+        </footer>
 
       <% } %>
 

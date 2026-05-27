@@ -13,6 +13,8 @@ const { sendPasswordResetEmail } = require('./email');
 const { ANGLES, getAngle, getQuestion } = require('./lib/seed-packet-questions');
 const { getCurricularSeason, getCurricularSeasonLabel, getCurricularSeasonDescriptor } = require('./lib/curricular-season');
 const { getSeasonPrompt } = require('./lib/season-prompts');
+const { renderHtmlToPdf } = require('./lib/pdf-render');
+const ejs = require('ejs');
 const ALL_QUESTION_IDS = new Set(ANGLES.flatMap(a => a.questions.map(q => q.id)));
 
 const Anthropic = require('@anthropic-ai/sdk');
@@ -1169,7 +1171,139 @@ app.get('/greenhouse/cuttings', requireAuth, (req, res) => {
     user: req.session.user,
     totalCount: cuttings.length,
     seasonGroups,
+    emptyExportNotice: req.query.empty === '1',
   });
+});
+
+// ─── Cuttings PDF export ──────────────────────────────────────────────────
+// Streams a styled PDF keepsake. Chronological (oldest first), grouped by
+// curricular season, presence-only. Renders via Puppeteer through a
+// process-wide mutex (see lib/pdf-render.js — Hobby-tier memory safety).
+const CUTTINGS_PDF_ASSETS = (() => {
+  const fontsDir = path.join(__dirname, 'public', 'fonts');
+  const read64 = (f) => fs.readFileSync(path.join(fontsDir, f)).toString('base64');
+  const logoSvg = fs.readFileSync(
+    path.join(__dirname, 'public', 'images', 'brand', 'the_Creatives_Garden_Full_Logo.svg'),
+    'utf8'
+  );
+  const fontFaceCss = `
+    @font-face {
+      font-family: 'Goldage';
+      src: url(data:font/woff;base64,${read64('goldage-regular-webfont.woff')}) format('woff');
+      font-weight: 400; font-style: normal; font-display: block;
+    }
+    @font-face {
+      font-family: 'Goldage';
+      src: url(data:font/woff;base64,${read64('goldage-italic-webfont.woff')}) format('woff');
+      font-weight: 400; font-style: italic; font-display: block;
+    }
+    @font-face {
+      font-family: 'Jost';
+      src: url(data:font/woff2;base64,${read64('jost-normal-latin.woff2')}) format('woff2');
+      font-weight: 300 700; font-style: normal; font-display: block;
+    }
+    @font-face {
+      font-family: 'Jost';
+      src: url(data:font/woff2;base64,${read64('jost-italic-latin.woff2')}) format('woff2');
+      font-weight: 300; font-style: italic; font-display: block;
+    }
+  `;
+  return { logoSvg, fontFaceCss };
+})();
+
+const SEASON_WEEKS_LABEL = {
+  winter: 'Weeks 1–3',
+  spring: 'Weeks 4–6',
+  summer: 'Weeks 7–9',
+  autumn: 'Weeks 10–12',
+};
+
+function formatEntryDate(createdAt) {
+  try {
+    const d = new Date(createdAt.replace(' ', 'T') + 'Z');
+    return d.toLocaleDateString('en-US', {
+      weekday: 'long', month: 'long', day: 'numeric',
+    });
+  } catch (_) {
+    return createdAt || '';
+  }
+}
+
+function formatDateRange(earliestStr, latestStr) {
+  const a = new Date(earliestStr.replace(' ', 'T') + 'Z');
+  const b = new Date(latestStr.replace(' ', 'T') + 'Z');
+  const ay = a.getUTCFullYear(), by = b.getUTCFullYear();
+  const am = a.getUTCMonth(),    bm = b.getUTCMonth();
+  const monthName = (d) => d.toLocaleDateString('en-US', { month: 'long', timeZone: 'UTC' });
+  if (ay === by && am === bm) return `${monthName(a)} ${by}`;
+  if (ay === by)               return `${monthName(a)} – ${monthName(b)} ${by}`;
+  return `${monthName(a)} ${ay} – ${monthName(b)} ${by}`;
+}
+
+app.get('/greenhouse/cuttings/export', requireAuth, async (req, res) => {
+  const userId = req.session.user.id;
+  const cuttings = db.getCuttingsForUserChronological(userId);
+  if (!cuttings.length) {
+    return res.redirect('/greenhouse/cuttings?empty=1');
+  }
+
+  // Group by season in curricular order. Empty seasons omitted; null-
+  // season entries (pre/post course) collected into a quiet "Other" group
+  // at the end so they aren't lost from the keepsake.
+  const buckets = {};
+  for (const c of cuttings) {
+    const key = c.season || '_other_';
+    (buckets[key] = buckets[key] || []).push({
+      ...c,
+      dateLabel: formatEntryDate(c.created_at),
+    });
+  }
+  const ORDER = ['winter', 'spring', 'summer', 'autumn'];
+  const seasonGroups = ORDER
+    .filter(s => buckets[s])
+    .map(s => ({
+      label:      getCurricularSeasonLabel(s),
+      weeksLabel: SEASON_WEEKS_LABEL[s],
+      entries:    buckets[s],
+    }));
+  if (buckets._other_) {
+    seasonGroups.push({ label: 'Other', weeksLabel: '', entries: buckets._other_ });
+  }
+
+  const dateRangeLabel = formatDateRange(
+    cuttings[0].created_at,
+    cuttings[cuttings.length - 1].created_at
+  );
+
+  const html = await ejs.renderFile(
+    path.join(__dirname, 'views', 'exports', 'cuttings-pdf.ejs'),
+    {
+      logoSvg:        CUTTINGS_PDF_ASSETS.logoSvg,
+      fontFaceCss:    CUTTINGS_PDF_ASSETS.fontFaceCss,
+      dateRangeLabel,
+      seasonGroups,
+    }
+  );
+
+  let pdfBuffer;
+  try {
+    pdfBuffer = await renderHtmlToPdf(html);
+  } catch (err) {
+    if (err && err.message === 'PDF render queue timeout') {
+      return res.status(503).type('text/plain').send(
+        'The server is busy generating another PDF right now. Please try again in a moment.'
+      );
+    }
+    console.error('[cuttings export] render failed:', err);
+    return res.status(500).type('text/plain').send('Could not generate your PDF. Please try again.');
+  }
+
+  const todayFilename = toLocalDateString(getNow(req.session.user));
+  res.setHeader('Content-Type', 'application/pdf');
+  res.setHeader('Content-Disposition',
+    `attachment; filename="creatives-garden-cuttings-${todayFilename}.pdf"`);
+  res.setHeader('Cache-Control', 'private, no-store');
+  res.send(pdfBuffer);
 });
 
 app.post('/api/greenhouse/plant-bed', requireAuth, (req, res) => {

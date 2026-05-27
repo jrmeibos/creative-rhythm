@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Your Cuttings</title>
+<style>
+  /* ───── Web fonts: base64-embedded by the route so the rendered HTML is
+     self-contained — no dependency on the Express static mount being
+     reachable from Puppeteer at render time. ───── */
+  <%- fontFaceCss %>
+
+  /* ───── Design tokens (keep in sync with public/css/main.css). ───── */
+  :root {
+    --color-bloem:       #705C6C;
+    --color-understory:  #76856C;
+    --color-pearl:       #F2EEE3;
+    --color-blank-page:  #FAFAFA;
+    --color-ink-stained: #100F10;
+    --font-display: 'Goldage', Georgia, serif;
+    --font-body:    'Jost', system-ui, sans-serif;
+  }
+
+  /* ───── Page setup. Generous margins, no headers/footers. ───── */
+  @page { size: Letter; margin: 0.85in; }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    background: #fff;
+    color: var(--color-ink-stained);
+    font-family: var(--font-body);
+    font-weight: 300;
+    line-height: 1.7;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* ───── Cover page. ───── */
+  .cover {
+    page-break-after: always;
+    text-align: center;
+    /* Fill the page so cover content sits in the optical center. */
+    min-height: calc(11in - 1.7in); /* page height minus top+bottom margins */
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 1.5rem;
+  }
+  .cover-logo {
+    width: 3.5in;
+    margin-bottom: 1.25rem;
+  }
+  .cover-logo svg { width: 100%; height: auto; display: block; }
+  .cover-title {
+    font-family: var(--font-display);
+    font-weight: 400;
+    font-size: 3.4rem;
+    line-height: 1.1;
+    color: var(--color-bloem);
+    margin: 0;
+  }
+  .cover-range {
+    font-family: var(--font-body);
+    font-weight: 300;
+    font-size: 1.1rem;
+    letter-spacing: 0.04em;
+    color: rgba(16, 15, 16, 0.75);
+    margin-top: 0.5rem;
+  }
+  .cover-source {
+    font-family: var(--font-body);
+    font-weight: 300;
+    font-size: 0.85rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--color-understory);
+    margin-top: 2rem;
+  }
+
+  /* ───── Section (one season per page break). ───── */
+  .season {
+    page-break-before: always;
+  }
+  .season-header {
+    margin-bottom: 1.5rem;
+  }
+  .season-name {
+    font-family: var(--font-display);
+    font-weight: 400;
+    font-size: 2.4rem;
+    color: var(--color-bloem);
+    line-height: 1.1;
+    margin: 0;
+  }
+  .season-weeks {
+    font-family: var(--font-body);
+    font-weight: 300;
+    font-size: 0.95rem;
+    letter-spacing: 0.04em;
+    color: rgba(16, 15, 16, 0.55);
+    margin-top: 0.35rem;
+  }
+  .season-rule {
+    border: 0;
+    border-top: 1px solid rgba(112, 92, 108, 0.25);
+    margin: 1.1rem 0 1.8rem;
+  }
+
+  /* ───── Entry. Allow a new page break before but never inside one. ───── */
+  .entry {
+    margin-bottom: 1.75rem;
+    page-break-inside: avoid;
+  }
+  .entry-date {
+    font-family: var(--font-body);
+    font-weight: 700;
+    font-size: 0.72rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--color-understory);
+    margin: 0 0 0.4rem;
+  }
+  .entry-prompt {
+    font-family: var(--font-body);
+    font-style: italic;
+    font-weight: 300;
+    font-size: 0.95rem;
+    color: rgba(16, 15, 16, 0.6);
+    margin: 0 0 0.55rem;
+  }
+  .entry-text {
+    font-family: var(--font-body);
+    font-weight: 300;
+    font-size: 1.02rem;
+    line-height: 1.75;
+    color: var(--color-ink-stained);
+    margin: 0;
+    white-space: pre-wrap;
+  }
+</style>
+</head>
+<body>
+
+  <!-- ───── Cover page. ───── -->
+  <section class="cover">
+    <div class="cover-logo"><%- logoSvg %></div>
+    <h1 class="cover-title">Your Cuttings</h1>
+    <p class="cover-range"><%= dateRangeLabel %></p>
+    <p class="cover-source">From The Creative's Garden</p>
+  </section>
+
+  <!-- ───── One season per page. ───── -->
+  <% seasonGroups.forEach(function (group) { %>
+    <section class="season">
+      <header class="season-header">
+        <h2 class="season-name"><%= group.label %></h2>
+        <p class="season-weeks"><%= group.weeksLabel %></p>
+        <hr class="season-rule">
+      </header>
+
+      <% group.entries.forEach(function (entry) { %>
+        <article class="entry">
+          <p class="entry-date"><%= entry.dateLabel %></p>
+          <p class="entry-prompt"><%= entry.prompt || 'What did you notice today?' %></p>
+          <p class="entry-text"><%= entry.reflection_text %></p>
+        </article>
+      <% }); %>
+    </section>
+  <% }); %>
+
+</body>
+</html>

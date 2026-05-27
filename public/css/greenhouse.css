@@ -1057,6 +1057,39 @@ details[open] .gh-planted-summary::before { content: '▾  '; }
 }
 
 
+/* ─── Cuttings PDF export — quiet footer link + redirect notice ────────── */
+
+.cuttings-footer {
+  margin-top: 2.5rem;
+  padding-top: 1.75rem;
+  border-top: 1px solid rgba(112, 92, 108, 0.12);
+  text-align: center;
+}
+.cuttings-export-link {
+  display: inline-block;
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  font-weight: 300;
+  color: var(--color-bloem);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  opacity: 0.75;
+  transition: opacity 0.15s;
+}
+.cuttings-export-link:hover { opacity: 1; }
+
+.cuttings-export-notice {
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  font-weight: 300;
+  color: rgba(16, 15, 16, 0.6);
+  background: var(--color-new-growth);
+  padding: 0.75rem 1.1rem;
+  border-radius: var(--radius-sm);
+  margin: 0 0 1.5rem;
+  max-width: 42rem;
+}
+
 /* ─── Your Cuttings — full section, replaces the old small link ─────────── */
 
 .gh-cuttings-section {

@@ -1604,6 +1604,14 @@ module.exports = {
     ).all(userId);
   },
 
+  // Chronological (oldest first) — for the PDF export, which tells a
+  // forward-moving story across the cohort's 12 weeks.
+  getCuttingsForUserChronological(userId) {
+    return db.prepare(
+      'SELECT id, created_at, season, prompt, reflection_text FROM cuttings WHERE user_id = ? ORDER BY created_at ASC'
+    ).all(userId);
+  },
+
   // Recording memory: a single overwritable YYYY-MM-DD per user.
   // Not a streak, not a count, not a history — one column, set & forget.
   markRecordedToday(userId, dateStr) {
