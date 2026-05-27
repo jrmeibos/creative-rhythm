@@ -12,6 +12,7 @@ const { requireAuth, requireAdmin } = require('./auth');
 const { sendPasswordResetEmail } = require('./email');
 const { ANGLES, getAngle, getQuestion } = require('./lib/seed-packet-questions');
 const { getCurricularSeason, getCurricularSeasonLabel, getCurricularSeasonDescriptor } = require('./lib/curricular-season');
+const { getSeasonPrompt } = require('./lib/season-prompts');
 const ALL_QUESTION_IDS = new Set(ANGLES.flatMap(a => a.questions.map(q => q.id)));
 
 const Anthropic = require('@anthropic-ai/sdk');
@@ -285,6 +286,7 @@ app.get('/dashboard', requireAuth, (req, res) => {
 
   const curricularSeason = getCurricularSeason(weekNumber);
   const curricularSeasonLabel = getCurricularSeasonLabel(curricularSeason);
+  const seasonPrompt = getSeasonPrompt(curricularSeason); // null pre/post course
 
   // Recording card initial state: did this user mark "recorded" today already?
   // "Today" uses the time-travel-aware now so admin Time Travel rolls it over.
@@ -300,6 +302,7 @@ app.get('/dashboard', requireAuth, (req, res) => {
     weekLabel: formatWeekLabel(weekStart),
     curricularSeason,
     curricularSeasonLabel,
+    seasonPrompt,
     goals: goalsMap,
     goalsData: goalsDataDash,
     currentLesson,

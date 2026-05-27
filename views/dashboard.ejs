@@ -78,8 +78,18 @@
           <!-- Resting state: invitation. Hidden on load if user already recorded today. -->
           <div class="recording-card-state<%= recordedToday ? ' is-hidden' : '' %>" id="recording-state-rest">
             <p class="recording-card-prompt">
-              "What's true for you today? Talk to the camera for as long or as little as feels honest. This one's only for you."
+              "<%= seasonPrompt ? seasonPrompt.shortPrompt : "What's true for you today? Talk to the camera for as long or as little as feels honest. This one's only for you." %>"
             </p>
+            <% if (seasonPrompt) { %>
+              <button type="button"
+                      class="recording-about-toggle"
+                      data-target="recording-about-panel-rest"
+                      aria-controls="recording-about-panel-rest"
+                      aria-expanded="false">About this season ↓</button>
+              <div id="recording-about-panel-rest" class="recording-about-panel is-hidden">
+                <p><%= seasonPrompt.aboutText %></p>
+              </div>
+            <% } %>
             <button type="button" class="recording-card-btn" id="recording-recorded-btn">I recorded today</button>
           </div>
 
@@ -97,6 +107,16 @@
           <!-- Done state: visible on load if user already recorded today. -->
           <div class="recording-card-state<%= recordedToday ? '' : ' is-hidden' %>" id="recording-state-done">
             <p class="recording-done-text">Tended for today. Until next time.</p>
+            <% if (seasonPrompt) { %>
+              <button type="button"
+                      class="recording-about-toggle"
+                      data-target="recording-about-panel-done"
+                      aria-controls="recording-about-panel-done"
+                      aria-expanded="false">About this season ↓</button>
+              <div id="recording-about-panel-done" class="recording-about-panel is-hidden">
+                <p><%= seasonPrompt.aboutText %></p>
+              </div>
+            <% } %>
           </div>
         </div>
       </section>
@@ -250,6 +270,19 @@
           if (!already) el.classList.add(`season-avatar--${season}`);
         });
         document.querySelector('.season-first-prompt')?.remove();
+      });
+    });
+
+    // ── "About this season" disclosure on the recording card ─────────────
+    // Each toggle button has data-target → panel id. State is per-pair and
+    // resets to closed on every page load (no persistence).
+    document.querySelectorAll('.recording-about-toggle').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const panel = document.getElementById(btn.dataset.target);
+        if (!panel) return;
+        const open = panel.classList.toggle('is-hidden') === false;
+        btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+        btn.textContent = open ? 'About this season ↑' : 'About this season ↓';
       });
     });
 
