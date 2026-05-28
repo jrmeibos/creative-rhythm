@@ -323,6 +323,14 @@
                   </div>
                   <div id="gh-view-<%= n %>">
                     <%- renderFacets(orig, false) %>
+                    <% if (!orig) { %>
+                      <!-- Empty bed in tending state: surface the same plant CTA
+                           the beds-empty template uses, so students can plant
+                           goals 2 and 3 after planting goal 1. No Winter gate
+                           here — once tending starts, the "wait for Spring"
+                           gate has been crossed. -->
+                      <a href="/greenhouse/plant?bed=<%= n %>" class="gh-bed-cta">+ plant a goal</a>
+                    <% } %>
                   </div>
                   <div class="gh-edit-form is-hidden" id="gh-edit-<%= n %>">
                     <%- include('partials/greenhouse-facet-fields', { n: n, prefix: 'gh-ef' }) %>
