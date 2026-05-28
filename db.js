@@ -846,6 +846,27 @@ function seedLessons() {
   console.log('✓ Lessons seeded');
 }
 
+// Course Introduction: idempotent additive insert. seedLessons() above only
+// runs on an empty table, so this is the right shape for a single new lesson
+// added after the initial seed. INSERT OR IGNORE relies on slug UNIQUE — if
+// the row already exists (manual admin edit, prior boot), this no-ops and
+// preserves whatever edits the admin made via the admin UI.
+function seedCourseIntroduction() {
+  db.prepare(`
+    INSERT OR IGNORE INTO lessons
+      (slug, title, subtitle, category_tag, content, estimated_read_time, sort_order, published)
+    VALUES (?, ?, ?, ?, ?, ?, ?, 1)
+  `).run(
+    'course-introduction',
+    'Course Introduction',
+    "An orientation to the Creative's Garden — our philosophy, our rhythms, and how to use this space.",
+    'Introduction',
+    `<p class="lesson-lead">Here is your orientation. We'll get straight on what we're trying to do here together. There are a few moving pieces to this program, so let's get into how they all work together.</p>`,
+    5,
+    0
+  );
+}
+
 function seedLesson1Homework() {
   const lesson = db.prepare("SELECT id FROM lessons WHERE slug='welcome-to-the-rhythm'").get();
   if (!lesson) return;
@@ -876,8 +897,9 @@ function safeInit(label, fn) {
 }
 safeInit('syncAdminAccount',    syncAdminAccount);
 safeInit('seedDefaultAccounts', seedDefaultAccounts);
-safeInit('seedLessons',         seedLessons);
-safeInit('seedLesson1Homework', seedLesson1Homework);
+safeInit('seedLessons',             seedLessons);
+safeInit('seedCourseIntroduction',  seedCourseIntroduction);
+safeInit('seedLesson1Homework',     seedLesson1Homework);
 
 module.exports = {
   getUserByEmail(email) {

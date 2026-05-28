@@ -570,9 +570,16 @@ app.get('/lessons/:slug', requireAuth, (req, res) => {
   const nextLesson = idx < allLessons.length - 1 ? allLessons[idx + 1] : null;
   const homework = db.getHomeworkForLesson(lesson.id);
   const homeworkDone = new Set(db.getHomeworkCompletions(req.session.user.id, lesson.id));
-  const lessonNumber = idx + 1;
-  const curricularSeason = getCurricularSeason(lessonNumber);
-  const curricularSeasonLabel = getCurricularSeasonLabel(curricularSeason);
+
+  // Course Introduction sits outside the numbered curriculum: Lesson 1
+  // stays Lesson 1, the total stays "of 12", and the Introduction itself
+  // has no "Lesson N of 12" or curricular season label. The view hides
+  // both meta items when lessonNumber is null.
+  const numberedLessons = allLessons.filter(l => l.slug !== 'course-introduction');
+  const numberedIdx     = numberedLessons.findIndex(l => l.id === lesson.id);
+  const lessonNumber    = numberedIdx >= 0 ? numberedIdx + 1 : null;
+  const curricularSeason      = lessonNumber ? getCurricularSeason(lessonNumber) : null;
+  const curricularSeasonLabel = lessonNumber ? getCurricularSeasonLabel(curricularSeason) : '';
   res.render('lesson', {
     title: lesson.title,
     page: 'lessons',

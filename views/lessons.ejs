@@ -17,8 +17,16 @@
           <h1 class="lessons-title">Your Field Notes</h1>
           <p class="lessons-sub">Read at your own pace. Return to anything, anytime.</p>
         </div>
+        <%
+          // Completion pill counts only the numbered curriculum — the
+          // Course Introduction is a real lesson (completion still tracked)
+          // but kept out of the X / N total so the pill stays curriculum-
+          // focused and never reads "13".
+          const numberedLessons    = lessons.filter(l => l.slug !== 'course-introduction');
+          const numberedCompleted  = numberedLessons.filter(l => completedIds.has(l.id)).length;
+        %>
         <div class="lessons-progress-pill">
-          <span class="lessons-progress-count"><%= completedCount %> / <%= lessons.length %></span>
+          <span class="lessons-progress-count"><%= numberedCompleted %> / <%= numberedLessons.length %></span>
           <span class="lessons-progress-label">complete</span>
         </div>
       </header>
@@ -67,7 +75,7 @@
         <% } %>
       </div>
 
-      <% if (completedCount === lessons.length && lessons.length > 0) { %>
+      <% if (numberedCompleted === numberedLessons.length && numberedLessons.length > 0) { %>
         <div class="lessons-all-done">
           <p class="lessons-all-done-title">You've read everything. Beautiful work.</p>
           <p class="lessons-all-done-sub">Feel free to return to any field note anytime — some things only land on a second read.</p>

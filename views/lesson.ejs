@@ -32,11 +32,13 @@
         <!-- Meta -->
         <div class="lesson-article-meta">
           <span>~<%= lesson.estimated_read_time %> min read</span>
-          <span class="lesson-article-meta-dot"></span>
-          <span>Lesson <%= lessonNumber %> of 12</span>
+          <% if (lessonNumber != null) { %>
+            <span class="lesson-article-meta-dot"></span>
+            <span>Lesson <%= lessonNumber %> of 12</span>
+          <% } %>
           <% if (curricularSeasonLabel) { %>
-          <span class="lesson-article-meta-dot"></span>
-          <span class="curricular-season-label"><%= curricularSeasonLabel %></span>
+            <span class="lesson-article-meta-dot"></span>
+            <span class="curricular-season-label"><%= curricularSeasonLabel %></span>
           <% } %>
         </div>
 
@@ -57,6 +59,36 @@
         <div class="lesson-body">
           <%- lesson.content %>
         </div>
+
+        <!-- Course Introduction: embedded PDF deck + download.
+             CSS hides the embed on narrow viewports and shows the mobile
+             button instead — desktop sees embed + download, mobile sees
+             a single tap-to-view-or-save button. -->
+        <% if (lesson.slug === 'course-introduction') { %>
+          <div class="lesson-pdf-wrap">
+            <object data="/lessons/creative-garden-introduction.pdf"
+                    type="application/pdf"
+                    class="lesson-pdf-embed">
+              <p class="lesson-pdf-fallback">
+                Your browser can't display the PDF inline. Download it below.
+              </p>
+            </object>
+          </div>
+
+          <a href="/lessons/creative-garden-introduction.pdf"
+             class="lesson-pdf-mobile"
+             download="creative-garden-introduction.pdf">
+            View or download the PDF ↓
+          </a>
+
+          <div class="lesson-pdf-download">
+            <a href="/lessons/creative-garden-introduction.pdf"
+               class="lesson-pdf-download-link"
+               download="creative-garden-introduction.pdf">
+              Download the introduction (PDF) ↓
+            </a>
+          </div>
+        <% } %>
 
         <!-- Greenhouse CTA — Lesson 1 only -->
         <% if (lesson.slug === 'welcome-to-the-rhythm') { %>

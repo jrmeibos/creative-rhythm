@@ -624,6 +624,65 @@
 }
 .lesson-greenhouse-cta-btn:hover { opacity: 0.85; }
 
+/* ─── Course Introduction: PDF embed + download ────────────────────────── */
+
+.lesson-pdf-wrap {
+  margin: 1.75rem 0 1rem;
+}
+.lesson-pdf-embed {
+  display: block;
+  width: 100%;
+  min-height: 80vh;
+  border: 1px solid rgba(112, 92, 108, 0.18);
+  border-radius: var(--radius-md);
+  background: var(--color-blank-page);
+}
+.lesson-pdf-fallback {
+  font-family: var(--font-body);
+  font-weight: 300;
+  padding: 2rem;
+  text-align: center;
+  color: rgba(16, 15, 16, 0.6);
+}
+
+.lesson-pdf-download {
+  text-align: center;
+  margin: 0.75rem 0 0.5rem;
+}
+.lesson-pdf-download-link {
+  display: inline-block;
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  font-weight: 300;
+  color: var(--color-bloem);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  opacity: 0.75;
+  transition: opacity 0.15s;
+}
+.lesson-pdf-download-link:hover { opacity: 1; }
+
+/* Mobile fallback — embedded PDFs render unreliably on phones, so we
+   replace both the embed and the desktop download link with a single
+   tap-to-view-or-save button. Hidden on desktop. */
+.lesson-pdf-mobile {
+  display: none;
+  font-family: var(--font-body);
+  font-size: 1rem;
+  font-weight: 400;
+  color: var(--color-bloem);
+  background: var(--color-blank-page);
+  border: 1px solid rgba(112, 92, 108, 0.2);
+  border-radius: var(--radius-md);
+  padding: 1rem 1.25rem;
+  margin: 1.75rem 0 0.5rem;
+  text-align: center;
+  text-decoration: none;
+}
+.lesson-pdf-mobile:hover {
+  background: var(--color-pearl);
+}
+
 /* ─── Responsive ─────────────────────────────────────────────────────────── */
 
 @media (max-width: 700px) {
@@ -634,4 +693,7 @@
   .lesson-layout {
     grid-template-columns: 1fr;
   }
+  .lesson-pdf-wrap     { display: none; }
+  .lesson-pdf-download { display: none; }
+  .lesson-pdf-mobile   { display: block; }
 }
