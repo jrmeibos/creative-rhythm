@@ -1,0 +1,42 @@
+# Nixpacks build configuration.
+#
+# Why this file exists:
+# Nixpacks auto-detects puppeteer and adds the Chromium runtime libs
+# (libnss3, libgbm1, libxshmfence1, etc.) to apt automatically. What it
+# does NOT add is `unzip`, which puppeteer's postinstall script needs to
+# extract its downloaded Chrome .zip archive. Without unzip, `npm ci`
+# fails at the puppeteer postinstall step with:
+#
+#   Required native binary ('tar.exe', 'powershell.exe', 'pwsh.exe' or
+#   'unzip') was not found in the system PATH.
+#
+# (Misleading error — on Linux it really wants `unzip`, not the .exe
+# variants. Chrome v149+ downloads ship as .zip on Linux.)
+#
+# Fix: replicate Nixpacks' auto-detected apt list verbatim and append
+# `unzip`. Setting aptPkgs here fully replaces the auto-detected list,
+# so the libs must be repeated explicitly.
+#
+# `chromium` stays in the list for parity with the auto-detection. On
+# Ubuntu 24.04 the apt `chromium` package is a snap stub that silently
+# fails to install in the build container — harmless because we don't
+# use it at runtime. Puppeteer's bundled Chromium (downloaded into
+# node_modules/puppeteer/.local-chromium during postinstall) is what
+# actually runs.
+
+[phases.setup]
+aptPkgs = [
+  "libnss3",
+  "libatk1.0-0",
+  "libatk-bridge2.0-0",
+  "libcups2",
+  "libgbm1",
+  "libasound2t64",
+  "libpangocairo-1.0-0",
+  "libxss1",
+  "libgtk-3-0",
+  "libxshmfence1",
+  "libglu1",
+  "chromium",
+  "unzip"
+]
