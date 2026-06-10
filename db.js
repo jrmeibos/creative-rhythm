@@ -458,6 +458,35 @@ db.exec(`
       ON cuttings (user_id, created_at);
   `);
 
+  // Cuttings: three additional optional reflection columns. Existing rows
+  // keep reflection_text and have NULL for the new columns — the archive
+  // and PDF render only-populated fields, so legacy rows look unchanged.
+  const cuttingCols = db.prepare("PRAGMA table_info(cuttings)").all().map(r => r.name);
+  if (!cuttingCols.includes('talked_about')) {
+    db.exec("ALTER TABLE cuttings ADD COLUMN talked_about TEXT");
+    console.log('✓ Migrated: added talked_about to cuttings');
+  }
+  if (!cuttingCols.includes('how_it_felt')) {
+    db.exec("ALTER TABLE cuttings ADD COLUMN how_it_felt TEXT");
+    console.log('✓ Migrated: added how_it_felt to cuttings');
+  }
+  if (!cuttingCols.includes('takeaway')) {
+    db.exec("ALTER TABLE cuttings ADD COLUMN takeaway TEXT");
+    console.log('✓ Migrated: added takeaway to cuttings');
+  }
+
+  // Cuttings: recorded_date stores the day-it-happened (YYYY-MM-DD),
+  // separate from created_at (when the row was written). Lets students
+  // backdate a recording without losing the audit trail. Existing rows
+  // are backfilled to DATE(created_at) so the archive/PDF group correctly
+  // for legacy data. Index added for grouping queries.
+  if (!cuttingCols.includes('recorded_date')) {
+    db.exec("ALTER TABLE cuttings ADD COLUMN recorded_date TEXT");
+    db.exec("UPDATE cuttings SET recorded_date = DATE(created_at) WHERE recorded_date IS NULL");
+    db.exec("CREATE INDEX IF NOT EXISTS idx_cuttings_user_recorded ON cuttings (user_id, recorded_date)");
+    console.log('✓ Migrated: added recorded_date to cuttings + backfilled from created_at');
+  }
+
   // Avatars moved to /data/avatars — old paths pointing to /uploads/avatars/ are now broken.
   // Reset them so users see initials until they re-upload.
   db.exec("UPDATE users SET profile_photo = NULL WHERE profile_photo LIKE '/uploads/avatars/%'");
@@ -1611,26 +1640,50 @@ module.exports = {
   },
 
   // Cuttings: daily reflection from the Dashboard recording practice.
-  // Caller is responsible for trimming + empty-check; this just inserts.
-  createCutting(userId, season, prompt, reflectionText) {
-    return db.prepare(
-      'INSERT INTO cuttings (user_id, season, prompt, reflection_text) VALUES (?, ?, ?, ?)'
-    ).run(userId, season || null, prompt || null, reflectionText);
+  // Caller is responsible for trimming each field + the all-empty check;
+  // this just inserts. `fields` is { reflection_text, talked_about,
+  // how_it_felt, takeaway } — any/all may be null. `recordedDate` is the
+  // day-it-happened (YYYY-MM-DD) — caller stamps it explicitly (today for
+  // normal logging, a backdated date for backdating). `prompt` is the
+  // vestigial legacy column.
+  createCutting(userId, season, prompt, fields, recordedDate) {
+    return db.prepare(`
+      INSERT INTO cuttings
+        (user_id, season, prompt, recorded_date,
+         reflection_text, talked_about, how_it_felt, takeaway)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      userId,
+      season || null,
+      prompt || null,
+      recordedDate || null,
+      fields.reflection_text || null,
+      fields.talked_about    || null,
+      fields.how_it_felt     || null,
+      fields.takeaway        || null
+    );
   },
 
-  // Read-only: all cuttings for a user, newest first. Used by Build 2's
-  // Greenhouse cuttings archive — caller groups by season before rendering.
+  // Read-only: all cuttings for a user. Ordered by recorded_date DESC
+  // (newest day first across days) then created_at ASC (within a day,
+  // earliest-written first — morning entry above evening entry).
   getCuttingsForUser(userId) {
     return db.prepare(
-      'SELECT id, created_at, season, prompt, reflection_text FROM cuttings WHERE user_id = ? ORDER BY created_at DESC'
+      `SELECT id, created_at, recorded_date, season, prompt,
+              reflection_text, talked_about, how_it_felt, takeaway
+       FROM cuttings WHERE user_id = ?
+       ORDER BY recorded_date DESC, created_at ASC`
     ).all(userId);
   },
 
-  // Chronological (oldest first) — for the PDF export, which tells a
-  // forward-moving story across the cohort's 12 weeks.
+  // Chronological — for the PDF export, which tells a forward-moving
+  // story. Within a day: earliest-written-first (same rule as the archive).
   getCuttingsForUserChronological(userId) {
     return db.prepare(
-      'SELECT id, created_at, season, prompt, reflection_text FROM cuttings WHERE user_id = ? ORDER BY created_at ASC'
+      `SELECT id, created_at, recorded_date, season, prompt,
+              reflection_text, talked_about, how_it_felt, takeaway
+       FROM cuttings WHERE user_id = ?
+       ORDER BY recorded_date ASC, created_at ASC`
     ).all(userId);
   },
 

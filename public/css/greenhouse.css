@@ -1009,11 +1009,25 @@ details[open] .gh-planted-summary::before { content: '▾  '; }
   gap: 1.25rem;
 }
 
-.cutting-entry {
+/* The day card: holds a date label plus one or more cutting entries. On
+   prolific days the card will be denser; on most days it's a single entry. */
+.cutting-day {
   background: var(--color-blank-page);
   border-radius: var(--radius-md);
   padding: 1.1rem 1.4rem 1.2rem;
   box-shadow: var(--shadow-sm);
+}
+
+/* A single reflection block inside a day card. No own chrome — sits naturally
+   under the date label and any prior entries. */
+.cutting-entry { /* base — no chrome, kept as a hook for spacing modifiers */ }
+
+/* Second and subsequent entries on the same day get a quiet separator + a
+   bit more breathing room so they read as distinct sessions. */
+.cutting-entry--stacked + .cutting-entry--stacked {
+  margin-top: 1.1rem;
+  padding-top: 1.1rem;
+  border-top: 1px solid rgba(112, 92, 108, 0.12);
 }
 
 .cutting-date {
@@ -1034,6 +1048,23 @@ details[open] .gh-planted-summary::before { content: '▾  '; }
   color: var(--color-ink-stained);
   margin: 0;
   white-space: pre-wrap;
+}
+
+/* Each labelled field inside a cutting card. Cards may have one (legacy)
+   to four populated fields; only populated ones render. */
+.cutting-field {
+  margin-top: 1rem;
+}
+.cutting-field:first-of-type {
+  margin-top: 0;
+}
+.cutting-field-label {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 0.9rem;
+  font-weight: 400;
+  color: rgba(16, 15, 16, 0.55);
+  margin: 0 0 0.25rem;
 }
 
 /* Whole-page empty state */

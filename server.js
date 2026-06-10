@@ -13,6 +13,7 @@ const { sendPasswordResetEmail } = require('./email');
 const { ANGLES, getAngle, getQuestion } = require('./lib/seed-packet-questions');
 const { getCurricularSeason, getCurricularSeasonLabel, getCurricularSeasonDescriptor } = require('./lib/curricular-season');
 const { getSeasonPrompt } = require('./lib/season-prompts');
+const CUTTING_PROMPTS = require('./lib/cutting-prompts');
 const { renderHtmlToPdf } = require('./lib/pdf-render');
 const ejs = require('ejs');
 const ALL_QUESTION_IDS = new Set(ANGLES.flatMap(a => a.questions.map(q => q.id)));
@@ -65,6 +66,12 @@ const app = express();
 
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
+
+// Static, request-independent template data — exposed to every res.render call
+// as `cuttingPrompts` so the form view, the archive view, and any future
+// surface can read the field definitions without per-route plumbing.
+app.locals.cuttingPrompts = CUTTING_PROMPTS;
+
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
@@ -295,6 +302,13 @@ app.get('/dashboard', requireAuth, (req, res) => {
   const today = toLocalDateString(getNow(req.session.user));
   const recordedToday = db.getLastRecordedDate(req.session.user.id) === today;
 
+  // Backdating UI bounds: min = course start (if set), max = yesterday in
+  // user TZ. Today is handled by the normal recording card flow.
+  const yesterdayDate = new Date(getNow(req.session.user).getTime() - 86400000);
+  const yesterdayStr  = toLocalDateString(yesterdayDate);
+  const backdatingMin = db.getSetting('course_start_date') || null;
+  const backdatingMax = backdatingMin && yesterdayStr >= backdatingMin ? yesterdayStr : null;
+
   res.render('dashboard', {
     title: 'Dashboard',
     page: 'dashboard',
@@ -311,6 +325,8 @@ app.get('/dashboard', requireAuth, (req, res) => {
     allLessons,
     completedCount,
     totalLessons: allLessons.length,
+    backdatingMin,
+    backdatingMax,
     isIntegrationWeek,
     recordedToday,
     quote: getRotatingQuote()
@@ -318,25 +334,65 @@ app.get('/dashboard', requireAuth, (req, res) => {
 });
 
 // ─── Daily recording practice: save an optional reflection ("cutting") ─────
-// No video is uploaded or stored — only the reflection text is persisted.
-// Empty / whitespace-only text is treated as a skip and inserts nothing.
-// Also stamps users.last_recorded_date so the card remembers the user
-// recorded today, even if they reach this endpoint without hitting the
-// /dashboard/recorded-today route first (belt-and-suspenders, idempotent).
+// Accepts the four CUTTING_PROMPTS fields as optional strings + an optional
+// recorded_date (YYYY-MM-DD) for backdating. All-empty fields → no row.
+// When recorded_date is omitted, the cutting is stamped for today (the user's
+// timezone-aware today) and last_recorded_date is bumped — that's the normal
+// "I recorded today" flow. When recorded_date is supplied and valid, the
+// cutting is stamped for that day and last_recorded_date is NOT touched —
+// backdating shouldn't mark today as recorded.
 app.post('/dashboard/cutting', requireAuth, (req, res) => {
-  const text = (req.body && typeof req.body.reflection_text === 'string')
-    ? req.body.reflection_text.trim()
-    : '';
-  if (!text) {
+  const body = req.body || {};
+  const fields = {};
+  let anyFilled = false;
+  for (const { key } of CUTTING_PROMPTS) {
+    const raw = typeof body[key] === 'string' ? body[key].trim() : '';
+    fields[key] = raw || null;
+    if (raw) anyFilled = true;
+  }
+  if (!anyFilled) {
     return res.json({ saved: false });
   }
-  const now = getNow(req.session.user);
-  const today = toLocalDateString(now);
-  const courseWeek = getCurrentCourseWeek(req.session.user);
-  const season = getCurricularSeason(courseWeek.weekNumber);
-  db.createCutting(req.session.user.id, season, 'What did you notice today?', text);
-  db.markRecordedToday(req.session.user.id, today);
-  res.json({ saved: true });
+
+  const today = toLocalDateString(getNow(req.session.user));
+  const courseStart = db.getSetting('course_start_date');
+
+  // Resolve recorded_date + season. If client sent a recorded_date, validate
+  // it's a real date string between course_start and today. Otherwise default
+  // to today + current season.
+  let recordedDate, season, isBackdated;
+  const rawRecorded = typeof body.recorded_date === 'string' ? body.recorded_date.trim() : '';
+  if (rawRecorded) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(rawRecorded)) {
+      return res.status(400).json({ error: 'Invalid recorded_date format.' });
+    }
+    if (courseStart && rawRecorded < courseStart) {
+      return res.status(400).json({ error: 'recorded_date is before course start.' });
+    }
+    if (rawRecorded > today) {
+      return res.status(400).json({ error: 'recorded_date is in the future.' });
+    }
+    recordedDate = rawRecorded;
+    season = seasonForRecordedDate(rawRecorded, courseStart);
+    isBackdated = rawRecorded !== today;
+  } else {
+    recordedDate = today;
+    season = getCurricularSeason(getCurrentCourseWeek(req.session.user).weekNumber);
+    isBackdated = false;
+  }
+
+  // `prompt` column is vestigial — kept set to the first/noticed prompt for
+  // continuity with legacy rows and any future direct queries.
+  db.createCutting(req.session.user.id, season, CUTTING_PROMPTS[0].label, fields, recordedDate);
+
+  // last_recorded_date tracks "did they record today" only — never bumped
+  // by backdating, even if the backdated date happens to equal today (it
+  // can't here because isBackdated is false in that case anyway).
+  if (!isBackdated) {
+    db.markRecordedToday(req.session.user.id, today);
+  }
+
+  res.json({ saved: true, recorded_date: recordedDate, backdated: isBackdated });
 });
 
 // ─── Mark "I recorded today" — stamp the date so the card remembers ────────
@@ -737,7 +793,8 @@ app.get('/calendar', requireAuth, (req, res) => {
     weeks,
     currentWeekStart,
     courseCurrentWeekStart,
-    courseStartDate
+    courseStartDate,
+    todayStr: toLocalDateString(getNow(req.session.user))
   });
 });
 
@@ -975,6 +1032,20 @@ function toLocalDateString(d) {
   const mm   = String(d.getMonth() + 1).padStart(2, '0');
   const dd   = String(d.getDate()).padStart(2, '0');
   return `${yyyy}-${mm}-${dd}`;
+}
+
+// Map a backdated recorded_date to the curricular season of its course week.
+// For backdated cuttings the archive/PDF should group by the SEASON the
+// recording belongs to, not the season the row was written in. Returns null
+// for dates before course start or beyond week 12.
+function seasonForRecordedDate(recordedDateStr, courseStartStr) {
+  if (!courseStartStr || !recordedDateStr) return null;
+  const days = Math.floor(
+    (new Date(recordedDateStr + 'T00:00:00').getTime() -
+     new Date(courseStartStr  + 'T00:00:00').getTime()) / 86400000
+  );
+  if (days < 0) return null;
+  return getCurricularSeason(Math.floor(days / 7) + 1);
 }
 
 function isGoalLocked(goal, user) {
@@ -1287,6 +1358,7 @@ app.get('/greenhouse/cuttings/export', requireAuth, async (req, res) => {
     {
       logoSvg:        CUTTINGS_PDF_ASSETS.logoSvg,
       fontFaceCss:    CUTTINGS_PDF_ASSETS.fontFaceCss,
+      cuttingPrompts: CUTTING_PROMPTS,  // ejs.renderFile bypasses app.locals
       dateRangeLabel,
       seasonGroups,
     }

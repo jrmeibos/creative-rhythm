@@ -283,3 +283,118 @@
 .cal-tile--current .cal-tile-season {
   color: rgba(242, 238, 227, 0.7);
 }
+
+/* ─── Day-grid backdating inside week panels ───────────────────────────── */
+
+.cal-day-grid-section {
+  margin-bottom: 1.75rem;
+}
+.cal-day-grid-title {
+  font-family: var(--font-display);
+  font-size: 1rem;
+  font-weight: 400;
+  color: var(--color-bloem);
+  margin: 0 0 0.75rem;
+}
+.cal-day-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+.cal-day {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.15rem;
+  background: var(--color-blank-page);
+  border: 1.5px solid rgba(112, 92, 108, 0.15);
+  border-radius: var(--radius-sm);
+  padding: 0.65rem 0.4rem;
+  min-height: 4.25rem;
+  font-family: var(--font-body);
+  color: var(--color-ink-stained);
+  text-align: center;
+  position: relative;
+}
+.cal-day-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(16, 15, 16, 0.5);
+}
+.cal-day-num {
+  font-family: var(--font-display);
+  font-size: 1.35rem;
+  font-weight: 400;
+  line-height: 1.1;
+}
+
+/* Past days are <button> — tappable, hover state */
+.cal-day--past {
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+.cal-day--past:hover {
+  background: rgba(112, 92, 108, 0.06);
+  border-color: var(--color-bloem);
+}
+.cal-day--past.is-active {
+  background: rgba(112, 92, 108, 0.10);
+  border-color: var(--color-bloem);
+}
+
+/* Today: visually distinct, inert */
+.cal-day--today {
+  background: rgba(246, 201, 92, 0.18);
+  border-color: var(--color-apricity);
+}
+.cal-day--today .cal-day-label {
+  color: rgba(16, 15, 16, 0.7);
+}
+.cal-day-today-tag {
+  font-family: var(--font-body);
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-bloem);
+  margin-top: 0.1rem;
+}
+
+/* Future + pre-course: greyed, inert */
+.cal-day--future,
+.cal-day--pre-course {
+  opacity: 0.4;
+  background: rgba(0, 0, 0, 0.02);
+  cursor: default;
+}
+
+/* Backdating form revealed when a past day is tapped */
+.cal-backdate-form {
+  margin-top: 1.25rem;
+  padding: 1.5rem 1.75rem 1.25rem;
+  background: var(--color-blank-page);
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(112, 92, 108, 0.12);
+}
+.cal-backdate-form.is-hidden { display: none; }
+.cal-backdate-form-for {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 0.95rem;
+  color: rgba(16, 15, 16, 0.6);
+  margin: 0 0 1.25rem;
+}
+.cal-backdate-form-date {
+  font-style: normal;
+  font-weight: 400;
+  color: var(--color-bloem);
+}
+
+@media (max-width: 700px) {
+  .cal-day { padding: 0.5rem 0.25rem; min-height: 3.75rem; }
+  .cal-day-num { font-size: 1.1rem; }
+  .cal-day-label { font-size: 0.6rem; }
+}

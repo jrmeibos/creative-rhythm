@@ -98,6 +98,92 @@ if (openParam) {
   history.replaceState(null, '', url.toString());
 }
 
+/* Day-grid backdating — tap a past day to log a cutting for that day.
+   One backdating form per week panel; tapping a different day swaps the
+   form's date context without losing typed content. Tapping the same day
+   again or Cancel closes the form. */
+document.querySelectorAll('.cal-day-grid-section').forEach(section => {
+  const weekStart  = section.dataset.week;
+  const form       = section.querySelector('.cal-backdate-form');
+  const dateSpan   = section.querySelector('.cal-backdate-form-date');
+  const textareas  = form.querySelectorAll('.cal-backdate-textarea');
+  const saveBtn    = form.querySelector('.cal-backdate-save');
+  const cancelBtn  = form.querySelector('.cal-backdate-cancel');
+  const savedMsg   = form.querySelector('.cal-backdate-saved');
+  let activeDate = null;
+
+  const fmtDate = iso => {
+    const d = new Date(iso + 'T00:00:00');
+    return d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+  };
+
+  const closeForm = (clearText) => {
+    form.classList.add('is-hidden');
+    if (savedMsg) savedMsg.hidden = true;
+    saveBtn.disabled = false;
+    if (clearText) textareas.forEach(t => { t.value = ''; });
+    section.querySelectorAll('.cal-day--past.is-active').forEach(b => b.classList.remove('is-active'));
+    activeDate = null;
+  };
+
+  const openForm = (dateIso, btn) => {
+    activeDate = dateIso;
+    dateSpan.textContent = fmtDate(dateIso);
+    form.classList.remove('is-hidden');
+    section.querySelectorAll('.cal-day--past.is-active').forEach(b => b.classList.remove('is-active'));
+    btn.classList.add('is-active');
+    if (savedMsg) savedMsg.hidden = true;
+    saveBtn.disabled = false;
+    // Focus the first textarea after the form is visible so keyboard users
+    // land in the right place.
+    setTimeout(() => textareas[0]?.focus(), 30);
+  };
+
+  section.querySelectorAll('.cal-day--past').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      const dateIso = btn.dataset.date;
+      if (activeDate === dateIso) {
+        closeForm(false);   // tapping the same day toggles closed
+      } else {
+        openForm(dateIso, btn);
+      }
+    });
+  });
+
+  cancelBtn.addEventListener('click', () => closeForm(true));
+
+  saveBtn.addEventListener('click', async () => {
+    if (!activeDate) return;
+    const payload = { recorded_date: activeDate };
+    let anyFilled = false;
+    textareas.forEach(t => {
+      const v = t.value.trim();
+      payload[t.dataset.cuttingKey] = v;
+      if (v) anyFilled = true;
+    });
+    if (!anyFilled) { closeForm(true); return; }
+    saveBtn.disabled = true;
+    try {
+      const res = await fetch('/dashboard/cutting', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify(payload)
+      });
+      if (!res.ok) throw new Error('save failed');
+      if (savedMsg) {
+        savedMsg.hidden = false;
+        setTimeout(() => closeForm(true), 1200);
+      } else {
+        closeForm(true);
+      }
+    } catch (e) {
+      saveBtn.disabled = false;
+      alert('Could not save. Please try again.');
+    }
+  });
+});
+
 /* Weekly reflection save — wired for all past-week panels */
 document.querySelectorAll('.weekly-reflection').forEach(section => {
   const weekStart = section.dataset.week;

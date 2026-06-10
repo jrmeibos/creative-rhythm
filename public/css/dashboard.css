@@ -2447,7 +2447,17 @@
   margin: 0;
 }
 
+/* Each prompt+textarea group inside the reflect form. Multiple of these
+   stack vertically — generous gap so the four fields breathe. */
+.recording-reflect-field {
+  margin-bottom: 1.5rem;
+}
+.recording-reflect-field:last-of-type {
+  margin-bottom: 1rem;
+}
+
 .recording-reflect-q {
+  display: block;
   font-family: var(--font-display);
   font-size: 1rem;
   font-weight: 400;
@@ -2493,4 +2503,68 @@
   font-size: 1rem;
   color: rgba(16, 15, 16, 0.55);
   margin: 0;
+}
+
+/* ─── Backdating: log a previous day's recording ──────────────────────── */
+
+.recording-backdate {
+  margin-top: 1rem;
+  text-align: center;
+}
+.recording-backdate-toggle {
+  display: inline-block;
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  font-weight: 300;
+  color: var(--color-bloem);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.4rem 0.6rem;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  opacity: 0.75;
+  transition: opacity 0.15s;
+}
+.recording-backdate-toggle:hover { opacity: 1; }
+
+.recording-backdate-panel {
+  background: var(--color-blank-page);
+  border-radius: var(--radius-md);
+  padding: 1.5rem 1.75rem 1.25rem;
+  margin-top: 0.75rem;
+  text-align: left;
+  box-shadow: var(--shadow-sm);
+}
+.recording-backdate-panel.is-hidden { display: none; }
+
+.recording-backdate-date-label {
+  display: block;
+  font-family: var(--font-display);
+  font-size: 1rem;
+  font-weight: 400;
+  color: var(--color-bloem);
+  margin: 0 0 0.35rem;
+}
+.recording-backdate-date-input {
+  width: 100%;
+  max-width: 14rem;
+  background: rgba(112, 92, 108, 0.04);
+  border: 1.5px solid rgba(112, 92, 108, 0.12);
+  border-radius: var(--radius-sm);
+  padding: 0.5rem 0.7rem;
+  font-family: var(--font-body);
+  font-size: 0.92rem;
+  color: var(--color-ink-stained);
+  outline: none;
+  transition: border-color 0.15s;
+  margin-bottom: 1.5rem;
+}
+.recording-backdate-date-input:focus { border-color: var(--color-bloem); }
+
+.recording-backdate-saved {
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  color: var(--color-understory);
+  margin-left: 0.5rem;
 }

@@ -93,11 +93,24 @@
             <button type="button" class="recording-card-btn" id="recording-recorded-btn">I recorded today</button>
           </div>
 
-          <!-- Reflect state: optional one-line capture. Always hidden on load -->
+          <!-- Reflect state: four optional fields. All visible by default —
+               no accordion. Skip + all-empty Save are both treated as skip
+               (no row written). Microcopy only on the first field; the others
+               signal optionality through the Skip button's presence. -->
           <div class="recording-card-state recording-card-reflect is-hidden" id="recording-state-reflect">
-            <p class="recording-reflect-q">What did you notice today?</p>
-            <p class="recording-reflect-help">A sentence is plenty — or skip it.</p>
-            <textarea id="recording-reflect-text" class="recording-reflect-textarea" rows="3" placeholder=""></textarea>
+            <% cuttingPrompts.forEach(function (p) { %>
+              <div class="recording-reflect-field">
+                <label class="recording-reflect-q" for="recording-reflect-<%= p.key %>"><%= p.label %></label>
+                <% if (p.help) { %>
+                  <p class="recording-reflect-help"><%= p.help %></p>
+                <% } %>
+                <textarea
+                  id="recording-reflect-<%= p.key %>"
+                  class="recording-reflect-textarea"
+                  data-cutting-key="<%= p.key %>"
+                  rows="3"></textarea>
+              </div>
+            <% }); %>
             <div class="recording-reflect-actions">
               <button type="button" class="recording-card-btn" id="recording-save-btn">Save</button>
               <button type="button" class="recording-card-btn-secondary" id="recording-skip-btn">Skip</button>
@@ -119,6 +132,51 @@
             <% } %>
           </div>
         </div>
+
+        <!-- Backdating: quiet expandable affordance for logging a previous
+             day. Min date is course_start_date, max is yesterday — today goes
+             through the normal card flow above. The whole block is hidden if
+             there's no eligible past day (course hasn't started, or today is
+             course start). last_recorded_date is never bumped from here. -->
+        <% if (backdatingMax) { %>
+          <div class="recording-backdate">
+            <button type="button"
+                    class="recording-backdate-toggle"
+                    id="recording-backdate-toggle"
+                    aria-controls="recording-backdate-panel"
+                    aria-expanded="false">Log a previous day's recording ↓</button>
+
+            <div class="recording-backdate-panel is-hidden" id="recording-backdate-panel">
+              <label class="recording-backdate-date-label" for="recording-backdate-date">Which day are you logging?</label>
+              <input type="date"
+                     id="recording-backdate-date"
+                     class="recording-backdate-date-input"
+                     min="<%= backdatingMin %>"
+                     max="<%= backdatingMax %>"
+                     value="<%= backdatingMax %>">
+
+              <% cuttingPrompts.forEach(function (p) { %>
+                <div class="recording-reflect-field">
+                  <label class="recording-reflect-q" for="recording-backdate-<%= p.key %>"><%= p.label %></label>
+                  <% if (p.help) { %>
+                    <p class="recording-reflect-help"><%= p.help %></p>
+                  <% } %>
+                  <textarea
+                    id="recording-backdate-<%= p.key %>"
+                    class="recording-reflect-textarea"
+                    data-cutting-key="<%= p.key %>"
+                    rows="3"></textarea>
+                </div>
+              <% }); %>
+
+              <div class="recording-reflect-actions">
+                <button type="button" class="recording-card-btn" id="recording-backdate-save">Save</button>
+                <button type="button" class="recording-card-btn-secondary" id="recording-backdate-cancel">Cancel</button>
+                <span class="recording-backdate-saved" id="recording-backdate-saved" hidden>Saved 🌿</span>
+              </div>
+            </div>
+          </div>
+        <% } %>
       </section>
 
       <!-- Weekly intentions preview -->
@@ -288,20 +346,31 @@
 
     // ── Daily recording practice ──────────────────────────────────────────
     (function () {
-      const rest    = document.getElementById('recording-state-rest');
-      const reflect = document.getElementById('recording-state-reflect');
-      const done    = document.getElementById('recording-state-done');
+      const rest        = document.getElementById('recording-state-rest');
+      const reflect     = document.getElementById('recording-state-reflect');
+      const done        = document.getElementById('recording-state-done');
       const recordedBtn = document.getElementById('recording-recorded-btn');
-      const saveBtn = document.getElementById('recording-save-btn');
-      const skipBtn = document.getElementById('recording-skip-btn');
-      const textEl  = document.getElementById('recording-reflect-text');
-      if (!rest || !reflect || !done || !recordedBtn || !saveBtn || !skipBtn || !textEl) return;
+      const saveBtn     = document.getElementById('recording-save-btn');
+      const skipBtn     = document.getElementById('recording-skip-btn');
+      const textEls     = reflect ? reflect.querySelectorAll('textarea[data-cutting-key]') : [];
+      if (!rest || !reflect || !done || !recordedBtn || !saveBtn || !skipBtn || !textEls.length) return;
 
       const show = el => { rest.classList.add('is-hidden'); reflect.classList.add('is-hidden'); done.classList.add('is-hidden'); el.classList.remove('is-hidden'); };
 
+      const collect = () => {
+        const payload = {};
+        let anyFilled = false;
+        textEls.forEach(t => {
+          const v = t.value.trim();
+          payload[t.dataset.cuttingKey] = v;
+          if (v) anyFilled = true;
+        });
+        return { payload, anyFilled };
+      };
+
       recordedBtn.addEventListener('click', () => {
         show(reflect);
-        textEl.focus();
+        textEls[0].focus();  // first field gets focus — "What did you notice today?"
         // Stamp today's date so the card remembers across navigation —
         // even if the student skips the reflection. Non-blocking: failure
         // here is acceptable, UI still works for this session.
@@ -309,23 +378,95 @@
       });
 
       skipBtn.addEventListener('click', () => {
-        // Skip → no POST. Empty text = same as skip; we never persist empty.
-        textEl.value = '';
+        // Skip → no POST. Clear all fields so they don't linger if the user
+        // navigates back through the card during the same session.
+        textEls.forEach(t => { t.value = ''; });
         show(done);
       });
 
       saveBtn.addEventListener('click', async () => {
-        const text = textEl.value.trim();
-        if (!text) { show(done); return; }   // empty save = skip, no row created
+        const { payload, anyFilled } = collect();
+        if (!anyFilled) { show(done); return; }   // all-empty save = skip, no row created
         saveBtn.disabled = true;
         try {
           const res = await fetch('/dashboard/cutting', {
             method:  'POST',
             headers: { 'Content-Type': 'application/json' },
-            body:    JSON.stringify({ reflection_text: text })
+            body:    JSON.stringify(payload)
           });
           if (!res.ok) throw new Error('save failed');
           show(done);
+        } catch (e) {
+          saveBtn.disabled = false;
+          alert('Could not save. Please try again.');
+        }
+      });
+    })();
+
+    // ── Dashboard backdating: log a previous day's recording ─────────────
+    (function () {
+      const toggleBtn = document.getElementById('recording-backdate-toggle');
+      const panel     = document.getElementById('recording-backdate-panel');
+      if (!toggleBtn || !panel) return;  // no eligible past day → markup omitted
+      const dateEl    = document.getElementById('recording-backdate-date');
+      const saveBtn   = document.getElementById('recording-backdate-save');
+      const cancelBtn = document.getElementById('recording-backdate-cancel');
+      const savedMsg  = document.getElementById('recording-backdate-saved');
+      const textEls   = panel.querySelectorAll('textarea[data-cutting-key]');
+
+      const togglePanel = (open) => {
+        panel.classList.toggle('is-hidden', !open);
+        toggleBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+        toggleBtn.textContent = open
+          ? "Log a previous day's recording ↑"
+          : "Log a previous day's recording ↓";
+      };
+
+      const resetPanel = () => {
+        textEls.forEach(t => { t.value = ''; });
+        if (savedMsg) savedMsg.hidden = true;
+        saveBtn.disabled = false;
+      };
+
+      toggleBtn.addEventListener('click', () => {
+        const willOpen = panel.classList.contains('is-hidden');
+        togglePanel(willOpen);
+      });
+
+      cancelBtn.addEventListener('click', () => {
+        resetPanel();
+        togglePanel(false);
+      });
+
+      saveBtn.addEventListener('click', async () => {
+        const payload = { recorded_date: dateEl.value };
+        let anyFilled = false;
+        textEls.forEach(t => {
+          const v = t.value.trim();
+          payload[t.dataset.cuttingKey] = v;
+          if (v) anyFilled = true;
+        });
+        if (!anyFilled) {
+          // All-empty backdated save → treat as cancel; nothing to persist.
+          resetPanel();
+          togglePanel(false);
+          return;
+        }
+        saveBtn.disabled = true;
+        try {
+          const res = await fetch('/dashboard/cutting', {
+            method:  'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body:    JSON.stringify(payload)
+          });
+          if (!res.ok) throw new Error('save failed');
+          if (savedMsg) {
+            savedMsg.hidden = false;
+            setTimeout(() => { resetPanel(); togglePanel(false); }, 1200);
+          } else {
+            resetPanel();
+            togglePanel(false);
+          }
         } catch (e) {
           saveBtn.disabled = false;
           alert('Could not save. Please try again.');

@@ -41,23 +41,57 @@
               <% } %>
             </header>
 
-            <ul class="cuttings-list">
-              <% group.entries.forEach(function (c) { %>
-                <%
-                  // Gentle date formatting: "Tuesday, May 14"
-                  let dateLabel = '';
+            <%
+              // Group entries by recorded_date — multiple cuttings on the
+              // same day stack under one date label. Entries within group.entries
+              // are already ordered earliest-written-first within a day by the
+              // DB query (ORDER BY recorded_date DESC, created_at ASC), so a
+              // simple reduce preserves that order.
+              const dayBuckets = [];
+              const dayIndex   = {};
+              group.entries.forEach(function (c) {
+                // recorded_date is the source of truth; fall back to
+                // DATE(created_at) for any malformed legacy row.
+                let dayKey = c.recorded_date;
+                if (!dayKey && c.created_at) {
+                  dayKey = c.created_at.slice(0, 10);
+                }
+                if (!dayKey) dayKey = '?';
+                if (dayIndex[dayKey] == null) {
+                  let dayLabel = dayKey;
                   try {
-                    const d = new Date(c.created_at.replace(' ', 'T') + 'Z');
-                    dateLabel = d.toLocaleDateString('en-US', {
+                    const d = new Date(dayKey + 'T00:00:00');
+                    dayLabel = d.toLocaleDateString('en-US', {
                       weekday: 'long', month: 'long', day: 'numeric',
                     });
-                  } catch (_) {
-                    dateLabel = c.created_at || '';
-                  }
-                %>
-                <li class="cutting-entry">
-                  <p class="cutting-date"><%= dateLabel %></p>
-                  <p class="cutting-text"><%= c.reflection_text %></p>
+                  } catch (_) { /* keep raw */ }
+                  dayIndex[dayKey] = dayBuckets.length;
+                  dayBuckets.push({ dayKey, dayLabel, items: [] });
+                }
+                dayBuckets[dayIndex[dayKey]].items.push(c);
+              });
+            %>
+
+            <ul class="cuttings-list">
+              <% dayBuckets.forEach(function (day) { %>
+                <li class="cutting-day">
+                  <p class="cutting-date"><%= day.dayLabel %></p>
+                  <% day.items.forEach(function (c, ci) { %>
+                    <%
+                      const populatedFields = cuttingPrompts.filter(function (p) {
+                        const v = c[p.key];
+                        return v != null && String(v).trim() !== '';
+                      });
+                    %>
+                    <article class="cutting-entry<%= day.items.length > 1 ? ' cutting-entry--stacked' : '' %>">
+                      <% populatedFields.forEach(function (p) { %>
+                        <div class="cutting-field">
+                          <p class="cutting-field-label"><%= p.label %></p>
+                          <p class="cutting-text"><%= c[p.key] %></p>
+                        </div>
+                      <% }); %>
+                    </article>
+                  <% }); %>
                 </li>
               <% }); %>
             </ul>

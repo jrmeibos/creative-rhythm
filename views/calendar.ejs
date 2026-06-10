@@ -66,7 +66,89 @@
         </div>
 
         <% for (const w of weeks) { %>
+          <%
+            // Build seven day-cell descriptors for this week. State drives
+            // both visual treatment and whether the cell is tappable:
+            //   - 'pre-course' : before courseStartDate
+            //   - 'past'       : tappable, between courseStart and yesterday
+            //   - 'today'      : visually distinct, non-tappable
+            //   - 'future'     : greyed, non-tappable
+            const dayLabels = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+            const weekDays = [];
+            for (let i = 0; i < 7; i++) {
+              const d = new Date(w.weekStart + 'T00:00:00');
+              d.setDate(d.getDate() + i);
+              const yyyy = d.getFullYear();
+              const mm = String(d.getMonth() + 1).padStart(2, '0');
+              const dd = String(d.getDate()).padStart(2, '0');
+              const iso = `${yyyy}-${mm}-${dd}`;
+              let state;
+              if (courseStartDate && iso < courseStartDate) state = 'pre-course';
+              else if (iso === todayStr)                    state = 'today';
+              else if (iso > todayStr)                      state = 'future';
+              else                                          state = 'past';
+              weekDays.push({ iso, label: dayLabels[i], dateNum: d.getDate(), state });
+            }
+            // Hide the heading + grid entirely when nothing in this week
+            // is tappable — pre-course-only weeks and fully-future weeks
+            // shouldn't show a misleading "log a recording" affordance.
+            const hasTappableDay = weekDays.some(d => d.state === 'past');
+          %>
           <div class="cal-panel" data-week="<%= w.weekStart %>" hidden>
+
+            <% if (hasTappableDay) { %>
+            <!-- Day grid: tap a past day to log a backdated cutting -->
+            <section class="cal-day-grid-section" data-week="<%= w.weekStart %>">
+              <h3 class="cal-day-grid-title">Log a recording for a day this week</h3>
+              <div class="cal-day-grid">
+                <% weekDays.forEach(function (d) { %>
+                  <% if (d.state === 'past') { %>
+                    <button type="button"
+                            class="cal-day cal-day--past"
+                            data-date="<%= d.iso %>"
+                            data-week="<%= w.weekStart %>">
+                      <span class="cal-day-label"><%= d.label %></span>
+                      <span class="cal-day-num"><%= d.dateNum %></span>
+                    </button>
+                  <% } else { %>
+                    <div class="cal-day cal-day--<%= d.state %>" aria-disabled="true">
+                      <span class="cal-day-label"><%= d.label %></span>
+                      <span class="cal-day-num"><%= d.dateNum %></span>
+                      <% if (d.state === 'today') { %>
+                        <span class="cal-day-today-tag">today</span>
+                      <% } %>
+                    </div>
+                  <% } %>
+                <% }); %>
+              </div>
+
+              <!-- Backdating form: hidden until a past day is tapped. One per
+                   week panel (only one panel is visible at a time, so this
+                   doesn't cross-talk between weeks). -->
+              <div class="cal-backdate-form is-hidden"
+                   id="cal-backdate-form-<%= w.weekStart %>"
+                   data-week="<%= w.weekStart %>">
+                <p class="cal-backdate-form-for">Logging for <span class="cal-backdate-form-date"></span></p>
+                <% cuttingPrompts.forEach(function (p) { %>
+                  <div class="recording-reflect-field">
+                    <label class="recording-reflect-q"><%= p.label %></label>
+                    <% if (p.help) { %>
+                      <p class="recording-reflect-help"><%= p.help %></p>
+                    <% } %>
+                    <textarea
+                      class="recording-reflect-textarea cal-backdate-textarea"
+                      data-cutting-key="<%= p.key %>"
+                      rows="3"></textarea>
+                  </div>
+                <% }); %>
+                <div class="recording-reflect-actions">
+                  <button type="button" class="recording-card-btn cal-backdate-save">Save</button>
+                  <button type="button" class="recording-card-btn-secondary cal-backdate-cancel">Cancel</button>
+                  <span class="recording-backdate-saved cal-backdate-saved" hidden>Saved 🌿</span>
+                </div>
+              </div>
+            </section>
+            <% } %>
 
             <!-- Integration toggle -->
             <div class="cal-integration-row">
