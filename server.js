@@ -274,54 +274,30 @@ app.post('/reset-password', async (req, res) => {
 
 // ─── Dashboard ─────────────────────────────────────────────────────────────
 
-app.get('/dashboard', requireAuth, (req, res) => {
-  const userId = req.session.user.id;
-  const courseWeek = getCurrentCourseWeek(req.session.user);
-  const weekStart = courseWeek.weekStart;
-  const weekNumber = courseWeek.weekNumber;
-  const goals = db.getGoalsForWeek(userId, weekStart);
-  const goalsMap = {};
-  for (const g of goals) goalsMap[g.category] = g;
-
-  const currentLesson = db.getFirstUncompletedLesson(userId);
-  const allLessons = db.getAllLessons();
-  const completedIds = new Set(db.completedLessonIds(userId));
-  const completedCount = completedIds.size;
-  const isIntegrationWeek = goals.some(g => g.is_integration_week);
-
-  const goalsDataDash = {};
-  for (const cat of ['curiosity','create','share','connect']) {
-    goalsDataDash[cat] = parseGoalText(goalsMap[cat]?.goal_text);
-  }
-
-  const curricularSeason = getCurricularSeason(weekNumber);
-  const curricularSeasonLabel = getCurricularSeasonLabel(curricularSeason);
-
-  // ─── Day-view payload ──────────────────────────────────────────────────
-  // The viewed day comes from ?day=YYYY-MM-DD (matches the existing ?week=
-  // convention). Clamp to [course_start_date, today_in_user_tz] so neither a
-  // malformed param nor a time-travelling admin can produce out-of-range
-  // URLs. Default is today when absent.
-  const today = toLocalDateString(getNow(req.session.user));
-  const courseStart = db.getSetting('course_start_date');
+// Shared helper used by both /dashboard (full page) and /dashboard/day
+// (HTML fragment for fetch-and-swap). Resolves the viewed day from a raw
+// ?day= value, clamps to [course_start_date, today_in_user_tz], and
+// returns the full dayview payload plus today's date string. The caller
+// passes `courseStart` so this helper doesn't re-query db.getSetting.
+function buildDayviewPayload(user, rawDay, courseStart) {
+  const today = toLocalDateString(getNow(user));
   let viewed = today;
-  const rawDay = typeof req.query.day === 'string' ? req.query.day.trim() : '';
-  if (rawDay && /^\d{4}-\d{2}-\d{2}$/.test(rawDay)) {
-    if (courseStart && rawDay < courseStart) viewed = courseStart;
-    else if (rawDay > today)                 viewed = today;
-    else                                     viewed = rawDay;
+  const raw = typeof rawDay === 'string' ? rawDay.trim() : '';
+  if (raw && /^\d{4}-\d{2}-\d{2}$/.test(raw)) {
+    if (courseStart && raw < courseStart) viewed = courseStart;
+    else if (raw > today)                 viewed = today;
+    else                                  viewed = raw;
   }
 
-  const dayInfo            = getCourseDayForDate(req.session.user, viewed);
+  const dayInfo            = getCourseDayForDate(user, viewed, courseStart);
   const viewedSeason       = dayInfo.season;
   const viewedSeasonLabel  = getCurricularSeasonLabel(viewedSeason);
   const viewedSeasonPrompt = getSeasonPrompt(viewedSeason);
-  const dayCuttings        = db.getCuttingsForUserOnDate(req.session.user.id, viewed);
+  const dayCuttings        = db.getCuttingsForUserOnDate(user.id, viewed);
   const isToday            = viewed === today;
 
   // Prev/next dates: walk one day in each direction and disable at the bounds.
-  // Date components built locally so the YYYY-MM-DD math doesn't drift across
-  // DST or TZ — we're only doing day arithmetic on a midnight-local Date.
+  // Local midnight Date so the math doesn't drift across DST or TZ.
   const viewedDate = new Date(viewed + 'T00:00:00');
   const prevD = new Date(viewedDate); prevD.setDate(prevD.getDate() - 1);
   const nextD = new Date(viewedDate); nextD.setDate(nextD.getDate() + 1);
@@ -349,6 +325,40 @@ app.get('/dashboard', requireAuth, (req, res) => {
     nextDate
   };
 
+  return { dayview, today };
+}
+
+app.get('/dashboard', requireAuth, (req, res) => {
+  const userId = req.session.user.id;
+
+  // Single db.getSetting('course_start_date') read per request — passed
+  // down into getCurrentCourseWeek + buildDayviewPayload + getCourseDayForDate
+  // so they don't each re-query. Was 3 reads per /dashboard before.
+  const courseStart = db.getSetting('course_start_date');
+
+  const courseWeek = getCurrentCourseWeek(req.session.user, courseStart);
+  const weekStart = courseWeek.weekStart;
+  const weekNumber = courseWeek.weekNumber;
+  const goals = db.getGoalsForWeek(userId, weekStart);
+  const goalsMap = {};
+  for (const g of goals) goalsMap[g.category] = g;
+
+  const currentLesson = db.getFirstUncompletedLesson(userId);
+  const allLessons = db.getAllLessons();
+  const completedIds = new Set(db.completedLessonIds(userId));
+  const completedCount = completedIds.size;
+  const isIntegrationWeek = goals.some(g => g.is_integration_week);
+
+  const goalsDataDash = {};
+  for (const cat of ['curiosity','create','share','connect']) {
+    goalsDataDash[cat] = parseGoalText(goalsMap[cat]?.goal_text);
+  }
+
+  const curricularSeason = getCurricularSeason(weekNumber);
+  const curricularSeasonLabel = getCurricularSeasonLabel(curricularSeason);
+
+  const { dayview, today } = buildDayviewPayload(req.session.user, req.query.day, courseStart);
+
   res.render('dashboard', {
     title: 'Dashboard',
     page: 'dashboard',
@@ -366,8 +376,20 @@ app.get('/dashboard', requireAuth, (req, res) => {
     totalLessons: allLessons.length,
     isIntegrationWeek,
     dayview,
+    today,
     quote: getRotatingQuote()
   });
+});
+
+// ─── Day-view fragment endpoint ────────────────────────────────────────────
+// Returns just the day-view partial — no sidebar, no layout — for the
+// dashboard's fetch-and-swap day stepper. Same clamping rules as /dashboard
+// so a malformed ?day= or a future date can't escape. The dashboard's
+// inline controller calls this on prev/next clicks and on popstate.
+app.get('/dashboard/day', requireAuth, (req, res) => {
+  const courseStart = db.getSetting('course_start_date');
+  const { dayview } = buildDayviewPayload(req.session.user, req.query.day, courseStart);
+  res.render('partials/day-view', { dayview });
 });
 
 // ─── Daily recording practice: save an optional reflection ("cutting") ─────
@@ -1029,6 +1051,25 @@ function isTimeTravelUser(user) {
   return user.role === 'admin' || TEST_ACCOUNT_ALLOWLIST.includes(user.email);
 }
 
+// Module-level cache so we don't pay the ~0.2ms Intl.DateTimeFormat
+// construction cost on every getNow() call. Keyed by IANA timezone
+// string — same options for every entry. With a small cohort the cache
+// grows to at most one entry per distinct student TZ and stays warm.
+const TZ_FORMATTER_CACHE = new Map();
+function getTzFormatter(tz) {
+  let f = TZ_FORMATTER_CACHE.get(tz);
+  if (!f) {
+    f = new Intl.DateTimeFormat('en-US', {
+      timeZone: tz,
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', second: '2-digit',
+      hour12: false
+    });
+    TZ_FORMATTER_CACHE.set(tz, f);
+  }
+  return f;
+}
+
 function getNow(user) {
   // Step 1: pick the instant — time travel first, real clock otherwise.
   let now;
@@ -1050,12 +1091,7 @@ function getNow(user) {
   if (!tz) return now;
 
   try {
-    const parts = new Intl.DateTimeFormat('en-US', {
-      timeZone: tz,
-      year: 'numeric', month: '2-digit', day: '2-digit',
-      hour: '2-digit', minute: '2-digit', second: '2-digit',
-      hour12: false
-    }).formatToParts(now);
+    const parts = getTzFormatter(tz).formatToParts(now);
     const pick = (type) => parts.find(p => p.type === type).value;
     let hour = parseInt(pick('hour'), 10);
     if (hour === 24) hour = 0; // en-US hour12:false reports midnight as "24"
@@ -1068,6 +1104,8 @@ function getNow(user) {
       parseInt(pick('second'), 10)
     );
   } catch (e) {
+    // Invalid TZ — likely a corrupted users.timezone. Surface in logs
+    // (once per cache miss) and fall back to server time silently.
     return now;
   }
 }
@@ -2136,9 +2174,11 @@ function getWeekStart() {
 
 // Returns { weekNumber, weekStart, weekEnd } relative to course_start_date.
 // weekNumber is 1-based; 0 means before course start; null means no course start set.
-// Uses getNow(user) so time-travel works correctly.
-function getCurrentCourseWeek(user) {
-  const courseStartStr = db.getSetting('course_start_date');
+// Uses getNow(user) so time-travel works correctly. Optional second arg lets
+// the caller hoist the db.getSetting('course_start_date') read so a route
+// doing both week + day math doesn't hit the same setting twice.
+function getCurrentCourseWeek(user, courseStartArg) {
+  const courseStartStr = (courseStartArg !== undefined) ? courseStartArg : db.getSetting('course_start_date');
   if (!courseStartStr || !courseStartStr.trim()) {
     const ws = getWeekStart();
     const we = new Date(ws + 'T00:00:00');
@@ -2177,8 +2217,8 @@ function getCurrentCourseWeek(user) {
 //   dayInWeek   1..7 for in-course days; 0 pre-course; null without start
 //   dateStr     today's wall-clock YYYY-MM-DD in the user's TZ
 //   isPreCourse / isPostCourse  edge flags
-function getCurrentCourseDay(user) {
-  const courseStartStr = db.getSetting('course_start_date');
+function getCurrentCourseDay(user, courseStartArg) {
+  const courseStartStr = (courseStartArg !== undefined) ? courseStartArg : db.getSetting('course_start_date');
   const dateStr = toLocalDateString(getNow(user));
   if (!courseStartStr || !courseStartStr.trim()) {
     return { dayNumber: null, weekNumber: null, dayInWeek: null,
@@ -2205,8 +2245,8 @@ function getCurrentCourseDay(user) {
 // before course start or when no course_start_date is set; dayInSeason uses
 // modulo 21 so it stays valid for post-course dates that admins might reach
 // via time travel.
-function getCourseDayForDate(user, dateStr) {
-  const courseStartStr = db.getSetting('course_start_date');
+function getCourseDayForDate(user, dateStr, courseStartArg) {
+  const courseStartStr = (courseStartArg !== undefined) ? courseStartArg : db.getSetting('course_start_date');
   if (!courseStartStr || !dateStr) {
     return { dayNumber: null, season: null, dayInSeason: null };
   }

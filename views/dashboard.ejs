@@ -68,105 +68,16 @@
       </section>
 
       <!-- Day-view: per-day topic + reflection with back/forward day nav.
-           Replaces the old rest/reflect/done recording card and the separate
-           backdating block. Uses the dayview payload from the route; all
-           element IDs use a dayview- prefix to avoid colliding with anything
-           else on the page. -->
+           Markup lives in views/partials/day-view.ejs (one source for both
+           the full-page render and the GET /dashboard/day fragment). The
+           outer #dayview-container is persistent — it stays in the DOM
+           across day-to-day fetch-and-swap, and is what the inline
+           controller below delegates events from. -->
       <section class="dash-section">
-        <div class="recording-card" id="dayview-card">
-
-          <header class="dayview-header">
-            <% if (dayview.prevDate) { %>
-              <a href="?day=<%= dayview.prevDate %>" class="dayview-nav" aria-label="Previous day">‹</a>
-            <% } else { %>
-              <span class="dayview-nav dayview-nav--disabled" aria-hidden="true">‹</span>
-            <% } %>
-
-            <div class="dayview-day-label">
-              <% if (dayview.dayNumber) { %><span class="dayview-day-num">Day <%= dayview.dayNumber %></span> · <% } %>
-              <span class="dayview-date"><%= dayview.dateLabel %></span>
-              <% if (dayview.isToday) { %><span class="dayview-today-tag">today</span><% } %>
-            </div>
-
-            <% if (dayview.nextDate) { %>
-              <a href="?day=<%= dayview.nextDate %>" class="dayview-nav" aria-label="Next day">›</a>
-            <% } else { %>
-              <span class="dayview-nav dayview-nav--disabled" aria-hidden="true">›</span>
-            <% } %>
-          </header>
-
-          <% if (dayview.seasonLabel) { %>
-            <div class="dayview-season-row">
-              <span class="recording-card-season"><%= dayview.seasonLabel.toUpperCase() %></span>
-              <% if (dayview.aboutText) { %>
-                <button type="button"
-                        class="recording-about-toggle"
-                        id="dayview-about-toggle"
-                        aria-controls="dayview-about-panel"
-                        aria-expanded="false">About this season ↓</button>
-              <% } %>
-            </div>
-            <% if (dayview.aboutText) { %>
-              <div id="dayview-about-panel" class="recording-about-panel is-hidden">
-                <p><%= dayview.aboutText %></p>
-              </div>
-            <% } %>
-          <% } %>
-
-          <% if (dayview.topic) { %>
-            <p class="recording-card-prompt">"<%= dayview.topic %>"</p>
-          <% } %>
-
-          <% if (dayview.cuttings && dayview.cuttings.length) { %>
-            <% dayview.cuttings.forEach(function (c, idx) { %>
-              <% const populated = cuttingPrompts.filter(p => c[p.key] != null && String(c[p.key]).trim() !== ''); %>
-              <article class="dayview-entry<%= idx > 0 ? ' dayview-entry--stacked' : '' %>">
-                <% populated.forEach(function (p) { %>
-                  <div class="dayview-field">
-                    <p class="dayview-field-label"><%= p.label %></p>
-                    <p class="dayview-field-text"><%= c[p.key] %></p>
-                  </div>
-                <% }); %>
-              </article>
-            <% }); %>
-
-            <div class="dayview-cta-row">
-              <button type="button" class="recording-card-btn-secondary" id="dayview-add-btn">+ Add another</button>
-            </div>
-          <% } else { %>
-            <p class="dayview-empty">
-              <% if (dayview.isToday) { %>
-                Nothing here yet. Record when you're ready.
-              <% } else { %>
-                Nothing recorded for this day. You can still add one if you'd like.
-              <% } %>
-            </p>
-            <div class="dayview-cta-row">
-              <button type="button" class="recording-card-btn" id="dayview-add-btn">Add a recording for this day</button>
-            </div>
-          <% } %>
-
-          <!-- Form revealed by the Add button. Saves backdated to the viewed
-               date via the existing POST /dashboard/cutting, which validates
-               range and computes season from the recorded_date itself. -->
-          <div class="dayview-form is-hidden" id="dayview-form">
-            <% cuttingPrompts.forEach(function (p) { %>
-              <div class="recording-reflect-field">
-                <label class="recording-reflect-q" for="dayview-input-<%= p.key %>"><%= p.label %></label>
-                <% if (p.help) { %><p class="recording-reflect-help"><%= p.help %></p><% } %>
-                <textarea id="dayview-input-<%= p.key %>"
-                          class="recording-reflect-textarea"
-                          data-cutting-key="<%= p.key %>"
-                          rows="3"></textarea>
-              </div>
-            <% }); %>
-            <div class="recording-reflect-actions">
-              <button type="button" class="recording-card-btn" id="dayview-save">Save</button>
-              <button type="button" class="recording-card-btn-secondary" id="dayview-cancel">Cancel</button>
-              <span id="dayview-saved" class="recording-backdate-saved" hidden>Saved 🌿</span>
-            </div>
-          </div>
-
+        <div id="dayview-container"
+             class="recording-card"
+             data-today="<%= today %>">
+          <%- include('partials/day-view', { dayview, cuttingPrompts }) %>
         </div>
       </section>
 
@@ -274,55 +185,128 @@
         .dayview-cta-row { margin-top: 1.1rem; }
         .dayview-form { margin-top: 1.5rem; }
         .dayview-form.is-hidden { display: none; }
+
+        /* Fetch-and-swap loading state — calm fade + arrows go inert while
+           the next day's fragment is on the wire. Brief enough that we don't
+           need a spinner; just stops double-clicks and signals "working." */
+        #dayview-container.is-loading .dayview-fragment {
+          opacity: 0.55;
+          transition: opacity 0.15s ease-out;
+        }
+        #dayview-container.is-loading .dayview-nav {
+          pointer-events: none;
+        }
       </style>
 
       <script>
+        // Day-view controller. Uses event delegation on the persistent
+        // #dayview-container so prev/next, About, Add/Save/Cancel keep
+        // working after each fetch-and-swap without re-binding listeners.
+        //
+        // Progressive enhancement: the prev/next links still have real hrefs
+        // (?day=...). If fetch fails or JS is off, the browser does a normal
+        // full-page navigation and the page works the same.
         (function () {
-          const card = document.getElementById('dayview-card');
-          if (!card) return;
+          const container = document.getElementById('dayview-container');
+          if (!container || typeof fetch !== 'function' || !window.history || !history.pushState) return;
+          const todayStr = container.dataset.today || '';
 
-          // About-this-season toggle (single copy now; no rest/done duplicate).
-          const aboutBtn   = card.querySelector('#dayview-about-toggle');
-          const aboutPanel = card.querySelector('#dayview-about-panel');
-          if (aboutBtn && aboutPanel) {
-            aboutBtn.addEventListener('click', () => {
-              const open = aboutPanel.classList.toggle('is-hidden') === false;
-              aboutBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
-              aboutBtn.textContent = open ? 'About this season ↑' : 'About this season ↓';
-            });
+          const viewedDate = () => {
+            const frag = container.querySelector('[data-viewed-date]');
+            return frag ? frag.dataset.viewedDate : todayStr;
+          };
+
+          // Fetch the day fragment and swap it into the container. skipPush=true
+          // for popstate-driven swaps so we don't re-push the same URL.
+          async function loadDay(dateStr, skipPush) {
+            if (!dateStr) return;
+            container.classList.add('is-loading');
+            try {
+              const res = await fetch('/dashboard/day?day=' + encodeURIComponent(dateStr), {
+                headers: { 'Accept': 'text/html' },
+                credentials: 'same-origin'
+              });
+              if (!res.ok) throw new Error('fetch failed');
+              const html = await res.text();
+              container.innerHTML = html;
+              if (!skipPush) {
+                const newUrl = location.pathname + '?day=' + encodeURIComponent(dateStr);
+                history.pushState({ day: dateStr }, '', newUrl);
+              }
+            } catch (e) {
+              // Fall back to the link's natural navigation so the user
+              // still gets where they were going.
+              window.location.href = '?day=' + encodeURIComponent(dateStr);
+            } finally {
+              container.classList.remove('is-loading');
+            }
           }
 
-          // Add / save / cancel — POSTs to /dashboard/cutting with the viewed
-          // date as recorded_date; the route already validates range and
-          // computes season from the date. On success we reload so the new
-          // entry appears stacked; the ?day=... param survives the reload.
-          const viewedDate = <%- JSON.stringify(dayview.dateStr) %>;
-          const addBtn    = card.querySelector('#dayview-add-btn');
-          const form      = card.querySelector('#dayview-form');
-          const saveBtn   = card.querySelector('#dayview-save');
-          const cancelBtn = card.querySelector('#dayview-cancel');
-          const savedMsg  = card.querySelector('#dayview-saved');
-          const textEls   = form ? form.querySelectorAll('textarea[data-cutting-key]') : [];
-          if (!addBtn || !form || !saveBtn || !cancelBtn) return;
+          // ─── Click delegation: prev/next, About toggle, Add/Save/Cancel ──
+          container.addEventListener('click', (e) => {
+            const nav = e.target.closest('[data-day-nav]');
+            if (nav && nav.dataset.dayNav) {
+              e.preventDefault();
+              loadDay(nav.dataset.dayNav);
+              return;
+            }
+            const aboutBtn = e.target.closest('#dayview-about-toggle');
+            if (aboutBtn) {
+              const panel = container.querySelector('#dayview-about-panel');
+              if (panel) {
+                const opened = panel.classList.toggle('is-hidden') === false;
+                aboutBtn.setAttribute('aria-expanded', opened ? 'true' : 'false');
+                aboutBtn.textContent = opened ? 'About this season ↑' : 'About this season ↓';
+              }
+              return;
+            }
+            if (e.target.closest('#dayview-add-btn'))    { showForm(); return; }
+            if (e.target.closest('#dayview-cancel'))     { hideForm(true); return; }
+            if (e.target.closest('#dayview-save'))       { saveReflection(); return; }
+          });
 
-          const showForm = () => {
+          // ─── popstate (browser back/forward) ────────────────────────────
+          window.addEventListener('popstate', () => {
+            const params = new URLSearchParams(location.search);
+            const day = params.get('day') || todayStr;
+            loadDay(day, true);
+          });
+
+          // ─── Form helpers — re-query the DOM each call because the
+          //    fragment gets replaced on swap. ───────────────────────────
+          function showForm() {
+            const form = container.querySelector('#dayview-form');
+            const addBtn = container.querySelector('#dayview-add-btn');
+            if (!form || !addBtn) return;
             form.classList.remove('is-hidden');
             addBtn.style.display = 'none';
-            if (textEls[0]) textEls[0].focus();
-          };
-          const hideForm = (clearText) => {
+            const first = form.querySelector('textarea[data-cutting-key]');
+            if (first) first.focus();
+          }
+
+          function hideForm(clearText) {
+            const form     = container.querySelector('#dayview-form');
+            const addBtn   = container.querySelector('#dayview-add-btn');
+            const saveBtn  = container.querySelector('#dayview-save');
+            const savedMsg = container.querySelector('#dayview-saved');
+            if (!form || !addBtn) return;
             form.classList.add('is-hidden');
             addBtn.style.display = '';
             if (savedMsg) savedMsg.hidden = true;
-            saveBtn.disabled = false;
-            if (clearText) textEls.forEach(t => { t.value = ''; });
-          };
+            if (saveBtn)  saveBtn.disabled = false;
+            if (clearText) {
+              form.querySelectorAll('textarea[data-cutting-key]').forEach(t => { t.value = ''; });
+            }
+          }
 
-          addBtn.addEventListener('click', showForm);
-          cancelBtn.addEventListener('click', () => hideForm(true));
-
-          saveBtn.addEventListener('click', async () => {
-            const payload = { recorded_date: viewedDate };
+          async function saveReflection() {
+            const form     = container.querySelector('#dayview-form');
+            const saveBtn  = container.querySelector('#dayview-save');
+            const savedMsg = container.querySelector('#dayview-saved');
+            if (!form || !saveBtn) return;
+            const textEls = form.querySelectorAll('textarea[data-cutting-key]');
+            const date = viewedDate();
+            const payload = { recorded_date: date };
             let anyFilled = false;
             textEls.forEach(t => {
               const v = t.value.trim();
@@ -339,12 +323,14 @@
               });
               if (!res.ok) throw new Error('save failed');
               if (savedMsg) savedMsg.hidden = false;
-              setTimeout(() => window.location.reload(), 600);
+              // Re-fetch the same day so the new entry appears in the stack.
+              // skipPush — URL doesn't need to change for a refresh.
+              setTimeout(() => loadDay(date, true), 600);
             } catch (e) {
               saveBtn.disabled = false;
               alert('Could not save. Please try again.');
             }
-          });
+          }
         })();
       </script>
 

@@ -1,0 +1,112 @@
+<!-- Day-view fragment.
+     Rendered both by GET /dashboard (inside the persistent #dayview-container)
+     and by GET /dashboard/day (alone, as the fetch-and-swap response body).
+     One source, two consumers — keep markup identical to either.
+
+     Locals expected:
+       dayview        — { dayNumber, dateStr, dateLabel, isToday, season,
+                          seasonLabel, aboutText, topic, cuttings,
+                          prevDate, nextDate }
+       cuttingPrompts — the three reflection field definitions
+                        (also available via app.locals)
+
+     data-viewed-date on the outer wrapper is the source of truth for the
+     client controller (save POST + popstate replay). -->
+<div class="dayview-fragment" data-viewed-date="<%= dayview.dateStr %>">
+
+  <header class="dayview-header">
+    <% if (dayview.prevDate) { %>
+      <a href="?day=<%= dayview.prevDate %>"
+         class="dayview-nav"
+         data-day-nav="<%= dayview.prevDate %>"
+         aria-label="Previous day">‹</a>
+    <% } else { %>
+      <span class="dayview-nav dayview-nav--disabled" aria-hidden="true">‹</span>
+    <% } %>
+
+    <div class="dayview-day-label">
+      <% if (dayview.dayNumber) { %><span class="dayview-day-num">Day <%= dayview.dayNumber %></span> · <% } %>
+      <span class="dayview-date"><%= dayview.dateLabel %></span>
+      <% if (dayview.isToday) { %><span class="dayview-today-tag">today</span><% } %>
+    </div>
+
+    <% if (dayview.nextDate) { %>
+      <a href="?day=<%= dayview.nextDate %>"
+         class="dayview-nav"
+         data-day-nav="<%= dayview.nextDate %>"
+         aria-label="Next day">›</a>
+    <% } else { %>
+      <span class="dayview-nav dayview-nav--disabled" aria-hidden="true">›</span>
+    <% } %>
+  </header>
+
+  <% if (dayview.seasonLabel) { %>
+    <div class="dayview-season-row">
+      <span class="recording-card-season"><%= dayview.seasonLabel.toUpperCase() %></span>
+      <% if (dayview.aboutText) { %>
+        <button type="button"
+                class="recording-about-toggle"
+                id="dayview-about-toggle"
+                aria-controls="dayview-about-panel"
+                aria-expanded="false">About this season ↓</button>
+      <% } %>
+    </div>
+    <% if (dayview.aboutText) { %>
+      <div id="dayview-about-panel" class="recording-about-panel is-hidden">
+        <p><%= dayview.aboutText %></p>
+      </div>
+    <% } %>
+  <% } %>
+
+  <% if (dayview.topic) { %>
+    <p class="recording-card-prompt">"<%= dayview.topic %>"</p>
+  <% } %>
+
+  <% if (dayview.cuttings && dayview.cuttings.length) { %>
+    <% dayview.cuttings.forEach(function (c, idx) { %>
+      <% const populated = cuttingPrompts.filter(p => c[p.key] != null && String(c[p.key]).trim() !== ''); %>
+      <article class="dayview-entry<%= idx > 0 ? ' dayview-entry--stacked' : '' %>">
+        <% populated.forEach(function (p) { %>
+          <div class="dayview-field">
+            <p class="dayview-field-label"><%= p.label %></p>
+            <p class="dayview-field-text"><%= c[p.key] %></p>
+          </div>
+        <% }); %>
+      </article>
+    <% }); %>
+
+    <div class="dayview-cta-row">
+      <button type="button" class="recording-card-btn-secondary" id="dayview-add-btn">+ Add another</button>
+    </div>
+  <% } else { %>
+    <p class="dayview-empty">
+      <% if (dayview.isToday) { %>
+        Nothing here yet. Record when you're ready.
+      <% } else { %>
+        Nothing recorded for this day. You can still add one if you'd like.
+      <% } %>
+    </p>
+    <div class="dayview-cta-row">
+      <button type="button" class="recording-card-btn" id="dayview-add-btn">Add a recording for this day</button>
+    </div>
+  <% } %>
+
+  <div class="dayview-form is-hidden" id="dayview-form">
+    <% cuttingPrompts.forEach(function (p) { %>
+      <div class="recording-reflect-field">
+        <label class="recording-reflect-q" for="dayview-input-<%= p.key %>"><%= p.label %></label>
+        <% if (p.help) { %><p class="recording-reflect-help"><%= p.help %></p><% } %>
+        <textarea id="dayview-input-<%= p.key %>"
+                  class="recording-reflect-textarea"
+                  data-cutting-key="<%= p.key %>"
+                  rows="3"></textarea>
+      </div>
+    <% }); %>
+    <div class="recording-reflect-actions">
+      <button type="button" class="recording-card-btn" id="dayview-save">Save</button>
+      <button type="button" class="recording-card-btn-secondary" id="dayview-cancel">Cancel</button>
+      <span id="dayview-saved" class="recording-backdate-saved" hidden>Saved 🌿</span>
+    </div>
+  </div>
+
+</div>
