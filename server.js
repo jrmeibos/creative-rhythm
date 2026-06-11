@@ -772,15 +772,15 @@ app.get('/community', requireAuth, (req, res) => {
     };
   }
 
-  // Presence-only "recorded this week" mark on each card. Derive the
-  // viewed week's last day (weekStart + 6), query a Set of user_ids who
-  // have ANY cutting in that range. Nothing about the cuttings themselves
-  // leaves the DB layer — the template only sees a boolean per user, so
-  // reflection text stays private even though this is a public surface.
+  // Per-card "recorded N days this week" — one camera per distinct day a
+  // user logged a cutting in the viewed week's range. Derive weekEnd
+  // (weekStart + 6) and pull a count Map keyed by user_id. The template
+  // only sees a number per user (0..7) — no cutting text ever reaches a
+  // public surface even though this is one.
   const weekEndDate = new Date(weekStart + 'T00:00:00');
   weekEndDate.setDate(weekEndDate.getDate() + 6);
   const weekEnd = toLocalDateString(weekEndDate);
-  const recordedSet = db.getUserIdsWithCuttingInRange(weekStart, weekEnd);
+  const dayCounts = db.getCuttingDayCountsByUser(weekStart, weekEnd);
 
   const members = allUsers.map(u => ({
     id:                      u.id,
@@ -791,7 +791,7 @@ app.get('/community', requireAuth, (req, res) => {
     community_goals_public:  u.community_goals_public !== 0,
     community_season_public: u.community_season_public !== 0,
     goals:                   goalsMap[u.id] || {},
-    recordedThisWeek:        recordedSet.has(u.id)
+    recordedDayCount:        dayCounts.get(u.id) || 0
   }));
 
   res.render('community', {

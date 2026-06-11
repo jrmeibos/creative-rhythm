@@ -1699,17 +1699,20 @@ module.exports = {
     ).all(userId, recordedDate);
   },
 
-  // Presence-only: which users have at least one cutting whose recorded_date
-  // falls in [startDate, endDate]? Returns a Set of user_ids. Used by the
-  // Community page to surface a single "recorded this week" boolean per
-  // user — no cutting text leaves the DB layer, ever. Uses recorded_date
-  // (the day-it-happened) so a backdated cutting counts in its real week.
-  getUserIdsWithCuttingInRange(startDate, endDate) {
+  // Count-only: for each user, how many DISTINCT days within [startDate,
+  // endDate] did they log at least one cutting? Returns a Map keyed by
+  // user_id, value = day count (1..7 for a week-sized range). Used by the
+  // Community page to render N camera icons per card — no cutting text
+  // ever leaves the DB layer. Uses recorded_date (the day-it-happened) so
+  // a backdated cutting counts in its real week. Users with zero days
+  // simply don't appear in the Map (route treats missing as 0).
+  getCuttingDayCountsByUser(startDate, endDate) {
     const rows = db.prepare(
-      `SELECT DISTINCT user_id FROM cuttings
-       WHERE recorded_date BETWEEN ? AND ?`
+      `SELECT user_id, COUNT(DISTINCT recorded_date) AS days
+       FROM cuttings WHERE recorded_date BETWEEN ? AND ?
+       GROUP BY user_id`
     ).all(startDate, endDate);
-    return new Set(rows.map(r => r.user_id));
+    return new Map(rows.map(r => [r.user_id, r.days]));
   },
 
   // Recording memory: a single overwritable YYYY-MM-DD per user.

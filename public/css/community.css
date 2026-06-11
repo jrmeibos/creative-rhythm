@@ -160,13 +160,16 @@
   gap: 0.3rem;
 }
 
-/* "Recorded this week" mark — presence-only, sits below the four dots,
-   18×18 to mirror dot size. Renders only when the user has at least one
-   cutting in the viewed week (no greyed slot when absent). */
+/* "Recorded N days this week" row — one camera per distinct day the user
+   logged a cutting in the viewed week (1..7). Sits below the four dots,
+   18×18 to mirror dot size, gap matches the dot row (0.3rem). Wraps on
+   narrow widths so 6–7 cameras stay tidy. Renders nothing for zero days. */
 .comm-recorded {
   display: flex;
   justify-content: center;
   align-items: center;
+  flex-wrap: wrap;
+  gap: 0.3rem;
   margin-top: 0.65rem;
   color: var(--color-bloem);
 }
