@@ -48,10 +48,15 @@
     gap: 1.5rem;
   }
   .cover-logo {
-    width: 3.5in;
-    margin-bottom: 1.25rem;
+    margin: 0 auto 1.25rem;
+    text-align: center;
   }
-  .cover-logo svg { width: 100%; height: auto; display: block; }
+  .cover-logo-img {
+    display: block;
+    width: 140px;
+    height: 140px;
+    margin: 0 auto;
+  }
   .cover-title {
     font-family: var(--font-display);
     font-weight: 400;
@@ -154,7 +159,11 @@
 
   <!-- ───── Cover page. ───── -->
   <section class="cover">
-    <div class="cover-logo"><%- logoSvg %></div>
+    <div class="cover-logo">
+      <img src="data:image/png;base64,<%= badgePngBase64 %>"
+           alt=""
+           class="cover-logo-img">
+    </div>
     <h1 class="cover-title">Your Cuttings</h1>
     <p class="cover-range"><%= dateRangeLabel %></p>
     <p class="cover-source">From The Creative's Garden</p>

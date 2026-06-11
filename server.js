@@ -1260,10 +1260,9 @@ app.get('/greenhouse/cuttings', requireAuth, (req, res) => {
 const CUTTINGS_PDF_ASSETS = (() => {
   const fontsDir = path.join(__dirname, 'public', 'fonts');
   const read64 = (f) => fs.readFileSync(path.join(fontsDir, f)).toString('base64');
-  const logoSvg = fs.readFileSync(
-    path.join(__dirname, 'public', 'images', 'brand', 'the_Creatives_Garden_Full_Logo.svg'),
-    'utf8'
-  );
+  const badgePngBase64 = fs.readFileSync(
+    path.join(__dirname, 'public', 'images', 'brand', 'creatives-garden-badge-green.png')
+  ).toString('base64');
   const fontFaceCss = `
     @font-face {
       font-family: 'Goldage';
@@ -1286,7 +1285,7 @@ const CUTTINGS_PDF_ASSETS = (() => {
       font-weight: 300; font-style: italic; font-display: block;
     }
   `;
-  return { logoSvg, fontFaceCss };
+  return { badgePngBase64, fontFaceCss };
 })();
 
 const SEASON_WEEKS_LABEL = {
@@ -1356,7 +1355,7 @@ app.get('/greenhouse/cuttings/export', requireAuth, async (req, res) => {
   const html = await ejs.renderFile(
     path.join(__dirname, 'views', 'exports', 'cuttings-pdf.ejs'),
     {
-      logoSvg:        CUTTINGS_PDF_ASSETS.logoSvg,
+      badgePngBase64: CUTTINGS_PDF_ASSETS.badgePngBase64,
       fontFaceCss:    CUTTINGS_PDF_ASSETS.fontFaceCss,
       cuttingPrompts: CUTTING_PROMPTS,  // ejs.renderFile bypasses app.locals
       dateRangeLabel,
