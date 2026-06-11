@@ -13,6 +13,7 @@ const { sendPasswordResetEmail } = require('./email');
 const { ANGLES, getAngle, getQuestion } = require('./lib/seed-packet-questions');
 const { getCurricularSeason, getCurricularSeasonLabel, getCurricularSeasonDescriptor } = require('./lib/curricular-season');
 const { getSeasonPrompt } = require('./lib/season-prompts');
+const { getDailyPrompt } = require('./lib/daily-prompts');
 const CUTTING_PROMPTS = require('./lib/cutting-prompts');
 const { renderHtmlToPdf } = require('./lib/pdf-render');
 const ejs = require('ejs');
@@ -295,19 +296,58 @@ app.get('/dashboard', requireAuth, (req, res) => {
 
   const curricularSeason = getCurricularSeason(weekNumber);
   const curricularSeasonLabel = getCurricularSeasonLabel(curricularSeason);
-  const seasonPrompt = getSeasonPrompt(curricularSeason); // null pre/post course
 
-  // Recording card initial state: did this user mark "recorded" today already?
-  // "Today" uses the time-travel-aware now so admin Time Travel rolls it over.
+  // ─── Day-view payload ──────────────────────────────────────────────────
+  // The viewed day comes from ?day=YYYY-MM-DD (matches the existing ?week=
+  // convention). Clamp to [course_start_date, today_in_user_tz] so neither a
+  // malformed param nor a time-travelling admin can produce out-of-range
+  // URLs. Default is today when absent.
   const today = toLocalDateString(getNow(req.session.user));
-  const recordedToday = db.getLastRecordedDate(req.session.user.id) === today;
+  const courseStart = db.getSetting('course_start_date');
+  let viewed = today;
+  const rawDay = typeof req.query.day === 'string' ? req.query.day.trim() : '';
+  if (rawDay && /^\d{4}-\d{2}-\d{2}$/.test(rawDay)) {
+    if (courseStart && rawDay < courseStart) viewed = courseStart;
+    else if (rawDay > today)                 viewed = today;
+    else                                     viewed = rawDay;
+  }
 
-  // Backdating UI bounds: min = course start (if set), max = yesterday in
-  // user TZ. Today is handled by the normal recording card flow.
-  const yesterdayDate = new Date(getNow(req.session.user).getTime() - 86400000);
-  const yesterdayStr  = toLocalDateString(yesterdayDate);
-  const backdatingMin = db.getSetting('course_start_date') || null;
-  const backdatingMax = backdatingMin && yesterdayStr >= backdatingMin ? yesterdayStr : null;
+  const dayInfo            = getCourseDayForDate(req.session.user, viewed);
+  const viewedSeason       = dayInfo.season;
+  const viewedSeasonLabel  = getCurricularSeasonLabel(viewedSeason);
+  const viewedSeasonPrompt = getSeasonPrompt(viewedSeason);
+  const dayCuttings        = db.getCuttingsForUserOnDate(req.session.user.id, viewed);
+  const isToday            = viewed === today;
+
+  // Prev/next dates: walk one day in each direction and disable at the bounds.
+  // Date components built locally so the YYYY-MM-DD math doesn't drift across
+  // DST or TZ — we're only doing day arithmetic on a midnight-local Date.
+  const viewedDate = new Date(viewed + 'T00:00:00');
+  const prevD = new Date(viewedDate); prevD.setDate(prevD.getDate() - 1);
+  const nextD = new Date(viewedDate); nextD.setDate(nextD.getDate() + 1);
+  const prevStr = toLocalDateString(prevD);
+  const nextStr = toLocalDateString(nextD);
+  const prevDate = (!courseStart || prevStr >= courseStart) ? prevStr : null;
+  const nextDate = (nextStr <= today) ? nextStr : null;
+
+  // "Tuesday, June 10" — wall-clock format the student reads.
+  const dateLabel = viewedDate.toLocaleDateString('en-US', {
+    weekday: 'long', month: 'long', day: 'numeric'
+  });
+
+  const dayview = {
+    dayNumber:   dayInfo.dayNumber,
+    dateStr:     viewed,
+    dateLabel,
+    isToday,
+    season:      viewedSeason,
+    seasonLabel: viewedSeasonLabel,
+    aboutText:   viewedSeasonPrompt ? viewedSeasonPrompt.aboutText : null,
+    topic:       getDailyPrompt(viewedSeason, dayInfo.dayInSeason),
+    cuttings:    dayCuttings,
+    prevDate,
+    nextDate
+  };
 
   res.render('dashboard', {
     title: 'Dashboard',
@@ -318,17 +358,14 @@ app.get('/dashboard', requireAuth, (req, res) => {
     weekLabel: formatWeekLabel(weekStart),
     curricularSeason,
     curricularSeasonLabel,
-    seasonPrompt,
     goals: goalsMap,
     goalsData: goalsDataDash,
     currentLesson,
     allLessons,
     completedCount,
     totalLessons: allLessons.length,
-    backdatingMin,
-    backdatingMax,
     isIntegrationWeek,
-    recordedToday,
+    dayview,
     quote: getRotatingQuote()
   });
 });
@@ -2118,6 +2155,61 @@ function getCurrentCourseWeek(user) {
   const weekEnd = new Date(weekStart);
   weekEnd.setDate(weekStart.getDate() + 6);
   return { weekNumber, weekStart: ws, weekEnd: weekEnd.toISOString().split('T')[0] };
+}
+
+// Today's course-day details. Mirrors getCurrentCourseWeek — same getNow(user)
+// + course_start_date flow, same pre/post-course edge cases — so the day-view
+// and the week-view share one clock. Returns:
+//   dayNumber   1-based day-of-course (1..N); null if no course_start_date set;
+//               0 if before course start
+//   weekNumber  1-based week-of-course; null/0 mirroring dayNumber
+//   dayInWeek   1..7 for in-course days; 0 pre-course; null without start
+//   dateStr     today's wall-clock YYYY-MM-DD in the user's TZ
+//   isPreCourse / isPostCourse  edge flags
+function getCurrentCourseDay(user) {
+  const courseStartStr = db.getSetting('course_start_date');
+  const dateStr = toLocalDateString(getNow(user));
+  if (!courseStartStr || !courseStartStr.trim()) {
+    return { dayNumber: null, weekNumber: null, dayInWeek: null,
+             dateStr, isPreCourse: false, isPostCourse: false };
+  }
+  const courseStart = new Date(courseStartStr + 'T00:00:00');
+  const now = getNow(user);
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const daysSinceStart = Math.floor((today - courseStart) / 86400000);
+  if (daysSinceStart < 0) {
+    return { dayNumber: 0, weekNumber: 0, dayInWeek: 0,
+             dateStr, isPreCourse: true, isPostCourse: false };
+  }
+  const dayNumber  = daysSinceStart + 1;
+  const weekNumber = Math.floor(daysSinceStart / 7) + 1;
+  const dayInWeek  = (daysSinceStart % 7) + 1;
+  return { dayNumber, weekNumber, dayInWeek, dateStr,
+           isPreCourse: false, isPostCourse: dayNumber > 84 };
+}
+
+// Pure date-to-course-day mapping for the viewed ?day= URL param. The user
+// arg is accepted for API symmetry with getCurrentCourseDay but the result
+// depends only on dateStr + course_start_date. Returns nulls for dates
+// before course start or when no course_start_date is set; dayInSeason uses
+// modulo 21 so it stays valid for post-course dates that admins might reach
+// via time travel.
+function getCourseDayForDate(user, dateStr) {
+  const courseStartStr = db.getSetting('course_start_date');
+  if (!courseStartStr || !dateStr) {
+    return { dayNumber: null, season: null, dayInSeason: null };
+  }
+  const courseStart = new Date(courseStartStr + 'T00:00:00');
+  const date = new Date(dateStr + 'T00:00:00');
+  const days = Math.floor((date - courseStart) / 86400000);
+  if (days < 0) {
+    return { dayNumber: null, season: null, dayInSeason: null };
+  }
+  const dayNumber   = days + 1;
+  const weekNumber  = Math.floor(days / 7) + 1;
+  const season      = getCurricularSeason(weekNumber);
+  const dayInSeason = (dayNumber - 1) % 21;
+  return { dayNumber, season, dayInSeason };
 }
 
 function formatWeekLabel(weekStart) {

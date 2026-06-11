@@ -1687,6 +1687,18 @@ module.exports = {
     ).all(userId);
   },
 
+  // All cuttings for a single day — for the Dashboard day-view. Multiple
+  // entries per day allowed (no uniqueness constraint); within the day
+  // they're ordered earliest-written-first.
+  getCuttingsForUserOnDate(userId, recordedDate) {
+    return db.prepare(
+      `SELECT id, created_at, recorded_date, season, prompt,
+              reflection_text, talked_about, how_it_felt, takeaway
+       FROM cuttings WHERE user_id = ? AND recorded_date = ?
+       ORDER BY created_at ASC`
+    ).all(userId, recordedDate);
+  },
+
   // Recording memory: a single overwritable YYYY-MM-DD per user.
   // Not a streak, not a count, not a history — one column, set & forget.
   markRecordedToday(userId, dateStr) {

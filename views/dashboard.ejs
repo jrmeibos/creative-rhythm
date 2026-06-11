@@ -19,9 +19,9 @@
           </h1>
           <p class="dash-week-label">
             <% if (isIntegrationWeek) { %>
-              <span class="integration-badge">Integration Week</span><% if (curricularSeasonLabel) { %> · <span class="curricular-season-label"><%= curricularSeasonLabel %></span><% } %> · <%= weekLabel %>
+              <span class="integration-badge">Integration Week</span> · <%= weekLabel %>
             <% } else if (weekNumber >= 1) { %>
-              Week <%= weekNumber %> of 12<% if (curricularSeasonLabel) { %> · <span class="curricular-season-label"><%= curricularSeasonLabel %></span><% } %> · <%= weekLabel %>
+              Week <%= weekNumber %> of 12 · <%= weekLabel %>
             <% } else { %>
               Week of <%= weekLabel %>
             <% } %>
@@ -67,117 +67,286 @@
         </div>
       </section>
 
-      <!-- Daily recording practice -->
+      <!-- Day-view: per-day topic + reflection with back/forward day nav.
+           Replaces the old rest/reflect/done recording card and the separate
+           backdating block. Uses the dayview payload from the route; all
+           element IDs use a dayview- prefix to avoid colliding with anything
+           else on the page. -->
       <section class="dash-section">
-        <div class="recording-card" id="recording-card">
-          <% if (curricularSeasonLabel) { %>
-            <p class="recording-card-season"><%= curricularSeasonLabel.toUpperCase() %></p>
-          <% } %>
-          <h2 class="recording-card-heading">Today's recording</h2>
+        <div class="recording-card" id="dayview-card">
 
-          <!-- Resting state: invitation. Hidden on load if user already recorded today. -->
-          <div class="recording-card-state<%= recordedToday ? ' is-hidden' : '' %>" id="recording-state-rest">
-            <p class="recording-card-prompt">
-              "<%= seasonPrompt ? seasonPrompt.shortPrompt : "What's true for you today? Talk to the camera for as long or as little as feels honest. This one's only for you." %>"
-            </p>
-            <% if (seasonPrompt) { %>
-              <button type="button"
-                      class="recording-about-toggle"
-                      data-target="recording-about-panel-rest"
-                      aria-controls="recording-about-panel-rest"
-                      aria-expanded="false">About this season ↓</button>
-              <div id="recording-about-panel-rest" class="recording-about-panel is-hidden">
-                <p><%= seasonPrompt.aboutText %></p>
+          <header class="dayview-header">
+            <% if (dayview.prevDate) { %>
+              <a href="?day=<%= dayview.prevDate %>" class="dayview-nav" aria-label="Previous day">‹</a>
+            <% } else { %>
+              <span class="dayview-nav dayview-nav--disabled" aria-hidden="true">‹</span>
+            <% } %>
+
+            <div class="dayview-day-label">
+              <% if (dayview.dayNumber) { %><span class="dayview-day-num">Day <%= dayview.dayNumber %></span> · <% } %>
+              <span class="dayview-date"><%= dayview.dateLabel %></span>
+              <% if (dayview.isToday) { %><span class="dayview-today-tag">today</span><% } %>
+            </div>
+
+            <% if (dayview.nextDate) { %>
+              <a href="?day=<%= dayview.nextDate %>" class="dayview-nav" aria-label="Next day">›</a>
+            <% } else { %>
+              <span class="dayview-nav dayview-nav--disabled" aria-hidden="true">›</span>
+            <% } %>
+          </header>
+
+          <% if (dayview.seasonLabel) { %>
+            <div class="dayview-season-row">
+              <span class="recording-card-season"><%= dayview.seasonLabel.toUpperCase() %></span>
+              <% if (dayview.aboutText) { %>
+                <button type="button"
+                        class="recording-about-toggle"
+                        id="dayview-about-toggle"
+                        aria-controls="dayview-about-panel"
+                        aria-expanded="false">About this season ↓</button>
+              <% } %>
+            </div>
+            <% if (dayview.aboutText) { %>
+              <div id="dayview-about-panel" class="recording-about-panel is-hidden">
+                <p><%= dayview.aboutText %></p>
               </div>
             <% } %>
-            <button type="button" class="recording-card-btn" id="recording-recorded-btn">I recorded today</button>
-          </div>
+          <% } %>
 
-          <!-- Reflect state: four optional fields. All visible by default —
-               no accordion. Skip + all-empty Save are both treated as skip
-               (no row written). Microcopy only on the first field; the others
-               signal optionality through the Skip button's presence. -->
-          <div class="recording-card-state recording-card-reflect is-hidden" id="recording-state-reflect">
+          <% if (dayview.topic) { %>
+            <p class="recording-card-prompt">"<%= dayview.topic %>"</p>
+          <% } %>
+
+          <% if (dayview.cuttings && dayview.cuttings.length) { %>
+            <% dayview.cuttings.forEach(function (c, idx) { %>
+              <% const populated = cuttingPrompts.filter(p => c[p.key] != null && String(c[p.key]).trim() !== ''); %>
+              <article class="dayview-entry<%= idx > 0 ? ' dayview-entry--stacked' : '' %>">
+                <% populated.forEach(function (p) { %>
+                  <div class="dayview-field">
+                    <p class="dayview-field-label"><%= p.label %></p>
+                    <p class="dayview-field-text"><%= c[p.key] %></p>
+                  </div>
+                <% }); %>
+              </article>
+            <% }); %>
+
+            <div class="dayview-cta-row">
+              <button type="button" class="recording-card-btn-secondary" id="dayview-add-btn">+ Add another</button>
+            </div>
+          <% } else { %>
+            <p class="dayview-empty">
+              <% if (dayview.isToday) { %>
+                Nothing here yet. Record when you're ready.
+              <% } else { %>
+                Nothing recorded for this day. You can still add one if you'd like.
+              <% } %>
+            </p>
+            <div class="dayview-cta-row">
+              <button type="button" class="recording-card-btn" id="dayview-add-btn">Add a recording for this day</button>
+            </div>
+          <% } %>
+
+          <!-- Form revealed by the Add button. Saves backdated to the viewed
+               date via the existing POST /dashboard/cutting, which validates
+               range and computes season from the recorded_date itself. -->
+          <div class="dayview-form is-hidden" id="dayview-form">
             <% cuttingPrompts.forEach(function (p) { %>
               <div class="recording-reflect-field">
-                <label class="recording-reflect-q" for="recording-reflect-<%= p.key %>"><%= p.label %></label>
-                <% if (p.help) { %>
-                  <p class="recording-reflect-help"><%= p.help %></p>
-                <% } %>
-                <textarea
-                  id="recording-reflect-<%= p.key %>"
-                  class="recording-reflect-textarea"
-                  data-cutting-key="<%= p.key %>"
-                  rows="3"></textarea>
+                <label class="recording-reflect-q" for="dayview-input-<%= p.key %>"><%= p.label %></label>
+                <% if (p.help) { %><p class="recording-reflect-help"><%= p.help %></p><% } %>
+                <textarea id="dayview-input-<%= p.key %>"
+                          class="recording-reflect-textarea"
+                          data-cutting-key="<%= p.key %>"
+                          rows="3"></textarea>
               </div>
             <% }); %>
             <div class="recording-reflect-actions">
-              <button type="button" class="recording-card-btn" id="recording-save-btn">Save</button>
-              <button type="button" class="recording-card-btn-secondary" id="recording-skip-btn">Skip</button>
+              <button type="button" class="recording-card-btn" id="dayview-save">Save</button>
+              <button type="button" class="recording-card-btn-secondary" id="dayview-cancel">Cancel</button>
+              <span id="dayview-saved" class="recording-backdate-saved" hidden>Saved 🌿</span>
             </div>
           </div>
 
-          <!-- Done state: visible on load if user already recorded today. -->
-          <div class="recording-card-state<%= recordedToday ? '' : ' is-hidden' %>" id="recording-state-done">
-            <p class="recording-done-text">Tended for today. Until next time.</p>
-            <% if (seasonPrompt) { %>
-              <button type="button"
-                      class="recording-about-toggle"
-                      data-target="recording-about-panel-done"
-                      aria-controls="recording-about-panel-done"
-                      aria-expanded="false">About this season ↓</button>
-              <div id="recording-about-panel-done" class="recording-about-panel is-hidden">
-                <p><%= seasonPrompt.aboutText %></p>
-              </div>
-            <% } %>
-          </div>
         </div>
-
-        <!-- Backdating: quiet expandable affordance for logging a previous
-             day. Min date is course_start_date, max is yesterday — today goes
-             through the normal card flow above. The whole block is hidden if
-             there's no eligible past day (course hasn't started, or today is
-             course start). last_recorded_date is never bumped from here. -->
-        <% if (backdatingMax) { %>
-          <div class="recording-backdate">
-            <button type="button"
-                    class="recording-backdate-toggle"
-                    id="recording-backdate-toggle"
-                    aria-controls="recording-backdate-panel"
-                    aria-expanded="false">Log a previous day's recording ↓</button>
-
-            <div class="recording-backdate-panel is-hidden" id="recording-backdate-panel">
-              <label class="recording-backdate-date-label" for="recording-backdate-date">Which day are you logging?</label>
-              <input type="date"
-                     id="recording-backdate-date"
-                     class="recording-backdate-date-input"
-                     min="<%= backdatingMin %>"
-                     max="<%= backdatingMax %>"
-                     value="<%= backdatingMax %>">
-
-              <% cuttingPrompts.forEach(function (p) { %>
-                <div class="recording-reflect-field">
-                  <label class="recording-reflect-q" for="recording-backdate-<%= p.key %>"><%= p.label %></label>
-                  <% if (p.help) { %>
-                    <p class="recording-reflect-help"><%= p.help %></p>
-                  <% } %>
-                  <textarea
-                    id="recording-backdate-<%= p.key %>"
-                    class="recording-reflect-textarea"
-                    data-cutting-key="<%= p.key %>"
-                    rows="3"></textarea>
-                </div>
-              <% }); %>
-
-              <div class="recording-reflect-actions">
-                <button type="button" class="recording-card-btn" id="recording-backdate-save">Save</button>
-                <button type="button" class="recording-card-btn-secondary" id="recording-backdate-cancel">Cancel</button>
-                <span class="recording-backdate-saved" id="recording-backdate-saved" hidden>Saved 🌿</span>
-              </div>
-            </div>
-          </div>
-        <% } %>
       </section>
+
+      <style>
+        /* Day-view module — scoped via .dayview- prefix to avoid collisions
+           with the legacy recording-card classes (which the day-view reuses
+           for the season label / about-toggle / form). */
+        .dayview-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 0.75rem;
+          margin-bottom: 1.1rem;
+        }
+        .dayview-nav {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          width: 2.25rem;
+          height: 2.25rem;
+          border-radius: 50%;
+          font-family: var(--font-body);
+          font-size: 1.4rem;
+          line-height: 1;
+          color: var(--color-bloem);
+          text-decoration: none;
+          background: rgba(112, 92, 108, 0.06);
+          transition: background 0.15s;
+        }
+        .dayview-nav:hover { background: rgba(112, 92, 108, 0.14); }
+        .dayview-nav--disabled {
+          color: rgba(16, 15, 16, 0.18);
+          background: transparent;
+          cursor: default;
+        }
+        .dayview-day-label {
+          flex: 1;
+          text-align: center;
+          font-family: var(--font-body);
+          font-size: 0.92rem;
+          font-weight: 400;
+          color: var(--color-ink-stained);
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 0.5rem;
+          flex-wrap: wrap;
+        }
+        .dayview-day-num {
+          font-family: var(--font-body);
+          font-weight: 700;
+          letter-spacing: 0.02em;
+          color: var(--color-bloem);
+        }
+        .dayview-date { font-weight: 300; color: rgba(16, 15, 16, 0.75); }
+        .dayview-today-tag {
+          font-family: var(--font-body);
+          font-size: 0.62rem;
+          font-weight: 600;
+          letter-spacing: 0.12em;
+          text-transform: uppercase;
+          color: var(--color-bloem);
+          background: rgba(246, 201, 92, 0.22);
+          padding: 0.15rem 0.5rem;
+          border-radius: 999px;
+        }
+        .dayview-season-row {
+          display: flex;
+          align-items: baseline;
+          gap: 0.75rem;
+          margin-bottom: 0.4rem;
+        }
+        .dayview-entry { margin-top: 1rem; }
+        .dayview-entry--stacked {
+          margin-top: 1.1rem;
+          padding-top: 1.1rem;
+          border-top: 1px solid rgba(112, 92, 108, 0.12);
+        }
+        .dayview-field { margin-top: 0.75rem; }
+        .dayview-field:first-child { margin-top: 0; }
+        .dayview-field-label {
+          font-family: var(--font-display);
+          font-style: italic;
+          font-size: 0.88rem;
+          font-weight: 400;
+          color: rgba(16, 15, 16, 0.55);
+          margin: 0 0 0.2rem;
+        }
+        .dayview-field-text {
+          font-family: var(--font-body);
+          font-size: 1rem;
+          font-weight: 300;
+          line-height: 1.6;
+          color: var(--color-ink-stained);
+          margin: 0;
+          white-space: pre-wrap;
+        }
+        .dayview-empty {
+          font-family: var(--font-display);
+          font-style: italic;
+          font-size: 1.02rem;
+          color: rgba(16, 15, 16, 0.55);
+          margin: 1.25rem 0 1rem;
+        }
+        .dayview-cta-row { margin-top: 1.1rem; }
+        .dayview-form { margin-top: 1.5rem; }
+        .dayview-form.is-hidden { display: none; }
+      </style>
+
+      <script>
+        (function () {
+          const card = document.getElementById('dayview-card');
+          if (!card) return;
+
+          // About-this-season toggle (single copy now; no rest/done duplicate).
+          const aboutBtn   = card.querySelector('#dayview-about-toggle');
+          const aboutPanel = card.querySelector('#dayview-about-panel');
+          if (aboutBtn && aboutPanel) {
+            aboutBtn.addEventListener('click', () => {
+              const open = aboutPanel.classList.toggle('is-hidden') === false;
+              aboutBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+              aboutBtn.textContent = open ? 'About this season ↑' : 'About this season ↓';
+            });
+          }
+
+          // Add / save / cancel — POSTs to /dashboard/cutting with the viewed
+          // date as recorded_date; the route already validates range and
+          // computes season from the date. On success we reload so the new
+          // entry appears stacked; the ?day=... param survives the reload.
+          const viewedDate = <%- JSON.stringify(dayview.dateStr) %>;
+          const addBtn    = card.querySelector('#dayview-add-btn');
+          const form      = card.querySelector('#dayview-form');
+          const saveBtn   = card.querySelector('#dayview-save');
+          const cancelBtn = card.querySelector('#dayview-cancel');
+          const savedMsg  = card.querySelector('#dayview-saved');
+          const textEls   = form ? form.querySelectorAll('textarea[data-cutting-key]') : [];
+          if (!addBtn || !form || !saveBtn || !cancelBtn) return;
+
+          const showForm = () => {
+            form.classList.remove('is-hidden');
+            addBtn.style.display = 'none';
+            if (textEls[0]) textEls[0].focus();
+          };
+          const hideForm = (clearText) => {
+            form.classList.add('is-hidden');
+            addBtn.style.display = '';
+            if (savedMsg) savedMsg.hidden = true;
+            saveBtn.disabled = false;
+            if (clearText) textEls.forEach(t => { t.value = ''; });
+          };
+
+          addBtn.addEventListener('click', showForm);
+          cancelBtn.addEventListener('click', () => hideForm(true));
+
+          saveBtn.addEventListener('click', async () => {
+            const payload = { recorded_date: viewedDate };
+            let anyFilled = false;
+            textEls.forEach(t => {
+              const v = t.value.trim();
+              payload[t.dataset.cuttingKey] = v;
+              if (v) anyFilled = true;
+            });
+            if (!anyFilled) { hideForm(true); return; }
+            saveBtn.disabled = true;
+            try {
+              const res = await fetch('/dashboard/cutting', {
+                method:  'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body:    JSON.stringify(payload)
+              });
+              if (!res.ok) throw new Error('save failed');
+              if (savedMsg) savedMsg.hidden = false;
+              setTimeout(() => window.location.reload(), 600);
+            } catch (e) {
+              saveBtn.disabled = false;
+              alert('Could not save. Please try again.');
+            }
+          });
+        })();
+      </script>
 
       <!-- Weekly intentions preview -->
       <section class="dash-section">
@@ -331,148 +500,10 @@
       });
     });
 
-    // ── "About this season" disclosure on the recording card ─────────────
-    // Each toggle button has data-target → panel id. State is per-pair and
-    // resets to closed on every page load (no persistence).
-    document.querySelectorAll('.recording-about-toggle').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const panel = document.getElementById(btn.dataset.target);
-        if (!panel) return;
-        const open = panel.classList.toggle('is-hidden') === false;
-        btn.setAttribute('aria-expanded', open ? 'true' : 'false');
-        btn.textContent = open ? 'About this season ↑' : 'About this season ↓';
-      });
-    });
-
-    // ── Daily recording practice ──────────────────────────────────────────
-    (function () {
-      const rest        = document.getElementById('recording-state-rest');
-      const reflect     = document.getElementById('recording-state-reflect');
-      const done        = document.getElementById('recording-state-done');
-      const recordedBtn = document.getElementById('recording-recorded-btn');
-      const saveBtn     = document.getElementById('recording-save-btn');
-      const skipBtn     = document.getElementById('recording-skip-btn');
-      const textEls     = reflect ? reflect.querySelectorAll('textarea[data-cutting-key]') : [];
-      if (!rest || !reflect || !done || !recordedBtn || !saveBtn || !skipBtn || !textEls.length) return;
-
-      const show = el => { rest.classList.add('is-hidden'); reflect.classList.add('is-hidden'); done.classList.add('is-hidden'); el.classList.remove('is-hidden'); };
-
-      const collect = () => {
-        const payload = {};
-        let anyFilled = false;
-        textEls.forEach(t => {
-          const v = t.value.trim();
-          payload[t.dataset.cuttingKey] = v;
-          if (v) anyFilled = true;
-        });
-        return { payload, anyFilled };
-      };
-
-      recordedBtn.addEventListener('click', () => {
-        show(reflect);
-        textEls[0].focus();  // first field gets focus — "What did you notice today?"
-        // Stamp today's date so the card remembers across navigation —
-        // even if the student skips the reflection. Non-blocking: failure
-        // here is acceptable, UI still works for this session.
-        fetch('/dashboard/recorded-today', { method: 'POST' }).catch(() => {});
-      });
-
-      skipBtn.addEventListener('click', () => {
-        // Skip → no POST. Clear all fields so they don't linger if the user
-        // navigates back through the card during the same session.
-        textEls.forEach(t => { t.value = ''; });
-        show(done);
-      });
-
-      saveBtn.addEventListener('click', async () => {
-        const { payload, anyFilled } = collect();
-        if (!anyFilled) { show(done); return; }   // all-empty save = skip, no row created
-        saveBtn.disabled = true;
-        try {
-          const res = await fetch('/dashboard/cutting', {
-            method:  'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body:    JSON.stringify(payload)
-          });
-          if (!res.ok) throw new Error('save failed');
-          show(done);
-        } catch (e) {
-          saveBtn.disabled = false;
-          alert('Could not save. Please try again.');
-        }
-      });
-    })();
-
-    // ── Dashboard backdating: log a previous day's recording ─────────────
-    (function () {
-      const toggleBtn = document.getElementById('recording-backdate-toggle');
-      const panel     = document.getElementById('recording-backdate-panel');
-      if (!toggleBtn || !panel) return;  // no eligible past day → markup omitted
-      const dateEl    = document.getElementById('recording-backdate-date');
-      const saveBtn   = document.getElementById('recording-backdate-save');
-      const cancelBtn = document.getElementById('recording-backdate-cancel');
-      const savedMsg  = document.getElementById('recording-backdate-saved');
-      const textEls   = panel.querySelectorAll('textarea[data-cutting-key]');
-
-      const togglePanel = (open) => {
-        panel.classList.toggle('is-hidden', !open);
-        toggleBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
-        toggleBtn.textContent = open
-          ? "Log a previous day's recording ↑"
-          : "Log a previous day's recording ↓";
-      };
-
-      const resetPanel = () => {
-        textEls.forEach(t => { t.value = ''; });
-        if (savedMsg) savedMsg.hidden = true;
-        saveBtn.disabled = false;
-      };
-
-      toggleBtn.addEventListener('click', () => {
-        const willOpen = panel.classList.contains('is-hidden');
-        togglePanel(willOpen);
-      });
-
-      cancelBtn.addEventListener('click', () => {
-        resetPanel();
-        togglePanel(false);
-      });
-
-      saveBtn.addEventListener('click', async () => {
-        const payload = { recorded_date: dateEl.value };
-        let anyFilled = false;
-        textEls.forEach(t => {
-          const v = t.value.trim();
-          payload[t.dataset.cuttingKey] = v;
-          if (v) anyFilled = true;
-        });
-        if (!anyFilled) {
-          // All-empty backdated save → treat as cancel; nothing to persist.
-          resetPanel();
-          togglePanel(false);
-          return;
-        }
-        saveBtn.disabled = true;
-        try {
-          const res = await fetch('/dashboard/cutting', {
-            method:  'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body:    JSON.stringify(payload)
-          });
-          if (!res.ok) throw new Error('save failed');
-          if (savedMsg) {
-            savedMsg.hidden = false;
-            setTimeout(() => { resetPanel(); togglePanel(false); }, 1200);
-          } else {
-            resetPanel();
-            togglePanel(false);
-          }
-        } catch (e) {
-          saveBtn.disabled = false;
-          alert('Could not save. Please try again.');
-        }
-      });
-    })();
+    // The day-view module has its own inline <style> + <script> embedded
+    // alongside its markup above. The old rest/reflect/done recording-card
+    // controller and the backdating controller were removed when the
+    // markup was replaced — the day-view supersedes both.
   </script>
 </body>
 </html>
