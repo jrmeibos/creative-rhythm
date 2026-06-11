@@ -160,6 +160,18 @@
   gap: 0.3rem;
 }
 
+/* "Recorded this week" mark — presence-only, sits below the four dots,
+   18×18 to mirror dot size. Renders only when the user has at least one
+   cutting in the viewed week (no greyed slot when absent). */
+.comm-recorded {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: 0.65rem;
+  color: var(--color-bloem);
+}
+.comm-recorded-icon { display: block; }
+
 .comm-circle {
   width: 18px;
   height: 18px;

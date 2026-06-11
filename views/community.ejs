@@ -80,6 +80,21 @@
                 <% } %>
               </div>
 
+              <!-- Presence-only mark: rendered iff this user has at least
+                   one cutting in the viewed week. No marker at all when
+                   absent — we surface who showed up, never absence. The
+                   server only passes a boolean here; cutting text never
+                   reaches this template. -->
+              <% if (member.recordedThisWeek) { %>
+                <div class="comm-recorded" role="img" aria-label="Recorded this week">
+                  <svg class="comm-recorded-icon" width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
+                    <path d="M3.5 6h2L6.5 4.5h5L12.5 6h2a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1h-11a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1z" fill="currentColor"/>
+                    <circle cx="9" cy="10" r="2.3" fill="var(--color-blank-page)"/>
+                    <circle cx="9" cy="10" r="1.1" fill="currentColor"/>
+                  </svg>
+                </div>
+              <% } %>
+
             </button>
           <% } %>
         </div>

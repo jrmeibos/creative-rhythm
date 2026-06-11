@@ -750,6 +750,16 @@ app.get('/community', requireAuth, (req, res) => {
     };
   }
 
+  // Presence-only "recorded this week" mark on each card. Derive the
+  // viewed week's last day (weekStart + 6), query a Set of user_ids who
+  // have ANY cutting in that range. Nothing about the cuttings themselves
+  // leaves the DB layer — the template only sees a boolean per user, so
+  // reflection text stays private even though this is a public surface.
+  const weekEndDate = new Date(weekStart + 'T00:00:00');
+  weekEndDate.setDate(weekEndDate.getDate() + 6);
+  const weekEnd = toLocalDateString(weekEndDate);
+  const recordedSet = db.getUserIdsWithCuttingInRange(weekStart, weekEnd);
+
   const members = allUsers.map(u => ({
     id:                      u.id,
     name:                    u.name,
@@ -758,7 +768,8 @@ app.get('/community', requireAuth, (req, res) => {
     profile_photo:           u.profile_photo || null,
     community_goals_public:  u.community_goals_public !== 0,
     community_season_public: u.community_season_public !== 0,
-    goals:                   goalsMap[u.id] || {}
+    goals:                   goalsMap[u.id] || {},
+    recordedThisWeek:        recordedSet.has(u.id)
   }));
 
   res.render('community', {
