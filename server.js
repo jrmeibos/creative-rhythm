@@ -667,7 +667,7 @@ app.get('/lessons', requireAuth, (req, res) => {
   const lessons = db.getAllLessons();
   const completedIds = new Set(db.completedLessonIds(req.session.user.id));
   res.render('lessons', {
-    title: 'Field Notes',
+    title: 'Lessons',
     page: 'lessons',
     lessons,
     completedIds,

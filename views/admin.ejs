@@ -187,11 +187,11 @@
       <!-- ── Lessons ──────────────────────────────────────────────────────── -->
       <section class="dash-section" id="section-lessons">
         <div class="dash-section-header">
-          <h2 class="dash-section-title">Field Notes</h2>
+          <h2 class="dash-section-title">Lessons</h2>
           <div class="admin-section-actions">
-            <span class="admin-count"><%= lessons.length %> field note<%= lessons.length !== 1 ? 's' : '' %></span>
+            <span class="admin-count"><%= lessons.length %> lesson<%= lessons.length !== 1 ? 's' : '' %></span>
             <button class="admin-add-btn" type="button" onclick="openDialog('dialog-add-lesson')">
-              + Add Field Note
+              + Add Lesson
             </button>
           </div>
         </div>
@@ -229,7 +229,7 @@
             </div>
           <% } %>
           <% if (!lessons.length) { %>
-            <p class="admin-empty">No field notes yet.</p>
+            <p class="admin-empty">No lessons yet.</p>
           <% } %>
         </div>
       </section>
@@ -1038,7 +1038,7 @@
     }
 
     async function deleteLesson(id, title) {
-      if (!confirm(`Delete "${title}"? This also removes all gardener completion records for this field note.`)) return;
+      if (!confirm(`Delete "${title}"? This also removes all gardener completion records for this lesson.`)) return;
       const res = await fetch(`/api/admin/lessons/${id}`, { method: 'DELETE' });
       const data = await res.json();
       if (!res.ok) return alert(data.error);

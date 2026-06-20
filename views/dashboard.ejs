@@ -29,7 +29,7 @@
         </div>
         <div class="dash-progress-pill">
           <span class="dash-progress-count"><%= completedCount %> / <%= totalLessons %></span>
-          <span class="dash-progress-label">field notes complete</span>
+          <span class="dash-progress-label">lessons complete</span>
         </div>
       </header>
 
@@ -434,11 +434,11 @@
       <section class="dash-section">
         <div class="dash-section-header">
           <h2 class="dash-section-title">Continue reading</h2>
-          <a href="/lessons" class="dash-section-link">All field notes →</a>
+          <a href="/lessons" class="dash-section-link">All lessons →</a>
         </div>
 
         <a href="/lessons/<%= currentLesson.slug %>" class="lesson-continue-card">
-          <div class="lesson-continue-tag"><%= currentLesson.category_tag || 'Field Note' %></div>
+          <div class="lesson-continue-tag"><%= currentLesson.category_tag || 'Lesson' %></div>
           <h3 class="lesson-continue-title"><%= currentLesson.title %></h3>
           <p class="lesson-continue-subtitle"><em><%= currentLesson.subtitle %></em></p>
           <div class="lesson-continue-meta">
@@ -450,11 +450,11 @@
       <% } else { %>
       <section class="dash-section">
         <div class="dash-section-header">
-          <h2 class="dash-section-title">Your field notes</h2>
+          <h2 class="dash-section-title">Your lessons</h2>
         </div>
         <div class="all-complete-card">
-          <p class="all-complete-text">You've read all available field notes. Beautiful work.</p>
-          <a href="/lessons" class="dash-section-link">Browse field notes →</a>
+          <p class="all-complete-text">You've read all available lessons. Beautiful work.</p>
+          <a href="/lessons" class="dash-section-link">Browse lessons →</a>
         </div>
       </section>
       <% } %>
