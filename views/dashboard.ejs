@@ -33,40 +33,6 @@
         </div>
       </header>
 
-      <!-- Current Season -->
-      <section class="dash-section">
-        <div class="dash-section-header">
-          <h2 class="dash-section-title">Your Current Season</h2>
-        </div>
-        <% if (!user.current_season) { %>
-          <p class="season-first-prompt">What season are you in right now?</p>
-        <% } %>
-        <div class="season-cards" id="season-cards">
-          <%
-            const seasonDefs = [
-              { key: 'spring', name: 'Spring', category: 'Prioritizing Curiosity',
-                desc: "You're in receptive mode — filling the cup, following whims, letting ideas germinate." },
-              { key: 'summer', name: 'Summer', category: 'Creation Mode',
-                desc: "You're in full creative flow — making, building, pouring energy into the work." },
-              { key: 'autumn', name: 'Autumn', category: 'Sharing is Caring',
-                desc: "You're ready to release — sharing your work with the world from a place of fullness." },
-              { key: 'winter', name: 'Winter', category: 'Time to Connect',
-                desc: "You're going deep — whether reaching outward to collaborate or retreating inward for perspective. Both are Winter." }
-            ];
-          %>
-          <% for (const s of seasonDefs) { %>
-            <button class="season-card season-card--<%= s.key %> <%= user.current_season === s.key ? 'is-selected' : '' %>"
-                    data-season="<%= s.key %>" type="button" aria-pressed="<%= user.current_season === s.key %>">
-              <span class="season-card-emoji"><%- include('partials/season-icon', { season: s.key, size: 48 }) %></span>
-              <span class="season-card-name"><%= s.name %></span>
-              <span class="season-card-category"><%= s.category %></span>
-              <span class="season-card-desc"><%= s.desc %></span>
-              <span class="season-card-check" aria-hidden="true">✓</span>
-            </button>
-          <% } %>
-        </div>
-      </section>
-
       <!-- Day-view: per-day topic + reflection with back/forward day nav.
            Markup lives in views/partials/day-view.ejs (one source for both
            the full-page render and the GET /dashboard/day fragment). The
@@ -427,6 +393,40 @@
             <% } %>
           </div>
         <% } %>
+      </section>
+
+      <!-- Current Season -->
+      <section class="dash-section">
+        <div class="dash-section-header">
+          <h2 class="dash-section-title">Your Current Season</h2>
+        </div>
+        <% if (!user.current_season) { %>
+          <p class="season-first-prompt">What season are you in right now?</p>
+        <% } %>
+        <div class="season-cards" id="season-cards">
+          <%
+            const seasonDefs = [
+              { key: 'spring', name: 'Spring', category: 'Prioritizing Curiosity',
+                desc: "You're in receptive mode — filling the cup, following whims, letting ideas germinate." },
+              { key: 'summer', name: 'Summer', category: 'Creation Mode',
+                desc: "You're in full creative flow — making, building, pouring energy into the work." },
+              { key: 'autumn', name: 'Autumn', category: 'Sharing is Caring',
+                desc: "You're ready to release — sharing your work with the world from a place of fullness." },
+              { key: 'winter', name: 'Winter', category: 'Time to Connect',
+                desc: "You're going deep — whether reaching outward to collaborate or retreating inward for perspective. Both are Winter." }
+            ];
+          %>
+          <% for (const s of seasonDefs) { %>
+            <button class="season-card season-card--<%= s.key %> <%= user.current_season === s.key ? 'is-selected' : '' %>"
+                    data-season="<%= s.key %>" type="button" aria-pressed="<%= user.current_season === s.key %>">
+              <span class="season-card-emoji"><%- include('partials/season-icon', { season: s.key, size: 48 }) %></span>
+              <span class="season-card-name"><%= s.name %></span>
+              <span class="season-card-category"><%= s.category %></span>
+              <span class="season-card-desc"><%= s.desc %></span>
+              <span class="season-card-check" aria-hidden="true">✓</span>
+            </button>
+          <% } %>
+        </div>
       </section>
 
       <!-- Continue learning -->
