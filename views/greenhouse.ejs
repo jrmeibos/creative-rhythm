@@ -206,7 +206,12 @@
       <% } %>
 
       <%
-        // Render a goal's facets (4-row stack for new goals, 2-row fallback for legacy).
+        // Render a goal's facets:
+        //   - 4-facet goals: Seed always visible; Soil/Water/Bloom collapsed
+        //     behind a "See more ↓" toggle. Toggling is handled by a single
+        //     delegated click listener at the bottom of this view.
+        //   - Legacy 2-field goals: feeling + looks_like, always visible.
+        //   - No goal / no content: gentle "Not yet planted" placeholder.
         function renderFacets(g, faded) {
           const labelCls = faded ? 'gh-col-label gh-col-label--faded' : 'gh-col-label';
           const textCls  = faded ? 'gh-col-text gh-col-text--faded'   : 'gh-col-text';
@@ -220,22 +225,32 @@
           if (!hasFacets && !hasLegacy) {
             return '<p class="' + textCls + '"><em class="gh-empty">Not yet planted</em></p>';
           }
-          const rows = hasFacets ? [
-            ['🪴 The Soil',  "where you're starting",   g.soil],
-            ['🌱 The Seed',  "what you're growing",     g.seed],
-            ['💧 The Water', "how you'll tend it",      g.water],
-            ['🌸 The Bloom', 'what success looks like', g.bloom],
-          ] : [
-            ['The feeling',        null, g.feeling],
-            ['What it looks like', null, g.looks_like],
-          ];
-          return '<div class="gh-seed-stack">' + rows.map(([label, descriptor, val]) =>
+          const facetBlock = (label, descriptor, val) =>
             '<div>' +
               '<span class="' + labelCls + '">' + label + '</span>' +
               (descriptor ? '<p class="gh-col-descriptor">' + descriptor + '</p>' : '') +
               '<p class="' + textCls + '">' + esc(val) + '</p>' +
-            '</div>'
-          ).join('') + '</div>';
+            '</div>';
+
+          if (hasFacets) {
+            const seed   = facetBlock('🌱 The Seed',  "what you're growing",     g.seed);
+            const soil   = facetBlock('🪴 The Soil',  "where you're starting",   g.soil);
+            const water  = facetBlock('💧 The Water', "how you'll tend it",      g.water);
+            const bloom  = facetBlock('🌸 The Bloom', 'what success looks like', g.bloom);
+            return '<div class="gh-seed-stack">' + seed +
+                     '<button type="button" class="gh-facets-toggle" aria-expanded="false">' +
+                       '<span class="gh-facets-toggle-text">See more</span> ' +
+                       '<span class="gh-facets-toggle-arrow" aria-hidden="true">↓</span>' +
+                     '</button>' +
+                     '<div class="gh-facets-extra is-hidden">' + soil + water + bloom + '</div>' +
+                   '</div>';
+          }
+
+          // Legacy 2-field — render both rows directly, no toggle.
+          return '<div class="gh-seed-stack">' +
+                   facetBlock('The feeling',        null, g.feeling) +
+                   facetBlock('What it looks like', null, g.looks_like) +
+                 '</div>';
         }
       %>
 
@@ -462,6 +477,22 @@
   </div>
 
   <script>
+    // ── Facets expand/collapse (per-goal "See more / See less") ─────────────
+    // Delegated so it works for every bed card without needing scoped IDs,
+    // and survives any future fetch-and-swap of card markup.
+    document.addEventListener('click', function (e) {
+      const btn = e.target.closest('.gh-facets-toggle');
+      if (!btn) return;
+      const extra = btn.parentElement.querySelector('.gh-facets-extra');
+      if (!extra) return;
+      const opened = extra.classList.toggle('is-hidden') === false;
+      btn.setAttribute('aria-expanded', opened ? 'true' : 'false');
+      const text  = btn.querySelector('.gh-facets-toggle-text');
+      const arrow = btn.querySelector('.gh-facets-toggle-arrow');
+      if (text)  text.textContent  = opened ? 'See less' : 'See more';
+      if (arrow) arrow.textContent = opened ? '↑' : '↓';
+    });
+
     // ── Edit existing goal ───────────────────────────────────────────────────
     function openEdit(data) {
       const n = data.n;

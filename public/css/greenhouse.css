@@ -1177,3 +1177,41 @@ details[open] .gh-planted-summary::before { content: '▾  '; }
   .gh-cuttings-section-title { font-size: 1.4rem; }
   .gh-cuttings-section-art { max-width: 280px; }
 }
+
+/* ─── Facets expand/collapse on planted-goal cards ──────────────────────── */
+/* Default state: Seed visible; Soil/Water/Bloom hidden behind toggle.    */
+
+.gh-facets-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  background: none;
+  border: none;
+  padding: 0;
+  margin-top: 0.35rem;
+  font-family: var(--font-body);
+  font-size: 0.82rem;
+  font-weight: 300;
+  color: var(--color-bloem);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-thickness: 1px;
+  opacity: 0.85;
+  transition: opacity 0.15s;
+}
+.gh-facets-toggle:hover { opacity: 1; }
+.gh-facets-toggle:focus-visible {
+  outline: 2px solid var(--color-bloem);
+  outline-offset: 3px;
+  border-radius: 2px;
+  opacity: 1;
+}
+
+.gh-facets-extra {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-top: 0.5rem;
+}
+.gh-facets-extra.is-hidden { display: none; }
