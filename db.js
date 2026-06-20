@@ -1715,21 +1715,6 @@ module.exports = {
     return new Map(rows.map(r => [r.user_id, r.days]));
   },
 
-  // Recording memory: a single overwritable YYYY-MM-DD per user.
-  // Not a streak, not a count, not a history — one column, set & forget.
-  markRecordedToday(userId, dateStr) {
-    return db.prepare(
-      'UPDATE users SET last_recorded_date = ? WHERE id = ?'
-    ).run(dateStr, userId);
-  },
-
-  getLastRecordedDate(userId) {
-    const row = db.prepare(
-      'SELECT last_recorded_date FROM users WHERE id = ?'
-    ).get(userId);
-    return row ? row.last_recorded_date : null;
-  },
-
   getUserTimezone(userId) {
     const row = db.prepare('SELECT timezone FROM users WHERE id = ?').get(userId);
     return row ? row.timezone : null;

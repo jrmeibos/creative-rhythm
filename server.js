@@ -396,10 +396,8 @@ app.get('/dashboard/day', requireAuth, (req, res) => {
 // Accepts the four CUTTING_PROMPTS fields as optional strings + an optional
 // recorded_date (YYYY-MM-DD) for backdating. All-empty fields → no row.
 // When recorded_date is omitted, the cutting is stamped for today (the user's
-// timezone-aware today) and last_recorded_date is bumped — that's the normal
-// "I recorded today" flow. When recorded_date is supplied and valid, the
-// cutting is stamped for that day and last_recorded_date is NOT touched —
-// backdating shouldn't mark today as recorded.
+// timezone-aware today). When recorded_date is supplied and valid, the cutting
+// is stamped for that day.
 app.post('/dashboard/cutting', requireAuth, (req, res) => {
   const body = req.body || {};
   const fields = {};
@@ -444,23 +442,7 @@ app.post('/dashboard/cutting', requireAuth, (req, res) => {
   // continuity with legacy rows and any future direct queries.
   db.createCutting(req.session.user.id, season, CUTTING_PROMPTS[0].label, fields, recordedDate);
 
-  // last_recorded_date tracks "did they record today" only — never bumped
-  // by backdating, even if the backdated date happens to equal today (it
-  // can't here because isBackdated is false in that case anyway).
-  if (!isBackdated) {
-    db.markRecordedToday(req.session.user.id, today);
-  }
-
   res.json({ saved: true, recorded_date: recordedDate, backdated: isBackdated });
-});
-
-// ─── Mark "I recorded today" — stamp the date so the card remembers ────────
-// Independent of saving a reflection. Setting the same date twice is a no-op
-// (idempotent UPDATE). Resets naturally when today's date changes.
-app.post('/dashboard/recorded-today', requireAuth, (req, res) => {
-  const today = toLocalDateString(getNow(req.session.user));
-  db.markRecordedToday(req.session.user.id, today);
-  res.json({ ok: true, date: today });
 });
 
 // ─── Capture user's browser timezone ───────────────────────────────────────
@@ -1483,28 +1465,6 @@ app.post('/api/greenhouse/plant-bed', requireAuth, (req, res) => {
   const now = getNow(req.session.user);
   const createdAt = now.toISOString().replace('T', ' ').split('.')[0];
   db.upsertGreenhouseGoalFacets(userId, bedNum, { soil, seed, water, bloom }, createdAt, bedNum);
-  res.json({ ok: true });
-});
-
-app.post('/api/greenhouse/plant', requireAuth, (req, res) => {
-  const userId = req.session.user.id;
-  if (!db.getLessonCompletion(userId, 1)) {
-    return res.status(403).json({ error: 'Complete Lesson 1 first.' });
-  }
-  const { seeds } = req.body;
-  if (!Array.isArray(seeds) || seeds.length !== 3) {
-    return res.status(400).json({ error: 'Invalid seeds data.' });
-  }
-  // When time travel is active for admin, seeds are planted at the simulated date so
-  // the 4-week lock window aligns with the simulated timeline.
-  const now = getNow(req.session.user);
-  const createdAt = now.toISOString().replace('T', ' ').split('.')[0];
-  for (const s of seeds) {
-    const num = parseInt(s.seed_number);
-    if (![1, 2, 3].includes(num)) return res.status(400).json({ error: 'Invalid seed number.' });
-    if (!s.feeling || !s.looks_like) return res.status(400).json({ error: 'All seed fields are required.' });
-    db.upsertGreenhouseGoal(userId, num, s.feeling, s.looks_like, createdAt);
-  }
   res.json({ ok: true });
 });
 

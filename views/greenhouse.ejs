@@ -462,41 +462,6 @@
   </div>
 
   <script>
-    // ── Plant goals ──────────────────────────────────────────────────────────
-    async function plantSeeds() {
-      const errEl = document.getElementById('seeds-error');
-      if (errEl) errEl.hidden = true;
-
-      const seeds = [1, 2, 3].map(n => ({
-        seed_number: n,
-        feeling: document.getElementById(`s${n}-feeling`)?.value.trim() || '',
-        looks_like: document.getElementById(`s${n}-looks`)?.value.trim() || ''
-      }));
-
-      if (seeds.some(s => !s.feeling || !s.looks_like)) {
-        if (errEl) errEl.hidden = false;
-        return;
-      }
-
-      const btn = document.getElementById('plant-btn');
-      btn.disabled = true;
-      btn.textContent = 'Planting…';
-
-      const res = await fetch('/api/greenhouse/plant', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ seeds })
-      });
-
-      if (res.ok) {
-        window.location.href = '/greenhouse';
-      } else {
-        btn.disabled = false;
-        btn.textContent = 'Plant my goals 🌱';
-        if (errEl) { errEl.textContent = 'Something went wrong. Please try again.'; errEl.hidden = false; }
-      }
-    }
-
     // ── Edit existing goal ───────────────────────────────────────────────────
     function openEdit(data) {
       const n = data.n;
