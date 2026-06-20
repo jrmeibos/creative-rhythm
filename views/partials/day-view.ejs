@@ -59,7 +59,14 @@
   <% } %>
 
   <% if (dayview.topic) { %>
-    <p class="recording-card-prompt">"<%= dayview.topic %>"</p>
+    <button type="button"
+            class="recording-about-toggle"
+            id="dayview-topic-toggle"
+            aria-controls="dayview-topic-panel"
+            aria-expanded="false">Want an idea of what to talk about today? ↓</button>
+    <div id="dayview-topic-panel" class="recording-about-panel is-hidden">
+      <p class="recording-card-prompt">"<%= dayview.topic %>"</p>
+    </div>
   <% } %>
 
   <% if (dayview.cuttings && dayview.cuttings.length) { %>

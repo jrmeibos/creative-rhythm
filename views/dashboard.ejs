@@ -260,6 +260,18 @@
               }
               return;
             }
+            const topicBtn = e.target.closest('#dayview-topic-toggle');
+            if (topicBtn) {
+              const panel = container.querySelector('#dayview-topic-panel');
+              if (panel) {
+                const opened = panel.classList.toggle('is-hidden') === false;
+                topicBtn.setAttribute('aria-expanded', opened ? 'true' : 'false');
+                topicBtn.textContent = opened
+                  ? 'Want an idea of what to talk about today? ↑'
+                  : 'Want an idea of what to talk about today? ↓';
+              }
+              return;
+            }
             if (e.target.closest('#dayview-add-btn'))    { showForm(); return; }
             if (e.target.closest('#dayview-cancel'))     { hideForm(true); return; }
             if (e.target.closest('#dayview-save'))       { saveReflection(); return; }
