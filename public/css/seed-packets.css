@@ -793,3 +793,80 @@ mark.cm-highlight {
   .cm-angle-name { font-size: 1.375rem; }
   .cm-question-display { font-size: 1.125rem; }
 }
+
+/* ─── Highlight chip click-to-add popover + used state ──────────────────── */
+
+/* Used state: chip has been added to at least one seed (drag or click).
+   Stays clickable so the same chip can be added to more seeds, but visually
+   fades to signal "you've moved this one." */
+.cm-highlight-chip--used {
+  opacity: 0.42;
+  background: rgba(246, 201, 92, 0.12);
+  border-color: rgba(246, 201, 92, 0.3);
+}
+.cm-highlight-chip--used:hover {
+  opacity: 0.7;
+  background: rgba(246, 201, 92, 0.22);
+}
+
+/* Click-to-add popover: appears beneath the clicked chip with the list of
+   current seed names. Inline-positioned (insertAdjacentElement('afterend'))
+   so it flows under the chip's wrapped row. */
+.cm-chip-popover {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.25rem;
+  background: var(--color-blank-page);
+  border: 1px solid rgba(112, 92, 108, 0.18);
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(16, 15, 16, 0.08);
+  padding: 0.5rem 0.5rem 0.55rem;
+  margin: 0.4rem 0.35rem 0.5rem;
+  min-width: 12rem;
+  max-width: 22rem;
+  vertical-align: top;
+  position: relative;
+  z-index: 5;
+}
+
+.cm-chip-popover-label {
+  font-family: var(--font-body);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(16, 15, 16, 0.55);
+  margin: 0 0 0.2rem 0.15rem;
+}
+
+.cm-chip-popover-option {
+  display: block;
+  text-align: left;
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  padding: 0.4rem 0.55rem;
+  font-family: var(--font-body);
+  font-size: 0.88rem;
+  font-weight: 400;
+  color: var(--color-ink-stained);
+  cursor: pointer;
+  transition: background-color 0.12s, color 0.12s;
+}
+.cm-chip-popover-option:hover {
+  background: rgba(112, 92, 108, 0.08);
+  color: var(--color-bloem);
+}
+.cm-chip-popover-option:focus-visible {
+  outline: 2px solid var(--color-bloem);
+  outline-offset: 2px;
+}
+
+.cm-chip-popover-empty {
+  font-family: var(--font-body);
+  font-style: italic;
+  font-size: 0.85rem;
+  color: rgba(16, 15, 16, 0.55);
+  margin: 0 0.15rem;
+}

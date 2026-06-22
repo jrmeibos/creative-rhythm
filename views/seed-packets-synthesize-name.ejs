@@ -21,7 +21,7 @@
 
         <% if (highlights.length > 0) { %>
         <div class="cm-highlights-bank">
-          <p class="cm-highlights-bank-label">Your highlights — drag one onto a seed card to add it as a note</p>
+          <p class="cm-highlights-bank-label">Your highlights — click one to pick a seed, or drag it onto a seed card</p>
           <div class="cm-highlights-chips" id="cm-highlights-chips">
             <% highlights.forEach(function(h) { %>
             <span class="cm-highlight-chip" draggable="true" data-text="<%= h.highlighted_text.replace(/"/g, '&quot;') %>"><%= h.highlighted_text %></span>
@@ -150,6 +150,7 @@
         fresh.addEventListener('click', function() {
           fresh.closest('.cm-seed-bullet-row').remove();
           debouncedSave(card);
+          refreshUsedChips();
         });
       });
     }
@@ -192,12 +193,14 @@
       removeBtn.addEventListener('click', function() {
         row.remove();
         debouncedSave(card);
+        refreshUsedChips();
       });
       row.appendChild(input);
       row.appendChild(removeBtn);
       bulletsDiv.appendChild(row);
       if (!text) input.focus();
       debouncedSave(card);
+      refreshUsedChips();
     }
 
     // ── Drag highlight chips → drop onto seed card ────────────────────────────
@@ -228,7 +231,81 @@
       chip.addEventListener('dragend', function() {
         chip.classList.remove('cm-highlight-chip--dragging');
       });
+      // Click-to-add: open a small popover with the list of current seeds.
+      chip.addEventListener('click', function(e) {
+        e.stopPropagation();
+        openChipPopover(chip);
+      });
     });
+
+    // ── Click-to-add popover ──────────────────────────────────────────────────
+
+    function closeChipPopover() {
+      document.querySelectorAll('.cm-chip-popover').forEach(function(p) { p.remove(); });
+    }
+
+    function openChipPopover(chip) {
+      closeChipPopover();
+      const popover = document.createElement('div');
+      popover.className = 'cm-chip-popover';
+      popover.addEventListener('click', function(e) { e.stopPropagation(); });
+
+      const label = document.createElement('p');
+      label.className = 'cm-chip-popover-label';
+      label.textContent = 'Add to:';
+      popover.appendChild(label);
+
+      const cards = document.querySelectorAll('.cm-seed-card');
+      if (cards.length === 0) {
+        const empty = document.createElement('p');
+        empty.className = 'cm-chip-popover-empty';
+        empty.textContent = 'Add a seed first, then come back.';
+        popover.appendChild(empty);
+      } else {
+        cards.forEach(function(card) {
+          const nameInput = card.querySelector('.cm-seed-name-input');
+          const name = (nameInput && nameInput.value || '').trim() || '(unnamed seed)';
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'cm-chip-popover-option';
+          btn.textContent = name;
+          btn.addEventListener('click', function() {
+            const text = chip.dataset.text || chip.textContent.trim();
+            addBulletToCard(card, text);
+            closeChipPopover();
+          });
+          popover.appendChild(btn);
+        });
+      }
+
+      // Position right after the chip in its parent so it flows naturally
+      // beneath the wrapped row the chip lives in.
+      chip.insertAdjacentElement('afterend', popover);
+    }
+
+    // Close popover on outside click or Escape.
+    document.addEventListener('click', function(e) {
+      if (!e.target.closest('.cm-chip-popover') && !e.target.closest('.cm-highlight-chip')) {
+        closeChipPopover();
+      }
+    });
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') closeChipPopover();
+    });
+
+    // ── Used-chip tracking ────────────────────────────────────────────────────
+
+    function refreshUsedChips() {
+      const usedTexts = new Set();
+      document.querySelectorAll('.cm-seed-bullet-input').forEach(function(input) {
+        const v = (input.value || '').trim();
+        if (v) usedTexts.add(v);
+      });
+      document.querySelectorAll('.cm-highlight-chip').forEach(function(chip) {
+        const t = chip.dataset.text || chip.textContent.trim();
+        chip.classList.toggle('cm-highlight-chip--used', usedTexts.has(t));
+      });
+    }
 
     // ── Attach listeners to existing saved cards ──────────────────────────────
 
@@ -245,6 +322,10 @@
       attachCardListeners(unsavedCard);
       attachAddBulletListener(unsavedCard);
     }
+
+    // ── Initial "used" pass: scan existing seed bullets so chips matching ─────
+    //    saved content stay dimmed across refreshes.
+    refreshUsedChips();
 
     // ── Add a new seed ────────────────────────────────────────────────────────
 
