@@ -257,42 +257,16 @@
       <section class="dash-section">
         <div class="gh-seeds">
           <% for (let n = 1; n <= 3; n++) { %>
-            <% const entry = goals[n] || { original: null, replacement: null, locked: false }; %>
+            <% const entry = goals[n] || { original: null, replacement: null }; %>
             <% const orig = entry.original; %>
             <% const repl = entry.replacement; %>
-            <% const isLocked = entry.locked; %>
             <% const seedLabel = ['One', 'Two', 'Three'][n - 1]; %>
             <% const isKept = orig && !!orig.kept_at; %>
 
             <div class="gh-seed-card" id="gh-card-<%= n %>">
               <div class="gh-seed-num">Goal <%= seedLabel %></div>
 
-              <% if (isLocked) { %>
-                <!-- ── Locked: 28-day tending period ── -->
-                <div class="gh-lock-notice">
-                  <svg width="14" height="16" viewBox="0 0 14 16" fill="none" aria-hidden="true">
-                    <rect x="1.5" y="7" width="11" height="8" rx="1.5" stroke="currentColor" stroke-width="1.4"/>
-                    <path d="M4 7V5a3 3 0 016 0v2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
-                  </svg>
-                  Tendable starting <%= entry.unlockDate %>
-                </div>
-
-                <% if (repl) { %>
-                  <div class="gh-original-block">
-                    <span class="gh-original-label">Originally planted</span>
-                    <%- renderFacets(orig, true) %>
-                  </div>
-                  <div>
-                    <span class="gh-updated-tag">New goal planted</span>
-                    <div style="margin-top:0.5rem">
-                      <%- renderFacets(repl, false) %>
-                    </div>
-                  </div>
-                <% } else if (orig) { %>
-                  <%- renderFacets(orig, false) %>
-                <% } %>
-
-              <% } else if (repl) { %>
+              <% if (repl) { %>
                 <!-- ── Replaced: show original greyed, replacement active ── -->
                 <div class="gh-original-block">
                   <span class="gh-original-label">Originally planted</span>

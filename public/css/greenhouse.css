@@ -410,17 +410,6 @@ details[open] .gh-planted-summary::before { content: '▾  '; }
 }
 .gh-harvest-link:hover { opacity: 1; }
 
-/* ─── 28-day lock notice ─────────────────────────────────────────────────── */
-.gh-lock-notice {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 0.8rem;
-  font-weight: 400;
-  color: rgba(16, 15, 16, 0.4);
-  margin-bottom: 1rem;
-}
-
 /* ─── Plant seeds intro ──────────────────────────────────────────────────── */
 .gh-plant-intro {
   font-size: 0.95rem;

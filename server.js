@@ -1116,12 +1116,6 @@ function seasonForRecordedDate(recordedDateStr, courseStartStr) {
   return getCurricularSeason(Math.floor(days / 7) + 1);
 }
 
-function isGoalLocked(goal, user) {
-  if (!goal || !goal.created_at) return false;
-  const planted = new Date(goal.created_at);
-  return getNow(user).getTime() < planted.getTime() + 28 * 24 * 60 * 60 * 1000;
-}
-
 const STAGE_LABELS = {
   1: { slug: 'just-planted', label: 'Just planted'  },
   2: { slug: 'first-sprout', label: 'First sprout'  },
@@ -1201,16 +1195,6 @@ app.get('/greenhouse', requireAuth, (req, res) => {
   let goals = null;
   if (state === 'tending') {
     goals = db.getGreenhouseGoals(userId);
-    // Attach lock status to each slot
-    for (const n of [1, 2, 3]) {
-      const entry = goals[n];
-      const activeGoal = entry.replacement || entry.original;
-      entry.locked = isGoalLocked(activeGoal, req.session.user);
-      if (entry.locked && activeGoal) {
-        const unlockMs = new Date(activeGoal.created_at).getTime() + 28 * 24 * 60 * 60 * 1000;
-        entry.unlockDate = new Date(unlockMs).toLocaleDateString('en-US', { month: 'long', day: 'numeric' });
-      }
-    }
   }
 
   // Growth Check: unlocks at day 77 from course start
@@ -1498,7 +1482,6 @@ app.post('/api/goals/:id/keep', requireAuth, (req, res) => {
   if (!goalId) return res.status(400).json({ error: 'Invalid goal id.' });
   const goal = db.getGoalById(goalId, req.session.user.id);
   if (!goal) return res.status(404).json({ error: 'Goal not found.' });
-  if (isGoalLocked(goal, req.session.user)) return res.status(403).json({ error: 'Goal is still in the lock period.' });
   const { kept } = req.body;
   db.keepGoal(goalId, req.session.user.id, !!kept);
   res.json({ ok: true });
@@ -1510,10 +1493,6 @@ app.post('/api/greenhouse/replace', requireAuth, (req, res) => {
   if (![1, 2, 3].includes(num)) return res.status(400).json({ error: 'Invalid seed number.' });
   if (!soil || !seed || !water || !bloom) {
     return res.status(400).json({ error: 'All four fields are required.' });
-  }
-  const activeGoal = db.getActiveGoalByNumber(req.session.user.id, num);
-  if (activeGoal && isGoalLocked(activeGoal, req.session.user)) {
-    return res.status(403).json({ error: 'Goal is still in the lock period.' });
   }
   const now = getNow(req.session.user);
   const createdAt = now.toISOString().replace('T', ' ').split('.')[0];
