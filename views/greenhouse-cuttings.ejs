@@ -91,20 +91,23 @@
                         </div>
                       <% }); %>
                       <div class="cutting-marks" data-cutting-id="<%= c.id %>">
-                        <button type="button"
-                                class="cutting-mark-btn <%= c.watched ? 'is-on' : '' %>"
-                                data-mark="watched"
-                                aria-pressed="<%= c.watched ? 'true' : 'false' %>">
-                          <span class="cutting-mark-icon" aria-hidden="true">✓</span>
-                          <span class="cutting-mark-label">Watched</span>
-                        </button>
-                        <button type="button"
-                                class="cutting-mark-btn <%= c.edited ? 'is-on' : '' %>"
-                                data-mark="edited"
-                                aria-pressed="<%= c.edited ? 'true' : 'false' %>">
-                          <span class="cutting-mark-icon" aria-hidden="true">✓</span>
-                          <span class="cutting-mark-label">Edited</span>
-                        </button>
+                        <div class="cutting-marks-group">
+                          <button type="button"
+                                  class="cutting-mark-btn <%= c.watched ? 'is-on' : '' %>"
+                                  data-mark="watched"
+                                  aria-pressed="<%= c.watched ? 'true' : 'false' %>">
+                            <span class="cutting-mark-icon" aria-hidden="true">✓</span>
+                            <span class="cutting-mark-label">Watched</span>
+                          </button>
+                          <button type="button"
+                                  class="cutting-mark-btn <%= c.edited ? 'is-on' : '' %>"
+                                  data-mark="edited"
+                                  aria-pressed="<%= c.edited ? 'true' : 'false' %>">
+                            <span class="cutting-mark-icon" aria-hidden="true">✓</span>
+                            <span class="cutting-mark-label">Edited</span>
+                          </button>
+                        </div>
+                        <button type="button" class="cutting-delete-btn" data-action="delete">Delete</button>
                       </div>
                     </article>
                   <% }); %>
@@ -153,6 +156,27 @@
         alert('Could not save. Please try again.');
       }).finally(function () {
         btn.disabled = false;
+      });
+    });
+
+    // Cuttings delete. Confirm in the browser, POST, reload on success so the
+    // view re-renders cleanly (empty days/seasons fall away automatically).
+    document.addEventListener('click', function (e) {
+      const btn = e.target.closest('.cutting-delete-btn');
+      if (!btn) return;
+      const row = btn.closest('.cutting-marks');
+      if (!row) return;
+      const cuttingId = row.getAttribute('data-cutting-id');
+      if (!confirm("Delete this cutting? This can't be undone.")) return;
+      btn.disabled = true;
+      fetch('/greenhouse/cuttings/' + encodeURIComponent(cuttingId) + '/delete', {
+        method: 'POST'
+      }).then(function (r) {
+        if (!r.ok) throw new Error('delete failed');
+        window.location.reload();
+      }).catch(function () {
+        btn.disabled = false;
+        alert('Could not delete. Please try again.');
       });
     });
   </script>

@@ -1392,6 +1392,21 @@ app.post('/greenhouse/cuttings/:id/mark', requireAuth, (req, res) => {
   res.json({ ok: true, mark, value: v, changed });
 });
 
+// Hard-delete a cutting. Confirmation lives in the client (browser confirm
+// dialog) — by the time we get here, the student has already confirmed.
+// Ownership is enforced inside the DB helper via WHERE user_id = ?.
+app.post('/greenhouse/cuttings/:id/delete', requireAuth, (req, res) => {
+  const cuttingId = parseInt(req.params.id, 10);
+  if (!Number.isInteger(cuttingId) || cuttingId <= 0) {
+    return res.status(400).json({ error: 'Invalid cutting id.' });
+  }
+  const changed = db.deleteCutting(cuttingId, req.session.user.id);
+  // 0 rows changed = either the row didn't exist or wasn't owned by this
+  // user. Treat both as a no-op success — the caller just wants the row
+  // gone, and from their perspective it now is.
+  res.json({ ok: true, changed });
+});
+
 app.get('/greenhouse/cuttings/export', requireAuth, async (req, res) => {
   const userId = req.session.user.id;
   const cuttings = db.getCuttingsForUserChronological(userId);

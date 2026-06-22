@@ -1729,6 +1729,15 @@ module.exports = {
     ).run(v, cuttingId, userId).changes;
   },
 
+  // Hard-delete a cutting. Ownership scoped via the WHERE so a student can
+  // only delete their own rows. Returns the rows-changed count (0 if no
+  // matching row — handled as a no-op success at the route level).
+  deleteCutting(cuttingId, userId) {
+    return db.prepare(
+      'DELETE FROM cuttings WHERE id = ? AND user_id = ?'
+    ).run(cuttingId, userId).changes;
+  },
+
   // Count-only: for each user, how many DISTINCT days within [startDate,
   // endDate] did they log at least one cutting? Returns a Map keyed by
   // user_id, value = day count (1..7 for a week-sized range). Used by the
