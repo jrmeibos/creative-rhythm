@@ -1316,7 +1316,8 @@ app.get('/greenhouse/cuttings', requireAuth, (req, res) => {
       entries:    buckets[s],
     }));
 
-  // Null/unknown-season cuttings get a quiet "Other" group at the end.
+  // Null/unknown-season cuttings get a quiet "Other" group at the end —
+  // these are post-course entries (past week 12), chronologically newest.
   if (buckets._other_ && buckets._other_.length) {
     seasonGroups.push({
       season:     null,
@@ -1325,6 +1326,11 @@ app.get('/greenhouse/cuttings', requireAuth, (req, res) => {
       entries:    buckets._other_,
     });
   }
+
+  // Reverse season-group order when sorting newest-first so the most recent
+  // group leads. Default 'oldest' keeps the course's natural reading order
+  // (Winter → Spring → Summer → Autumn → Other).
+  if (sort === 'newest') seasonGroups.reverse();
 
   res.render('greenhouse-cuttings', {
     title: 'Cuttings',
