@@ -23,7 +23,7 @@
 
       <% if (totalCount === 0) { %>
 
-        <!-- ── Whole-page empty state ─────────────────────────────────── -->
+        <!-- ── Whole-page empty state (no cuttings at all) ──────────── -->
         <section class="cuttings-empty">
           <p class="cuttings-empty-text">
             Nothing gathered yet. After you record, you can note what you noticed — and it'll be kept here.
@@ -31,6 +31,53 @@
         </section>
 
       <% } else { %>
+
+        <%
+          // href helper: preserves the other param so each link only changes
+          // its own dimension. Omit defaults so /cuttings stays the canonical
+          // 'all/newest' URL.
+          function controlHref(s, f) {
+            const params = [];
+            if (s !== 'newest') params.push('sort=' + encodeURIComponent(s));
+            if (f !== 'all')    params.push('filter=' + encodeURIComponent(f));
+            return params.length ? '?' + params.join('&') : '/greenhouse/cuttings';
+          }
+          const cls = (active) => 'cuttings-control-link' + (active ? ' is-active' : '');
+        %>
+
+        <!-- ── Controls: order + filter ────────────────────────────── -->
+        <div class="cuttings-controls" role="group" aria-label="Sort and filter cuttings">
+          <div class="cuttings-control-row">
+            <span class="cuttings-control-label">Order</span>
+            <a href="<%= controlHref('newest', filter) %>" class="<%= cls(sort === 'newest') %>">Newest</a>
+            <span class="cuttings-control-divider" aria-hidden="true">·</span>
+            <a href="<%= controlHref('oldest', filter) %>" class="<%= cls(sort === 'oldest') %>">Oldest</a>
+          </div>
+          <div class="cuttings-control-row">
+            <span class="cuttings-control-label">Show</span>
+            <a href="<%= controlHref(sort, 'all')        %>" class="<%= cls(filter === 'all')        %>">All</a>
+            <span class="cuttings-control-divider" aria-hidden="true">·</span>
+            <a href="<%= controlHref(sort, 'watched')    %>" class="<%= cls(filter === 'watched')    %>">Watched</a>
+            <span class="cuttings-control-divider" aria-hidden="true">·</span>
+            <a href="<%= controlHref(sort, 'unwatched')  %>" class="<%= cls(filter === 'unwatched')  %>">Unwatched</a>
+            <span class="cuttings-control-divider" aria-hidden="true">·</span>
+            <a href="<%= controlHref(sort, 'edited')     %>" class="<%= cls(filter === 'edited')     %>">Edited</a>
+            <span class="cuttings-control-divider" aria-hidden="true">·</span>
+            <a href="<%= controlHref(sort, 'not-edited') %>" class="<%= cls(filter === 'not-edited') %>">Not edited</a>
+          </div>
+        </div>
+
+        <% if (filteredCount === 0) { %>
+
+          <!-- ── Filter-result empty state (cuttings exist but none match) -->
+          <section class="cuttings-empty cuttings-empty--filter">
+            <p class="cuttings-empty-text">Nothing matches that filter.</p>
+            <p class="cuttings-empty-sub">
+              <a href="<%= controlHref(sort, 'all') %>" class="cuttings-control-link">Show all</a>
+            </p>
+          </section>
+
+        <% } else { %>
 
         <% seasonGroups.forEach(function (group) { %>
           <section class="cuttings-season-group cuttings-season-group--<%= group.season || 'other' %>">
@@ -123,7 +170,9 @@
           </a>
         </footer>
 
-      <% } %>
+        <% } %><!-- end filteredCount > 0 branch -->
+
+      <% } %><!-- end totalCount > 0 branch -->
 
     </main>
   </div>

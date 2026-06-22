@@ -1020,13 +1020,11 @@ details[open] .gh-planted-summary::before { content: '▾  '; }
 }
 
 .cutting-date {
-  font-family: var(--font-body);
-  font-size: 0.74rem;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: rgba(16, 15, 16, 0.45);
-  margin: 0 0 0.45rem;
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  font-weight: 400;
+  color: rgba(16, 15, 16, 0.55);
+  margin: 0 0 0.55rem;
 }
 
 .cutting-text {
@@ -1048,11 +1046,10 @@ details[open] .gh-planted-summary::before { content: '▾  '; }
   margin-top: 0;
 }
 .cutting-field-label {
-  font-family: var(--font-display);
-  font-style: italic;
-  font-size: 0.9rem;
-  font-weight: 400;
-  color: rgba(16, 15, 16, 0.55);
+  font-family: var(--font-body);
+  font-size: 1rem;
+  font-weight: 500;
+  color: rgba(16, 15, 16, 0.7);
   margin: 0 0 0.25rem;
 }
 
@@ -1297,3 +1294,71 @@ details[open] .gh-planted-summary::before { content: '▾  '; }
   border-radius: 2px;
 }
 .cutting-delete-btn:disabled { opacity: 0.5; cursor: default; }
+
+/* ─── Cuttings controls: sort + filter ─────────────────────────────────── */
+
+.cuttings-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin: 0 0 2.25rem;
+  padding: 0.85rem 0;
+  border-top: 1px solid rgba(16, 15, 16, 0.08);
+  border-bottom: 1px solid rgba(16, 15, 16, 0.08);
+}
+
+.cuttings-control-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.4rem 0.55rem;
+}
+
+.cuttings-control-label {
+  font-family: var(--font-body);
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: rgba(16, 15, 16, 0.55);
+  min-width: 3.25rem;
+}
+
+.cuttings-control-link {
+  font-family: var(--font-body);
+  font-size: 0.88rem;
+  font-weight: 300;
+  color: rgba(16, 15, 16, 0.55);
+  text-decoration: none;
+  padding-bottom: 1px;
+  transition: color 0.15s, opacity 0.15s;
+}
+.cuttings-control-link:hover { color: var(--color-bloem); }
+.cuttings-control-link.is-active {
+  color: var(--color-bloem);
+  font-weight: 600;
+  border-bottom: 1.5px solid var(--color-bloem);
+}
+.cuttings-control-link:focus-visible {
+  outline: 2px solid var(--color-bloem);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+.cuttings-control-divider {
+  color: rgba(16, 15, 16, 0.25);
+  font-size: 0.88rem;
+}
+
+/* Filter-result empty state (still have cuttings but none match) */
+.cuttings-empty--filter {
+  text-align: center;
+  background: transparent;
+  box-shadow: none;
+  padding: 2rem 1rem;
+}
+.cuttings-empty--filter .cuttings-empty-text {
+  margin-bottom: 0.5rem;
+}
+.cuttings-empty-sub {
+  margin: 0;
+}

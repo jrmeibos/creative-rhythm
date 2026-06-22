@@ -1262,8 +1262,39 @@ app.get('/greenhouse/plant', requireAuth, (req, res) => {
 });
 
 // ─── Cuttings archive: read-only, season-grouped reflections (Build 2) ────
+// Optional query params (all default-friendly):
+//   ?sort=newest|oldest  — day order within each season (default newest)
+//   ?filter=all|watched|unwatched|edited|not-edited  — narrow the set
+// Season order itself always stays in curricular sequence (Winter → Spring
+// → Summer → Autumn) — the course's natural reading direction.
 app.get('/greenhouse/cuttings', requireAuth, (req, res) => {
-  const cuttings = db.getCuttingsForUser(req.session.user.id);
+  const allowedSort   = new Set(['newest', 'oldest']);
+  const allowedFilter = new Set(['all', 'watched', 'unwatched', 'edited', 'not-edited']);
+  const sort   = allowedSort.has(req.query.sort)     ? req.query.sort   : 'newest';
+  const filter = allowedFilter.has(req.query.filter) ? req.query.filter : 'all';
+
+  let cuttings = db.getCuttingsForUser(req.session.user.id);
+  const totalCount = cuttings.length;
+
+  // Filter by mark state.
+  if (filter === 'watched')      cuttings = cuttings.filter(c => c.watched);
+  else if (filter === 'unwatched') cuttings = cuttings.filter(c => !c.watched);
+  else if (filter === 'edited')    cuttings = cuttings.filter(c => c.edited);
+  else if (filter === 'not-edited') cuttings = cuttings.filter(c => !c.edited);
+
+  // Sort within-day order. getCuttingsForUser already returns rows in
+  // recorded_date DESC + created_at ASC, so 'newest' is a no-op. For
+  // 'oldest', re-sort by (recorded_date ASC, created_at ASC).
+  if (sort === 'oldest') {
+    cuttings = cuttings.slice().sort((a, b) => {
+      const da = a.recorded_date || '';
+      const db = b.recorded_date || '';
+      if (da !== db) return da < db ? -1 : 1;
+      const ca = a.created_at || '';
+      const cb = b.created_at || '';
+      return ca < cb ? -1 : ca > cb ? 1 : 0;
+    });
+  }
 
   // Group by season slug. null/empty -> '_other_' bucket.
   const buckets = {};
@@ -1299,7 +1330,10 @@ app.get('/greenhouse/cuttings', requireAuth, (req, res) => {
     title: 'Cuttings',
     page: 'greenhouse',
     user: req.session.user,
-    totalCount: cuttings.length,
+    totalCount,                    // total before filtering — for the page-level empty state
+    filteredCount: cuttings.length, // after filtering — for the empty-filter state
+    sort,
+    filter,
     seasonGroups,
     emptyExportNotice: req.query.empty === '1',
   });
