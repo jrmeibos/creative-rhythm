@@ -16,30 +16,57 @@
 
         <header class="cm-synth-header">
           <h1 class="cm-synth-title">Your seeds</h1>
-          <p class="cm-synth-subtitle">Not a final answer — just what's true right now. Return to revise whenever something shifts.</p>
+          <p class="cm-synth-subtitle">Not a final answer — just what's true right now. Tap any packet to open it. Return to revise whenever something shifts.</p>
         </header>
 
         <% if (lastUpdated) { %>
         <p class="cm-seeds-lastmod">Last updated: <%= lastUpdated %></p>
         <% } %>
 
-        <div class="cm-seed-list" id="cm-seed-list">
+        <div class="cm-seed-list cm-seed-list--packets" id="cm-seed-list">
           <% seeds.forEach(function(seed) { %>
-          <div class="cm-seed-card" data-seed-id="<%= seed.id %>" data-sort-order="<%= seed.sort_order %>">
-            <input type="text" class="cm-seed-name-input" value="<%= seed.name %>" placeholder="Name this seed...">
-            <textarea class="cm-seed-desc" rows="3" placeholder="What's this seed about? In your own words."><%= seed.description %></textarea>
-            <p class="cm-seed-bullets-label">Notes, examples, details (optional)</p>
-            <div class="cm-seed-bullets">
-              <% seed.bullets.forEach(function(b) { %>
-              <div class="cm-seed-bullet-row">
-                <input type="text" class="cm-seed-bullet-input" value="<%= b %>" placeholder="Add a note...">
-                <button type="button" class="cm-seed-bullet-remove">×</button>
+          <article class="cm-seed-packet" data-seed-id="<%= seed.id %>" data-sort-order="<%= seed.sort_order %>" aria-expanded="false">
+            <header class="cm-seed-packet-header">
+              <span class="cm-seed-packet-sprout" aria-hidden="true">
+                <svg viewBox="0 0 24 28" width="22" height="26" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M12 26 L12 14" fill="none" stroke="#76856C" stroke-width="1.6" stroke-linecap="round"/>
+                  <path d="M12 18 Q4 16 4 8 Q12 8 12 18 Z" fill="#76856C" opacity="0.85"/>
+                  <path d="M12 15 Q20 13 20 6 Q12 6 12 15 Z" fill="#76856C"/>
+                </svg>
+              </span>
+              <h2 class="cm-seed-packet-title"><%= seed.name || 'Untitled seed' %></h2>
+              <span class="cm-seed-packet-caret" aria-hidden="true">↓</span>
+            </header>
+
+            <p class="cm-seed-packet-blurb"><%= seed.description || 'No description yet — tap to add one.' %></p>
+
+            <div class="cm-seed-packet-body" hidden>
+              <label class="cm-seed-packet-label">Name</label>
+              <input type="text" class="cm-seed-name-input" value="<%= seed.name %>" placeholder="Name this seed...">
+
+              <label class="cm-seed-packet-label">In your own words</label>
+              <textarea class="cm-seed-desc" rows="3" placeholder="What's this seed about?"><%= seed.description %></textarea>
+
+              <label class="cm-seed-packet-label">How this shows up in my content</label>
+              <p class="cm-seed-packet-help">Posts, projects, conversations — concrete examples.</p>
+              <textarea class="cm-seed-application" rows="3" placeholder="If this seed sprouted into something you made, what would it be?"><%= seed.application || '' %></textarea>
+
+              <label class="cm-seed-packet-label">Notes, examples, details (optional)</label>
+              <div class="cm-seed-bullets">
+                <% (seed.bullets || []).forEach(function(b) { %>
+                <div class="cm-seed-bullet-row">
+                  <input type="text" class="cm-seed-bullet-input" value="<%= b %>" placeholder="Add a note...">
+                  <button type="button" class="cm-seed-bullet-remove" aria-label="Remove note">×</button>
+                </div>
+                <% }); %>
               </div>
-              <% }); %>
+              <button type="button" class="cm-seed-add-bullet">+ Add note</button>
+
+              <div class="cm-seed-packet-footer">
+                <button type="button" class="cm-seed-remove">× Remove seed</button>
+              </div>
             </div>
-            <button type="button" class="cm-seed-add-bullet">+ Add note</button>
-            <button type="button" class="cm-seed-remove">× Remove seed</button>
-          </div>
+          </article>
           <% }); %>
         </div>
 
@@ -77,21 +104,22 @@
       return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
     }
 
-    function getSeedData(card) {
+    function getSeedData(packet) {
       return {
-        name: (card.querySelector('.cm-seed-name-input').value || '').trim(),
-        description: card.querySelector('.cm-seed-desc').value || '',
-        bullets: Array.from(card.querySelectorAll('.cm-seed-bullet-input'))
+        name: (packet.querySelector('.cm-seed-name-input').value || '').trim(),
+        description: packet.querySelector('.cm-seed-desc').value || '',
+        application: packet.querySelector('.cm-seed-application').value || '',
+        bullets: Array.from(packet.querySelectorAll('.cm-seed-bullet-input'))
                       .map(function(i) { return i.value; })
                       .filter(function(v) { return v.trim(); }),
-        sortOrder: parseInt(card.dataset.sortOrder) || 0,
+        sortOrder: parseInt(packet.dataset.sortOrder) || 0,
       };
     }
 
-    async function saveSeed(card) {
-      const seedId = card.dataset.seedId;
+    async function saveSeed(packet) {
+      const seedId = packet.dataset.seedId;
       if (!seedId) return;
-      const data = getSeedData(card);
+      const data = getSeedData(packet);
       if (!data.name) return;
       try {
         await fetch('/api/seed-packets/seeds/' + seedId, {
@@ -99,53 +127,64 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(data),
         });
+        // Sync collapsed-view text from the saved fields without re-fetching.
+        const titleEl = packet.querySelector('.cm-seed-packet-title');
+        if (titleEl) titleEl.textContent = data.name || 'Untitled seed';
+        const blurbEl = packet.querySelector('.cm-seed-packet-blurb');
+        if (blurbEl) blurbEl.textContent = data.description || 'No description yet — tap to add one.';
       } catch(e) {}
     }
 
     const debouncedSave = debounce(saveSeed, 800);
 
-    function attachCardListeners(card) {
-      card.querySelectorAll('.cm-seed-name-input, .cm-seed-desc').forEach(function(el) {
-        el.addEventListener('input', function() { debouncedSave(card); });
+    function attachPacketListeners(packet) {
+      packet.querySelectorAll('.cm-seed-name-input, .cm-seed-desc, .cm-seed-application').forEach(function(el) {
+        el.addEventListener('input', function() { debouncedSave(packet); });
       });
-      refreshBulletListeners(card);
+      refreshBulletListeners(packet);
     }
 
-    function refreshBulletListeners(card) {
-      card.querySelectorAll('.cm-seed-bullet-input').forEach(function(input) {
-        input.addEventListener('input', function() { debouncedSave(card); });
+    function refreshBulletListeners(packet) {
+      packet.querySelectorAll('.cm-seed-bullet-input').forEach(function(input) {
+        const fresh = input.cloneNode(true);
+        input.parentNode.replaceChild(fresh, input);
+        fresh.addEventListener('input', function() { debouncedSave(packet); });
       });
-      card.querySelectorAll('.cm-seed-bullet-remove').forEach(function(btn) {
+      packet.querySelectorAll('.cm-seed-bullet-remove').forEach(function(btn) {
         const fresh = btn.cloneNode(true);
         btn.parentNode.replaceChild(fresh, btn);
         fresh.addEventListener('click', function() {
           fresh.closest('.cm-seed-bullet-row').remove();
-          debouncedSave(card);
+          debouncedSave(packet);
         });
       });
     }
 
-    function attachRemoveListener(card) {
-      const btn = card.querySelector('.cm-seed-remove');
+    function attachRemoveListener(packet) {
+      const btn = packet.querySelector('.cm-seed-remove');
       if (!btn) return;
-      btn.addEventListener('click', async function() {
+      btn.addEventListener('click', async function(e) {
+        e.stopPropagation();
         if (!confirm('Remove this seed?')) return;
-        const seedId = card.dataset.seedId;
+        const seedId = packet.dataset.seedId;
         if (seedId) {
           try { await fetch('/api/seed-packets/seeds/' + seedId, { method: 'DELETE' }); } catch(e) {}
         }
-        card.remove();
+        packet.remove();
       });
     }
 
-    function attachAddBulletListener(card) {
-      const btn = card.querySelector('.cm-seed-add-bullet');
+    function attachAddBulletListener(packet) {
+      const btn = packet.querySelector('.cm-seed-add-bullet');
       if (!btn) return;
-      btn.addEventListener('click', function() { addBulletToCard(card, ''); });
+      btn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        addBulletToPacket(packet, '');
+      });
     }
 
-    function addBulletToCard(card, text) {
-      const bulletsDiv = card.querySelector('.cm-seed-bullets');
+    function addBulletToPacket(packet, text) {
+      const bulletsDiv = packet.querySelector('.cm-seed-bullets');
       const row = document.createElement('div');
       row.className = 'cm-seed-bullet-row';
       const input = document.createElement('input');
@@ -153,73 +192,129 @@
       input.className = 'cm-seed-bullet-input';
       input.value = text || '';
       input.placeholder = 'Add a note...';
-      input.addEventListener('input', function() { debouncedSave(card); });
+      input.addEventListener('input', function() { debouncedSave(packet); });
       const removeBtn = document.createElement('button');
       removeBtn.type = 'button';
       removeBtn.className = 'cm-seed-bullet-remove';
+      removeBtn.setAttribute('aria-label', 'Remove note');
       removeBtn.textContent = '×';
-      removeBtn.addEventListener('click', function() {
+      removeBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
         row.remove();
-        debouncedSave(card);
+        debouncedSave(packet);
       });
       row.appendChild(input);
       row.appendChild(removeBtn);
       bulletsDiv.appendChild(row);
       if (!text) input.focus();
-      debouncedSave(card);
+      debouncedSave(packet);
     }
 
-    // ── Attach listeners to existing cards ────────────────────────────────────
+    // ── Expand/collapse on header click ───────────────────────────────────────
 
-    document.querySelectorAll('.cm-seed-card').forEach(function(card) {
-      attachCardListeners(card);
-      attachRemoveListener(card);
-      attachAddBulletListener(card);
+    function setExpanded(packet, open) {
+      const body = packet.querySelector('.cm-seed-packet-body');
+      const caret = packet.querySelector('.cm-seed-packet-caret');
+      if (open) {
+        packet.classList.add('cm-seed-packet--open');
+        packet.setAttribute('aria-expanded', 'true');
+        body.hidden = false;
+        if (caret) caret.textContent = '↑';
+      } else {
+        packet.classList.remove('cm-seed-packet--open');
+        packet.setAttribute('aria-expanded', 'false');
+        body.hidden = true;
+        if (caret) caret.textContent = '↓';
+      }
+    }
+
+    function attachToggleListener(packet) {
+      const header = packet.querySelector('.cm-seed-packet-header');
+      const blurb  = packet.querySelector('.cm-seed-packet-blurb');
+      [header, blurb].forEach(function(el) {
+        if (!el) return;
+        el.addEventListener('click', function() {
+          setExpanded(packet, !packet.classList.contains('cm-seed-packet--open'));
+        });
+      });
+    }
+
+    // ── Attach listeners to existing packets ─────────────────────────────────
+
+    document.querySelectorAll('.cm-seed-packet').forEach(function(packet) {
+      attachPacketListeners(packet);
+      attachRemoveListener(packet);
+      attachAddBulletListener(packet);
+      attachToggleListener(packet);
     });
 
     // ── Add a new seed ────────────────────────────────────────────────────────
 
     document.getElementById('cm-add-seed-btn').addEventListener('click', async function() {
-      const sortOrder = document.querySelectorAll('.cm-seed-card').length;
+      const sortOrder = document.querySelectorAll('.cm-seed-packet').length;
       try {
         const res = await fetch('/api/seed-packets/seeds', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name: 'New seed', description: '', bullets: [], sortOrder }),
+          body: JSON.stringify({ name: 'New seed', description: '', application: '', bullets: [], sortOrder }),
         });
         const seed = await res.json();
-        const card = buildCard(seed);
-        document.getElementById('cm-seed-list').appendChild(card);
-        card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-        const nameInput = card.querySelector('.cm-seed-name-input');
+        const packet = buildPacket(seed);
+        document.getElementById('cm-seed-list').appendChild(packet);
+        setExpanded(packet, true);
+        packet.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        const nameInput = packet.querySelector('.cm-seed-name-input');
         nameInput.focus();
         nameInput.select();
       } catch(e) {}
     });
 
-    function buildCard(seed) {
-      const div = document.createElement('div');
-      div.className = 'cm-seed-card';
-      div.dataset.seedId = String(seed.id);
-      div.dataset.sortOrder = String(seed.sort_order || 0);
+    function buildPacket(seed) {
+      const article = document.createElement('article');
+      article.className = 'cm-seed-packet';
+      article.dataset.seedId = String(seed.id);
+      article.dataset.sortOrder = String(seed.sort_order || 0);
+      article.setAttribute('aria-expanded', 'false');
       const bullets = Array.isArray(seed.bullets) ? seed.bullets : [];
-      div.innerHTML = `
-        <input type="text" class="cm-seed-name-input" value="${escHtml(seed.name || '')}" placeholder="Name this seed...">
-        <textarea class="cm-seed-desc" rows="3" placeholder="What's this seed about? In your own words.">${escHtml(seed.description || '')}</textarea>
-        <p class="cm-seed-bullets-label">Notes, examples, details (optional)</p>
-        <div class="cm-seed-bullets">${bullets.map(function(b) {
-          return '<div class="cm-seed-bullet-row">'
-            + '<input type="text" class="cm-seed-bullet-input" value="' + escHtml(b) + '" placeholder="Add a note...">'
-            + '<button type="button" class="cm-seed-bullet-remove">×</button>'
-            + '</div>';
-        }).join('')}</div>
-        <button type="button" class="cm-seed-add-bullet">+ Add note</button>
-        <button type="button" class="cm-seed-remove">× Remove seed</button>
-      `;
-      attachCardListeners(div);
-      attachRemoveListener(div);
-      attachAddBulletListener(div);
-      return div;
+      const bulletsHtml = bullets.map(function(b) {
+        return '<div class="cm-seed-bullet-row">'
+          + '<input type="text" class="cm-seed-bullet-input" value="' + escHtml(b) + '" placeholder="Add a note...">'
+          + '<button type="button" class="cm-seed-bullet-remove" aria-label="Remove note">×</button>'
+          + '</div>';
+      }).join('');
+      article.innerHTML = ''
+        + '<header class="cm-seed-packet-header">'
+        +   '<span class="cm-seed-packet-sprout" aria-hidden="true">'
+        +     '<svg viewBox="0 0 24 28" width="22" height="26" xmlns="http://www.w3.org/2000/svg">'
+        +       '<path d="M12 26 L12 14" fill="none" stroke="#76856C" stroke-width="1.6" stroke-linecap="round"/>'
+        +       '<path d="M12 18 Q4 16 4 8 Q12 8 12 18 Z" fill="#76856C" opacity="0.85"/>'
+        +       '<path d="M12 15 Q20 13 20 6 Q12 6 12 15 Z" fill="#76856C"/>'
+        +     '</svg>'
+        +   '</span>'
+        +   '<h2 class="cm-seed-packet-title">' + escHtml(seed.name || 'Untitled seed') + '</h2>'
+        +   '<span class="cm-seed-packet-caret" aria-hidden="true">↓</span>'
+        + '</header>'
+        + '<p class="cm-seed-packet-blurb">' + escHtml(seed.description || 'No description yet — tap to add one.') + '</p>'
+        + '<div class="cm-seed-packet-body" hidden>'
+        +   '<label class="cm-seed-packet-label">Name</label>'
+        +   '<input type="text" class="cm-seed-name-input" value="' + escHtml(seed.name || '') + '" placeholder="Name this seed...">'
+        +   '<label class="cm-seed-packet-label">In your own words</label>'
+        +   '<textarea class="cm-seed-desc" rows="3" placeholder="What’s this seed about?">' + escHtml(seed.description || '') + '</textarea>'
+        +   '<label class="cm-seed-packet-label">How this shows up in my content</label>'
+        +   '<p class="cm-seed-packet-help">Posts, projects, conversations — concrete examples.</p>'
+        +   '<textarea class="cm-seed-application" rows="3" placeholder="If this seed sprouted into something you made, what would it be?">' + escHtml(seed.application || '') + '</textarea>'
+        +   '<label class="cm-seed-packet-label">Notes, examples, details (optional)</label>'
+        +   '<div class="cm-seed-bullets">' + bulletsHtml + '</div>'
+        +   '<button type="button" class="cm-seed-add-bullet">+ Add note</button>'
+        +   '<div class="cm-seed-packet-footer">'
+        +     '<button type="button" class="cm-seed-remove">× Remove seed</button>'
+        +   '</div>'
+        + '</div>';
+      attachPacketListeners(article);
+      attachRemoveListener(article);
+      attachAddBulletListener(article);
+      attachToggleListener(article);
+      return article;
     }
 
     // ── Highlights bank toggle ────────────────────────────────────────────────

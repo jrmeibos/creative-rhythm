@@ -870,3 +870,175 @@ mark.cm-highlight {
   color: rgba(16, 15, 16, 0.55);
   margin: 0 0.15rem;
 }
+
+/* ─── Seed packet cards (final seeds page) ─────────────────────────────────
+   Playful + crafty: warm cream paper, apricity-gold ribbon top band, sprout
+   glyph, gentle stitched-style dashed top edge, soft shadow. Collapsed by
+   default so the list scans as a row of named packets; tap to open.
+*/
+
+.cm-seed-list--packets {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  margin-bottom: 1rem;
+}
+
+.cm-seed-packet {
+  position: relative;
+  background: linear-gradient(180deg, #FBF6E8 0%, var(--color-blank-page) 100%);
+  border: 1.5px solid rgba(112, 92, 108, 0.12);
+  border-radius: 14px;
+  padding: 1.2rem 1.4rem 1.25rem;
+  box-shadow: 0 2px 14px rgba(16, 15, 16, 0.05);
+  cursor: pointer;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+}
+
+/* Stitched top edge — a thin dashed line that reads as a packet seal */
+.cm-seed-packet::before {
+  content: '';
+  position: absolute;
+  top: 0.45rem;
+  left: 0.9rem;
+  right: 0.9rem;
+  height: 0;
+  border-top: 1.2px dashed rgba(246, 201, 92, 0.55);
+  opacity: 0.85;
+  pointer-events: none;
+}
+
+.cm-seed-packet:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 22px rgba(16, 15, 16, 0.08);
+  border-color: rgba(246, 201, 92, 0.5);
+}
+
+.cm-seed-packet--open {
+  cursor: default;
+  background: var(--color-blank-page);
+}
+.cm-seed-packet--open:hover { transform: none; }
+
+.cm-seed-packet-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.4rem 0.75rem 0.55rem;
+  margin: 0 -0.4rem 0.75rem;
+  background: linear-gradient(90deg, rgba(246, 201, 92, 0.35) 0%, rgba(246, 201, 92, 0.18) 100%);
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.cm-seed-packet-sprout {
+  display: inline-flex;
+  flex-shrink: 0;
+}
+
+.cm-seed-packet-title {
+  flex: 1;
+  font-family: var(--font-display);
+  font-size: 1.35rem;
+  font-weight: 400;
+  color: var(--color-ink-stained);
+  margin: 0;
+  line-height: 1.2;
+}
+
+.cm-seed-packet-caret {
+  font-size: 1rem;
+  color: rgba(16, 15, 16, 0.5);
+  flex-shrink: 0;
+  transition: color 0.15s;
+}
+.cm-seed-packet:hover .cm-seed-packet-caret { color: var(--color-bloem); }
+
+.cm-seed-packet-blurb {
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+  font-weight: 300;
+  line-height: 1.55;
+  color: rgba(16, 15, 16, 0.72);
+  margin: 0;
+  cursor: pointer;
+}
+.cm-seed-packet--open .cm-seed-packet-blurb { display: none; }
+
+/* ── Expanded body ─────────────────────────────────────────────────────── */
+
+.cm-seed-packet-body {
+  margin-top: 0.5rem;
+  padding-top: 0.75rem;
+  border-top: 1px dashed rgba(112, 92, 108, 0.15);
+}
+
+.cm-seed-packet-label {
+  display: block;
+  font-family: var(--font-body);
+  font-size: 0.74rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: rgba(16, 15, 16, 0.55);
+  margin: 0.85rem 0 0.3rem;
+}
+.cm-seed-packet-body > .cm-seed-packet-label:first-child {
+  margin-top: 0;
+}
+
+.cm-seed-packet-help {
+  font-family: var(--font-body);
+  font-size: 0.82rem;
+  font-weight: 300;
+  font-style: italic;
+  color: rgba(16, 15, 16, 0.5);
+  margin: -0.15rem 0 0.4rem 0;
+  line-height: 1.4;
+}
+
+.cm-seed-application,
+.cm-seed-packet-body .cm-seed-desc,
+.cm-seed-packet-body .cm-seed-name-input {
+  width: 100%;
+  box-sizing: border-box;
+  background: var(--color-pearl);
+  border: 1.5px solid rgba(112, 92, 108, 0.18);
+  border-radius: 8px;
+  padding: 0.55rem 0.75rem;
+  font-family: var(--font-body);
+  font-size: 0.92rem;
+  font-weight: 300;
+  color: var(--color-ink-stained);
+  line-height: 1.55;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  resize: vertical;
+}
+.cm-seed-packet-body .cm-seed-name-input { font-weight: 500; font-size: 1rem; }
+
+.cm-seed-application:focus,
+.cm-seed-packet-body .cm-seed-desc:focus,
+.cm-seed-packet-body .cm-seed-name-input:focus {
+  border-color: var(--color-bloem);
+  box-shadow: 0 0 0 3px rgba(112, 92, 108, 0.08);
+}
+
+.cm-seed-packet-footer {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 1.1rem;
+}
+.cm-seed-packet-footer .cm-seed-remove {
+  background: transparent;
+  border: none;
+  color: rgba(16, 15, 16, 0.4);
+  font-family: var(--font-body);
+  font-size: 0.82rem;
+  cursor: pointer;
+  padding: 0.3rem 0.25rem;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  transition: color 0.15s;
+}
+.cm-seed-packet-footer .cm-seed-remove:hover { color: var(--color-bloem); }

@@ -602,6 +602,14 @@ db.exec(`
     CREATE INDEX IF NOT EXISTS idx_spse_user_order ON seed_packet_seeds(user_id, sort_order);
   `);
 
+  // Seeds: add `application` for the "How this shows up in my content" field
+  // on the seed-packets/seeds page. Optional free text per seed.
+  const spseCols = db.prepare("PRAGMA table_info(seed_packet_seeds)").all().map(r => r.name);
+  if (!spseCols.includes('application')) {
+    db.exec("ALTER TABLE seed_packet_seeds ADD COLUMN application TEXT DEFAULT ''");
+    console.log('✓ Migrated: added application to seed_packet_seeds');
+  }
+
   // Add curricular_season column to lessons (idempotent)
   const hasLessonSeason = db.prepare("PRAGMA table_info(lessons)").all().some(c => c.name === 'curricular_season');
   if (!hasLessonSeason) {
@@ -1926,22 +1934,22 @@ module.exports = {
     ).get(userId).c;
   },
 
-  createSeedPacketSeed(userId, name, description, bullets, sortOrder) {
+  createSeedPacketSeed(userId, name, description, bullets, sortOrder, application) {
     const bulletsJson = JSON.stringify(Array.isArray(bullets) ? bullets : []);
     const result = db.prepare(
-      'INSERT INTO seed_packet_seeds (user_id, name, description, bullets, sort_order) VALUES (?, ?, ?, ?, ?)'
-    ).run(userId, name, description || '', bulletsJson, sortOrder || 0);
+      'INSERT INTO seed_packet_seeds (user_id, name, description, bullets, sort_order, application) VALUES (?, ?, ?, ?, ?, ?)'
+    ).run(userId, name, description || '', bulletsJson, sortOrder || 0, application || '');
     const row = db.prepare('SELECT * FROM seed_packet_seeds WHERE id = ?').get(result.lastInsertRowid);
     return { ...row, bullets: JSON.parse(row.bullets || '[]') };
   },
 
-  updateSeedPacketSeed(seedId, userId, name, description, bullets, sortOrder) {
+  updateSeedPacketSeed(seedId, userId, name, description, bullets, sortOrder, application) {
     const bulletsJson = JSON.stringify(Array.isArray(bullets) ? bullets : []);
     return db.prepare(`
       UPDATE seed_packet_seeds
-      SET name = ?, description = ?, bullets = ?, sort_order = ?, updated_at = CURRENT_TIMESTAMP
+      SET name = ?, description = ?, bullets = ?, sort_order = ?, application = ?, updated_at = CURRENT_TIMESTAMP
       WHERE id = ? AND user_id = ?
-    `).run(name, description || '', bulletsJson, sortOrder || 0, seedId, userId);
+    `).run(name, description || '', bulletsJson, sortOrder || 0, application || '', seedId, userId);
   },
 
   deleteSeedPacketSeed(seedId, userId) {

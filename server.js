@@ -1802,7 +1802,8 @@ app.post('/api/seed-packets/seeds', requireAuth, (req, res) => {
     userId, name,
     req.body.description || '',
     Array.isArray(req.body.bullets) ? req.body.bullets : [],
-    Number(req.body.sortOrder) || 0
+    Number(req.body.sortOrder) || 0,
+    req.body.application || ''
   );
   res.json(seed);
 });
@@ -1815,7 +1816,8 @@ app.put('/api/seed-packets/seeds/:id', requireAuth, (req, res) => {
     name,
     req.body.description || '',
     Array.isArray(req.body.bullets) ? req.body.bullets : [],
-    Number(req.body.sortOrder) || 0
+    Number(req.body.sortOrder) || 0,
+    req.body.application || ''
   );
   res.json({ ok: true });
 });
