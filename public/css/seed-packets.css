@@ -145,7 +145,7 @@
 /* ─── Seed Packets — angle page ────────────────────────────────────────── */
 
 .cm-back-link {
-  display: inline-block;
+  display: block;
   font-family: var(--font-display);
   font-style: italic;
   font-size: 0.875rem;
