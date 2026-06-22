@@ -1215,3 +1215,61 @@ details[open] .gh-planted-summary::before { content: '▾  '; }
   margin-top: 0.5rem;
 }
 .gh-facets-extra.is-hidden { display: none; }
+
+/* ─── Cuttings: Watched / Edited marks per entry ────────────────────────── */
+
+.cutting-marks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.85rem;
+}
+
+.cutting-mark-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.32rem 0.8rem;
+  border: 1.5px solid rgba(112, 92, 108, 0.25);
+  background: transparent;
+  color: rgba(16, 15, 16, 0.55);
+  border-radius: 999px;
+  font-family: var(--font-body);
+  font-size: 0.78rem;
+  font-weight: 400;
+  cursor: pointer;
+  transition: background-color 0.15s, color 0.15s, border-color 0.15s, opacity 0.15s;
+}
+.cutting-mark-btn:hover {
+  border-color: var(--color-bloem);
+  color: var(--color-bloem);
+}
+.cutting-mark-btn:focus-visible {
+  outline: 2px solid var(--color-bloem);
+  outline-offset: 2px;
+}
+.cutting-mark-btn:disabled { opacity: 0.6; cursor: default; }
+
+.cutting-mark-icon {
+  display: inline-block;
+  width: 0.85rem;
+  text-align: center;
+  font-weight: 600;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.cutting-mark-btn.is-on {
+  background: var(--color-bloem);
+  border-color: var(--color-bloem);
+  color: #FAFAFA;
+}
+.cutting-mark-btn.is-on:hover {
+  background: var(--color-bloem-mid);
+  border-color: var(--color-bloem-mid);
+}
+.cutting-mark-btn.is-on .cutting-mark-icon { opacity: 1; }
+
+@media (max-width: 480px) {
+  .cutting-mark-btn { padding: 0.3rem 0.7rem; font-size: 0.76rem; }
+}

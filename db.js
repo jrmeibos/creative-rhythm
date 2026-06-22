@@ -487,6 +487,19 @@ db.exec(`
     console.log('✓ Migrated: added recorded_date to cuttings + backfilled from created_at');
   }
 
+  // Cuttings: watched/edited marks — booleans (0/1) per cutting so the
+  // student can flag that they rewatched a past take or edited it externally.
+  // Default 0 so existing rows seamlessly read as unmarked.
+  const cuttingCols2 = db.prepare("PRAGMA table_info(cuttings)").all().map(r => r.name);
+  if (!cuttingCols2.includes('watched')) {
+    db.exec("ALTER TABLE cuttings ADD COLUMN watched INTEGER DEFAULT 0");
+    console.log('✓ Migrated: added watched to cuttings');
+  }
+  if (!cuttingCols2.includes('edited')) {
+    db.exec("ALTER TABLE cuttings ADD COLUMN edited INTEGER DEFAULT 0");
+    console.log('✓ Migrated: added edited to cuttings');
+  }
+
   // Avatars moved to /data/avatars — old paths pointing to /uploads/avatars/ are now broken.
   // Reset them so users see initials until they re-upload.
   db.exec("UPDATE users SET profile_photo = NULL WHERE profile_photo LIKE '/uploads/avatars/%'");
@@ -1670,7 +1683,8 @@ module.exports = {
   getCuttingsForUser(userId) {
     return db.prepare(
       `SELECT id, created_at, recorded_date, season, prompt,
-              reflection_text, talked_about, how_it_felt, takeaway
+              reflection_text, talked_about, how_it_felt, takeaway,
+              watched, edited
        FROM cuttings WHERE user_id = ?
        ORDER BY recorded_date DESC, created_at ASC`
     ).all(userId);
@@ -1681,7 +1695,8 @@ module.exports = {
   getCuttingsForUserChronological(userId) {
     return db.prepare(
       `SELECT id, created_at, recorded_date, season, prompt,
-              reflection_text, talked_about, how_it_felt, takeaway
+              reflection_text, talked_about, how_it_felt, takeaway,
+              watched, edited
        FROM cuttings WHERE user_id = ?
        ORDER BY recorded_date ASC, created_at ASC`
     ).all(userId);
@@ -1693,10 +1708,25 @@ module.exports = {
   getCuttingsForUserOnDate(userId, recordedDate) {
     return db.prepare(
       `SELECT id, created_at, recorded_date, season, prompt,
-              reflection_text, talked_about, how_it_felt, takeaway
+              reflection_text, talked_about, how_it_felt, takeaway,
+              watched, edited
        FROM cuttings WHERE user_id = ? AND recorded_date = ?
        ORDER BY created_at ASC`
     ).all(userId, recordedDate);
+  },
+
+  // Update the watched/edited mark on a cutting. Whitelists `mark` so it can
+  // safely interpolate into the SQL column name; coerces value to 0|1; scopes
+  // the UPDATE by user_id so a student can only mark their own rows. Returns
+  // the rows-changed count (0 if no row matched or the value was already set).
+  setCuttingMark(cuttingId, userId, mark, value) {
+    if (mark !== 'watched' && mark !== 'edited') {
+      throw new Error('Invalid mark: ' + mark);
+    }
+    const v = value ? 1 : 0;
+    return db.prepare(
+      `UPDATE cuttings SET ${mark} = ? WHERE id = ? AND user_id = ?`
+    ).run(v, cuttingId, userId).changes;
   },
 
   // Count-only: for each user, how many DISTINCT days within [startDate,

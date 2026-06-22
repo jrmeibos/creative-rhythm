@@ -1385,6 +1385,29 @@ function formatDateRange(earliestStr, latestStr) {
   return `${monthName(a)} ${ay} – ${monthName(b)} ${by}`;
 }
 
+// Mark a cutting as watched/edited (or unmark it). Latches on by default;
+// clicking again un-marks for misclick recovery. Booleans only — no count
+// or history.
+app.post('/greenhouse/cuttings/:id/mark', requireAuth, (req, res) => {
+  const cuttingId = parseInt(req.params.id, 10);
+  if (!Number.isInteger(cuttingId) || cuttingId <= 0) {
+    return res.status(400).json({ error: 'Invalid cutting id.' });
+  }
+  const { mark, value } = req.body || {};
+  if (mark !== 'watched' && mark !== 'edited') {
+    return res.status(400).json({ error: "mark must be 'watched' or 'edited'." });
+  }
+  const v = value === 1 || value === true || value === '1' ? 1 : 0;
+  const changed = db.setCuttingMark(cuttingId, req.session.user.id, mark, v);
+  if (changed === 0) {
+    // Either the cutting doesn't exist, isn't owned by this user, or the
+    // mark was already at v. Treat all three as a no-op success — the
+    // client just wants to know the row is in the requested state.
+    return res.json({ ok: true, mark, value: v, changed: 0 });
+  }
+  res.json({ ok: true, mark, value: v, changed });
+});
+
 app.get('/greenhouse/cuttings/export', requireAuth, async (req, res) => {
   const userId = req.session.user.id;
   const cuttings = db.getCuttingsForUserChronological(userId);

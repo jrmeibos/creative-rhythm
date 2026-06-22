@@ -90,6 +90,22 @@
                           <p class="cutting-text"><%= c[p.key] %></p>
                         </div>
                       <% }); %>
+                      <div class="cutting-marks" data-cutting-id="<%= c.id %>">
+                        <button type="button"
+                                class="cutting-mark-btn <%= c.watched ? 'is-on' : '' %>"
+                                data-mark="watched"
+                                aria-pressed="<%= c.watched ? 'true' : 'false' %>">
+                          <span class="cutting-mark-icon" aria-hidden="true">✓</span>
+                          <span class="cutting-mark-label">Watched</span>
+                        </button>
+                        <button type="button"
+                                class="cutting-mark-btn <%= c.edited ? 'is-on' : '' %>"
+                                data-mark="edited"
+                                aria-pressed="<%= c.edited ? 'true' : 'false' %>">
+                          <span class="cutting-mark-icon" aria-hidden="true">✓</span>
+                          <span class="cutting-mark-label">Edited</span>
+                        </button>
+                      </div>
                     </article>
                   <% }); %>
                 </li>
@@ -108,5 +124,37 @@
 
     </main>
   </div>
+
+  <script>
+    // Cuttings watched/edited toggle. Delegated so it works for every entry
+    // without per-card IDs. Flips the .is-on class + aria-pressed optimistically;
+    // on a failed POST, reverts the visual state and surfaces an alert.
+    document.addEventListener('click', function (e) {
+      const btn = e.target.closest('.cutting-mark-btn');
+      if (!btn) return;
+      const row = btn.closest('.cutting-marks');
+      if (!row) return;
+      const cuttingId = row.getAttribute('data-cutting-id');
+      const mark = btn.getAttribute('data-mark');
+      const willBeOn = !btn.classList.contains('is-on');
+      btn.disabled = true;
+      btn.classList.toggle('is-on', willBeOn);
+      btn.setAttribute('aria-pressed', willBeOn ? 'true' : 'false');
+      fetch('/greenhouse/cuttings/' + encodeURIComponent(cuttingId) + '/mark', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ mark: mark, value: willBeOn ? 1 : 0 })
+      }).then(function (r) {
+        if (!r.ok) throw new Error('save failed');
+      }).catch(function () {
+        // Revert
+        btn.classList.toggle('is-on', !willBeOn);
+        btn.setAttribute('aria-pressed', !willBeOn ? 'true' : 'false');
+        alert('Could not save. Please try again.');
+      }).finally(function () {
+        btn.disabled = false;
+      });
+    });
+  </script>
 </body>
 </html>
