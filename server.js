@@ -1564,7 +1564,9 @@ app.get('/seed-packets/synthesize/export', requireAuth, requireSynthesisEligible
 });
 
 // ─── Seed Packets: Seeds export ──────────────────────────────────────────
-app.get('/seed-packets/synthesize/name/export', requireAuth, requireSynthesisEligible, async (req, res) => {
+// Same gating as the parent page (requireAuth — the seeds page itself does
+// not require synthesis-eligibility since named seeds may already exist).
+app.get('/seed-packets/seeds/export', requireAuth, async (req, res) => {
   const userId = req.session.user.id;
   const seeds = db.getSeedPacketSeeds(userId);
 
