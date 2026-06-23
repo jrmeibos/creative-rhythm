@@ -50,14 +50,19 @@
         <div class="gh-beds">
           <% for (let n = 1; n <= 3; n++) { %>
             <% const isBedEmpty = emptyBedPositions.includes(n); %>
-            <div class="gh-bed">
+            <% const isFallow = fallowBedNumbers.includes(n); %>
+            <div class="gh-bed<%= isFallow ? ' gh-bed--fallow' : '' %>">
               <span class="gh-bed-label">Bed <%= n %></span>
               <% if (!isBedEmpty) { %>
                 <span class="gh-bed-filled-note">Planted</span>
+              <% } else if (isFallow) { %>
+                <p class="gh-bed-fallow-note">Resting this season</p>
+                <a href="/greenhouse/plant?bed=<%= n %>" class="gh-bed-fallow-replant">Plant something here →</a>
               <% } else if (isWinterLocked) { %>
                 <p class="gh-bed-winter-note">It's currently Winter. Come back in Spring to plant your goals.</p>
               <% } else { %>
                 <a href="/greenhouse/plant?bed=<%= n %>" class="gh-bed-cta">+ plant a goal</a>
+                <a href="#" class="gh-bed-fallow-link" data-bed="<%= n %>">Leave this bed fallow</a>
               <% } %>
             </div>
           <% } %>
@@ -318,7 +323,13 @@
                            goals 2 and 3 after planting goal 1. No Winter gate
                            here — once tending starts, the "wait for Spring"
                            gate has been crossed. -->
-                      <a href="/greenhouse/plant?bed=<%= n %>" class="gh-bed-cta">+ plant a goal</a>
+                      <% if (fallowBedNumbers.includes(n)) { %>
+                        <p class="gh-bed-fallow-note">Resting this season</p>
+                        <a href="/greenhouse/plant?bed=<%= n %>" class="gh-bed-fallow-replant">Plant something here →</a>
+                      <% } else { %>
+                        <a href="/greenhouse/plant?bed=<%= n %>" class="gh-bed-cta">+ plant a goal</a>
+                        <a href="#" class="gh-bed-fallow-link" data-bed="<%= n %>">Leave this bed fallow</a>
+                      <% } %>
                     <% } %>
                   </div>
                   <div class="gh-edit-form is-hidden" id="gh-edit-<%= n %>">
@@ -451,6 +462,28 @@
   </div>
 
   <script>
+    // ── Leave a bed fallow (quiet text link → POST → reload) ─────────────────
+    // Delegated so it works for the link in both beds-empty and tending states.
+    // No confirm dialog — the student can reverse the choice from the fallow
+    // state by clicking 'Plant something here', so the action isn't destructive.
+    document.addEventListener('click', function (e) {
+      const link = e.target.closest('.gh-bed-fallow-link');
+      if (!link) return;
+      e.preventDefault();
+      const bed = parseInt(link.dataset.bed, 10);
+      if (![1, 2, 3].includes(bed)) return;
+      fetch('/api/greenhouse/leave-fallow', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ bed: bed })
+      }).then(function (r) {
+        if (!r.ok) throw new Error('save failed');
+        window.location.reload();
+      }).catch(function () {
+        alert('Could not save. Please try again.');
+      });
+    });
+
     // ── Facets expand/collapse (per-goal "See more / See less") ─────────────
     // Delegated so it works for every bed card without needing scoped IDs,
     // and survives any future fetch-and-swap of card markup.

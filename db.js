@@ -135,6 +135,15 @@ db.exec(`
     UNIQUE(user_id, seed_number)
   );
 
+  CREATE TABLE IF NOT EXISTS fallow_beds (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id     INTEGER NOT NULL,
+    bed_number  INTEGER NOT NULL,
+    set_at      DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id),
+    UNIQUE(user_id, bed_number)
+  );
+
   CREATE TABLE IF NOT EXISTS self_assessments (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER NOT NULL,
@@ -1461,6 +1470,11 @@ module.exports = {
 
   upsertGreenhouseGoalFacets(userId, seedNumber, facets, createdAt, bedPosition = null) {
     const { soil = '', seed = '', water = '', bloom = '' } = facets;
+    // Planting and being fallow are mutually exclusive: clear any fallow row
+    // for this bed when planting it, so a student who marked a bed fallow can
+    // change their mind by re-entering the plant form.
+    db.prepare('DELETE FROM fallow_beds WHERE user_id=? AND bed_number=?')
+      .run(userId, seedNumber);
     const existing = db.prepare(
       'SELECT id FROM goals WHERE user_id=? AND seed_number=? AND is_replacement=0'
     ).get(userId, seedNumber);
@@ -1477,6 +1491,34 @@ module.exports = {
     return db.prepare(
       'INSERT INTO goals (user_id, seed_number, soil, seed, water, bloom, is_active, is_replacement, bed_position) VALUES (?, ?, ?, ?, ?, ?, 1, 0, ?)'
     ).run(userId, seedNumber, soil, seed, water, bloom, bedPosition);
+  },
+
+  // ─── Fallow beds: a row here means "student chose to leave this bed empty
+  // this season." Planting that bed clears the row (see upsertGreenhouseGoal-
+  // Facets). Used by the "all beds resolved" milestone for the admin email.
+  setBedFallow(userId, bedNumber) {
+    return db.prepare(
+      'INSERT OR IGNORE INTO fallow_beds (user_id, bed_number) VALUES (?, ?)'
+    ).run(userId, bedNumber);
+  },
+
+  getFallowBedNumbers(userId) {
+    return db.prepare(
+      'SELECT bed_number FROM fallow_beds WHERE user_id=? ORDER BY bed_number ASC'
+    ).all(userId).map(r => r.bed_number);
+  },
+
+  // True when every bed (1, 2, 3) is either planted (a goal row exists) or
+  // explicitly fallow. Drives the greenhouse_goals_set milestone.
+  areAllBedsResolved(userId) {
+    const plantedBeds = new Set(db.prepare(
+      'SELECT DISTINCT seed_number FROM goals WHERE user_id=? AND is_active=1'
+    ).all(userId).map(r => r.seed_number));
+    const fallowBeds = new Set(this.getFallowBedNumbers(userId));
+    for (let n = 1; n <= 3; n++) {
+      if (!plantedBeds.has(n) && !fallowBeds.has(n)) return false;
+    }
+    return true;
   },
 
   replaceGoalsFacets(userId, seedNumber, facets, createdAt) {

@@ -1175,6 +1175,7 @@ app.get('/greenhouse', requireAuth, (req, res) => {
       gardenStage: null, stageSlug: null, stageLabel: null,
       weekNumber, curricularSeason, isWinterLocked: false,
       emptyBedPositions: null,
+      fallowBedNumbers: [],
     });
   }
 
@@ -1190,6 +1191,11 @@ app.get('/greenhouse', requireAuth, (req, res) => {
   if (state === 'beds-empty') {
     emptyBedPositions = db.getEmptyBedPositions(userId);
   }
+
+  // Fallow beds — the student explicitly chose to leave these empty this
+  // season. Needed in both beds-empty and tending states to render the
+  // 'Resting this season' card variant.
+  const fallowBedNumbers = db.getFallowBedNumbers(userId);
 
   // Load goals only when tending
   let goals = null;
@@ -1243,6 +1249,7 @@ app.get('/greenhouse', requireAuth, (req, res) => {
     curricularSeason,
     isWinterLocked,
     emptyBedPositions,
+    fallowBedNumbers,
   });
 });
 
@@ -1614,6 +1621,18 @@ app.post('/api/greenhouse/plant-bed', requireAuth, (req, res) => {
   const now = getNow(req.session.user);
   const createdAt = now.toISOString().replace('T', ' ').split('.')[0];
   db.upsertGreenhouseGoalFacets(userId, bedNum, { soil, seed, water, bloom }, createdAt, bedNum);
+  res.json({ ok: true });
+});
+
+// Mark a bed as "fallow" (intentionally empty this season). The student can
+// reverse this by re-entering the plant form for the bed — upsertGreenhouse-
+// GoalFacets clears the fallow row automatically when a plant happens.
+app.post('/api/greenhouse/leave-fallow', requireAuth, (req, res) => {
+  const bedNum = parseInt(req.body.bed);
+  if (![1, 2, 3].includes(bedNum)) {
+    return res.status(400).json({ error: 'Invalid bed number.' });
+  }
+  db.setBedFallow(req.session.user.id, bedNum);
   res.json({ ok: true });
 });
 

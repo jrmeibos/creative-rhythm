@@ -837,6 +837,50 @@ details[open] .gh-planted-summary::before { content: '▾  '; }
   margin-top: 0.5rem;
 }
 
+/* ── Fallow bed (intentionally empty this season) ─────────────────────── */
+
+.gh-bed--fallow {
+  opacity: 0.78;
+}
+
+.gh-bed-fallow-link {
+  display: inline-block;
+  margin-top: 0.6rem;
+  font-family: var(--font-body);
+  font-size: 0.78rem;
+  font-style: italic;
+  color: var(--color-understory);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  opacity: 0.7;
+  transition: opacity 0.15s;
+  cursor: pointer;
+}
+.gh-bed-fallow-link:hover { opacity: 1; }
+
+.gh-bed-fallow-note {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 0.9rem;
+  color: var(--color-understory);
+  text-align: center;
+  line-height: 1.5;
+  margin: 0.5rem 0 0.4rem;
+}
+
+.gh-bed-fallow-replant {
+  display: inline-block;
+  margin-top: 0.3rem;
+  font-family: var(--font-body);
+  font-size: 0.82rem;
+  color: var(--color-bloem);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  opacity: 0.85;
+  transition: opacity 0.15s;
+}
+.gh-bed-fallow-replant:hover { opacity: 1; }
+
 .gh-beds-caption {
   text-align: center;
   font-size: 0.82rem;
