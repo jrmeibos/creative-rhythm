@@ -1042,3 +1042,24 @@ mark.cm-highlight {
   transition: color 0.15s;
 }
 .cm-seed-packet-footer .cm-seed-remove:hover { color: var(--color-bloem); }
+
+/* ─── Quiet PDF export link footer (synthesize read + name pages) ──────── */
+
+.cm-export-footer {
+  margin-top: 2.5rem;
+  padding-top: 1.75rem;
+  border-top: 1px solid rgba(112, 92, 108, 0.12);
+  text-align: center;
+}
+.cm-export-link {
+  display: inline-block;
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  font-weight: 300;
+  color: var(--color-bloem);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  opacity: 0.75;
+  transition: opacity 0.15s;
+}
+.cm-export-link:hover { opacity: 1; }

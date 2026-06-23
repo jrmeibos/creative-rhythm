@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Your Seeds</title>
+<style>
+  <%- fontFaceCss %>
+
+  :root {
+    --color-bloem:       #705C6C;
+    --color-understory:  #76856C;
+    --color-apricity:    #F6C95C;
+    --color-pearl:       #F2EEE3;
+    --color-blank-page:  #FAFAFA;
+    --color-ink-stained: #100F10;
+    --font-display: 'Goldage', Georgia, serif;
+    --font-body:    'Jost', system-ui, sans-serif;
+  }
+
+  @page { size: Letter; margin: 0.85in; }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    background: #fff;
+    color: var(--color-ink-stained);
+    font-family: var(--font-body);
+    font-weight: 300;
+    line-height: 1.7;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .cover {
+    page-break-after: always;
+    text-align: center;
+    min-height: calc(11in - 1.7in);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 1.5rem;
+  }
+  .cover-logo-img {
+    display: block;
+    width: 140px;
+    height: 140px;
+    margin: 0 auto 1.25rem;
+  }
+  .cover-title {
+    font-family: var(--font-display);
+    font-weight: 400;
+    font-size: 3.4rem;
+    line-height: 1.1;
+    color: var(--color-bloem);
+  }
+  .cover-range {
+    font-family: var(--font-body);
+    font-weight: 300;
+    font-size: 1.1rem;
+    letter-spacing: 0.04em;
+    color: rgba(16, 15, 16, 0.75);
+    margin-top: 0.5rem;
+  }
+  .cover-source {
+    font-family: var(--font-body);
+    font-weight: 300;
+    font-size: 0.85rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--color-understory);
+    margin-top: 2rem;
+  }
+
+  /* One seed per page break — keeps the keepsake feel like flipping
+     through a stack of named packets. */
+  .seed {
+    page-break-before: always;
+    page-break-inside: avoid;
+  }
+  .seed-header {
+    margin-bottom: 1.25rem;
+  }
+  .seed-number {
+    font-family: var(--font-body);
+    font-weight: 700;
+    font-size: 0.72rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--color-understory);
+    margin: 0 0 0.4rem;
+  }
+  .seed-name {
+    font-family: var(--font-display);
+    font-weight: 400;
+    font-size: 2.4rem;
+    color: var(--color-bloem);
+    line-height: 1.15;
+  }
+  .seed-rule {
+    border: 0;
+    border-top: 1px solid rgba(112, 92, 108, 0.25);
+    margin: 1.1rem 0 1.6rem;
+  }
+
+  .seed-section {
+    margin-bottom: 1.5rem;
+    page-break-inside: avoid;
+  }
+  .seed-section-label {
+    font-family: var(--font-body);
+    font-weight: 600;
+    font-size: 0.74rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: rgba(16, 15, 16, 0.55);
+    margin: 0 0 0.4rem;
+  }
+  .seed-description {
+    font-family: var(--font-body);
+    font-style: italic;
+    font-weight: 300;
+    font-size: 1.05rem;
+    line-height: 1.7;
+    color: var(--color-ink-stained);
+    white-space: pre-wrap;
+  }
+  .seed-application {
+    font-family: var(--font-body);
+    font-weight: 300;
+    font-size: 1.02rem;
+    line-height: 1.75;
+    color: var(--color-ink-stained);
+    white-space: pre-wrap;
+  }
+  .seed-notes {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  .seed-notes li {
+    font-family: var(--font-body);
+    font-weight: 300;
+    font-size: 1rem;
+    line-height: 1.7;
+    color: var(--color-ink-stained);
+    padding-left: 1.1rem;
+    position: relative;
+    margin-bottom: 0.35rem;
+  }
+  .seed-notes li::before {
+    content: '•';
+    position: absolute;
+    left: 0;
+    color: var(--color-understory);
+  }
+
+  .seed-empty-note {
+    font-family: var(--font-body);
+    font-style: italic;
+    font-weight: 300;
+    font-size: 0.95rem;
+    color: rgba(16, 15, 16, 0.4);
+  }
+</style>
+</head>
+<body>
+
+  <section class="cover">
+    <div class="cover-logo">
+      <img src="data:image/png;base64,<%= badgePngBase64 %>"
+           alt=""
+           class="cover-logo-img">
+    </div>
+    <h1 class="cover-title">Your Seeds</h1>
+    <p class="cover-range"><%= generatedLabel %></p>
+    <p class="cover-source">From The Creative's Garden</p>
+  </section>
+
+  <% seeds.forEach(function (seed, si) {
+    const bullets = (seed.bullets || []).filter(function (b) { return String(b || '').trim() !== ''; });
+    const hasDescription = seed.description && String(seed.description).trim() !== '';
+    const hasApplication = seed.application && String(seed.application).trim() !== '';
+  %>
+    <section class="seed">
+      <header class="seed-header">
+        <p class="seed-number">Seed <%= si + 1 %> of <%= seeds.length %></p>
+        <h2 class="seed-name"><%= seed.name || 'Untitled seed' %></h2>
+        <hr class="seed-rule">
+      </header>
+
+      <% if (hasDescription) { %>
+        <div class="seed-section">
+          <p class="seed-section-label">In your own words</p>
+          <p class="seed-description"><%= seed.description %></p>
+        </div>
+      <% } %>
+
+      <% if (hasApplication) { %>
+        <div class="seed-section">
+          <p class="seed-section-label">How this shows up in my content</p>
+          <p class="seed-application"><%= seed.application %></p>
+        </div>
+      <% } %>
+
+      <% if (bullets.length) { %>
+        <div class="seed-section">
+          <p class="seed-section-label">Notes</p>
+          <ul class="seed-notes">
+            <% bullets.forEach(function (b) { %>
+              <li><%= b %></li>
+            <% }); %>
+          </ul>
+        </div>
+      <% } %>
+
+      <% if (!hasDescription && !hasApplication && !bullets.length) { %>
+        <p class="seed-empty-note">No details yet for this seed.</p>
+      <% } %>
+    </section>
+  <% }); %>
+
+</body>
+</html>

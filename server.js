@@ -1514,6 +1514,91 @@ app.get('/greenhouse/cuttings/export', requireAuth, async (req, res) => {
   res.send(pdfBuffer);
 });
 
+// "Generated June 22, 2026" — single-date label for keepsake PDFs that aren't
+// tied to a date range. Same brand voice as the cuttings export's range line.
+function formatGeneratedLabel(now) {
+  return 'Generated ' + now.toLocaleDateString('en-US', {
+    month: 'long', day: 'numeric', year: 'numeric',
+  });
+}
+
+// ─── Seed Packets: Answers export ────────────────────────────────────────
+// Reuses CUTTINGS_PDF_ASSETS (same fonts + brand badge) and the same
+// puppeteer mutex. Same gating as the parent page (requireSynthesisEligible).
+app.get('/seed-packets/synthesize/export', requireAuth, requireSynthesisEligible, async (req, res) => {
+  const userId = req.session.user.id;
+  const allAnswers = db.getSeedPacketAnswersByUser(userId);
+  const userAnswers = {};
+  for (const row of allAnswers) userAnswers[row.question_id] = row.answer_text;
+
+  const html = await ejs.renderFile(
+    path.join(__dirname, 'views', 'exports', 'seed-packets-answers-pdf.ejs'),
+    {
+      badgePngBase64: CUTTINGS_PDF_ASSETS.badgePngBase64,
+      fontFaceCss:    CUTTINGS_PDF_ASSETS.fontFaceCss,
+      angles:         ANGLES,
+      userAnswers,
+      generatedLabel: formatGeneratedLabel(getNow(req.session.user)),
+    }
+  );
+
+  let pdfBuffer;
+  try {
+    pdfBuffer = await renderHtmlToPdf(html);
+  } catch (err) {
+    if (err && err.message === 'PDF render queue timeout') {
+      return res.status(503).type('text/plain').send(
+        'The server is busy generating another PDF right now. Please try again in a moment.'
+      );
+    }
+    console.error('[seed-packets answers export] render failed:', err);
+    return res.status(500).type('text/plain').send('Could not generate your PDF. Please try again.');
+  }
+
+  const todayFilename = toLocalDateString(getNow(req.session.user));
+  res.setHeader('Content-Type', 'application/pdf');
+  res.setHeader('Content-Disposition',
+    `attachment; filename="creatives-garden-answers-${todayFilename}.pdf"`);
+  res.setHeader('Cache-Control', 'private, no-store');
+  res.send(pdfBuffer);
+});
+
+// ─── Seed Packets: Seeds export ──────────────────────────────────────────
+app.get('/seed-packets/synthesize/name/export', requireAuth, requireSynthesisEligible, async (req, res) => {
+  const userId = req.session.user.id;
+  const seeds = db.getSeedPacketSeeds(userId);
+
+  const html = await ejs.renderFile(
+    path.join(__dirname, 'views', 'exports', 'seed-packets-seeds-pdf.ejs'),
+    {
+      badgePngBase64: CUTTINGS_PDF_ASSETS.badgePngBase64,
+      fontFaceCss:    CUTTINGS_PDF_ASSETS.fontFaceCss,
+      seeds,
+      generatedLabel: formatGeneratedLabel(getNow(req.session.user)),
+    }
+  );
+
+  let pdfBuffer;
+  try {
+    pdfBuffer = await renderHtmlToPdf(html);
+  } catch (err) {
+    if (err && err.message === 'PDF render queue timeout') {
+      return res.status(503).type('text/plain').send(
+        'The server is busy generating another PDF right now. Please try again in a moment.'
+      );
+    }
+    console.error('[seed-packets seeds export] render failed:', err);
+    return res.status(500).type('text/plain').send('Could not generate your PDF. Please try again.');
+  }
+
+  const todayFilename = toLocalDateString(getNow(req.session.user));
+  res.setHeader('Content-Type', 'application/pdf');
+  res.setHeader('Content-Disposition',
+    `attachment; filename="creatives-garden-seeds-${todayFilename}.pdf"`);
+  res.setHeader('Cache-Control', 'private, no-store');
+  res.send(pdfBuffer);
+});
+
 app.post('/api/greenhouse/plant-bed', requireAuth, (req, res) => {
   const userId = req.session.user.id;
   const { bed, soil, seed, water, bloom } = req.body;
