@@ -1830,6 +1830,28 @@ module.exports = {
     ).all(userId);
   },
 
+  // All student accounts ordered by id. Used by the weekly cuttings digest
+  // cron — admins are excluded since they don't write cuttings.
+  getAllStudents() {
+    return db.prepare(
+      "SELECT id, name, email FROM users WHERE role = 'student' ORDER BY id ASC"
+    ).all();
+  },
+
+  // Inclusive date window [fromDate, toDate], both YYYY-MM-DD strings.
+  // Used by the weekly cuttings digest cron — pass the previous Mon and Sun
+  // and you get exactly that week's entries, chronologically.
+  getCuttingsForUserInRange(userId, fromDate, toDate) {
+    return db.prepare(
+      `SELECT id, created_at, recorded_date, season, prompt,
+              reflection_text, talked_about, how_it_felt, takeaway,
+              watched, edited
+       FROM cuttings WHERE user_id = ?
+         AND recorded_date BETWEEN ? AND ?
+       ORDER BY recorded_date ASC, created_at ASC`
+    ).all(userId, fromDate, toDate);
+  },
+
   // All cuttings for a single day — for the Dashboard day-view. Multiple
   // entries per day allowed (no uniqueness constraint); within the day
   // they're ordered earliest-written-first.

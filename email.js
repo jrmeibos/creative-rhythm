@@ -1,5 +1,15 @@
 const { Resend } = require('resend');
-const resend = new Resend(process.env.RESEND_API_KEY);
+
+// Lazy-init so `require('./email')` doesn't crash in environments where
+// RESEND_API_KEY is unset (e.g. local cron-script dry-runs). In production
+// (Railway) the key is always set and getResend() returns a real client.
+let _resend = null;
+function getResend() {
+  if (_resend) return _resend;
+  if (!process.env.RESEND_API_KEY) return null;
+  _resend = new Resend(process.env.RESEND_API_KEY);
+  return _resend;
+}
 
 async function sendPasswordResetEmail(toEmail, resetLink, displayName) {
   const fromAddress = process.env.EMAIL_FROM || 'hello@creativesgarden.com';
@@ -60,7 +70,12 @@ The Creative's Garden`;
 </html>`;
 
   try {
-    const result = await resend.emails.send({
+    const client = getResend();
+    if (!client) {
+      console.warn('[email] RESEND_API_KEY not set — skipping send');
+      return { ok: false, error: 'RESEND_API_KEY not set' };
+    }
+    const result = await client.emails.send({
       from: `The Creative's Garden <${fromAddress}>`,
       to: toEmail,
       subject,
@@ -140,7 +155,12 @@ The Creative's Garden`;
   }
 
   try {
-    const result = await resend.emails.send(payload);
+    const client = getResend();
+    if (!client) {
+      console.warn('[email] RESEND_API_KEY not set — skipping send');
+      return { ok: false, error: 'RESEND_API_KEY not set' };
+    }
+    const result = await client.emails.send(payload);
     console.log(`[email] Milestone "${subject}" sent for ${name}, id=${result.data?.id}`);
     return { ok: true, id: result.data?.id };
   } catch (err) {
