@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Onboarding Answers</title>
+<style>
+  <%- fontFaceCss %>
+
+  :root {
+    --color-bloem:       #705C6C;
+    --color-understory:  #76856C;
+    --color-pearl:       #F2EEE3;
+    --color-blank-page:  #FAFAFA;
+    --color-ink-stained: #100F10;
+    --font-display: 'Goldage', Georgia, serif;
+    --font-body:    'Jost', system-ui, sans-serif;
+  }
+
+  @page { size: Letter; margin: 0.85in; }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    background: #fff;
+    color: var(--color-ink-stained);
+    font-family: var(--font-body);
+    font-weight: 300;
+    line-height: 1.7;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .cover {
+    page-break-after: always;
+    text-align: center;
+    min-height: calc(11in - 1.7in);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 1.5rem;
+  }
+  .cover-logo-img {
+    display: block;
+    width: 140px;
+    height: 140px;
+    margin: 0 auto 1.25rem;
+  }
+  .cover-title {
+    font-family: var(--font-display);
+    font-weight: 400;
+    font-size: 3.4rem;
+    line-height: 1.1;
+    color: var(--color-bloem);
+  }
+  .cover-range {
+    font-family: var(--font-body);
+    font-weight: 300;
+    font-size: 1.1rem;
+    letter-spacing: 0.04em;
+    color: rgba(16, 15, 16, 0.75);
+    margin-top: 0.5rem;
+  }
+  .cover-source {
+    font-family: var(--font-body);
+    font-weight: 300;
+    font-size: 0.85rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--color-understory);
+    margin-top: 2rem;
+  }
+
+  .qa {
+    margin-bottom: 1.75rem;
+    page-break-inside: avoid;
+  }
+  .qa-number {
+    font-family: var(--font-body);
+    font-weight: 700;
+    font-size: 0.72rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--color-understory);
+    margin: 0 0 0.4rem;
+  }
+  .qa-question {
+    font-family: var(--font-body);
+    font-style: italic;
+    font-weight: 300;
+    font-size: 0.95rem;
+    color: rgba(16, 15, 16, 0.6);
+    margin: 0 0 0.55rem;
+  }
+  .qa-answer {
+    font-family: var(--font-body);
+    font-weight: 300;
+    font-size: 1.02rem;
+    line-height: 1.75;
+    color: var(--color-ink-stained);
+    white-space: pre-wrap;
+  }
+  .qa-answer--missing {
+    font-style: italic;
+    color: rgba(16, 15, 16, 0.35);
+  }
+  .qa-rating {
+    font-family: var(--font-display);
+    font-weight: 400;
+    font-size: 1.4rem;
+    color: var(--color-bloem);
+  }
+  .qa-rating-scale {
+    font-family: var(--font-body);
+    font-style: italic;
+    font-size: 0.8rem;
+    color: rgba(16, 15, 16, 0.45);
+    margin-top: 0.25rem;
+  }
+</style>
+</head>
+<body>
+
+  <section class="cover">
+    <div class="cover-logo">
+      <img src="data:image/png;base64,<%= badgePngBase64 %>"
+           alt=""
+           class="cover-logo-img">
+    </div>
+    <h1 class="cover-title">Onboarding: <%= studentName %></h1>
+    <p class="cover-range"><%= generatedLabel %></p>
+    <p class="cover-source">From The Creative's Garden</p>
+  </section>
+
+  <%
+    function renderAnswer(q, assessment) {
+      if (!assessment) return '<p class="qa-answer qa-answer--missing">(no answer)</p>';
+      const raw = assessment[q.field];
+      if (raw == null || String(raw).trim() === '') {
+        return '<p class="qa-answer qa-answer--missing">(no answer)</p>';
+      }
+      if (q.type === 'choice') {
+        const choice = q.choices.find(c => c.val === raw);
+        return '<p class="qa-answer"><strong>' + raw + '.</strong> ' + (choice ? escapeHtml(choice.label) : escapeHtml(String(raw))) + '</p>';
+      }
+      if (q.type === 'multi') {
+        const vals = String(raw).split(',').map(s => s.trim()).filter(Boolean);
+        const labels = vals.map(v => {
+          const c = q.choices.find(x => x.val === v);
+          return '<strong>' + v + '.</strong> ' + (c ? escapeHtml(c.label) : escapeHtml(v));
+        });
+        return '<p class="qa-answer">' + labels.join('<br>') + '</p>';
+      }
+      if (q.type === 'rating') {
+        return '<p class="qa-rating">' + escapeHtml(String(raw)) + ' / 10</p>'
+             + '<p class="qa-rating-scale">' + escapeHtml(q.low) + ' — ' + escapeHtml(q.high) + '</p>';
+      }
+      return '<p class="qa-answer">' + escapeHtml(String(raw)) + '</p>';
+    }
+    function escapeHtml(s) {
+      return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+  %>
+
+  <% questions.forEach(function (q, qi) { %>
+    <article class="qa">
+      <p class="qa-number">Question <%= qi + 1 %></p>
+      <p class="qa-question"><%= q.text %></p>
+      <%- renderAnswer(q, assessment) %>
+    </article>
+  <% }); %>
+
+</body>
+</html>

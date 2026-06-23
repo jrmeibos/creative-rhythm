@@ -975,6 +975,15 @@ app.post('/api/onboarding/complete', requireAuth, (req, res) => {
   req.session.save(err => {
     if (err) return res.status(500).json({ error: 'Session save failed.' });
     res.json({ ok: true });
+    setImmediate(() => {
+      notifyAdminOfMilestone({
+        user: req.session.user,
+        milestone: 'onboarding_completed',
+        subject: `[Creative's Garden] ${req.session.user.name} finished onboarding`,
+        bodyLine: `${req.session.user.name} just completed the onboarding self-assessment. A copy of their answers is attached.`,
+        generatePdf: () => generateOnboardingPdfBuffer(req.session.user),
+      });
+    });
   });
 });
 
@@ -1556,6 +1565,116 @@ async function notifyAdminOfMilestone({ user, milestone, subject, bodyLine, gene
   }
 }
 
+// ─── PDF generators per milestone (each returns { filename, buffer }) ─────
+// All reuse CUTTINGS_PDF_ASSETS so embedded fonts + the brand badge stay
+// consistent across the four keepsake PDFs Julia receives.
+
+function studentFilenameSlug(name) {
+  return String(name || 'student').toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'student';
+}
+
+async function generateAnswersPdfBuffer(user) {
+  const allAnswers = db.getSeedPacketAnswersByUser(user.id);
+  const userAnswers = {};
+  for (const row of allAnswers) userAnswers[row.question_id] = row.answer_text;
+  const html = await ejs.renderFile(
+    path.join(__dirname, 'views', 'exports', 'seed-packets-answers-pdf.ejs'),
+    {
+      badgePngBase64: CUTTINGS_PDF_ASSETS.badgePngBase64,
+      fontFaceCss:    CUTTINGS_PDF_ASSETS.fontFaceCss,
+      angles:         ANGLES,
+      userAnswers,
+      generatedLabel: formatGeneratedLabel(getNow(user)),
+    }
+  );
+  const buffer = await renderHtmlToPdf(html);
+  return {
+    filename: `${studentFilenameSlug(user.name)}-answers-${toLocalDateString(getNow(user))}.pdf`,
+    buffer,
+  };
+}
+
+async function generateSeedsPdfBuffer(user) {
+  const seeds = db.getSeedPacketSeeds(user.id);
+  const html = await ejs.renderFile(
+    path.join(__dirname, 'views', 'exports', 'seed-packets-seeds-pdf.ejs'),
+    {
+      badgePngBase64: CUTTINGS_PDF_ASSETS.badgePngBase64,
+      fontFaceCss:    CUTTINGS_PDF_ASSETS.fontFaceCss,
+      seeds,
+      generatedLabel: formatGeneratedLabel(getNow(user)),
+    }
+  );
+  const buffer = await renderHtmlToPdf(html);
+  return {
+    filename: `${studentFilenameSlug(user.name)}-seeds-${toLocalDateString(getNow(user))}.pdf`,
+    buffer,
+  };
+}
+
+async function generateOnboardingPdfBuffer(user) {
+  const assessment = db.getAssessment(user.id, 'opening');
+  const html = await ejs.renderFile(
+    path.join(__dirname, 'views', 'exports', 'onboarding-pdf.ejs'),
+    {
+      badgePngBase64: CUTTINGS_PDF_ASSETS.badgePngBase64,
+      fontFaceCss:    CUTTINGS_PDF_ASSETS.fontFaceCss,
+      questions:      ASSESSMENT_QUESTIONS,
+      assessment,
+      studentName:    user.name || 'Student',
+      generatedLabel: formatGeneratedLabel(getNow(user)),
+    }
+  );
+  const buffer = await renderHtmlToPdf(html);
+  return {
+    filename: `${studentFilenameSlug(user.name)}-onboarding-${toLocalDateString(getNow(user))}.pdf`,
+    buffer,
+  };
+}
+
+async function generateGreenhousePdfBuffer(user) {
+  // Build { number, status, goal } for each of the 3 beds. Status is
+  // 'planted' if there's an active goal row, 'fallow' if the bed is in
+  // fallow_beds, and 'empty' otherwise. (At trigger time both routes
+  // gate on areAllBedsResolved, so 'empty' shouldn't appear in practice
+  // — but render it defensively.)
+  // getGreenhouseGoals returns { 1: {original, replacement}, 2: ..., 3: ... }.
+  // Use the active goal (replacement if present, else original) for each bed.
+  const goalsMap = db.getGreenhouseGoals(user.id);
+  const goalsByBed = {};
+  for (let n = 1; n <= 3; n++) {
+    const g = goalsMap[n] ? (goalsMap[n].replacement || goalsMap[n].original) : null;
+    if (g) goalsByBed[n] = g;
+  }
+  const fallowSet = new Set(db.getFallowBedNumbers(user.id));
+  const beds = [];
+  for (let n = 1; n <= 3; n++) {
+    if (goalsByBed[n]) {
+      beds.push({ number: n, status: 'planted', goal: goalsByBed[n] });
+    } else if (fallowSet.has(n)) {
+      beds.push({ number: n, status: 'fallow', goal: null });
+    } else {
+      beds.push({ number: n, status: 'empty', goal: null });
+    }
+  }
+  const html = await ejs.renderFile(
+    path.join(__dirname, 'views', 'exports', 'greenhouse-goals-pdf.ejs'),
+    {
+      badgePngBase64: CUTTINGS_PDF_ASSETS.badgePngBase64,
+      fontFaceCss:    CUTTINGS_PDF_ASSETS.fontFaceCss,
+      beds,
+      studentName:    user.name || 'Student',
+      generatedLabel: formatGeneratedLabel(getNow(user)),
+    }
+  );
+  const buffer = await renderHtmlToPdf(html);
+  return {
+    filename: `${studentFilenameSlug(user.name)}-greenhouse-${toLocalDateString(getNow(user))}.pdf`,
+    buffer,
+  };
+}
+
 // ─── Seed Packets: Answers export ────────────────────────────────────────
 // Reuses CUTTINGS_PDF_ASSETS (same fonts + brand badge) and the same
 // puppeteer mutex. Same gating as the parent page (requireSynthesisEligible).
@@ -1649,6 +1768,7 @@ app.post('/api/greenhouse/plant-bed', requireAuth, (req, res) => {
   const createdAt = now.toISOString().replace('T', ' ').split('.')[0];
   db.upsertGreenhouseGoalFacets(userId, bedNum, { soil, seed, water, bloom }, createdAt, bedNum);
   res.json({ ok: true });
+  maybeNotifyGreenhouseSetUp(req.session.user);
 });
 
 // Mark a bed as "fallow" (intentionally empty this season). The student can
@@ -1661,7 +1781,26 @@ app.post('/api/greenhouse/leave-fallow', requireAuth, (req, res) => {
   }
   db.setBedFallow(req.session.user.id, bedNum);
   res.json({ ok: true });
+  maybeNotifyGreenhouseSetUp(req.session.user);
 });
+
+// Shared trigger for both plant-bed and leave-fallow: only fire the milestone
+// when this action made every bed resolved (planted or fallow). Wrapped in
+// setImmediate so the response goes out first and the PDF render happens off
+// the request path.
+function maybeNotifyGreenhouseSetUp(user) {
+  if (!user || user.role === 'admin') return;
+  if (!db.areAllBedsResolved(user.id)) return;
+  setImmediate(() => {
+    notifyAdminOfMilestone({
+      user,
+      milestone: 'greenhouse_goals_set',
+      subject: `[Creative's Garden] ${user.name} set up their greenhouse`,
+      bodyLine: `${user.name} just resolved all three greenhouse beds. A copy of what they planted (and any beds left fallow) is attached.`,
+      generatePdf: () => generateGreenhousePdfBuffer(user),
+    });
+  });
+}
 
 app.post('/api/seeds/:id/keep', requireAuth, (req, res) => res.redirect(301, '/api/goals/' + req.params.id + '/keep'));
 
@@ -1889,6 +2028,15 @@ app.get('/seed-packets/synthesize/name', requireAuth, requireSynthesisEligible, 
     existingSeeds,
     highlights,
   });
+  setImmediate(() => {
+    notifyAdminOfMilestone({
+      user: req.session.user,
+      milestone: 'advanced_to_naming',
+      subject: `[Creative's Garden] ${req.session.user.name} just moved on to naming their seeds`,
+      bodyLine: `${req.session.user.name} just moved from answering questions to naming their seeds. A copy of their answers so far is attached.`,
+      generatePdf: () => generateAnswersPdfBuffer(req.session.user),
+    });
+  });
 });
 
 app.get('/seed-packets/seeds', requireAuth, (req, res) => {
@@ -1907,6 +2055,20 @@ app.get('/seed-packets/seeds', requireAuth, (req, res) => {
     highlights,
     lastUpdated,
   });
+  // Trigger only when the student has actually named at least one seed —
+  // otherwise the first visit (before they've done any naming) would email
+  // an empty seeds PDF.
+  if (seeds.length > 0) {
+    setImmediate(() => {
+      notifyAdminOfMilestone({
+        user: req.session.user,
+        milestone: 'advanced_to_seeds_view',
+        subject: `[Creative's Garden] ${req.session.user.name} just moved on to viewing their seeds`,
+        bodyLine: `${req.session.user.name} just finished naming their seeds and moved on to viewing them. A copy of their seeds is attached.`,
+        generatePdf: () => generateSeedsPdfBuffer(req.session.user),
+      });
+    });
+  }
 });
 
 // ─── Seed Packets API: highlights ───────────────────────────────────────────
