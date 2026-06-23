@@ -651,6 +651,52 @@ db.exec(`
     db.prepare("INSERT OR IGNORE INTO settings (key, value) VALUES ('seeds_v2_migrated', 'true')").run();
     console.log('✓ Migrated: Wiped goal data — V2 model resets all goals; users will re-plant after Lesson 1');
   }
+
+  // Backfill notification_log for existing students.
+  //
+  // Without this, when the admin-milestone trigger code rolls out, the first
+  // time Danielle next visits /seed-packets/synthesize/name, Julia gets an
+  // 'advanced_to_naming' email retroactively — even though Danielle did that
+  // months ago. Pre-claim every milestone every student is ALREADY past.
+  // tryClaimMilestone is idempotent (INSERT OR IGNORE on the UNIQUE
+  // constraint), so this is safe to re-run on every boot.
+  const claim = db.prepare(
+    'INSERT OR IGNORE INTO notification_log (user_id, milestone) VALUES (?, ?)'
+  );
+  let backfilled = 0;
+  for (const u of db.prepare("SELECT id FROM users WHERE role='student'").all()) {
+    // Onboarding done? — flag is one-way.
+    const ob = db.prepare('SELECT onboarding_completed FROM users WHERE id=?').get(u.id);
+    if (ob && ob.onboarding_completed) {
+      backfilled += claim.run(u.id, 'onboarding_completed').changes;
+    }
+    // Has any named seed? — they've necessarily been to /synthesize/name and
+    // (since the seeds page is where they edit them) to /seeds.
+    const seedCount = db.prepare(
+      'SELECT COUNT(*) AS c FROM seed_packet_seeds WHERE user_id=?'
+    ).get(u.id).c;
+    if (seedCount > 0) {
+      backfilled += claim.run(u.id, 'advanced_to_naming').changes;
+      backfilled += claim.run(u.id, 'advanced_to_seeds_view').changes;
+    }
+    // All greenhouse beds resolved? — every bed planted or fallow.
+    const plantedBeds = new Set(db.prepare(
+      'SELECT DISTINCT seed_number FROM goals WHERE user_id=? AND is_active=1'
+    ).all(u.id).map(r => r.seed_number));
+    const fallowBeds = new Set(db.prepare(
+      'SELECT bed_number FROM fallow_beds WHERE user_id=?'
+    ).all(u.id).map(r => r.bed_number));
+    let allResolved = true;
+    for (let n = 1; n <= 3; n++) {
+      if (!plantedBeds.has(n) && !fallowBeds.has(n)) { allResolved = false; break; }
+    }
+    if (allResolved) {
+      backfilled += claim.run(u.id, 'greenhouse_goals_set').changes;
+    }
+  }
+  if (backfilled > 0) {
+    console.log(`✓ Backfilled ${backfilled} notification_log rows for existing students`);
+  }
   } catch (err) {
     // Boot survives migration failure. Some queries may fail at runtime if
     // expected columns/tables aren't where they should be — check this log.
