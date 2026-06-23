@@ -9,7 +9,7 @@ const fs = require('fs');
 const multer = require('multer');
 const db = require('./db');
 const { requireAuth, requireAdmin } = require('./auth');
-const { sendPasswordResetEmail } = require('./email');
+const { sendPasswordResetEmail, sendAdminMilestoneEmail } = require('./email');
 const { ANGLES, getAngle, getQuestion } = require('./lib/seed-packet-questions');
 const { getCurricularSeason, getCurricularSeasonLabel, getCurricularSeasonDescriptor } = require('./lib/curricular-season');
 const { getSeasonPrompt } = require('./lib/season-prompts');
@@ -1527,6 +1527,33 @@ function formatGeneratedLabel(now) {
   return 'Generated ' + now.toLocaleDateString('en-US', {
     month: 'long', day: 'numeric', year: 'numeric',
   });
+}
+
+// ─── Admin milestone notifications ────────────────────────────────────────
+// Trigger points (onboarding complete, advanced-to-naming, etc.) call this
+// fire-and-forget. The helper itself handles:
+//   - admin skip (Julia visiting the page shouldn't email Julia)
+//   - atomic claim (each milestone fires at most once per student)
+//   - PDF generation (single render behind the renderHtmlToPdf mutex)
+//   - email send (Resend, errors logged but never thrown)
+// Failures still RECORD the claim so we don't retry on every page visit and
+// spam Julia's inbox if Resend has a recurring problem. Console logs surface
+// the failure for debugging.
+async function notifyAdminOfMilestone({ user, milestone, subject, bodyLine, generatePdf }) {
+  if (!user || user.role === 'admin') return;
+  const claimed = db.tryClaimMilestone(user.id, milestone);
+  if (!claimed) return;
+  try {
+    const pdf = generatePdf ? await generatePdf() : null;
+    await sendAdminMilestoneEmail({
+      studentName: user.name,
+      subject,
+      bodyLine,
+      pdf,
+    });
+  } catch (err) {
+    console.error(`[milestone] "${milestone}" failed for user ${user.id} (${user.name}):`, err);
+  }
 }
 
 // ─── Seed Packets: Answers export ────────────────────────────────────────

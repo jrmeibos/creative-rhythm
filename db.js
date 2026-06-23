@@ -144,6 +144,19 @@ db.exec(`
     UNIQUE(user_id, bed_number)
   );
 
+  -- Admin notification ledger. One row per (user, milestone) — the UNIQUE
+  -- constraint guarantees each milestone email fires at most once per
+  -- student, even under concurrent requests, because the atomic INSERT
+  -- itself decides whether we send.
+  CREATE TABLE IF NOT EXISTS notification_log (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id    INTEGER NOT NULL,
+    milestone  TEXT    NOT NULL,
+    sent_at    DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id),
+    UNIQUE(user_id, milestone)
+  );
+
   CREATE TABLE IF NOT EXISTS self_assessments (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER NOT NULL,
@@ -1519,6 +1532,25 @@ module.exports = {
       if (!plantedBeds.has(n) && !fallowBeds.has(n)) return false;
     }
     return true;
+  },
+
+  // ─── Admin notification ledger ────────────────────────────────────────────
+  // Try to claim a milestone for this user. Returns true if it was the first
+  // time (caller should send the email) or false if it was already claimed
+  // (caller should skip). The UNIQUE constraint + INSERT OR IGNORE is what
+  // makes this atomic: two concurrent requests can race and only one will
+  // see lastInsertRowid > 0.
+  tryClaimMilestone(userId, milestone) {
+    const result = db.prepare(
+      'INSERT OR IGNORE INTO notification_log (user_id, milestone) VALUES (?, ?)'
+    ).run(userId, milestone);
+    return result.changes > 0;
+  },
+
+  hasMilestoneBeenClaimed(userId, milestone) {
+    return !!db.prepare(
+      'SELECT 1 FROM notification_log WHERE user_id=? AND milestone=?'
+    ).get(userId, milestone);
   },
 
   replaceGoalsFacets(userId, seedNumber, facets, createdAt) {
