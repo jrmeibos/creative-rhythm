@@ -146,3 +146,31 @@
     align-items: flex-start;
   }
 }
+
+/* ─── Brand + help links ────────────────────────────────────────────────── */
+/* All three logo/text targets point to the course page on meibostouch.com.
+   Image links suppress the default browser underline; text links use the
+   same quiet underline aesthetic as the forgot-password link.            */
+
+.login-brand-link,
+.login-logo-link {
+  display: inline-block;
+  line-height: 0;
+  text-decoration: none;
+}
+.login-brand-link:focus-visible,
+.login-logo-link:focus-visible {
+  outline: 2px solid var(--color-bloem);
+  outline-offset: 4px;
+  border-radius: 4px;
+}
+
+.login-help-link,
+.login-attribution-link {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  transition: opacity 0.15s;
+}
+.login-help-link:hover,
+.login-attribution-link:hover { opacity: 0.7; }
