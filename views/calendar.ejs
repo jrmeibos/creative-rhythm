@@ -73,6 +73,11 @@
             //   - 'past'       : tappable, between courseStart and yesterday
             //   - 'today'      : visually distinct, non-tappable
             //   - 'future'     : greyed, non-tappable
+            // Mon=0, Tue=1, …, Sun=6. JS Date.getDay() is 0=Sun..6=Sat so we
+            // rotate. Labels are computed from each date's ACTUAL weekday,
+            // not its slot in the 7-day course-week window — so when
+            // course_start_date isn't a Monday (e.g. cohort started on a
+            // Friday), the per-day labels still reflect real weekdays.
             const dayLabels = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
             const weekDays = [];
             for (let i = 0; i < 7; i++) {
@@ -87,7 +92,8 @@
               else if (iso === todayStr)                    state = 'today';
               else if (iso > todayStr)                      state = 'future';
               else                                          state = 'past';
-              weekDays.push({ iso, label: dayLabels[i], dateNum: d.getDate(), state });
+              const realLabel = dayLabels[(d.getDay() + 6) % 7];
+              weekDays.push({ iso, label: realLabel, dateNum: d.getDate(), state });
             }
             // Hide the heading + grid entirely when nothing in this week
             // is tappable — pre-course-only weeks and fully-future weeks
