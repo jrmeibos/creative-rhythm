@@ -2618,3 +2618,33 @@
   transition: background 0.15s;
 }
 .mid-card-cta:hover { background: var(--color-bloem-mid); }
+
+/* ─── Admin: per-user course start date editor ─────────────────────────── */
+
+.admin-user-start-date {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.4rem;
+  flex-wrap: wrap;
+}
+.admin-user-start-input {
+  font-family: var(--font-body);
+  font-size: 0.82rem;
+  font-weight: 300;
+  padding: 0.25rem 0.5rem;
+  border: 1px solid rgba(112, 92, 108, 0.25);
+  border-radius: 4px;
+  background: var(--color-pearl);
+  color: var(--color-ink-stained);
+  outline: none;
+  transition: border-color 0.15s;
+}
+.admin-user-start-input:focus { border-color: var(--color-bloem); }
+.admin-user-start-input:disabled { opacity: 0.5; cursor: wait; }
+.admin-user-start-fallback {
+  font-family: var(--font-body);
+  font-style: italic;
+  font-size: 0.78rem;
+  color: rgba(16, 15, 16, 0.45);
+}

@@ -122,22 +122,11 @@ app.use((req, res, next) => {
   next();
 });
 
-// Auto-unlock: persist date-based unlock flags to DB once thresholds pass
-app.use((req, res, next) => {
-  const courseStart = db.getSetting('course_start_date');
-  if (courseStart) {
-    const daysDiff = Math.floor((Date.now() - new Date(courseStart + 'T00:00:00').getTime()) / 86400000);
-    if (daysDiff >= 35 && db.getSetting('midcourse_unlocked') !== 'true') {
-      db.setSetting('midcourse_unlocked', 'true');
-      console.log('✓ Mid-course auto-unlocked (Week 6)');
-    }
-    if (daysDiff >= 77 && db.getSetting('harvest_unlocked') !== 'true') {
-      db.setSetting('harvest_unlocked', 'true');
-      console.log('✓ Harvest auto-unlocked (Week 12)');
-    }
-  }
-  next();
-});
+// Auto-unlock middleware was removed when start dates became per-user. The
+// midcourse/harvest gating now reads each user's own course_start_date
+// (see db.getUserCourseStartDate + isMidcourseUnlockedFor + getUnlockState).
+// The global midcourse_unlocked / harvest_unlocked settings still exist as
+// admin manual overrides ("force-unlock for everyone now").
 
 // ─── Avatar files ─────────────────────────────────────────────────────────
 // In production, avatars live in /data/avatars (Railway volume), not public/.
@@ -191,7 +180,8 @@ app.post('/login', async (req, res) => {
     avatar_initial: user.avatar_initial, current_season: user.current_season || null,
     onboarding_completed: !!user.onboarding_completed,
     profile_photo: user.profile_photo || null,
-    timezone: user.timezone || null
+    timezone: user.timezone || null,
+    course_start_date: user.course_start_date || null
   };
   if (user.role !== 'admin' && !user.onboarding_completed) {
     return res.redirect('/onboarding');
@@ -331,10 +321,10 @@ function buildDayviewPayload(user, rawDay, courseStart) {
 app.get('/dashboard', requireAuth, (req, res) => {
   const userId = req.session.user.id;
 
-  // Single db.getSetting('course_start_date') read per request — passed
-  // down into getCurrentCourseWeek + buildDayviewPayload + getCourseDayForDate
-  // so they don't each re-query. Was 3 reads per /dashboard before.
-  const courseStart = db.getSetting('course_start_date');
+  // Single per-user start-date read per request — passed down into
+  // getCurrentCourseWeek + buildDayviewPayload + getCourseDayForDate so they
+  // don't each re-resolve. Was 3 reads per /dashboard before.
+  const courseStart = db.getUserCourseStartDate(req.session.user);
 
   const courseWeek = getCurrentCourseWeek(req.session.user, courseStart);
   const weekStart = courseWeek.weekStart;
@@ -364,7 +354,7 @@ app.get('/dashboard', requireAuth, (req, res) => {
   // see the card (they can't submit, and POST is 403-gated server-side).
   const midcourseCardVisible = (
     req.session.user.role !== 'admin' &&
-    isMidcourseUnlocked() &&
+    isMidcourseUnlockedFor(req.session.user) &&
     !db.hasMidcourseBeenSubmittedByUser(req.session.user.id)
   );
 
@@ -397,7 +387,7 @@ app.get('/dashboard', requireAuth, (req, res) => {
 // so a malformed ?day= or a future date can't escape. The dashboard's
 // inline controller calls this on prev/next clicks and on popstate.
 app.get('/dashboard/day', requireAuth, (req, res) => {
-  const courseStart = db.getSetting('course_start_date');
+  const courseStart = db.getUserCourseStartDate(req.session.user);
   const { dayview } = buildDayviewPayload(req.session.user, req.query.day, courseStart);
   res.render('partials/day-view', { dayview });
 });
@@ -422,7 +412,7 @@ app.post('/dashboard/cutting', requireAuth, (req, res) => {
   }
 
   const today = toLocalDateString(getNow(req.session.user));
-  const courseStart = db.getSetting('course_start_date');
+  const courseStart = db.getUserCourseStartDate(req.session.user);
 
   // Resolve recorded_date + season. If client sent a recorded_date, validate
   // it's a real date string between course_start and today. Otherwise default
@@ -500,7 +490,7 @@ app.get('/goals', requireAuth, (req, res) => {
   const history = db.getWeekHistory(userId, 12);
 
   // Pre-build weekStart → "Week One" label for history pills
-  const courseStartDate = db.getSetting('course_start_date');
+  const courseStartDate = db.getUserCourseStartDate(req.session.user);
   const weekNames = {};
   if (courseStartDate) {
     generate12Weeks(courseStartDate).forEach((ws, i) => {
@@ -722,7 +712,7 @@ app.post('/api/lessons/:id/complete', requireAuth, (req, res) => {
 
 app.get('/community', requireAuth, (req, res) => {
   const currentWeekStart = getCurrentCourseWeek(req.session.user).weekStart;
-  const courseStartDate  = db.getSetting('course_start_date') || currentWeekStart;
+  const courseStartDate  = db.getUserCourseStartDate(req.session.user) || currentWeekStart;
   const weekStarts       = generate12Weeks(courseStartDate);
   const firstWeek        = weekStarts[0];
   const lastWeek         = weekStarts[11];
@@ -808,7 +798,7 @@ app.get('/calendar', requireAuth, (req, res) => {
   const userId               = req.session.user.id;
   const courseCurrentWeekStart = getCurrentCourseWeek(req.session.user).weekStart;
   const currentWeekStart     = courseCurrentWeekStart;
-  const courseStartDate      = db.getSetting('course_start_date') || currentWeekStart;
+  const courseStartDate      = db.getUserCourseStartDate(req.session.user) || currentWeekStart;
   const weekStarts           = generate12Weeks(courseStartDate);
   const allGoalsRaw          = db.getGoalsForWeeks(userId, weekStarts);
   const reflectionsRaw       = db.getWeeklyReflections(userId, weekStarts);
@@ -1009,13 +999,19 @@ const MIDCOURSE_QUESTIONS = [
   },
 ];
 
-function isMidcourseUnlocked() {
-  return db.getSetting('midcourse_unlocked') === 'true';
+// True if THIS user's mid-course should be visible — either their own
+// course_start_date is ≥35 days ago, or admin force-unlocked globally.
+function isMidcourseUnlockedFor(user) {
+  if (db.getSetting('midcourse_unlocked') === 'true') return true; // admin manual override
+  const courseStart = db.getUserCourseStartDate(user);
+  if (!courseStart) return false;
+  const daysDiff = Math.floor((Date.now() - new Date(courseStart + 'T00:00:00').getTime()) / 86400000);
+  return daysDiff >= 35;
 }
 
 app.get('/midcourse', requireAuth, (req, res) => {
   if (req.session.user.role === 'admin') return res.redirect('/dashboard');
-  if (!isMidcourseUnlocked())            return res.redirect('/dashboard');
+  if (!isMidcourseUnlockedFor(req.session.user)) return res.redirect('/dashboard');
   if (db.hasMidcourseBeenSubmittedByUser(req.session.user.id)) return res.redirect('/dashboard');
   res.render('midcourse', {
     title: 'Mid-course check-in',
@@ -1027,7 +1023,7 @@ app.get('/midcourse', requireAuth, (req, res) => {
 app.post('/api/midcourse/submit', requireAuth, async (req, res) => {
   const user = req.session.user;
   if (user.role === 'admin')         return res.status(403).json({ error: 'Admins do not submit feedback.' });
-  if (!isMidcourseUnlocked())        return res.status(403).json({ error: 'Mid-course is not unlocked yet.' });
+  if (!isMidcourseUnlockedFor(user)) return res.status(403).json({ error: 'Mid-course is not unlocked yet.' });
   if (db.hasMidcourseBeenSubmittedByUser(user.id)) {
     return res.status(409).json({ error: "You've already submitted your mid-course feedback. Thank you." });
   }
@@ -1336,8 +1332,8 @@ app.get('/greenhouse', requireAuth, (req, res) => {
     goals = db.getGreenhouseGoals(userId);
   }
 
-  // Growth Check: unlocks at day 77 from course start
-  const courseStart = db.getSetting('course_start_date');
+  // Growth Check: unlocks at day 77 from this user's course start
+  const courseStart = db.getUserCourseStartDate(req.session.user);
   let growthCheckUnlocked = false;
   let growthCheckDate = null;
   if (courseStart) {
@@ -1990,7 +1986,7 @@ app.get('/harvest', requireAuth, (req, res) => {
 });
 
 app.post('/api/harvest', requireAuth, (req, res) => {
-  const courseStart = db.getSetting('course_start_date');
+  const courseStart = db.getUserCourseStartDate(req.session.user);
   let growthCheckUnlocked = false;
   if (courseStart) {
     const now = getNow(req.session.user);
@@ -2525,6 +2521,19 @@ app.delete('/api/admin/users/:id', requireAdmin, (req, res) => {
   res.json({ ok: true });
 });
 
+// Per-user course start date — the multi-cohort lever. Pass {date: 'YYYY-MM-DD'}
+// to override; pass {date: null} to clear and fall back to the global default.
+app.post('/api/admin/users/:id/course-start-date', requireAdmin, (req, res) => {
+  const id = parseInt(req.params.id);
+  if (!id) return res.status(400).json({ error: 'Invalid user id.' });
+  const { date } = req.body || {};
+  if (date !== null && !/^\d{4}-\d{2}-\d{2}$/.test(String(date || ''))) {
+    return res.status(400).json({ error: 'date must be YYYY-MM-DD or null.' });
+  }
+  db.setUserCourseStartDate(id, date);
+  res.json({ ok: true });
+});
+
 app.get('/api/admin/student-data/:id', requireAdmin, (req, res) => {
   const data = db.getStudentFullData(parseInt(req.params.id));
   if (!data.user) return res.status(404).json({ error: 'User not found.' });
@@ -2642,8 +2651,8 @@ app.post('/admin/run-weekly-digest', async (req, res) => {
 // ─── Helpers ───────────────────────────────────────────────────────────────
 
 function getUnlockState(user) {
-  // Check date-based logic OR manual DB flags — whichever is true wins
-  const courseStart = db.getSetting('course_start_date');
+  // Date-based (per-user) OR admin manual override — whichever is true wins.
+  const courseStart = db.getUserCourseStartDate(user);
   let midcourseDate = false, closingDate = false;
   if (courseStart) {
     const now = getNow(user);

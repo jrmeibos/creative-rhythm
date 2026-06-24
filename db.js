@@ -287,6 +287,15 @@ db.exec(`
     db.exec("ALTER TABLE users ADD COLUMN timezone TEXT DEFAULT 'America/Denver'");
     console.log('✓ Migrated: added timezone column');
   }
+  // Per-user course start date for multi-cohort support. NULL means "fall
+  // back to the global settings.course_start_date" so existing students keep
+  // their current timeline observable behavior without a one-time backfill
+  // (the helper db.getUserCourseStartDate handles the fallback). Admin can
+  // override per user via the admin UI; new students inherit the global.
+  if (!userCols.includes('course_start_date')) {
+    db.exec("ALTER TABLE users ADD COLUMN course_start_date DATETIME");
+    console.log('✓ Migrated: added course_start_date column');
+  }
   if (!userCols.includes('notify_new_fieldnotes')) {
     db.exec("ALTER TABLE users ADD COLUMN notify_new_fieldnotes INTEGER DEFAULT 1");
     console.log('✓ Migrated: added notify_new_fieldnotes column');
@@ -1048,7 +1057,29 @@ module.exports = {
   },
 
   getUserById(id) {
-    return db.prepare('SELECT id, name, email, role, avatar_initial, current_season, profile_photo FROM users WHERE id = ?').get(id);
+    return db.prepare('SELECT id, name, email, role, avatar_initial, current_season, profile_photo, course_start_date FROM users WHERE id = ?').get(id);
+  },
+
+  // ─── Per-user course start date (multi-cohort support) ────────────────────
+  // Returns the user's own start date if they have one, else falls back to
+  // the global course_start_date setting. The caller may pass the session
+  // user (which carries the field if the session was created after this
+  // refactor) or a fresh DB row; both work.
+  //
+  // Returns null if neither the user nor the global setting has a date.
+  // Every time-based feature (week number, midcourse/harvest unlock,
+  // garden stage, day-view bounds) reads through this helper instead of
+  // reaching for the global setting directly.
+  getUserCourseStartDate(user) {
+    if (user && user.course_start_date) return user.course_start_date;
+    return db.prepare("SELECT value FROM settings WHERE key = 'course_start_date'")
+             .get()?.value || null;
+  },
+
+  setUserCourseStartDate(userId, dateString) {
+    return db.prepare(
+      'UPDATE users SET course_start_date = ? WHERE id = ?'
+    ).run(dateString || null, userId);
   },
 
   hasVisitedGreenhouse(userId) {
@@ -1061,7 +1092,7 @@ module.exports = {
   },
 
   getAllUsers() {
-    return db.prepare('SELECT id, name, email, role, avatar_initial, current_season, profile_photo, community_goals_public, community_season_public, created_at FROM users ORDER BY role DESC, name ASC').all();
+    return db.prepare('SELECT id, name, email, role, avatar_initial, current_season, profile_photo, community_goals_public, community_season_public, course_start_date, created_at FROM users ORDER BY role DESC, name ASC').all();
   },
 
   getUserFullProfile(id) {

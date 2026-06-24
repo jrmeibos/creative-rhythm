@@ -156,6 +156,7 @@
         </div>
         <div class="admin-card" id="student-list">
           <% for (const u of users) { %>
+            <% const userStart = u.course_start_date ? String(u.course_start_date).slice(0, 10) : ''; %>
             <div class="admin-user-row" id="user-row-<%= u.id %>">
               <div class="sidebar-avatar" style="width:32px;height:32px;font-size:0.85rem;flex-shrink:0">
                 <%= u.avatar_initial || u.name.charAt(0) %>
@@ -163,6 +164,16 @@
               <div class="admin-user-info">
                 <span class="admin-user-name"><%= u.name %></span>
                 <span class="admin-user-email"><%= u.email %></span>
+                <span class="admin-user-start-date">
+                  <label for="user-start-<%= u.id %>" style="font-size:0.7rem;color:rgba(16,15,16,0.5);letter-spacing:0.08em;text-transform:uppercase;font-weight:600">Course start</label>
+                  <input type="date" id="user-start-<%= u.id %>" class="admin-user-start-input"
+                         value="<%= userStart %>"
+                         data-user-id="<%= u.id %>"
+                         title="<%= userStart ? '' : 'Blank = uses the global default' %>">
+                  <% if (!userStart) { %>
+                    <span class="admin-user-start-fallback" title="No override set; uses the global default course start date.">— uses default</span>
+                  <% } %>
+                </span>
               </div>
               <span class="admin-user-role <%= u.role === 'admin' ? 'admin-role--admin' : '' %>">
                 <%= u.role === 'admin' ? 'Curator' : 'Gardener' %>
@@ -864,6 +875,39 @@
       document.getElementById(`user-row-${id}`)?.remove();
       updateStudentCount(-1);
     }
+
+    // Auto-save course start date on change. Empty value clears the override
+    // and falls back to the global default (server stores NULL).
+    document.querySelectorAll('.admin-user-start-input').forEach(input => {
+      input.addEventListener('change', async () => {
+        const id = input.dataset.userId;
+        const date = input.value || null;
+        input.disabled = true;
+        try {
+          const res = await fetch(`/api/admin/users/${id}/course-start-date`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ date }),
+          });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error || 'Save failed');
+          // Toggle the "uses default" hint based on whether a date is now set.
+          const row = input.closest('.admin-user-row');
+          const fallback = row.querySelector('.admin-user-start-fallback');
+          if (date && fallback) fallback.remove();
+          if (!date && !fallback) {
+            const hint = document.createElement('span');
+            hint.className = 'admin-user-start-fallback';
+            hint.textContent = '— uses default';
+            input.parentNode.appendChild(hint);
+          }
+        } catch (err) {
+          alert(err.message);
+        } finally {
+          input.disabled = false;
+        }
+      });
+    });
 
     function updateStudentCount(delta) {
       const el = document.getElementById('student-count');
