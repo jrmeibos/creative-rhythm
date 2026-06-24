@@ -939,7 +939,7 @@ const ASSESSMENT_QUESTIONS = [
 const CLOSING_QUESTIONS = [
   { id: 'q7', type: 'text', field: 'q7_choices',
     text: 'What surprised you most about this experience?',
-    placeholder: 'What caught you off guard — in the best or hardest way?' },
+    placeholder: 'What caught you off guard, in the best or hardest way?' },
   { id: 'q8', type: 'choice', field: 'q8_choice',
     text: 'What season do you feel you spent the most time in during this course?',
     choices: [
@@ -951,10 +951,10 @@ const CLOSING_QUESTIONS = [
   },
   { id: 'q9', type: 'text', field: 'q9_text',
     text: 'What does showing up online feel like now compared to when you started?',
-    placeholder: 'Describe the shift — even if it\'s subtle.' },
+    placeholder: 'Describe the shift in your own words, even if it\'s subtle.' },
   { id: 'q10', type: 'text', field: 'q10_text',
-    text: 'What will you keep doing after this course ends?',
-    placeholder: 'What rhythm will you carry forward?' },
+    text: 'What will you keep doing after this program ends?',
+    placeholder: 'Is there anything from this framework that you plan to keep using in the future?' },
   { id: 'q11', type: 'text', field: 'q11_text',
     text: 'What would you tell someone who is standing where you were 12 weeks ago?',
     placeholder: 'What do they need to hear?' },
