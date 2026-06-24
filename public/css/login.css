@@ -16,9 +16,25 @@
 .login-brand {
   background: var(--color-understory);
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   padding: 3rem;
+  gap: 1.5rem;
+}
+
+/* On the sage brand panel, the attribution needs a light cream tone to
+   read against the dark background — not the bloem mauve used on the
+   pearl form panel. Specificity is bumped via .login-brand so the rule
+   wins over the base .login-attribution defined further down in this
+   file. */
+.login-brand .login-attribution--on-brand {
+  margin-top: 0;
+  color: var(--color-pearl);
+  opacity: 0.85;
+}
+.login-brand .login-attribution--on-brand .login-attribution-link {
+  color: inherit;
 }
 
 .login-brand-icon {
