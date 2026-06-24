@@ -1902,11 +1902,14 @@ module.exports = {
     ).all(userId);
   },
 
-  // All student accounts ordered by id. Used by the weekly cuttings digest
-  // cron — admins are excluded since they don't write cuttings.
-  getAllStudents() {
+  // All accounts that should be iterated by the weekly cuttings digest.
+  // Originally student-only, but admins also use the recording feature
+  // and would otherwise be invisible in their own digest. The digest's
+  // per-row gate is "has the user recorded any cuttings in the window?",
+  // so admins who don't record produce no email — no noise added.
+  getAllAccountsForDigest() {
     return db.prepare(
-      "SELECT id, name, email FROM users WHERE role = 'student' ORDER BY id ASC"
+      "SELECT id, name, email, role FROM users ORDER BY role DESC, id ASC"
     ).all();
   },
 
