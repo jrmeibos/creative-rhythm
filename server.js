@@ -874,11 +874,11 @@ const ASSESSMENT_QUESTIONS = [
     ]
   },
   { id: 'q2', type: 'rating', field: 'q2_rating',
-    text: 'How congruent do you feel between who you are and how you show up online?',
+    text: 'How congruent do you feel between who you are and how you show up on camera?',
     low: '1 = completely different people', high: '10 = exactly the same person'
   },
   { id: 'q3', type: 'choice', field: 'q3_choice',
-    text: 'When you sit down to create — or even just think about creating — what\'s your default state?',
+    text: 'When you sit down to create content — or even just think about creating — what\'s your default state?',
     choices: [
       { val: 'A', label: 'Frozen or avoidant' },
       { val: 'B', label: 'Forcing it, going through the motions' },
@@ -906,13 +906,13 @@ const ASSESSMENT_QUESTIONS = [
     low: "1 = I'm holding almost everything back", high: '10 = what I share feels truly like me'
   },
   { id: 'q7', type: 'multi', field: 'q7_choices', max: 2,
-    text: 'What would feel most meaningful to track over the next 12 weeks?',
+    text: 'What would feel most meaningful to see by the end of these next 12 weeks?',
     choices: [
       { val: 'A', label: 'Engagement that feels like real connection' },
       { val: 'B', label: 'Showing up more consistently without burning out' },
-      { val: 'C', label: 'Energy and nervous system wins — posting without dread' },
+      { val: 'C', label: 'Energy and nervous system wins (posting without dread)' },
       { val: 'D', label: 'People finding my work and feeling something' },
-      { val: 'E', label: 'Alignment — am I actually saying what I mean?' },
+      { val: 'E', label: 'Alignment (am I actually saying what I mean?)' },
       { val: 'F', label: 'Building a community, not just an audience' }
     ]
   },
