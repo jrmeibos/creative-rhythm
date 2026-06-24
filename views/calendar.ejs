@@ -47,6 +47,13 @@
               <span class="cal-tile-season"><%= w.curricularSeasonLabel %></span>
             <% } %>
 
+            <% if (w.meeting) { %>
+              <span class="cal-tile-meeting cal-tile-meeting--<%= w.meeting.type %>">
+                <span class="cal-tile-meeting-icon" aria-hidden="true"><%= w.meeting.icon %></span>
+                <%= w.meeting.label %>
+              </span>
+            <% } %>
+
             <% if (w.isIntegration) { %>
               <span class="cal-tile-intg">Integration Week</span>
             <% } %>
@@ -101,6 +108,18 @@
             const hasTappableDay = weekDays.some(d => d.state === 'past');
           %>
           <div class="cal-panel" data-week="<%= w.weekStart %>" hidden>
+
+            <% if (w.meeting) { %>
+              <section class="cal-drawer-meeting cal-drawer-meeting--<%= w.meeting.type %>">
+                <span class="cal-drawer-meeting-icon" aria-hidden="true"><%= w.meeting.icon %></span>
+                <div class="cal-drawer-meeting-body">
+                  <span class="cal-drawer-meeting-label">This week: <strong><%= w.meeting.label %></strong></span>
+                  <% if (w.meeting.note) { %>
+                    <span class="cal-drawer-meeting-note"><%= w.meeting.note %></span>
+                  <% } %>
+                </div>
+              </section>
+            <% } %>
 
             <% if (hasTappableDay) { %>
             <!-- Day grid: tap a past day to log a backdated cutting -->

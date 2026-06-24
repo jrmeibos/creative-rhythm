@@ -794,6 +794,24 @@ app.get('/community', requireAuth, (req, res) => {
 
 // ─── Calendar ──────────────────────────────────────────────────────────────
 
+// Weekly meeting cadence — hardcoded per the course curriculum design.
+// 3-week cadence (Group → 1:1 → Office Hours) repeats Weeks 1-9, then the
+// final block (Weeks 10-12) breaks pattern: Group, 1:1, Group.
+const WEEKLY_MEETINGS = {
+  1:  { type: 'group',        label: 'Group Meeting', note: "Recorded if you can't attend", icon: '👥' },
+  2:  { type: 'one-on-one',   label: 'One-on-One',                                          icon: '💬' },
+  3:  { type: 'office-hours', label: 'Office Hours',                                        icon: '🕐' },
+  4:  { type: 'group',        label: 'Group Meeting', note: "Recorded if you can't attend", icon: '👥' },
+  5:  { type: 'one-on-one',   label: 'One-on-One',                                          icon: '💬' },
+  6:  { type: 'office-hours', label: 'Office Hours',                                        icon: '🕐' },
+  7:  { type: 'group',        label: 'Group Meeting', note: "Recorded if you can't attend", icon: '👥' },
+  8:  { type: 'one-on-one',   label: 'One-on-One',                                          icon: '💬' },
+  9:  { type: 'office-hours', label: 'Office Hours',                                        icon: '🕐' },
+  10: { type: 'group',        label: 'Group Meeting', note: "Recorded if you can't attend", icon: '👥' },
+  11: { type: 'one-on-one',   label: 'One-on-One',                                          icon: '💬' },
+  12: { type: 'group',        label: 'Group Meeting', note: "Recorded if you can't attend", icon: '👥' },
+};
+
 app.get('/calendar', requireAuth, (req, res) => {
   const userId               = req.session.user.id;
   const courseCurrentWeekStart = getCurrentCourseWeek(req.session.user).weekStart;
@@ -831,6 +849,7 @@ app.get('/calendar', requireAuth, (req, res) => {
       isIntegration,
       curricularSeason,
       curricularSeasonLabel,
+      meeting:            WEEKLY_MEETINGS[weekNum] || null,
       goalsData,
       goalsMap,
       goalsExist,
