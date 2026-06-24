@@ -2678,7 +2678,10 @@ function getWeekStart() {
 // the caller hoist the db.getSetting('course_start_date') read so a route
 // doing both week + day math doesn't hit the same setting twice.
 function getCurrentCourseWeek(user, courseStartArg) {
-  const courseStartStr = (courseStartArg !== undefined) ? courseStartArg : db.getSetting('course_start_date');
+  // Fallback resolves through the per-user helper so callers that don't
+  // pre-hoist the start date still respect cohort overrides. The helper
+  // itself falls back to the global setting when the user has no override.
+  const courseStartStr = (courseStartArg !== undefined) ? courseStartArg : db.getUserCourseStartDate(user);
   if (!courseStartStr || !courseStartStr.trim()) {
     const ws = getWeekStart();
     const we = new Date(ws + 'T00:00:00');
@@ -2718,7 +2721,7 @@ function getCurrentCourseWeek(user, courseStartArg) {
 //   dateStr     today's wall-clock YYYY-MM-DD in the user's TZ
 //   isPreCourse / isPostCourse  edge flags
 function getCurrentCourseDay(user, courseStartArg) {
-  const courseStartStr = (courseStartArg !== undefined) ? courseStartArg : db.getSetting('course_start_date');
+  const courseStartStr = (courseStartArg !== undefined) ? courseStartArg : db.getUserCourseStartDate(user);
   const dateStr = toLocalDateString(getNow(user));
   if (!courseStartStr || !courseStartStr.trim()) {
     return { dayNumber: null, weekNumber: null, dayInWeek: null,
@@ -2746,7 +2749,7 @@ function getCurrentCourseDay(user, courseStartArg) {
 // modulo 21 so it stays valid for post-course dates that admins might reach
 // via time travel.
 function getCourseDayForDate(user, dateStr, courseStartArg) {
-  const courseStartStr = (courseStartArg !== undefined) ? courseStartArg : db.getSetting('course_start_date');
+  const courseStartStr = (courseStartArg !== undefined) ? courseStartArg : db.getUserCourseStartDate(user);
   if (!courseStartStr || !dateStr) {
     return { dayNumber: null, season: null, dayInSeason: null };
   }
