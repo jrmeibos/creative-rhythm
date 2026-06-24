@@ -48,10 +48,7 @@
             <% } %>
 
             <% if (w.meeting) { %>
-              <span class="cal-tile-meeting cal-tile-meeting--<%= w.meeting.type %>">
-                <span class="cal-tile-meeting-icon" aria-hidden="true"><%= w.meeting.icon %></span>
-                <%= w.meeting.label %>
-              </span>
+              <span class="cal-tile-meeting"><%= w.meeting.label %></span>
             <% } %>
 
             <% if (w.isIntegration) { %>
@@ -110,15 +107,12 @@
           <div class="cal-panel" data-week="<%= w.weekStart %>" hidden>
 
             <% if (w.meeting) { %>
-              <section class="cal-drawer-meeting cal-drawer-meeting--<%= w.meeting.type %>">
-                <span class="cal-drawer-meeting-icon" aria-hidden="true"><%= w.meeting.icon %></span>
-                <div class="cal-drawer-meeting-body">
-                  <span class="cal-drawer-meeting-label">This week: <strong><%= w.meeting.label %></strong></span>
-                  <% if (w.meeting.note) { %>
-                    <span class="cal-drawer-meeting-note"><%= w.meeting.note %></span>
-                  <% } %>
-                </div>
-              </section>
+              <div class="cal-drawer-meeting">
+                <span class="cal-drawer-meeting-label">This week: <em><%= w.meeting.label %></em></span>
+                <% if (w.meeting.note) { %>
+                  <span class="cal-drawer-meeting-note"><%= w.meeting.note %></span>
+                <% } %>
+              </div>
             <% } %>
 
             <% if (hasTappableDay) { %>

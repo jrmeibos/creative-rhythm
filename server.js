@@ -798,18 +798,18 @@ app.get('/community', requireAuth, (req, res) => {
 // 3-week cadence (Group → 1:1 → Office Hours) repeats Weeks 1-9, then the
 // final block (Weeks 10-12) breaks pattern: Group, 1:1, Group.
 const WEEKLY_MEETINGS = {
-  1:  { type: 'group',        label: 'Group Meeting', note: "Recorded if you can't attend", icon: '👥' },
-  2:  { type: 'one-on-one',   label: 'One-on-One',                                          icon: '💬' },
-  3:  { type: 'office-hours', label: 'Office Hours',                                        icon: '🕐' },
-  4:  { type: 'group',        label: 'Group Meeting', note: "Recorded if you can't attend", icon: '👥' },
-  5:  { type: 'one-on-one',   label: 'One-on-One',                                          icon: '💬' },
-  6:  { type: 'office-hours', label: 'Office Hours',                                        icon: '🕐' },
-  7:  { type: 'group',        label: 'Group Meeting', note: "Recorded if you can't attend", icon: '👥' },
-  8:  { type: 'one-on-one',   label: 'One-on-One',                                          icon: '💬' },
-  9:  { type: 'office-hours', label: 'Office Hours',                                        icon: '🕐' },
-  10: { type: 'group',        label: 'Group Meeting', note: "Recorded if you can't attend", icon: '👥' },
-  11: { type: 'one-on-one',   label: 'One-on-One',                                          icon: '💬' },
-  12: { type: 'group',        label: 'Group Meeting', note: "Recorded if you can't attend", icon: '👥' },
+  1:  { type: 'group',        label: 'Group Meeting', note: "Recorded if you can't attend" },
+  2:  { type: 'one-on-one',   label: 'One-on-One' },
+  3:  { type: 'office-hours', label: 'Office Hours' },
+  4:  { type: 'group',        label: 'Group Meeting', note: "Recorded if you can't attend" },
+  5:  { type: 'one-on-one',   label: 'One-on-One' },
+  6:  { type: 'office-hours', label: 'Office Hours' },
+  7:  { type: 'group',        label: 'Group Meeting', note: "Recorded if you can't attend" },
+  8:  { type: 'one-on-one',   label: 'One-on-One' },
+  9:  { type: 'office-hours', label: 'Office Hours' },
+  10: { type: 'group',        label: 'Group Meeting', note: "Recorded if you can't attend" },
+  11: { type: 'one-on-one',   label: 'One-on-One' },
+  12: { type: 'group',        label: 'Group Meeting', note: "Recorded if you can't attend" },
 };
 
 app.get('/calendar', requireAuth, (req, res) => {

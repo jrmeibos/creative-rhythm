@@ -400,58 +400,27 @@
 }
 
 /* ─── Weekly meeting indicators (on tile + in drawer) ──────────────────── */
+/* Quiet metadata, not interactive. No border, no pill background, no icon —
+   reads as a small italic eyebrow on each tile and as a soft inline note in
+   the drawer. Matches the calm voice of .cal-tile-season nearby. */
 
 .cal-tile-meeting {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.3rem;
-  margin-top: 0.45rem;
-  padding: 0.25rem 0.6rem;
-  border-radius: 999px;
-  font-family: var(--font-body);
-  font-size: 0.72rem;
-  font-weight: 500;
-  letter-spacing: 0.02em;
-  background: rgba(255, 255, 255, 0.55);
-  color: var(--color-ink-stained);
-  border: 1px solid rgba(112, 92, 108, 0.18);
+  display: block;
+  margin-top: 0.4rem;
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 0.82rem;
+  color: var(--color-understory);
+  opacity: 0.85;
 }
-.cal-tile-meeting-icon {
-  font-size: 0.85rem;
-  line-height: 1;
-}
-
-/* Per-type subtle accents to distinguish at a glance */
-.cal-tile-meeting--group        { border-color: rgba(216, 176, 171, 0.55); }
-.cal-tile-meeting--one-on-one   { border-color: rgba(118, 133, 108, 0.45); }
-.cal-tile-meeting--office-hours { border-color: rgba(246, 201, 92, 0.55); }
-
-/* ── Drawer meeting block ─────────────────────────────────────────────── */
 
 .cal-drawer-meeting {
   display: flex;
-  align-items: flex-start;
-  gap: 0.85rem;
-  padding: 1rem 1.25rem;
-  margin: 0 0 1.5rem;
-  background: var(--color-pearl);
-  border-radius: 12px;
-  border-left: 4px solid var(--color-bloem);
-}
-.cal-drawer-meeting--group        { border-left-color: var(--color-curiositys-kiss); }
-.cal-drawer-meeting--one-on-one   { border-left-color: var(--color-understory); }
-.cal-drawer-meeting--office-hours { border-left-color: var(--color-apricity); }
-
-.cal-drawer-meeting-icon {
-  font-size: 1.5rem;
-  line-height: 1;
-  margin-top: 0.05rem;
-}
-.cal-drawer-meeting-body {
-  display: flex;
   flex-direction: column;
-  gap: 0.15rem;
-  flex: 1;
+  gap: 0.2rem;
+  margin: 0 0 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid rgba(112, 92, 108, 0.12);
 }
 .cal-drawer-meeting-label {
   font-family: var(--font-body);
@@ -459,12 +428,15 @@
   font-weight: 300;
   color: var(--color-ink-stained);
 }
-.cal-drawer-meeting-label strong {
-  font-weight: 600;
+.cal-drawer-meeting-label em {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-weight: 400;
+  color: var(--color-bloem);
 }
 .cal-drawer-meeting-note {
   font-family: var(--font-body);
   font-style: italic;
   font-size: 0.82rem;
-  color: rgba(16, 15, 16, 0.55);
+  color: rgba(16, 15, 16, 0.5);
 }
