@@ -2581,10 +2581,10 @@
 }
 .mid-card-eyebrow {
   font-family: var(--font-body);
-  font-weight: 700;
-  font-size: 0.72rem;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
+  font-weight: 500;
+  font-size: 0.85rem;
+  font-style: italic;
+  letter-spacing: 0.02em;
   color: var(--color-understory);
   margin: 0 0 0.4rem;
 }
