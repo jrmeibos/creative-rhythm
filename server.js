@@ -359,6 +359,15 @@ app.get('/dashboard', requireAuth, (req, res) => {
 
   const { dayview, today } = buildDayviewPayload(req.session.user, req.query.day, courseStart);
 
+  // Mid-course check-in card: visible only when the global setting is
+  // unlocked AND this specific student hasn't submitted yet. Admins never
+  // see the card (they can't submit, and POST is 403-gated server-side).
+  const midcourseCardVisible = (
+    req.session.user.role !== 'admin' &&
+    isMidcourseUnlocked() &&
+    !db.hasMidcourseBeenSubmittedByUser(req.session.user.id)
+  );
+
   res.render('dashboard', {
     title: 'Dashboard',
     page: 'dashboard',
@@ -377,7 +386,8 @@ app.get('/dashboard', requireAuth, (req, res) => {
     isIntegrationWeek,
     dayview,
     today,
-    quote: getRotatingQuote()
+    quote: getRotatingQuote(),
+    midcourseCardVisible,
   });
 });
 
@@ -952,6 +962,120 @@ const CLOSING_QUESTIONS = [
     text: 'Is there anything that would have improved your experience in The Creative\'s Garden?',
     placeholder: 'Your honesty helps the garden grow.' }
 ];
+
+// ─── Mid-course check-in (anonymous feedback) ──────────────────────────────
+// Shown as a dashboard card from day 35 (midcourse_unlocked setting) until
+// the student submits. Responses are stored without a user_id; completion
+// is tracked separately on users.midcourse_submitted_at. The admin email
+// shows all responses received so far, anonymously labelled Response 1, 2,
+// …, so Julia gets honest feedback she can act on without inferring who.
+const MIDCOURSE_QUESTIONS = [
+  { id: 'q1', type: 'rating', field: 'q1_rating',
+    text: 'Overall, how is the course going for you so far?',
+    low: '1 = struggling', high: '10 = exactly what I needed'
+  },
+  { id: 'q2', type: 'multi', field: 'q2_working', max: 8,
+    text: "What's working for you?",
+    choices: [
+      { val: 'A', label: 'The lessons' },
+      { val: 'B', label: 'The recording practice (cuttings)' },
+      { val: 'C', label: 'The Greenhouse / goal beds' },
+      { val: 'D', label: 'Weekly intentions' },
+      { val: 'E', label: 'Seed Packets' },
+      { val: 'F', label: 'The pace' },
+      { val: 'G', label: 'The garden metaphor' },
+      { val: 'H', label: 'The voice and tone of the course' },
+    ]
+  },
+  { id: 'q3', type: 'multi', field: 'q3_resistance', max: 7,
+    text: "If you're experiencing any resistance, where is it happening?",
+    choices: [
+      { val: 'A', label: 'The pace is too fast' },
+      { val: 'B', label: 'The pace is too slow' },
+      { val: 'C', label: "I'm not sure what to do day-to-day" },
+      { val: 'D', label: 'I feel behind' },
+      { val: 'E', label: 'Too much work' },
+      { val: 'F', label: 'The tech / interface' },
+      { val: 'G', label: "Nothing — it's all good" },
+    ]
+  },
+  { id: 'q4', type: 'text', field: 'q4_improvement',
+    text: 'Is there anything else I can do to improve your experience?',
+    placeholder: 'Anything I could do, change, add, or remove.'
+  },
+  { id: 'q5', type: 'text', field: 'q5_other',
+    text: 'Anything else you want me to know?',
+    placeholder: 'This is anonymous to help you feel safe giving me honest feedback. I welcome it!'
+  },
+];
+
+function isMidcourseUnlocked() {
+  return db.getSetting('midcourse_unlocked') === 'true';
+}
+
+app.get('/midcourse', requireAuth, (req, res) => {
+  if (req.session.user.role === 'admin') return res.redirect('/dashboard');
+  if (!isMidcourseUnlocked())            return res.redirect('/dashboard');
+  if (db.hasMidcourseBeenSubmittedByUser(req.session.user.id)) return res.redirect('/dashboard');
+  res.render('midcourse', {
+    title: 'Mid-course check-in',
+    page: 'dashboard',
+    questions: MIDCOURSE_QUESTIONS,
+  });
+});
+
+app.post('/api/midcourse/submit', requireAuth, async (req, res) => {
+  const user = req.session.user;
+  if (user.role === 'admin')         return res.status(403).json({ error: 'Admins do not submit feedback.' });
+  if (!isMidcourseUnlocked())        return res.status(403).json({ error: 'Mid-course is not unlocked yet.' });
+  if (db.hasMidcourseBeenSubmittedByUser(user.id)) {
+    return res.status(409).json({ error: "You've already submitted your mid-course feedback. Thank you." });
+  }
+  const { answers } = req.body || {};
+  if (!answers || typeof answers !== 'object') return res.status(400).json({ error: 'Missing answers.' });
+  for (const q of MIDCOURSE_QUESTIONS) {
+    const v = answers[q.field];
+    if (q.type === 'rating') {
+      const n = Number(v);
+      if (!Number.isFinite(n) || n < 1 || n > 10) return res.status(400).json({ error: `Question ${q.id} requires a 1–10 rating.` });
+    } else if (q.type === 'multi') {
+      if (!Array.isArray(v) || v.length === 0)    return res.status(400).json({ error: `Question ${q.id} requires at least one choice.` });
+    } else if (q.type === 'text') {
+      if (typeof v !== 'string' || !v.trim())     return res.status(400).json({ error: `Question ${q.id} requires an answer.` });
+    }
+  }
+
+  // Submit the anonymous row first, then flag the user. The two are in
+  // separate statements (not a transaction) so even at the SQL level the
+  // INSERT and the UPDATE can't be reconstructed into a single record by a
+  // future admin who reads the DB.
+  const dayString = toLocalDateString(getNow(user));
+  db.submitMidcourseResponse(answers, dayString);
+  db.markMidcourseSubmittedForUser(user.id);
+
+  res.json({ ok: true });
+  setImmediate(() => notifyAdminOfMidcourseSubmission());
+});
+
+// Fires after every submission. The email body is name-less by design — the
+// PDF cover doesn't include a student name, and Julia gets a cumulative
+// snapshot of all anonymous responses received so far. We bypass the usual
+// notifyAdminOfMilestone helper because that one is structured around
+// per-student emails and adds the student's name to subject + body.
+async function notifyAdminOfMidcourseSubmission() {
+  try {
+    const { done, total } = db.countMidcourseSubmissionsByStudents();
+    const pdf = await generateMidcoursePdfBuffer();
+    await sendAdminMilestoneEmail({
+      studentName: 'A student',  // logged only; not used in subject/body below
+      subject:     '[Creative\'s Garden] Anonymous mid-course feedback received',
+      bodyLine:    `A student just submitted mid-course feedback (${done} of ${total} students have submitted so far). A copy of all responses received so far is attached.`,
+      pdf,
+    });
+  } catch (err) {
+    console.error('[midcourse] notify failed:', err);
+  }
+}
 
 app.get('/onboarding', requireAuth, (req, res) => {
   if (req.session.user.role === 'admin') return res.redirect('/dashboard');
@@ -1629,6 +1753,28 @@ async function generateOnboardingPdfBuffer(user) {
   const buffer = await renderHtmlToPdf(html);
   return {
     filename: `${studentFilenameSlug(user.name)}-onboarding-${toLocalDateString(getNow(user))}.pdf`,
+    buffer,
+  };
+}
+
+async function generateMidcoursePdfBuffer() {
+  const responses = db.getAllMidcourseResponses();
+  // The PDF renderer is name-less by design; we pass the current date as the
+  // generated label and let the EJS print "Response 1 / 2 / …" with only the
+  // submission day, no time, no user_id.
+  const html = await ejs.renderFile(
+    path.join(__dirname, 'views', 'exports', 'midcourse-pdf.ejs'),
+    {
+      badgePngBase64: CUTTINGS_PDF_ASSETS.badgePngBase64,
+      fontFaceCss:    CUTTINGS_PDF_ASSETS.fontFaceCss,
+      questions:      MIDCOURSE_QUESTIONS,
+      responses,
+      generatedLabel: formatGeneratedLabel(new Date()),
+    }
+  );
+  const buffer = await renderHtmlToPdf(html);
+  return {
+    filename: `creatives-garden-midcourse-feedback-${toLocalDateString(new Date())}.pdf`,
     buffer,
   };
 }

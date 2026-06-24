@@ -39,6 +39,21 @@
            outer #dayview-container is persistent — it stays in the DOM
            across day-to-day fetch-and-swap, and is what the inline
            controller below delegates events from. -->
+      <% if (midcourseCardVisible) { %>
+      <section class="dash-section">
+        <div class="mid-card">
+          <p class="mid-card-eyebrow">Mid-course</p>
+          <h2 class="mid-card-title">A short, anonymous check-in</h2>
+          <p class="mid-card-body">
+            We're about halfway. I'd love to hear how this is going for you — and
+            anything I can change to make the second half land better.
+            Your answers come to me without your name attached.
+          </p>
+          <a href="/midcourse" class="mid-card-cta">Take the check-in →</a>
+        </div>
+      </section>
+      <% } %>
+
       <section class="dash-section">
         <div id="dayview-container"
              class="recording-card"

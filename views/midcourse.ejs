@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <%- include('partials/head') %>
+  <link rel="stylesheet" href="/css/dashboard.css">
+  <link rel="stylesheet" href="/css/onboarding.css">
+</head>
+<body class="app-body">
+  <div class="app-layout">
+    <%- include('partials/sidebar') %>
+    <main class="main-content">
+
+      <a href="/dashboard" class="cm-back-link" style="display:inline-block; margin: 1.5rem 0 1rem;">← Back to dashboard</a>
+
+      <div class="ob-step is-active" style="position: static; padding: 1rem 0 4rem;">
+        <div class="ob-content" style="margin: 0 auto; max-width: 720px;">
+
+          <h2 class="ob-title">Mid-course check-in</h2>
+          <p class="ob-subtitle" style="line-height:1.6;">
+            We're halfway. A short, anonymous check-in to help me make the second
+            half land as well as it can for you. Your name is not stored with
+            your answers — these go to me as anonymous feedback.
+          </p>
+
+          <div class="ob-questions">
+            <% questions.forEach(function(q, idx) { %>
+              <div class="ob-question" id="q-block-<%= q.id %>">
+                <div class="ob-q-num">0<%= idx + 1 %></div>
+                <p class="ob-q-text"><%= q.text %></p>
+
+                <% if (q.type === 'multi') { %>
+                  <p class="ob-multi-note">Choose any that apply</p>
+                  <div class="ob-choices">
+                    <% q.choices.forEach(function(c) { %>
+                      <button type="button"
+                        class="ob-choice ob-multi"
+                        data-group="<%= q.field %>"
+                        data-value="<%= c.val %>">
+                        <span class="ob-choice-val"><%= c.val %></span>
+                        <span class="ob-choice-label"><%= c.label %></span>
+                      </button>
+                    <% }); %>
+                  </div>
+
+                <% } else if (q.type === 'rating') { %>
+                  <p class="ob-rating-scale"><span><%= q.low %></span><span><%= q.high %></span></p>
+                  <div class="ob-rating-row">
+                    <% for (let i = 1; i <= 10; i++) { %>
+                      <button type="button" class="ob-rating-btn"
+                        data-group="<%= q.field %>" data-value="<%= i %>">
+                        <%= i %>
+                      </button>
+                    <% } %>
+                  </div>
+
+                <% } else if (q.type === 'text') { %>
+                  <textarea class="ob-textarea" data-field="<%= q.field %>"
+                            rows="4" placeholder="<%= q.placeholder %>"></textarea>
+                <% } %>
+              </div>
+            <% }); %>
+          </div>
+
+          <p class="ob-error" id="mid-error" hidden>Please answer all questions before submitting.</p>
+          <div class="ob-actions">
+            <button class="ob-btn ob-btn--primary" id="mid-submit-btn" onclick="submitMidcourse()">Send my feedback →</button>
+          </div>
+
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <script>
+    // State: collected answers, keyed by field name.
+    const answers = {};
+
+    // Choice buttons (rating + multi). Rating buttons act like radio
+    // (single value); multi buttons toggle into a list.
+    document.querySelectorAll('.ob-choice, .ob-rating-btn').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        const group  = btn.dataset.group;
+        const value  = btn.dataset.value;
+        const isMulti = btn.classList.contains('ob-multi');
+
+        if (isMulti) {
+          const list = answers[group] = answers[group] || [];
+          const i = list.indexOf(value);
+          if (i >= 0) {
+            list.splice(i, 1);
+            btn.classList.remove('is-selected');
+          } else {
+            list.push(value);
+            btn.classList.add('is-selected');
+          }
+        } else {
+          // Rating: clear sibling selection, then mark this one.
+          document.querySelectorAll('.ob-rating-btn[data-group="' + group + '"]').forEach(function (b) {
+            b.classList.remove('is-selected');
+          });
+          btn.classList.add('is-selected');
+          answers[group] = value;
+        }
+      });
+    });
+
+    // Text inputs.
+    document.querySelectorAll('.ob-textarea').forEach(function (ta) {
+      ta.addEventListener('input', function () {
+        answers[ta.dataset.field] = ta.value;
+      });
+    });
+
+    async function submitMidcourse() {
+      const err  = document.getElementById('mid-error');
+      const btn  = document.getElementById('mid-submit-btn');
+      err.hidden = true;
+
+      // Coerce + validate before sending so the user sees the issue in-page.
+      const payload = {
+        q1_rating:       answers.q1_rating != null ? Number(answers.q1_rating) : null,
+        q2_working:      Array.isArray(answers.q2_working)    ? answers.q2_working    : [],
+        q3_resistance:   Array.isArray(answers.q3_resistance) ? answers.q3_resistance : [],
+        q4_improvement:  (answers.q4_improvement || '').trim(),
+        q5_other:        (answers.q5_other || '').trim(),
+      };
+      const incomplete = (
+        payload.q1_rating == null ||
+        payload.q2_working.length === 0 ||
+        payload.q3_resistance.length === 0 ||
+        !payload.q4_improvement ||
+        !payload.q5_other
+      );
+      if (incomplete) { err.hidden = false; return; }
+
+      btn.disabled = true;
+      btn.textContent = 'Sending…';
+
+      try {
+        const res = await fetch('/api/midcourse/submit', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ answers: payload }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          err.textContent = data.error || 'Something went wrong. Please try again.';
+          err.hidden = false;
+          btn.disabled = false;
+          btn.textContent = 'Send my feedback →';
+          return;
+        }
+        // Done — go back to the dashboard. The card will be gone there.
+        window.location.href = '/dashboard';
+      } catch (e) {
+        err.textContent = 'Network error. Please try again.';
+        err.hidden = false;
+        btn.disabled = false;
+        btn.textContent = 'Send my feedback →';
+      }
+    }
+  </script>
+</body>
+</html>

@@ -157,6 +157,21 @@ db.exec(`
     UNIQUE(user_id, milestone)
   );
 
+  -- Anonymous mid-course feedback. No user_id column — the structural link
+  -- between "who submitted" and "what they said" is broken on purpose so
+  -- students can be honest. Completion tracking lives separately on
+  -- users.midcourse_submitted_at. submitted_at_day is YYYY-MM-DD so timing
+  -- correlation is blurred to the day.
+  CREATE TABLE IF NOT EXISTS midcourse_responses (
+    id                INTEGER PRIMARY KEY AUTOINCREMENT,
+    submitted_at_day  TEXT    NOT NULL,
+    q1_rating         INTEGER,
+    q2_working        TEXT DEFAULT '',
+    q3_resistance     TEXT DEFAULT '',
+    q4_improvement    TEXT DEFAULT '',
+    q5_other          TEXT DEFAULT ''
+  );
+
   CREATE TABLE IF NOT EXISTS self_assessments (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER NOT NULL,
@@ -255,6 +270,14 @@ db.exec(`
   if (!userCols.includes('onboarding_completed')) {
     db.exec("ALTER TABLE users ADD COLUMN onboarding_completed INTEGER DEFAULT 0");
     console.log('✓ Migrated: added onboarding_completed column');
+  }
+  // Mid-course feedback submission flag (one-shot per user). Presence of a
+  // value here hides the dashboard card and prevents re-submission. Kept
+  // structurally separate from midcourse_responses so admin can see "who
+  // has submitted" without being able to link it to "what they said".
+  if (!userCols.includes('midcourse_submitted_at')) {
+    db.exec("ALTER TABLE users ADD COLUMN midcourse_submitted_at DATETIME");
+    console.log('✓ Migrated: added midcourse_submitted_at column');
   }
   if (!userCols.includes('profile_photo')) {
     db.exec("ALTER TABLE users ADD COLUMN profile_photo TEXT");
@@ -1748,6 +1771,55 @@ module.exports = {
       VALUES (?, 'midcourse', CURRENT_TIMESTAMP)
       ON CONFLICT(user_id, assessment_type) DO UPDATE SET completed_at = CURRENT_TIMESTAMP
     `).run(userId);
+  },
+
+  // ─── Mid-course feedback (anonymous) ───────────────────────────────────────
+  // submitMidcourseResponse writes the actual answers to a table that has NO
+  // user_id column. markMidcourseSubmittedForUser writes a flag to the users
+  // table. The two are intentionally separate. Both should be called inside
+  // the same request handler, but never in a single transaction that joins
+  // them — so even at the SQL level the link can't be reconstructed.
+  submitMidcourseResponse(answers, dayString) {
+    const a = answers || {};
+    return db.prepare(`
+      INSERT INTO midcourse_responses
+        (submitted_at_day, q1_rating, q2_working, q3_resistance, q4_improvement, q5_other)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `).run(
+      dayString,
+      a.q1_rating != null ? Number(a.q1_rating) : null,
+      Array.isArray(a.q2_working)    ? a.q2_working.join(',')    : (a.q2_working || ''),
+      Array.isArray(a.q3_resistance) ? a.q3_resistance.join(',') : (a.q3_resistance || ''),
+      a.q4_improvement || '',
+      a.q5_other || ''
+    );
+  },
+
+  markMidcourseSubmittedForUser(userId) {
+    return db.prepare(
+      'UPDATE users SET midcourse_submitted_at = CURRENT_TIMESTAMP WHERE id = ? AND midcourse_submitted_at IS NULL'
+    ).run(userId);
+  },
+
+  hasMidcourseBeenSubmittedByUser(userId) {
+    const r = db.prepare(
+      'SELECT midcourse_submitted_at FROM users WHERE id = ?'
+    ).get(userId);
+    return !!(r && r.midcourse_submitted_at);
+  },
+
+  // All anonymous responses, oldest first. Used by the PDF generator each
+  // time a new response lands — Julia gets a cumulative snapshot per email.
+  getAllMidcourseResponses() {
+    return db.prepare(
+      'SELECT id, submitted_at_day, q1_rating, q2_working, q3_resistance, q4_improvement, q5_other FROM midcourse_responses ORDER BY id ASC'
+    ).all();
+  },
+
+  countMidcourseSubmissionsByStudents() {
+    const total    = db.prepare("SELECT COUNT(*) AS c FROM users WHERE role='student'").get().c;
+    const done     = db.prepare("SELECT COUNT(*) AS c FROM users WHERE role='student' AND midcourse_submitted_at IS NOT NULL").get().c;
+    return { done, total };
   },
 
   setOnboardingComplete(userId) {
