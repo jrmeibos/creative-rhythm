@@ -809,7 +809,7 @@ function seedLessons() {
   </div>
   <div class="lesson-4c connect">
     <span class="lesson-4c-label">Connect</span>
-    <p>Reach outward. Collaborations, residencies, community, relationships.</p>
+    <p>Reach out (or in). Collaborations, residencies, community, relationships.</p>
   </div>
 </div>
 

@@ -119,7 +119,7 @@
               spring: { name: 'Spring',  category: 'Curiosity', desc: 'Feed your artist\'s soul' },
               summer: { name: 'Summer',  category: 'Create',    desc: 'Make the thing' },
               autumn: { name: 'Autumn',  category: 'Share',     desc: 'Put it into the world' },
-              winter: { name: 'Winter',  category: 'Connect',   desc: 'Reach outward' }
+              winter: { name: 'Winter',  category: 'Connect',   desc: 'Reach out (or in)' }
             }; %>
             <% for (const [s, meta] of Object.entries(seasonMeta)) { %>
               <button class="season-card season-card--<%= s %><%= profile.current_season === s ? ' is-selected' : '' %>"
