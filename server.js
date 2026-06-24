@@ -2597,6 +2597,48 @@ app.delete('/api/admin/resources/:id', requireAdmin, (req, res) => {
   res.json({ ok: true });
 });
 
+// ─── Weekly cuttings digest ────────────────────────────────────────────────
+// Triggered by an external cron (GitHub Actions) hitting this route every
+// Monday. Protected by CRON_SECRET in the X-Cron-Secret header instead of
+// the admin session, because the cron caller doesn't have a session.
+//
+// The route is gated by a constant-time compare on the secret to avoid
+// timing-based guessing, and bails fast with 503 if CRON_SECRET isn't set
+// (so a misconfigured production never silently accepts unauthenticated
+// requests). Response body includes the per-line trace so you can read it
+// in the GitHub Actions logs.
+const { runDigest: runWeeklyDigest } = require('./lib/weekly-cuttings-digest');
+
+function safeEqual(a, b) {
+  const ab = Buffer.from(String(a), 'utf8');
+  const bb = Buffer.from(String(b), 'utf8');
+  if (ab.length !== bb.length) return false;
+  return require('crypto').timingSafeEqual(ab, bb);
+}
+
+app.post('/admin/run-weekly-digest', async (req, res) => {
+  const expected = process.env.CRON_SECRET;
+  if (!expected) {
+    return res.status(503).json({ error: 'CRON_SECRET not configured on this server.' });
+  }
+  const provided = req.get('X-Cron-Secret') || '';
+  if (!safeEqual(provided, expected)) {
+    return res.status(401).json({ error: 'Invalid or missing X-Cron-Secret.' });
+  }
+  const dryRun = req.query.dryRun === '1' || req.query.dryRun === 'true';
+
+  const log = [];
+  const capture = (line) => { log.push(line); console.log(line); };
+
+  try {
+    const summary = await runWeeklyDigest({ dryRun, log: capture });
+    res.json({ ok: true, dryRun, summary, log });
+  } catch (err) {
+    console.error('[digest route] fatal:', err);
+    res.status(500).json({ ok: false, error: err.message, log });
+  }
+});
+
 // ─── Helpers ───────────────────────────────────────────────────────────────
 
 function getUnlockState(user) {
