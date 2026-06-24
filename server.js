@@ -2322,7 +2322,6 @@ app.get('/admin', requireAdmin, (req, res) => {
   const harvestUnlocked    = db.getSetting('harvest_unlocked') === 'true';
   const midcourseUnlocked  = db.getSetting('midcourse_unlocked') === 'true';
   const simulatedToday     = db.getSetting('simulated_today') || null;
-  const allGoals           = db.getAllGoalsForAdmin();
   const studentAssessments = db.getAllStudentAssessmentStatus();
 
   // Attach homework to each lesson for the edit dialog
@@ -2346,7 +2345,7 @@ app.get('/admin', requireAdmin, (req, res) => {
     users, lessons, resources, lessonStats, lessonHomework, courseStartDate,
     harvestUnlocked, midcourseUnlocked,
     midcourseUnlockDate, closingUnlockDate,
-    simulatedToday, allGoals,
+    simulatedToday,
     studentAssessments,
     questions: ASSESSMENT_QUESTIONS,
     closingQuestions: CLOSING_QUESTIONS
@@ -2472,16 +2471,6 @@ app.post('/api/admin/time-travel/clear', requireAdmin, (req, res) => {
   res.redirect(ref);
 });
 
-app.post('/api/admin/seeds/:id/planted-at', requireAdmin, (req, res) => res.redirect(301, '/api/admin/goals/' + req.params.id + '/planted-at'));
-
-app.post('/api/admin/goals/:id/planted-at', requireAdmin, (req, res) => {
-  const { date } = req.body;
-  if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-    return res.status(400).json({ error: 'Invalid date format. Use YYYY-MM-DD.' });
-  }
-  db.updateGoalCreatedAt(parseInt(req.params.id), date);
-  res.json({ ok: true });
-});
 
 
 // ─── Admin: Students ───────────────────────────────────────────────────────

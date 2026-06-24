@@ -93,52 +93,6 @@
             <button class="admin-btn-sm admin-btn-sm--danger" type="button" onclick="clearTimeTravel()">Return to real time</button>
           </div>
         </div>
-
-        <!-- Seed Time Override -->
-        <div class="admin-card" style="margin-top:1rem">
-          <div class="admin-card-row" style="margin-bottom:0.75rem">
-            <div>
-              <strong>Goal Time Override</strong>
-              <p class="admin-field-hint" style="margin-top:0.2rem">⚠️ Editing planted_at affects the 4-week lock calculation. Use for testing only.</p>
-            </div>
-          </div>
-          <table class="admin-seed-table">
-            <thead>
-              <tr>
-                <th>User</th>
-                <th>Goal #</th>
-                <th>Feeling</th>
-                <th>Planted at</th>
-                <th>Active</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
-              <% if (allGoals.length === 0) { %>
-                <tr><td colspan="6" class="admin-empty" style="text-align:left;padding:0.75rem 0.5rem">No goals planted yet.</td></tr>
-              <% } %>
-              <% for (const s of allGoals) { %>
-                <tr id="seed-row-<%= s.id %>">
-                  <td><%= s.email %></td>
-                  <td><%= s.seed_number %></td>
-                  <% const previewText = s.seed || s.feeling || ''; %>
-                  <td class="admin-seed-feeling"><%= previewText.length > 28 ? previewText.slice(0, 28) + '…' : (previewText || '—') %></td>
-                  <td id="seed-planted-<%= s.id %>"><%= s.created_at ? s.created_at.slice(0, 10) : '—' %></td>
-                  <td><%= s.is_active ? '✓' : '' %></td>
-                  <td><button class="admin-btn-sm" type="button" onclick="editSeedDate(<%= s.id %>)">Edit</button></td>
-                </tr>
-                <tr id="seed-edit-row-<%= s.id %>" style="display:none">
-                  <td colspan="6" class="admin-seed-edit-row">
-                    <input type="date" id="seed-date-<%= s.id %>" class="admin-date-input" value="<%= s.created_at ? s.created_at.slice(0, 10) : '' %>">
-                    <button class="admin-save-btn" type="button" onclick="saveSeedDate(<%= s.id %>)">Save</button>
-                    <button class="admin-btn-sm" type="button" onclick="cancelSeedEdit(<%= s.id %>)" style="margin-left:0.25rem">Cancel</button>
-                    <span class="admin-save-status" id="seed-status-<%= s.id %>"></span>
-                  </td>
-                </tr>
-              <% } %>
-            </tbody>
-          </table>
-        </div>
       </section>
 
       <!-- ── Students ─────────────────────────────────────────────────────── -->
@@ -756,33 +710,6 @@
         body: JSON.stringify({ key: 'simulated_today', value: '' })
       });
       if (res.ok) location.reload();
-    }
-
-    // ── Seed Time Override ───────────────────────────────────────────────────
-    function editSeedDate(id) {
-      document.getElementById('seed-edit-row-' + id).style.display = '';
-    }
-
-    function cancelSeedEdit(id) {
-      document.getElementById('seed-edit-row-' + id).style.display = 'none';
-    }
-
-    async function saveSeedDate(id) {
-      const date = document.getElementById('seed-date-' + id).value;
-      const statusEl = document.getElementById('seed-status-' + id);
-      if (!date) return;
-      const res = await fetch('/api/admin/goals/' + id + '/planted-at', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ date })
-      });
-      if (res.ok) {
-        document.getElementById('seed-planted-' + id).textContent = date;
-        document.getElementById('seed-edit-row-' + id).style.display = 'none';
-      } else {
-        statusEl.textContent = 'Error saving.';
-        statusEl.style.color = '#c0392b';
-      }
     }
 
     // ── Course start date ────────────────────────────────────────────────────

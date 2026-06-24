@@ -1711,18 +1711,6 @@ module.exports = {
     `).all();
   },
 
-  getAllGoalsForAdmin() {
-    return db.prepare(`
-      SELECT s.id, s.user_id, s.seed_number,
-             s.feeling, s.looks_like,
-             s.soil, s.seed, s.water, s.bloom,
-             s.created_at, s.is_active, u.email
-      FROM goals s
-      JOIN users u ON s.user_id = u.id
-      ORDER BY u.name ASC, s.seed_number ASC, s.id ASC
-    `).all();
-  },
-
   // Owner-only export helpers — read-only, SELECT only.
   // Used by GET /admin/export. Never called during migrations or boot.
   getAllUsersForExport() {
@@ -1741,10 +1729,6 @@ module.exports = {
       FROM goals
       ORDER BY user_id ASC, seed_number ASC, id ASC
     `).all();
-  },
-
-  updateGoalCreatedAt(seedId, dateStr) {
-    return db.prepare("UPDATE goals SET created_at = ? WHERE id = ?").run(dateStr + ' 00:00:00', seedId);
   },
 
   // ─── Self-Assessments ──────────────────────────────────────────────────────
