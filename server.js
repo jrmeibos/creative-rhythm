@@ -362,7 +362,7 @@ app.get('/dashboard', requireAuth, (req, res) => {
   res.render('dashboard', {
     title: 'Dashboard',
     page: 'dashboard',
-    greeting: getGreeting(),
+    greeting: getGreeting(req.session.user),
     weekStart,
     weekNumber,
     weekLabel: formatWeekLabel(weekStart),
@@ -2773,8 +2773,20 @@ function getUnlockState(user) {
   };
 }
 
-function getGreeting() {
-  const h = new Date().getHours();
+function getGreeting(user) {
+  // new Date().getHours() reads the SERVER's local hour — on Railway that's
+  // UTC, so a user in Denver at noon saw "Good evening" (UTC 18:00). Resolve
+  // the current hour in the user's saved timezone instead.
+  const tz = (user && user.timezone) || 'America/Denver';
+  let h;
+  try {
+    h = parseInt(new Intl.DateTimeFormat('en-US', {
+      hour: 'numeric', hour12: false, timeZone: tz,
+    }).format(new Date()), 10);
+    if (h === 24) h = 0;
+  } catch (_) {
+    h = new Date().getUTCHours();
+  }
   if (h < 12) return 'Good morning';
   if (h < 17) return 'Good afternoon';
   return 'Good evening';
