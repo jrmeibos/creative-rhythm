@@ -2434,7 +2434,32 @@ app.get('/admin', requireAdmin, (req, res) => {
     // group by angle without doing a second fetch.
     seedPacketAngles: ANGLES,
     midcourseSubmittedCount: db.countMidcourseSubmissionsByStudents(),
+    quotes: db.getAllQuotes(),
   });
+});
+
+// ─── Admin: Quotes ────────────────────────────────────────────────────────
+// Body validation is intentionally minimal: text is required; source and
+// season are optional. season is gated to the four valid values in
+// db.createQuote / db.updateQuote (anything else stored as NULL).
+
+app.post('/api/admin/quotes', requireAdmin, (req, res) => {
+  const { text, source, season } = req.body;
+  if (!text || !text.trim()) return res.status(400).json({ error: 'Quote text is required.' });
+  const result = db.createQuote(text, source, season);
+  res.json({ ok: true, id: result.lastInsertRowid });
+});
+
+app.put('/api/admin/quotes/:id', requireAdmin, (req, res) => {
+  const { text, source, season } = req.body;
+  if (!text || !text.trim()) return res.status(400).json({ error: 'Quote text is required.' });
+  db.updateQuote(parseInt(req.params.id, 10), text, source, season);
+  res.json({ ok: true });
+});
+
+app.delete('/api/admin/quotes/:id', requireAdmin, (req, res) => {
+  db.deleteQuote(parseInt(req.params.id, 10));
+  res.json({ ok: true });
 });
 
 // All anonymous mid-course responses, oldest first. Per-student linkage is
@@ -2948,20 +2973,20 @@ function generate12Weeks(startDate) {
 }
 
 function getRotatingQuote(user) {
-  const quotes = [
-    { text: "You already know what you want to say. Let's find it together.", source: "The Creative's Garden" },
-    { text: "Visibility that feels like a return to self.", source: "The Meibos Touch" },
-    { text: "You're not bad at marketing. You're just doing it wrong for who you are.", source: "The Creative's Garden" },
-    { text: "Nobody creates well from an empty cup.", source: "The Creative's Garden" },
-    { text: "Don't wait to be done to show up.", source: "The Creative's Garden" },
-    { text: "Curiosity is not a luxury. It's load-bearing infrastructure for your creative life.", source: "The Creative's Garden" },
-    { text: "The buffer isn't procrastination. It's wisdom.", source: "The Creative's Garden" },
-  ];
+  // Pool comes from the DB (managed by admin via /admin → Quotes) and is
+  // filtered to the user's current_season + any "untagged" quotes — see
+  // db.getQuotesForUser. Defensive fallback for the unlikely case of an
+  // empty pool (e.g. all quotes deleted, no untagged left) so the dashboard
+  // never renders a blank quote box.
+  const pool = db.getQuotesForUser(user);
+  if (!pool.length) {
+    return { text: "Visibility that feels like a return to self.", source: "The Meibos Touch" };
+  }
   // Rotate at the user's local midnight, not server (UTC) midnight, so the
   // quote doesn't change mid-evening for anyone west of UTC.
   const today = getNow(user);
-  const idx = (today.getFullYear() * 365 + today.getMonth() * 31 + today.getDate()) % quotes.length;
-  return quotes[idx];
+  const idx = (today.getFullYear() * 365 + today.getMonth() * 31 + today.getDate()) % pool.length;
+  return pool[idx];
 }
 
 const PORT = process.env.PORT || 3000;

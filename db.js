@@ -210,6 +210,19 @@ db.exec(`
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
   );
   CREATE INDEX IF NOT EXISTS idx_push_subscriptions_user ON push_subscriptions(user_id);
+
+  -- Rotating dashboard quotes. season is one of spring|summer|autumn|winter
+  -- or NULL ("any season"). The dashboard helper filters to (user's chosen
+  -- season OR NULL) so a student who hasn't picked a season still gets the
+  -- generic pool. Curated by the admin via /admin → Quotes.
+  CREATE TABLE IF NOT EXISTS quotes (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    text       TEXT    NOT NULL,
+    source     TEXT    DEFAULT '',
+    season     TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
 `);
 
 // Migrate existing databases to add new columns
@@ -760,6 +773,26 @@ db.exec(`
   }
   if (backfilled > 0) {
     console.log(`✓ Backfilled ${backfilled} notification_log rows for existing students`);
+  }
+
+  // Seed the quotes table on first boot only. Empty pool = brand-new install,
+  // so we land the 7 original hardcoded quotes (all general, no season) to
+  // preserve the existing dashboard experience. Idempotent because we gate
+  // on row count; later boots see rows already present and skip.
+  const quoteRowCount = db.prepare('SELECT COUNT(*) AS c FROM quotes').get().c;
+  if (quoteRowCount === 0) {
+    const seedStmt = db.prepare('INSERT INTO quotes (text, source, season) VALUES (?, ?, NULL)');
+    const seeds = [
+      { text: "You already know what you want to say. Let's find it together.", source: "The Creative's Garden" },
+      { text: "Visibility that feels like a return to self.", source: "The Meibos Touch" },
+      { text: "You're not bad at marketing. You're just doing it wrong for who you are.", source: "The Creative's Garden" },
+      { text: "Nobody creates well from an empty cup.", source: "The Creative's Garden" },
+      { text: "Don't wait to be done to show up.", source: "The Creative's Garden" },
+      { text: "Curiosity is not a luxury. It's load-bearing infrastructure for your creative life.", source: "The Creative's Garden" },
+      { text: "The buffer isn't procrastination. It's wisdom.", source: "The Creative's Garden" },
+    ];
+    for (const q of seeds) seedStmt.run(q.text, q.source);
+    console.log(`✓ Seeded quotes table with ${seeds.length} default entries`);
   }
   } catch (err) {
     // Boot survives migration failure. Some queries may fail at runtime if
@@ -2329,5 +2362,50 @@ module.exports = {
     return db.prepare(
       'SELECT id, name, email, timezone, daily_reminder_hour FROM users WHERE daily_reminder_enabled = 1'
     ).all();
+  },
+
+  // ─── Dashboard quotes ─────────────────────────────────────────────────────
+
+  // The pool that getRotatingQuote rotates through for a given user.
+  // Includes: quotes tagged with the user's current_season + untagged
+  // "any season" quotes. If the user hasn't picked a season, returns only
+  // the untagged pool so they still see something.
+  getQuotesForUser(user) {
+    const season = user && user.current_season;
+    if (season) {
+      return db.prepare(
+        'SELECT id, text, source, season FROM quotes WHERE season = ? OR season IS NULL ORDER BY id ASC'
+      ).all(season);
+    }
+    return db.prepare(
+      'SELECT id, text, source, season FROM quotes WHERE season IS NULL ORDER BY id ASC'
+    ).all();
+  },
+
+  // Full list for the admin Quotes UI. NULL-season ("any") first, then per
+  // season alphabetically — keeps the admin table organized.
+  getAllQuotes() {
+    return db.prepare(
+      'SELECT id, text, source, season, created_at, updated_at FROM quotes ' +
+      'ORDER BY CASE WHEN season IS NULL THEN 0 ELSE 1 END, season ASC, id ASC'
+    ).all();
+  },
+
+  createQuote(text, source, season) {
+    const s = ['spring','summer','autumn','winter'].includes(season) ? season : null;
+    return db.prepare(
+      'INSERT INTO quotes (text, source, season) VALUES (?, ?, ?)'
+    ).run((text || '').trim(), (source || '').trim(), s);
+  },
+
+  updateQuote(id, text, source, season) {
+    const s = ['spring','summer','autumn','winter'].includes(season) ? season : null;
+    return db.prepare(
+      'UPDATE quotes SET text = ?, source = ?, season = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?'
+    ).run((text || '').trim(), (source || '').trim(), s, id);
+  },
+
+  deleteQuote(id) {
+    return db.prepare('DELETE FROM quotes WHERE id = ?').run(id);
   },
 };
