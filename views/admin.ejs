@@ -42,10 +42,16 @@
               <div>
                 <strong>Mid-course check-in</strong>
                 <span class="admin-unlock-hint">Unlocks Week 6<% if (midcourseUnlockDate) { %> · <%= midcourseUnlockDate %><% } %></span>
+                <span class="admin-unlock-hint"><%= midcourseSubmittedCount.done %> / <%= midcourseSubmittedCount.total %> students submitted</span>
               </div>
-              <span class="admin-unlock-badge <%= midcourseUnlocked ? 'admin-unlock-badge--on' : 'admin-unlock-badge--off' %>">
-                <%= midcourseUnlocked ? '✓ Unlocked' : 'Locked' %>
-              </span>
+              <div style="display:flex;align-items:center;gap:0.6rem">
+                <span class="admin-unlock-badge <%= midcourseUnlocked ? 'admin-unlock-badge--on' : 'admin-unlock-badge--off' %>">
+                  <%= midcourseUnlocked ? '✓ Unlocked' : 'Locked' %>
+                </span>
+                <% if (midcourseSubmittedCount.done > 0) { %>
+                  <button type="button" class="admin-btn-sm" onclick="viewAllMidcourseResponses()">View all responses</button>
+                <% } %>
+              </div>
             </div>
             <div class="admin-unlock-row">
               <div>
@@ -539,6 +545,15 @@
     </div>
   </dialog>
 
+  <!-- All anonymous mid-course responses -->
+  <dialog class="admin-dialog admin-dialog--wide" id="dialog-midcourse-all">
+    <h3 class="admin-dialog-title">All Mid-course Responses</h3>
+    <div id="midcourse-all-body" style="max-height:60vh;overflow-y:auto;font-size:0.85rem;font-weight:300;line-height:1.6"></div>
+    <div class="admin-dialog-footer">
+      <button class="admin-dialog-cancel" type="button" onclick="closeDialog('dialog-midcourse-all')">Close</button>
+    </div>
+  </dialog>
+
   <script>
     // ── Lesson data for edit dialog ──────────────────────────────────────────
     const LESSON_DATA = {};
@@ -583,6 +598,15 @@
 
 
     // ── View student data ─────────────────────────────────────────────────────
+    // Seed Packet angles are surfaced by the route once for the whole page so
+    // the View dialog can join answers ↔ questions without a second fetch.
+    const SEED_PACKET_ANGLES = <%- JSON.stringify(seedPacketAngles) %>;
+
+    const esc = v => String(v == null ? '' : v)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    const fmtDate = iso => new Date(iso).toLocaleDateString('en-US',
+      { month: 'short', day: 'numeric', year: 'numeric' });
+
     async function viewStudentData(id, name) {
       document.getElementById('student-data-title').textContent = name + ' — Responses';
       const body = document.getElementById('student-data-body');
@@ -594,19 +618,19 @@
 
       let html = '';
 
+      // ─── Greenhouse goals ─────────────────────────────────────────────────
       if (data.goals && data.goals.length) {
-        html += '<h4 style="font-weight:700;margin:0.75rem 0 0.5rem;color:var(--color-bloem)">Goals</h4>';
-        const esc = v => String(v == null ? '' : v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+        html += '<h4 style="font-weight:700;margin:0.75rem 0 0.5rem;color:var(--color-bloem)">Greenhouse Goals</h4>';
         for (const s of data.goals) {
           const status = s.status === 'replaced' ? ' <em style="color:#D4956A">(replaced)</em>' : '';
           const hasFacets = s.soil || s.seed || s.water || s.bloom;
-          html += `<div style="margin-bottom:0.75rem"><strong>Seed ${s.seed_number}${status}:</strong>`;
+          html += `<div style="margin-bottom:0.75rem"><strong>Bed ${s.seed_number}${status}:</strong>`;
           if (hasFacets) {
             html += '<div style="margin-left:1rem;margin-top:0.25rem">';
-            html += `<div>🪴 <strong>Soil:</strong> ${esc(s.soil)  || '—'}</div>`;
-            html += `<div>🌱 <strong>Seed:</strong> ${esc(s.seed)  || '—'}</div>`;
-            html += `<div>💧 <strong>Water:</strong> ${esc(s.water) || '—'}</div>`;
-            html += `<div>🌸 <strong>Bloom:</strong> ${esc(s.bloom) || '—'}</div>`;
+            html += `<div><strong>Soil:</strong> ${esc(s.soil)  || '—'}</div>`;
+            html += `<div><strong>Seed:</strong> ${esc(s.seed)  || '—'}</div>`;
+            html += `<div><strong>Water:</strong> ${esc(s.water) || '—'}</div>`;
+            html += `<div><strong>Bloom:</strong> ${esc(s.bloom) || '—'}</div>`;
             html += '</div>';
           } else {
             html += ` ${esc(s.feeling) || '—'} / ${esc(s.looks_like) || '—'}`;
@@ -618,20 +642,72 @@
         }
       }
 
-      if (data.midcourse) {
-        html += `<h4 style="font-weight:700;margin:1rem 0 0.5rem;color:var(--color-understory)">Mid-course Check-in ✓</h4>`;
-        html += `<p style="color:rgba(16,15,16,0.5)">Tended on ${new Date(data.midcourse.completed_at).toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'})}</p>`;
+      // ─── Seed Packet answers ──────────────────────────────────────────────
+      // Group by angle using the SEED_PACKET_ANGLES catalog injected above.
+      // Skip empty angles so the dialog only shows what the student actually
+      // worked on.
+      if (data.seedPacketAnswers && data.seedPacketAnswers.length) {
+        const answerByQid = {};
+        for (const a of data.seedPacketAnswers) answerByQid[a.question_id] = a;
+
+        let sectionOpen = false;
+        for (const angle of SEED_PACKET_ANGLES) {
+          const answered = angle.questions.filter(q => answerByQid[q.id]);
+          if (!answered.length) continue;
+          if (!sectionOpen) {
+            html += '<h4 style="font-weight:700;margin:1rem 0 0.5rem;color:var(--color-bloem)">Seed Packet Answers</h4>';
+            sectionOpen = true;
+          }
+          html += `<div style="margin:0.5rem 0 0.75rem;padding-left:0.5rem;border-left:2px solid rgba(112,92,108,0.2)">`;
+          html += `<div style="font-weight:700;color:var(--color-understory)">${esc(angle.name)}</div>`;
+          for (const q of answered) {
+            const ans = answerByQid[q.id];
+            html += `<div style="margin:0.4rem 0">`;
+            html += `<div style="font-style:italic;color:rgba(16,15,16,0.6)">${esc(q.text)}</div>`;
+            html += `<div>${esc(ans.answer_text)}</div>`;
+            html += `</div>`;
+          }
+          html += `</div>`;
+        }
       }
 
+      // ─── Seed Packet seeds (named seeds) ──────────────────────────────────
+      if (data.seedPacketSeeds && data.seedPacketSeeds.length) {
+        html += '<h4 style="font-weight:700;margin:1rem 0 0.5rem;color:var(--color-bloem)">Seed Packets — Your Seeds</h4>';
+        for (const seed of data.seedPacketSeeds) {
+          html += `<div style="margin-bottom:0.75rem;padding:0.6rem 0.75rem;background:rgba(112,92,108,0.05);border-radius:6px">`;
+          html += `<div style="font-weight:700">${esc(seed.name) || '(untitled seed)'}</div>`;
+          if (seed.description) html += `<div style="font-style:italic;color:rgba(16,15,16,0.6);margin-top:0.2rem">${esc(seed.description)}</div>`;
+          if (seed.bullets && seed.bullets.length) {
+            html += '<ul style="margin:0.4rem 0 0 1.2rem;padding:0">';
+            for (const b of seed.bullets) html += `<li>${esc(b)}</li>`;
+            html += '</ul>';
+          }
+          if (seed.application) {
+            html += `<div style="margin-top:0.4rem"><strong>How it shows up:</strong> ${esc(seed.application)}</div>`;
+          }
+          html += `</div>`;
+        }
+      }
+
+      // ─── Opening assessment ───────────────────────────────────────────────
       if (data.opening) {
         html += '<h4 style="font-weight:700;margin:1rem 0 0.5rem;color:var(--color-bloem)">Opening Assessment</h4>';
         const q = data.opening;
-        html += `<p>Q1: ${q.q1_choice} | Q2: ${q.q2_rating}/10 | Q3: ${q.q3_choice} | Q4: ${q.q4_rating}/10</p>`;
-        html += `<p>Q5: ${q.q5_choice} | Q6: ${q.q6_rating}/10</p>`;
-        if (q.q9_text) html += `<p><em>Vision:</em> ${q.q9_text}</p>`;
-        if (q.q10_text) html += `<p><em>Promise:</em> ${q.q10_text}</p>`;
+        html += `<p>Q1: ${esc(q.q1_choice)} | Q2: ${q.q2_rating}/10 | Q3: ${esc(q.q3_choice)} | Q4: ${q.q4_rating}/10</p>`;
+        html += `<p>Q5: ${esc(q.q5_choice)} | Q6: ${q.q6_rating}/10</p>`;
+        if (q.q9_text)  html += `<p><em>Vision:</em> ${esc(q.q9_text)}</p>`;
+        if (q.q10_text) html += `<p><em>Promise:</em> ${esc(q.q10_text)}</p>`;
       }
 
+      // ─── Mid-course check-in (per-student: only the submission flag) ──────
+      if (data.midcourseSubmittedAt) {
+        html += `<h4 style="font-weight:700;margin:1rem 0 0.5rem;color:var(--color-understory)">Mid-course Check-in ✓</h4>`;
+        html += `<p style="color:rgba(16,15,16,0.5)">Submitted on ${fmtDate(data.midcourseSubmittedAt)}</p>`;
+        html += `<p style="color:rgba(16,15,16,0.5);font-size:0.78rem;font-style:italic">Responses are stored anonymously — view all of them via "All mid-course responses" on the main admin page.</p>`;
+      }
+
+      // ─── Closing assessment ───────────────────────────────────────────────
       if (data.closing) {
         html += '<h4 style="font-weight:700;margin:1rem 0 0.5rem;color:var(--color-understory)">Closing Assessment</h4>';
         const q = data.closing;
@@ -642,17 +718,66 @@
           if (diff < 0) return ` <span style="color:#D4956A">↓${Math.abs(diff)}</span>`;
           return ' →';
         };
-        html += `<p>Q1: ${q.q1_choice} | Q2: ${q.q2_rating}/10${ratingDiff('q2_rating')} | Q3: ${q.q3_choice} | Q4: ${q.q4_rating}/10${ratingDiff('q4_rating')}</p>`;
-        html += `<p>Q5: ${q.q5_choice} | Q6: ${q.q6_rating}/10${ratingDiff('q6_rating')}</p>`;
-        if (q.q7_choices) html += `<p><em>What surprised them:</em> ${q.q7_choices}</p>`;
-        if (q.q8_choice)  html += `<p><em>Season they spent most time in:</em> ${q.q8_choice}</p>`;
-        if (q.q9_text)    html += `<p><em>Showing up feels like:</em> ${q.q9_text}</p>`;
-        if (q.q10_text)   html += `<p><em>Will keep doing:</em> ${q.q10_text}</p>`;
-        if (q.q11_text)   html += `<p><em>To someone starting out:</em> ${q.q11_text}</p>`;
-        if (q.q12_text)   html += `<p><em>Feedback:</em> ${q.q12_text}</p>`;
+        html += `<p>Q1: ${esc(q.q1_choice)} | Q2: ${q.q2_rating}/10${ratingDiff('q2_rating')} | Q3: ${esc(q.q3_choice)} | Q4: ${q.q4_rating}/10${ratingDiff('q4_rating')}</p>`;
+        html += `<p>Q5: ${esc(q.q5_choice)} | Q6: ${q.q6_rating}/10${ratingDiff('q6_rating')}</p>`;
+        if (q.q7_choices) html += `<p><em>What surprised them:</em> ${esc(q.q7_choices)}</p>`;
+        if (q.q8_choice)  html += `<p><em>Season they spent most time in:</em> ${esc(q.q8_choice)}</p>`;
+        if (q.q9_text)    html += `<p><em>Showing up feels like:</em> ${esc(q.q9_text)}</p>`;
+        if (q.q10_text)   html += `<p><em>Will keep doing:</em> ${esc(q.q10_text)}</p>`;
+        if (q.q11_text)   html += `<p><em>To someone starting out:</em> ${esc(q.q11_text)}</p>`;
+        if (q.q12_text)   html += `<p><em>Feedback:</em> ${esc(q.q12_text)}</p>`;
+      }
+
+      // ─── Cuttings (daily reflections) ─────────────────────────────────────
+      // Collapsed by default — a 12-week course can produce 80+ entries and
+      // we don't want them dominating the dialog.
+      if (data.cuttings && data.cuttings.length) {
+        html += '<h4 style="font-weight:700;margin:1rem 0 0.5rem;color:var(--color-bloem)">Cuttings (Daily Reflections)</h4>';
+        html += `<details><summary style="cursor:pointer;color:rgba(16,15,16,0.6)">Show ${data.cuttings.length} entr${data.cuttings.length === 1 ? 'y' : 'ies'}</summary>`;
+        for (const c of data.cuttings) {
+          html += `<div style="margin:0.6rem 0;padding:0.5rem 0.7rem;background:rgba(112,92,108,0.04);border-radius:6px">`;
+          html += `<div style="font-weight:700;color:var(--color-bloem)">${fmtDate(c.recorded_date)}${c.season ? ' · <span style="font-weight:300;color:rgba(16,15,16,0.5)">' + esc(c.season) + '</span>' : ''}</div>`;
+          if (c.prompt)          html += `<div style="font-style:italic;color:rgba(16,15,16,0.55);font-size:0.8rem;margin-top:0.2rem">${esc(c.prompt)}</div>`;
+          if (c.reflection_text) html += `<div style="margin-top:0.3rem">${esc(c.reflection_text)}</div>`;
+          if (c.talked_about)    html += `<div style="margin-top:0.3rem"><strong>Talked about:</strong> ${esc(c.talked_about)}</div>`;
+          if (c.how_it_felt)     html += `<div><strong>How it felt:</strong> ${esc(c.how_it_felt)}</div>`;
+          if (c.takeaway)        html += `<div><strong>Takeaway:</strong> ${esc(c.takeaway)}</div>`;
+          html += `</div>`;
+        }
+        html += `</details>`;
       }
 
       body.innerHTML = html || '<p>No data yet.</p>';
+    }
+
+    // ── All mid-course responses (aggregate, anonymous) ──────────────────────
+    async function viewAllMidcourseResponses() {
+      const body = document.getElementById('midcourse-all-body');
+      body.textContent = 'Loading…';
+      openDialog('dialog-midcourse-all');
+
+      const res = await fetch('/api/admin/midcourse-responses');
+      const data = await res.json();
+      const rows = (data && data.responses) || [];
+
+      if (!rows.length) {
+        body.innerHTML = '<p>No mid-course responses yet.</p>';
+        return;
+      }
+
+      let html = `<p style="color:rgba(16,15,16,0.55);font-size:0.82rem;font-style:italic;margin:0 0 1rem">Stored anonymously — no link to student identity. Shown in submission order.</p>`;
+      let i = 1;
+      for (const r of rows) {
+        html += `<div style="margin-bottom:1rem;padding:0.75rem 0.9rem;background:rgba(112,92,108,0.05);border-radius:8px">`;
+        html += `<div style="font-weight:700;color:var(--color-bloem)">Response #${i++} <span style="font-weight:300;color:rgba(16,15,16,0.5);font-size:0.8rem">· submitted ${esc(r.submitted_at_day)}</span></div>`;
+        if (r.q1_rating != null) html += `<div style="margin-top:0.3rem"><strong>How it's going (1–10):</strong> ${r.q1_rating}</div>`;
+        if (r.q2_working)        html += `<div><strong>What's working:</strong> ${esc(r.q2_working)}</div>`;
+        if (r.q3_resistance)     html += `<div><strong>Where there's resistance:</strong> ${esc(r.q3_resistance)}</div>`;
+        if (r.q4_improvement)    html += `<div><strong>What could change:</strong> ${esc(r.q4_improvement)}</div>`;
+        if (r.q5_other)          html += `<div><strong>Anything else:</strong> ${esc(r.q5_other)}</div>`;
+        html += `</div>`;
+      }
+      body.innerHTML = html;
     }
 
     // ── Manual unlock toggles ────────────────────────────────────────────────

@@ -2049,12 +2049,32 @@ module.exports = {
   },
 
   getStudentFullData(userId) {
-    const user = db.prepare('SELECT id, name, email, avatar_initial FROM users WHERE id=?').get(userId);
-    const opening  = db.prepare("SELECT * FROM self_assessments WHERE user_id=? AND assessment_type='opening'").get(userId);
-    const midcourse = db.prepare("SELECT * FROM self_assessments WHERE user_id=? AND assessment_type='midcourse'").get(userId);
-    const closing  = db.prepare("SELECT * FROM self_assessments WHERE user_id=? AND assessment_type='closing'").get(userId);
+    const user = db.prepare(
+      'SELECT id, name, email, avatar_initial, midcourse_submitted_at FROM users WHERE id=?'
+    ).get(userId);
+    const opening = db.prepare(
+      "SELECT * FROM self_assessments WHERE user_id=? AND assessment_type='opening'"
+    ).get(userId);
+    const closing = db.prepare(
+      "SELECT * FROM self_assessments WHERE user_id=? AND assessment_type='closing'"
+    ).get(userId);
     const goals    = db.prepare('SELECT * FROM goals WHERE user_id=? ORDER BY seed_number').all(userId);
-    return { user, opening, midcourse, closing, goals };
+
+    // Reach for the existing seed-packet + cuttings helpers so this method
+    // stays a thin aggregator — no duplicated SQL.
+    const seedPacketAnswers = this.getSeedPacketAnswersByUser(userId);
+    const seedPacketSeeds   = this.getSeedPacketSeeds(userId);
+    const cuttings          = this.getCuttingsForUserChronological(userId);
+
+    // Mid-course content is structurally anonymous (no user_id link). The
+    // only per-student fact available is "have they submitted?", which lives
+    // on users.midcourse_submitted_at. Surface just that — the dialog turns
+    // it into a "✓ Submitted on DATE" line.
+    return {
+      user, opening, closing, goals,
+      midcourseSubmittedAt: user ? user.midcourse_submitted_at : null,
+      seedPacketAnswers, seedPacketSeeds, cuttings,
+    };
   },
 
   // ─── Seed Packets ──────────────────────────────────────────────────────────

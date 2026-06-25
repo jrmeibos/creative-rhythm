@@ -2426,8 +2426,19 @@ app.get('/admin', requireAdmin, (req, res) => {
     simulatedToday,
     studentAssessments,
     questions: ASSESSMENT_QUESTIONS,
-    closingQuestions: CLOSING_QUESTIONS
+    closingQuestions: CLOSING_QUESTIONS,
+    // Surfaced so the View-student dialog can join answers↔questions and
+    // group by angle without doing a second fetch.
+    seedPacketAngles: ANGLES,
+    midcourseSubmittedCount: db.countMidcourseSubmissionsByStudents(),
   });
+});
+
+// All anonymous mid-course responses, oldest first. Per-student linkage is
+// intentionally broken at the schema level, so the only way to read content
+// is in aggregate.
+app.get('/api/admin/midcourse-responses', requireAdmin, (req, res) => {
+  res.json({ responses: db.getAllMidcourseResponses() });
 });
 
 // ─── Admin: Seed Packets export ───────────────────────────────────────────────
