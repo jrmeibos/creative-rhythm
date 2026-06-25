@@ -2715,6 +2715,35 @@ app.post('/admin/run-weekly-digest', async (req, res) => {
   }
 });
 
+// ─── Daily push reminders ──────────────────────────────────────────────────
+// Triggered hourly by GitHub Actions. The lib decides per-user whether the
+// current UTC hour maps to that student's chosen local hour, so this route
+// is dumb — it just runs the lib and reports.
+const { runDailyReminders } = require('./lib/daily-reminders');
+
+app.post('/admin/run-daily-reminders', async (req, res) => {
+  const expected = process.env.CRON_SECRET;
+  if (!expected) {
+    return res.status(503).json({ error: 'CRON_SECRET not configured on this server.' });
+  }
+  const provided = req.get('X-Cron-Secret') || '';
+  if (!safeEqual(provided, expected)) {
+    return res.status(401).json({ error: 'Invalid or missing X-Cron-Secret.' });
+  }
+  const dryRun = req.query.dryRun === '1' || req.query.dryRun === 'true';
+
+  const log = [];
+  const capture = (line) => { log.push(line); console.log(line); };
+
+  try {
+    const summary = await runDailyReminders({ dryRun, log: capture });
+    res.json({ ok: true, dryRun, summary, log });
+  } catch (err) {
+    console.error('[daily-reminders route] fatal:', err);
+    res.status(500).json({ ok: false, error: err.message, log });
+  }
+});
+
 // ─── Helpers ───────────────────────────────────────────────────────────────
 
 function getUnlockState(user) {
