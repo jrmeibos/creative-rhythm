@@ -47,6 +47,11 @@
   width: 100%;
   height: auto;
   opacity: 0.92;
+  /* Circle logo is square — cap so it doesn't dominate the 260px sidebar.
+     Centered within the wrap. Old horizontal logo filled to full width;
+     this keeps it tight and balanced with the user-info block below. */
+  max-width: 130px;
+  margin: 0 auto;
 }
 
 /* User info */
