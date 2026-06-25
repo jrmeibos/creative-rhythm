@@ -377,7 +377,7 @@ app.get('/dashboard', requireAuth, (req, res) => {
     isIntegrationWeek,
     dayview,
     today,
-    quote: getRotatingQuote(),
+    quote: getRotatingQuote(req.session.user),
     midcourseCardVisible,
   });
 });
@@ -1118,7 +1118,7 @@ app.post('/api/midcourse/submit', requireAuth, async (req, res) => {
   db.markMidcourseSubmittedForUser(user.id);
 
   res.json({ ok: true });
-  setImmediate(() => notifyAdminOfMidcourseSubmission());
+  setImmediate(() => notifyAdminOfMidcourseSubmission(user));
 });
 
 // Fires after every submission. The email body is name-less by design — the
@@ -1126,10 +1126,10 @@ app.post('/api/midcourse/submit', requireAuth, async (req, res) => {
 // snapshot of all anonymous responses received so far. We bypass the usual
 // notifyAdminOfMilestone helper because that one is structured around
 // per-student emails and adds the student's name to subject + body.
-async function notifyAdminOfMidcourseSubmission() {
+async function notifyAdminOfMidcourseSubmission(submittingUser) {
   try {
     const { done, total } = db.countMidcourseSubmissionsByStudents();
-    const pdf = await generateMidcoursePdfBuffer();
+    const pdf = await generateMidcoursePdfBuffer(submittingUser);
     await sendAdminMilestoneEmail({
       studentName: 'A student',  // logged only; not used in subject/body below
       subject:     '[Creative\'s Garden] Anonymous mid-course feedback received',
@@ -1821,7 +1821,10 @@ async function generateOnboardingPdfBuffer(user) {
   };
 }
 
-async function generateMidcoursePdfBuffer() {
+async function generateMidcoursePdfBuffer(submittingUser) {
+  // submittingUser provides timezone for the "generated" label + filename
+  // date; the PDF body itself stays anonymous (no name, no email).
+  const now = getNow(submittingUser);
   const responses = db.getAllMidcourseResponses();
   // The PDF renderer is name-less by design; we pass the current date as the
   // generated label and let the EJS print "Response 1 / 2 / …" with only the
@@ -1833,12 +1836,12 @@ async function generateMidcoursePdfBuffer() {
       fontFaceCss:    CUTTINGS_PDF_ASSETS.fontFaceCss,
       questions:      MIDCOURSE_QUESTIONS,
       responses,
-      generatedLabel: formatGeneratedLabel(new Date()),
+      generatedLabel: formatGeneratedLabel(now),
     }
   );
   const buffer = await renderHtmlToPdf(html);
   return {
-    filename: `creatives-garden-midcourse-feedback-${toLocalDateString(new Date())}.pdf`,
+    filename: `creatives-garden-midcourse-feedback-${toLocalDateString(now)}.pdf`,
     buffer,
   };
 }
@@ -2792,14 +2795,17 @@ function getGreeting(user) {
   return 'Good evening';
 }
 
-function getWeekStart() {
-  const now = new Date();
+function getWeekStart(user) {
+  // Resolve "now" in the user's wall-clock TZ so a Sunday-evening student in
+  // Denver doesn't see the upcoming Monday because Railway already ticked
+  // over to UTC Monday.
+  const now = getNow(user);
   const day = now.getDay();
   const diff = day === 0 ? -6 : 1 - day;
   const monday = new Date(now);
   monday.setDate(now.getDate() + diff);
   monday.setHours(0, 0, 0, 0);
-  return monday.toISOString().split('T')[0];
+  return toLocalDateString(monday);
 }
 
 // Returns { weekNumber, weekStart, weekEnd } relative to course_start_date.
@@ -2813,7 +2819,7 @@ function getCurrentCourseWeek(user, courseStartArg) {
   // itself falls back to the global setting when the user has no override.
   const courseStartStr = (courseStartArg !== undefined) ? courseStartArg : db.getUserCourseStartDate(user);
   if (!courseStartStr || !courseStartStr.trim()) {
-    const ws = getWeekStart();
+    const ws = getWeekStart(user);
     const we = new Date(ws + 'T00:00:00');
     we.setDate(we.getDate() + 6);
     return { weekNumber: null, weekStart: ws, weekEnd: we.toISOString().split('T')[0] };
@@ -2825,7 +2831,7 @@ function getCurrentCourseWeek(user, courseStartArg) {
   const daysSinceStart = Math.floor((today - courseStart) / 86400000);
 
   if (daysSinceStart < 0) {
-    const ws = getWeekStart();
+    const ws = getWeekStart(user);
     const we = new Date(ws + 'T00:00:00');
     we.setDate(we.getDate() + 6);
     return { weekNumber: 0, weekStart: ws, weekEnd: we.toISOString().split('T')[0] };
@@ -2941,7 +2947,7 @@ function generate12Weeks(startDate) {
   return weeks;
 }
 
-function getRotatingQuote() {
+function getRotatingQuote(user) {
   const quotes = [
     { text: "You already know what you want to say. Let's find it together.", source: "The Creative's Garden" },
     { text: "Visibility that feels like a return to self.", source: "The Meibos Touch" },
@@ -2951,7 +2957,9 @@ function getRotatingQuote() {
     { text: "Curiosity is not a luxury. It's load-bearing infrastructure for your creative life.", source: "The Creative's Garden" },
     { text: "The buffer isn't procrastination. It's wisdom.", source: "The Creative's Garden" },
   ];
-  const today = new Date();
+  // Rotate at the user's local midnight, not server (UTC) midnight, so the
+  // quote doesn't change mid-evening for anyone west of UTC.
+  const today = getNow(user);
   const idx = (today.getFullYear() * 365 + today.getMonth() * 31 + today.getDate()) % quotes.length;
   return quotes[idx];
 }
