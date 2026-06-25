@@ -1,0 +1,56 @@
+# Daily push reminders — pings the live web app's /admin/run-daily-reminders
+# route every hour. The lib inside decides per-user whether to actually send
+# (compares "current hour in their timezone" vs their saved hour), so it's
+# safe to run hourly even though most rounds are no-ops for most students.
+#
+# Setup (one-time, in this repo's settings):
+#   1. Settings → Secrets and variables → Actions → New repository secret
+#   2. Add CRON_SECRET (reuse the same one as the weekly digest)
+#   3. Make sure the same CRON_SECRET is set as an env var on Railway,
+#      along with VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY / VAPID_CONTACT.
+#
+# Manual trigger: Actions tab → "Daily push reminders" → "Run workflow"
+# (uses the same secret; useful for testing without waiting for the top of
+# the hour).
+
+name: Daily push reminders
+
+on:
+  schedule:
+    # Top of every UTC hour. GitHub cron drift (a few minutes) is fine —
+    # each student gets at most one push per day regardless, because the lib
+    # claims a per-day milestone before sending.
+    - cron: '0 * * * *'
+  workflow_dispatch:
+    inputs:
+      dryRun:
+        description: 'Dry run (logs decisions, sends nothing)'
+        required: false
+        default: 'false'
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger daily reminders on production
+        env:
+          CRON_SECRET:    ${{ secrets.CRON_SECRET }}
+          REMINDER_URL:   https://www.creativesgarden.com/admin/run-daily-reminders
+          DRY_RUN_FLAG:   ${{ github.event.inputs.dryRun == 'true' && '?dryRun=1' || '' }}
+        run: |
+          if [ -z "$CRON_SECRET" ]; then
+            echo "::error::CRON_SECRET repository secret is not set."
+            exit 1
+          fi
+          echo "POSTing to $REMINDER_URL$DRY_RUN_FLAG"
+          response=$(curl -sS -X POST "$REMINDER_URL$DRY_RUN_FLAG" \
+            -H "X-Cron-Secret: $CRON_SECRET" \
+            -H "Content-Type: application/json" \
+            --max-time 60 \
+            -w "\nHTTP_STATUS:%{http_code}\n")
+          echo "$response"
+          status=$(echo "$response" | tail -1 | sed 's/HTTP_STATUS://')
+          if [ "$status" -lt 200 ] || [ "$status" -ge 300 ]; then
+            echo "::error::Daily reminders endpoint returned HTTP $status"
+            exit 1
+          fi
