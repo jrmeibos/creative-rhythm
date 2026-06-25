@@ -191,6 +191,25 @@ db.exec(`
     FOREIGN KEY (user_id) REFERENCES users(id),
     UNIQUE(user_id, assessment_type)
   );
+
+  -- One row per (user, device/browser) subscription to Web Push. The browser
+  -- generates a unique endpoint URL on subscribe() and re-uses it on
+  -- subsequent calls from the same install, so UNIQUE(endpoint) lets re-subs
+  -- update in place. user_agent is captured at subscribe-time only so the
+  -- student can identify which device a row corresponds to if we ever
+  -- expose a per-device list.
+  CREATE TABLE IF NOT EXISTS push_subscriptions (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id       INTEGER NOT NULL,
+    endpoint      TEXT    NOT NULL UNIQUE,
+    p256dh        TEXT    NOT NULL,
+    auth          TEXT    NOT NULL,
+    user_agent    TEXT,
+    created_at    DATETIME DEFAULT CURRENT_TIMESTAMP,
+    last_seen_at  DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+  );
+  CREATE INDEX IF NOT EXISTS idx_push_subscriptions_user ON push_subscriptions(user_id);
 `);
 
 // Migrate existing databases to add new columns
@@ -2213,5 +2232,45 @@ module.exports = {
     db.prepare(
       `UPDATE seed_packet_synthesis_state SET ${fields} WHERE user_id = ?`
     ).run(...Object.values(partial), userId);
+  },
+
+  // ─── Web Push subscriptions ────────────────────────────────────────────────
+
+  // Insert a new subscription, or refresh ownership+timestamps if the same
+  // endpoint already exists. UPSERT on endpoint covers the common case where
+  // a user re-subscribes from the same install — keys may rotate, ownership
+  // may change (rare, but if a different account installs on the same
+  // browser, the subscription should now belong to that user).
+  upsertPushSubscription({ userId, endpoint, p256dh, auth, userAgent }) {
+    db.prepare(`
+      INSERT INTO push_subscriptions (user_id, endpoint, p256dh, auth, user_agent)
+      VALUES (?, ?, ?, ?, ?)
+      ON CONFLICT(endpoint) DO UPDATE SET
+        user_id      = excluded.user_id,
+        p256dh       = excluded.p256dh,
+        auth         = excluded.auth,
+        user_agent   = excluded.user_agent,
+        last_seen_at = CURRENT_TIMESTAMP
+    `).run(userId, endpoint, p256dh, auth, userAgent || null);
+  },
+
+  // Used by /api/push/unsubscribe and by the send-helper to prune dead
+  // subscriptions when the push service returns 404/410.
+  deletePushSubscriptionByEndpoint(endpoint) {
+    return db.prepare(
+      'DELETE FROM push_subscriptions WHERE endpoint = ?'
+    ).run(endpoint);
+  },
+
+  getPushSubscriptionsForUser(userId) {
+    return db.prepare(
+      'SELECT id, endpoint, p256dh, auth, user_agent, created_at FROM push_subscriptions WHERE user_id = ?'
+    ).all(userId);
+  },
+
+  countPushSubscriptionsForUser(userId) {
+    return db.prepare(
+      'SELECT COUNT(*) AS c FROM push_subscriptions WHERE user_id = ?'
+    ).get(userId).c;
   },
 };

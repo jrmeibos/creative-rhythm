@@ -16,6 +16,7 @@ const { getSeasonPrompt } = require('./lib/season-prompts');
 const { getDailyPrompt } = require('./lib/daily-prompts');
 const CUTTING_PROMPTS = require('./lib/cutting-prompts');
 const { renderHtmlToPdf } = require('./lib/pdf-render');
+const PUSH = require('./lib/push');
 const ejs = require('ejs');
 const ALL_QUESTION_IDS = new Set(ANGLES.flatMap(a => a.questions.map(q => q.id)));
 
@@ -469,6 +470,54 @@ app.post('/api/timezone', requireAuth, (req, res) => {
   db.setUserTimezone(req.session.user.id, tz);
   req.session.user.timezone = tz;
   req.session.save(() => res.json({ ok: true, timezone: tz }));
+});
+
+// ─── Push notifications ────────────────────────────────────────────────────
+// Three lifecycle endpoints. Client flow:
+//   1. fetch GET /api/push/vapid-public-key
+//   2. registration.pushManager.subscribe({ applicationServerKey: <key> })
+//   3. POST /api/push/subscribe  with the resulting subscription object
+//   …or POST /api/push/unsubscribe to revoke a device.
+
+app.get('/api/push/vapid-public-key', requireAuth, (req, res) => {
+  if (!PUSH.isPushConfigured()) {
+    return res.status(503).json({ ok: false, error: 'push_not_configured' });
+  }
+  res.json({ ok: true, key: PUSH.getVapidPublicKey() });
+});
+
+app.post('/api/push/subscribe', requireAuth, (req, res) => {
+  if (!PUSH.isPushConfigured()) {
+    return res.status(503).json({ ok: false, error: 'push_not_configured' });
+  }
+
+  const sub = req.body && req.body.subscription;
+  // The browser subscription object always has the shape
+  // { endpoint, keys: { p256dh, auth } }. Anything else is malformed input.
+  if (!sub || typeof sub.endpoint !== 'string' || !sub.keys ||
+      typeof sub.keys.p256dh !== 'string' || typeof sub.keys.auth !== 'string') {
+    return res.status(400).json({ ok: false, error: 'invalid_subscription' });
+  }
+
+  const userAgent = (req.get('user-agent') || '').slice(0, 500);
+  db.upsertPushSubscription({
+    userId:   req.session.user.id,
+    endpoint: sub.endpoint,
+    p256dh:   sub.keys.p256dh,
+    auth:     sub.keys.auth,
+    userAgent,
+  });
+
+  res.json({ ok: true });
+});
+
+app.post('/api/push/unsubscribe', requireAuth, (req, res) => {
+  const endpoint = req.body && req.body.endpoint;
+  if (typeof endpoint !== 'string' || !endpoint) {
+    return res.status(400).json({ ok: false, error: 'invalid_endpoint' });
+  }
+  db.deletePushSubscriptionByEndpoint(endpoint);
+  res.json({ ok: true });
 });
 
 // ─── Goals ─────────────────────────────────────────────────────────────────
