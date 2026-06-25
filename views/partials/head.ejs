@@ -6,3 +6,23 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Jost:ital,wght@0,300;0,700;1,300&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/css/main.css">
+
+<!-- ─── PWA / Add-to-Home-Screen ──────────────────────────────────────── -->
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#705C6C">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Creative's Garden">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon-180.png">
+<script>
+  // Service-worker registration runs after load so it never delays the
+  // first paint. Wrapped in a feature check because Safari < 11.1 and a
+  // few enterprise browsers will throw on the property access.
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', function () {
+      navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(function (err) {
+        console.warn('[sw] registration failed:', err && err.message);
+      });
+    });
+  }
+</script>
