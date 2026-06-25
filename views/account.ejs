@@ -19,6 +19,83 @@
         </div>
       </header>
 
+      <!-- ── Daily Reminder ────────────────────────────────────────────────── -->
+      <%
+        // Pre-render the time picker options here so the inline JS doesn't
+        // have to. Storing the hour as 0–23 keeps timezone math simple; the
+        // display labels are the conventional 12-hour clock for legibility.
+        const currentHour = (typeof profile.daily_reminder_hour === 'number') ? profile.daily_reminder_hour : 8;
+        const reminderEnabled = profile.daily_reminder_enabled === 1;
+        const HOURS = Array.from({ length: 24 }, (_, h) => {
+          const ampm = h < 12 ? 'AM' : 'PM';
+          const display = h === 0 ? 12 : (h > 12 ? h - 12 : h);
+          return { value: h, label: `${display}:00 ${ampm}` };
+        });
+      %>
+      <section class="dash-section">
+        <div class="dash-section-header">
+          <h2 class="dash-section-title">Daily Reminder</h2>
+        </div>
+        <div class="acct-card">
+          <p class="acct-section-subtitle">
+            Get one gentle nudge per day to log your reflection — at a time you choose.
+            You'll need to install <em>The Creative's Garden</em> to your home screen and turn on
+            notifications for this device.
+          </p>
+
+          <!-- iOS install guidance: only visible on iPhone/iPad in non-installed mode -->
+          <div class="acct-install-card" id="ios-install-card" hidden>
+            <strong>One step first — install to your home screen.</strong>
+            <p>iPhone only delivers notifications to installed apps. To install:</p>
+            <ol>
+              <li>Tap the <em>Share</em> button at the bottom of Safari</li>
+              <li>Scroll down and tap <em>Add to Home Screen</em></li>
+              <li>Tap <em>Add</em>, then open the app from your home screen</li>
+              <li>Return here to enable notifications</li>
+            </ol>
+          </div>
+
+          <!-- Master toggle: cron checks this column before sending -->
+          <div class="acct-toggle-row">
+            <div class="acct-toggle-text">
+              <strong>Send me a daily reminder</strong>
+              <span>You can turn this off any time.</span>
+            </div>
+            <div class="acct-toggle-right">
+              <span class="acct-toggle-saved" id="saved-daily_reminder" hidden>Saved ✓</span>
+              <button class="acct-toggle" id="toggle-daily-reminder"
+                      aria-pressed="<%= reminderEnabled ? 'true' : 'false' %>"
+                      type="button" onclick="toggleDailyReminder(this)">
+                <span class="acct-toggle-track"><span class="acct-toggle-thumb"></span></span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Time picker: hidden when master toggle is off -->
+          <div class="acct-reminder-time" id="reminder-time-row"<%= reminderEnabled ? '' : ' hidden' %>>
+            <label class="acct-label" for="reminder-hour-select">Send it at</label>
+            <select class="acct-input acct-select" id="reminder-hour-select" onchange="saveReminderHour(this)">
+              <% for (const h of HOURS) { %>
+                <option value="<%= h.value %>"<%= h.value === currentHour ? ' selected' : '' %>><%= h.label %></option>
+              <% } %>
+            </select>
+            <span class="acct-reminder-tz">in your timezone (<%= profile.timezone || 'America/Denver' %>)</span>
+          </div>
+
+          <!-- Per-device enable: separate concept from the master toggle because -->
+          <!-- browser push permission lives on the device, not the account.       -->
+          <div class="acct-device-row">
+            <div class="acct-device-state">
+              <strong id="device-status-label">Not enabled on this device</strong>
+              <span id="device-status-hint">Tap below to allow notifications in this browser.</span>
+            </div>
+            <button class="acct-save-btn" id="enable-device-btn" type="button" onclick="enableOnDevice()">Enable on this device</button>
+            <button class="acct-text-btn" id="disable-device-btn" type="button" onclick="disableOnDevice()" hidden>Disable on this device</button>
+          </div>
+          <p class="acct-status acct-status--error" id="reminder-error" hidden></p>
+        </div>
+      </section>
+
       <!-- ── Profile Photo ─────────────────────────────────────────────────── -->
       <section class="dash-section">
         <div class="dash-section-header">
@@ -430,6 +507,168 @@
       el.hidden = false;
       if (!isError) setTimeout(() => { el.hidden = true; el.textContent = ''; }, 3500);
     }
+
+    // ── Daily Reminder ─────────────────────────────────────────────────────────
+    // Two-axis state model:
+    //   • Master toggle (`daily_reminder_enabled`) — server-side per-user flag
+    //     the cron checks before sending. Persists across devices.
+    //   • Per-device push subscription — browser-level permission + endpoint
+    //     stored in push_subscriptions. One row per device/browser install.
+    //
+    // The UI lets you toggle them independently for clarity, but the "Enable
+    // on this device" button is the one most students will use — it grants
+    // permission, subscribes, AND turns on the master toggle in one tap.
+
+    const reminderErrEl = document.getElementById('reminder-error');
+
+    async function toggleDailyReminder(btn) {
+      const wasOn = btn.getAttribute('aria-pressed') === 'true';
+      const nowOn = !wasOn;
+      btn.setAttribute('aria-pressed', String(nowOn));
+      document.getElementById('reminder-time-row').hidden = !nowOn;
+      const savedEl = document.getElementById('saved-daily_reminder');
+      const res = await fetch('/api/account/daily-reminder', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ enabled: nowOn })
+      });
+      if (res.ok) {
+        if (savedEl) { savedEl.hidden = false; setTimeout(() => savedEl.hidden = true, 2000); }
+      } else {
+        btn.setAttribute('aria-pressed', String(wasOn));
+        document.getElementById('reminder-time-row').hidden = !wasOn;
+      }
+    }
+
+    async function saveReminderHour(sel) {
+      await fetch('/api/account/daily-reminder', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ hour: parseInt(sel.value, 10) })
+      });
+    }
+
+    // Standard helper for converting a base64url-encoded VAPID key into the
+    // Uint8Array shape pushManager.subscribe() wants.
+    function urlBase64ToUint8Array(s) {
+      const padding = '='.repeat((4 - s.length % 4) % 4);
+      const base64 = (s + padding).replace(/-/g, '+').replace(/_/g, '/');
+      const raw = atob(base64);
+      const out = new Uint8Array(raw.length);
+      for (let i = 0; i < raw.length; ++i) out[i] = raw.charCodeAt(i);
+      return out;
+    }
+
+    function showReminderError(msg) {
+      reminderErrEl.textContent = msg;
+      reminderErrEl.hidden = false;
+    }
+
+    function setDeviceUiEnabled(isEnabled) {
+      document.getElementById('device-status-label').textContent =
+        isEnabled ? 'Enabled on this device' : 'Not enabled on this device';
+      document.getElementById('device-status-hint').textContent = isEnabled
+        ? "You'll get the daily reminder here."
+        : 'Tap below to allow notifications in this browser.';
+      document.getElementById('enable-device-btn').hidden  = isEnabled;
+      document.getElementById('disable-device-btn').hidden = !isEnabled;
+    }
+
+    async function enableOnDevice() {
+      reminderErrEl.hidden = true;
+      if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) {
+        return showReminderError('This browser does not support push notifications.');
+      }
+
+      // Permission has to be requested from a user gesture — we are inside one.
+      const permission = await Notification.requestPermission();
+      if (permission !== 'granted') {
+        return showReminderError('Permission denied. You can enable it in your browser settings.');
+      }
+
+      // Pull the VAPID public key fresh — handles the case where the server
+      // rotated keys since the last visit.
+      const keyRes = await fetch('/api/push/vapid-public-key');
+      if (!keyRes.ok) {
+        return showReminderError('Notifications are not configured on the server yet.');
+      }
+      const { key } = await keyRes.json();
+
+      const reg = await navigator.serviceWorker.ready;
+      let sub;
+      try {
+        sub = await reg.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(key),
+        });
+      } catch (e) {
+        return showReminderError('Could not subscribe: ' + (e.message || e));
+      }
+
+      const res = await fetch('/api/push/subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ subscription: sub.toJSON() })
+      });
+      if (!res.ok) {
+        return showReminderError('Could not save the subscription.');
+      }
+
+      // If the master toggle is off, flip it on — enabling a device but
+      // having the cron skip you would be confusing.
+      const masterBtn = document.getElementById('toggle-daily-reminder');
+      if (masterBtn.getAttribute('aria-pressed') !== 'true') {
+        masterBtn.setAttribute('aria-pressed', 'true');
+        document.getElementById('reminder-time-row').hidden = false;
+        await fetch('/api/account/daily-reminder', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ enabled: true })
+        });
+      }
+      setDeviceUiEnabled(true);
+    }
+
+    async function disableOnDevice() {
+      reminderErrEl.hidden = true;
+      if (!('serviceWorker' in navigator)) return;
+      const reg = await navigator.serviceWorker.ready;
+      const sub = await reg.pushManager.getSubscription();
+      if (sub) {
+        // Tell the server first, then unsubscribe locally — if the server
+        // call fails the user can retry; if we unsubscribed first we'd lose
+        // the endpoint we need to send.
+        await fetch('/api/push/unsubscribe', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ endpoint: sub.endpoint })
+        });
+        await sub.unsubscribe();
+      }
+      setDeviceUiEnabled(false);
+    }
+
+    // On page load, reconcile UI with reality: does this browser have an
+    // active subscription? + is this an iOS Safari that needs the install
+    // guidance shown?
+    (async () => {
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+      const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+      if (isIOS && !isStandalone) {
+        document.getElementById('ios-install-card').hidden = false;
+      }
+
+      if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+        // Just leave the button visible — clicking it will show a friendly
+        // unsupported message via showReminderError.
+        return;
+      }
+      try {
+        const reg = await navigator.serviceWorker.ready;
+        const sub = await reg.pushManager.getSubscription();
+        setDeviceUiEnabled(!!sub);
+      } catch (_) { /* no-op */ }
+    })();
   </script>
 
 </body>

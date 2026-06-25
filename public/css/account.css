@@ -349,6 +349,71 @@
   padding: 0.5rem 1rem 2rem;
 }
 
+/* ─── Daily Reminder section ─────────────────────────────────────────────── */
+
+/* iOS install guidance — quiet card with the 4-step "Add to Home Screen"
+   flow, only shown to iPhone/iPad users not already in standalone mode. */
+.acct-install-card {
+  background: rgba(246, 201, 92, 0.10);
+  border: 1px solid rgba(246, 201, 92, 0.4);
+  border-radius: var(--radius-sm);
+  padding: 1rem 1.25rem;
+  margin: 0 0 1.25rem;
+  font-size: 0.88rem;
+  color: var(--color-ink-stained);
+}
+.acct-install-card strong {
+  display: block;
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 1rem;
+  margin-bottom: 0.35rem;
+  color: var(--color-bloem);
+}
+.acct-install-card p { margin: 0 0 0.5rem; }
+.acct-install-card ol { margin: 0; padding-left: 1.4rem; line-height: 1.6; }
+.acct-install-card li em { font-style: normal; font-weight: 700; }
+
+.acct-reminder-time {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin: 0.25rem 0 1.25rem;
+  padding: 0.75rem 0;
+  border-top: 1px dashed rgba(112, 92, 108, 0.15);
+}
+.acct-reminder-time .acct-label { margin: 0; min-width: auto; }
+.acct-reminder-time .acct-select { max-width: 12rem; }
+.acct-reminder-tz {
+  font-size: 0.82rem;
+  font-weight: 300;
+  font-style: italic;
+  color: rgba(16, 15, 16, 0.5);
+}
+
+.acct-device-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  padding-top: 0.5rem;
+  border-top: 1px solid rgba(112, 92, 108, 0.08);
+}
+.acct-device-state { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+.acct-device-state strong {
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--color-ink-stained);
+}
+.acct-device-state span {
+  font-size: 0.82rem;
+  font-weight: 300;
+  color: rgba(16, 15, 16, 0.55);
+}
+
 /* ─── Mobile ─────────────────────────────────────────────────────────────── */
 @media (max-width: 680px) {
   .acct-card { padding: 1.25rem; }
@@ -357,4 +422,6 @@
   .acct-form--inline { max-width: 100%; }
   .acct-toggle-row { flex-wrap: wrap; }
   .acct-card--danger { flex-direction: column; align-items: flex-start; }
+  .acct-reminder-time .acct-select { max-width: 100%; }
+  .acct-device-row { flex-direction: column; align-items: stretch; }
 }

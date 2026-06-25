@@ -2165,6 +2165,16 @@ app.post('/api/account/preference', requireAuth, (req, res) => {
   }
 });
 
+// Daily reminder lives outside the generic preference helper because `hour`
+// is an integer (0–23), not a boolean — and the client wants to update both
+// fields atomically when the student first enables the reminder.
+app.post('/api/account/daily-reminder', requireAuth, (req, res) => {
+  const { enabled, hour } = req.body || {};
+  if (enabled !== undefined) db.setDailyReminderEnabled(req.session.user.id, !!enabled);
+  if (hour    !== undefined) db.setDailyReminderHour(req.session.user.id, hour);
+  res.json({ ok: true });
+});
+
 // ─── Resources ─────────────────────────────────────────────────────────────
 
 app.get('/resources', requireAuth, (req, res) => {

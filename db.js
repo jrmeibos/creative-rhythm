@@ -331,6 +331,19 @@ db.exec(`
     db.exec("ALTER TABLE users ADD COLUMN community_goals_public INTEGER DEFAULT 1");
     console.log('✓ Migrated: added community_goals_public column');
   }
+  // Daily push reminder — opt-in server-side switch (cron sender checks this)
+  // plus the local-hour the student wants the nudge delivered (0–23, resolved
+  // against users.timezone). Default OFF so brand-new students don't get
+  // surprise pushes; they flip it on from /account.
+  if (!userCols.includes('daily_reminder_enabled')) {
+    db.exec("ALTER TABLE users ADD COLUMN daily_reminder_enabled INTEGER DEFAULT 0");
+    console.log('✓ Migrated: added daily_reminder_enabled column');
+  }
+  if (!userCols.includes('daily_reminder_hour')) {
+    db.exec("ALTER TABLE users ADD COLUMN daily_reminder_hour INTEGER DEFAULT 8");
+    console.log('✓ Migrated: added daily_reminder_hour column');
+  }
+
   if (!userCols.includes('community_season_public')) {
     db.exec("ALTER TABLE users ADD COLUMN community_season_public INTEGER DEFAULT 1");
     console.log('✓ Migrated: added community_season_public column');
@@ -1115,7 +1128,7 @@ module.exports = {
   },
 
   getUserFullProfile(id) {
-    return db.prepare('SELECT id, name, email, role, avatar_initial, current_season, profile_photo, timezone, notify_new_fieldnotes, notify_community, notify_weekly_reminder, community_goals_public, community_season_public FROM users WHERE id = ?').get(id);
+    return db.prepare('SELECT id, name, email, role, avatar_initial, current_season, profile_photo, timezone, notify_new_fieldnotes, notify_community, notify_weekly_reminder, community_goals_public, community_season_public, daily_reminder_enabled, daily_reminder_hour FROM users WHERE id = ?').get(id);
   },
 
   updateUserDetails(userId, name, email) {
@@ -2272,5 +2285,29 @@ module.exports = {
     return db.prepare(
       'SELECT COUNT(*) AS c FROM push_subscriptions WHERE user_id = ?'
     ).get(userId).c;
+  },
+
+  // ─── Daily reminder preferences ───────────────────────────────────────────
+
+  setDailyReminderEnabled(userId, enabled) {
+    return db.prepare(
+      'UPDATE users SET daily_reminder_enabled = ? WHERE id = ?'
+    ).run(enabled ? 1 : 0, userId);
+  },
+
+  setDailyReminderHour(userId, hour) {
+    const h = Math.max(0, Math.min(23, parseInt(hour, 10) || 0));
+    return db.prepare(
+      'UPDATE users SET daily_reminder_hour = ? WHERE id = ?'
+    ).run(h, userId);
+  },
+
+  // Used by the cron in commit 4 — return every user whose toggle is on,
+  // along with their preferred hour and timezone (so the sender can decide
+  // "is it 8 AM in their timezone right now?").
+  getUsersWithDailyReminderEnabled() {
+    return db.prepare(
+      'SELECT id, name, email, timezone, daily_reminder_hour FROM users WHERE daily_reminder_enabled = 1'
+    ).all();
   },
 };
