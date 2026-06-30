@@ -319,6 +319,13 @@ db.exec(`
     db.exec("ALTER TABLE users ADD COLUMN timezone TEXT DEFAULT 'America/Denver'");
     console.log('✓ Migrated: added timezone column');
   }
+  // Trial-run support. Default 12 = full course. Admin sets to 3 (or any
+  // smaller number) for trial students so the dashboard / calendar / lesson
+  // gating clamp at the shorter length.
+  if (!userCols.includes('course_length_weeks')) {
+    db.exec("ALTER TABLE users ADD COLUMN course_length_weeks INTEGER DEFAULT 12");
+    console.log('✓ Migrated: added course_length_weeks column');
+  }
   // Per-user course start date for multi-cohort support. NULL means "fall
   // back to the global settings.course_start_date" so existing students keep
   // their current timeline observable behavior without a one-time backfill
@@ -1122,7 +1129,7 @@ module.exports = {
   },
 
   getUserById(id) {
-    return db.prepare('SELECT id, name, email, role, avatar_initial, current_season, profile_photo, course_start_date FROM users WHERE id = ?').get(id);
+    return db.prepare('SELECT id, name, email, role, avatar_initial, current_season, profile_photo, course_start_date, course_length_weeks FROM users WHERE id = ?').get(id);
   },
 
   // ─── Per-user course start date (multi-cohort support) ────────────────────
@@ -1147,6 +1154,17 @@ module.exports = {
     ).run(dateString || null, userId);
   },
 
+  // Trial students get a shorter clamp (typically 3). Server-side accessor
+  // mirrors getUserCourseStartDate: fall back to the column default of 12
+  // if anything goes wrong, so a missing/null value can never produce a
+  // 0-week course math edge case.
+  setUserCourseLengthWeeks(userId, weeks) {
+    const w = Math.max(1, Math.min(52, parseInt(weeks, 10) || 12));
+    return db.prepare(
+      'UPDATE users SET course_length_weeks = ? WHERE id = ?'
+    ).run(w, userId);
+  },
+
   hasVisitedGreenhouse(userId) {
     const row = db.prepare('SELECT has_visited_greenhouse FROM users WHERE id = ?').get(userId);
     return !!(row && row.has_visited_greenhouse);
@@ -1157,7 +1175,7 @@ module.exports = {
   },
 
   getAllUsers() {
-    return db.prepare('SELECT id, name, email, role, avatar_initial, current_season, profile_photo, community_goals_public, community_season_public, course_start_date, created_at FROM users ORDER BY role DESC, name ASC').all();
+    return db.prepare('SELECT id, name, email, role, avatar_initial, current_season, profile_photo, community_goals_public, community_season_public, course_start_date, course_length_weeks, created_at FROM users ORDER BY role DESC, name ASC').all();
   },
 
   getUserFullProfile(id) {

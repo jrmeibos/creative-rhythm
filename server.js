@@ -182,7 +182,8 @@ app.post('/login', async (req, res) => {
     onboarding_completed: !!user.onboarding_completed,
     profile_photo: user.profile_photo || null,
     timezone: user.timezone || null,
-    course_start_date: user.course_start_date || null
+    course_start_date: user.course_start_date || null,
+    course_length_weeks: user.course_length_weeks || 12,
   };
   if (user.role !== 'admin' && !user.onboarding_completed) {
     return res.redirect('/onboarding');
@@ -359,6 +360,13 @@ app.get('/dashboard', requireAuth, (req, res) => {
     !db.hasMidcourseBeenSubmittedByUser(req.session.user.id)
   );
 
+  // Trial-aware fields: total weeks for the "Week N of X" label, plus a
+  // flag for the soft "Trial complete" state once a trial student passes
+  // their final week (Commit B swaps a closing-reflection CTA in here).
+  const courseLengthWeeks = getCourseLengthWeeks(req.session.user);
+  const isTrial           = courseLengthWeeks < 12;
+  const trialComplete     = isTrial && typeof weekNumber === 'number' && weekNumber > courseLengthWeeks;
+
   res.render('dashboard', {
     title: 'Dashboard',
     page: 'dashboard',
@@ -379,6 +387,9 @@ app.get('/dashboard', requireAuth, (req, res) => {
     today,
     quote: getRotatingQuote(req.session.user),
     midcourseCardVisible,
+    courseLengthWeeks,
+    isTrial,
+    trialComplete,
   });
 });
 
@@ -540,9 +551,10 @@ app.get('/goals', requireAuth, (req, res) => {
 
   // Pre-build weekStart → "Week One" label for history pills
   const courseStartDate = db.getUserCourseStartDate(req.session.user);
+  const courseLengthWeeks = getCourseLengthWeeks(req.session.user);
   const weekNames = {};
   if (courseStartDate) {
-    generate12Weeks(courseStartDate).forEach((ws, i) => {
+    generateCourseWeeks(courseStartDate, courseLengthWeeks).forEach((ws, i) => {
       weekNames[ws] = 'Week ' + WEEK_ORDINALS[i];
     });
   }
@@ -566,7 +578,7 @@ app.get('/goals', requireAuth, (req, res) => {
   const weeklyReflection = isPastWeek ? db.getWeeklyReflection(userId, weekStart) : null;
 
   // Determine curricular season for the viewed week
-  const allWeekStarts = courseStartDate ? generate12Weeks(courseStartDate) : [];
+  const allWeekStarts = courseStartDate ? generateCourseWeeks(courseStartDate, courseLengthWeeks) : [];
   const viewedWeekIdx = allWeekStarts.indexOf(weekStart);
   const viewedWeekNumber = viewedWeekIdx >= 0 ? viewedWeekIdx + 1 : null;
   const curricularSeason = getCurricularSeason(viewedWeekNumber);
@@ -695,12 +707,22 @@ function normalizeVideoUrl(url) {
 }
 
 app.get('/lessons', requireAuth, (req, res) => {
-  const lessons = db.getAllLessons();
+  const allLessons = db.getAllLessons();
   const completedIds = new Set(db.completedLessonIds(req.session.user.id));
+  // Trial students only see lessons within their course length. The
+  // "Course Introduction" sits outside the numbered curriculum so it stays
+  // visible to everyone. Numbered lessons N > length are hidden.
+  const courseLengthWeeks = getCourseLengthWeeks(req.session.user);
+  let visible = allLessons;
+  if (req.session.user.role !== 'admin' && courseLengthWeeks < 12) {
+    const numbered = allLessons.filter(l => l.slug !== 'course-introduction');
+    const allowedNumbered = new Set(numbered.slice(0, courseLengthWeeks).map(l => l.id));
+    visible = allLessons.filter(l => l.slug === 'course-introduction' || allowedNumbered.has(l.id));
+  }
   res.render('lessons', {
     title: 'Lessons',
     page: 'lessons',
-    lessons,
+    lessons: visible,
     completedIds,
     completedCount: completedIds.size
   });
@@ -709,6 +731,23 @@ app.get('/lessons', requireAuth, (req, res) => {
 app.get('/lessons/:slug', requireAuth, (req, res) => {
   const lesson = db.getLessonBySlug(req.params.slug);
   if (!lesson) return res.status(404).render('error', { title: '404', message: 'Lesson not found.', user: req.session.user });
+  // Block trial students from URL-hacking into a lesson past their length.
+  // Admins always pass; intro is always allowed; numbered lessons N > length
+  // 404 with a friendly message instead of silently rendering.
+  if (req.session.user.role !== 'admin' && lesson.slug !== 'course-introduction') {
+    const courseLengthWeeks = getCourseLengthWeeks(req.session.user);
+    if (courseLengthWeeks < 12) {
+      const numbered = db.getAllLessons().filter(l => l.slug !== 'course-introduction');
+      const numIdx = numbered.findIndex(l => l.id === lesson.id);
+      if (numIdx >= 0 && numIdx + 1 > courseLengthWeeks) {
+        return res.status(404).render('error', {
+          title: 'Not yet',
+          message: `This lesson is part of the full course. Your trial covers lessons 1–${courseLengthWeeks}.`,
+          user: req.session.user,
+        });
+      }
+    }
+  }
   const completed = !!db.getLessonCompletion(req.session.user.id, lesson.id);
   const allLessons = db.getAllLessons();
   const idx = allLessons.findIndex(l => l.id === lesson.id);
@@ -762,11 +801,12 @@ app.post('/api/lessons/:id/complete', requireAuth, (req, res) => {
 app.get('/community', requireAuth, (req, res) => {
   const currentWeekStart = getCurrentCourseWeek(req.session.user).weekStart;
   const courseStartDate  = db.getUserCourseStartDate(req.session.user) || currentWeekStart;
-  const weekStarts       = generate12Weeks(courseStartDate);
+  const courseLengthWeeks = getCourseLengthWeeks(req.session.user);
+  const weekStarts       = generateCourseWeeks(courseStartDate, courseLengthWeeks);
   const firstWeek        = weekStarts[0];
-  const lastWeek         = weekStarts[11];
+  const lastWeek         = weekStarts[weekStarts.length - 1];
 
-  // Accessible ceiling: can't exceed current week or Week 12
+  // Accessible ceiling: can't exceed current week or final week
   const accessibleUpTo = currentWeekStart < lastWeek ? currentWeekStart : lastWeek;
 
   // Clamp requested week to [firstWeek, accessibleUpTo]
@@ -866,7 +906,8 @@ app.get('/calendar', requireAuth, (req, res) => {
   const courseCurrentWeekStart = getCurrentCourseWeek(req.session.user).weekStart;
   const currentWeekStart     = courseCurrentWeekStart;
   const courseStartDate      = db.getUserCourseStartDate(req.session.user) || currentWeekStart;
-  const weekStarts           = generate12Weeks(courseStartDate);
+  const courseLengthWeeks    = getCourseLengthWeeks(req.session.user);
+  const weekStarts           = generateCourseWeeks(courseStartDate, courseLengthWeeks);
   const allGoalsRaw          = db.getGoalsForWeeks(userId, weekStarts);
   const reflectionsRaw       = db.getWeeklyReflections(userId, weekStarts);
   const cats                 = ['curiosity', 'create', 'share', 'connect'];
@@ -908,12 +949,13 @@ app.get('/calendar', requireAuth, (req, res) => {
   });
 
   res.render('calendar', {
-    title:                "Your 12-Week Journey",
+    title:                courseLengthWeeks < 12 ? `Your ${courseLengthWeeks}-Week Trial` : 'Your 12-Week Journey',
     page:                 'calendar',
     weeks,
     currentWeekStart,
     courseCurrentWeekStart,
     courseStartDate,
+    courseLengthWeeks,
     todayStr: toLocalDateString(getNow(req.session.user))
   });
 });
@@ -1070,6 +1112,10 @@ const MIDCOURSE_QUESTIONS = [
 // True if THIS user's mid-course should be visible — either their own
 // course_start_date is ≥35 days ago, or admin force-unlocked globally.
 function isMidcourseUnlockedFor(user) {
+  // Mid-course doesn't apply to short trials. Gating here prevents both the
+  // global admin override AND the date-based unlock from leaking the
+  // mid-course card / route to a 3-week trial student.
+  if (getCourseLengthWeeks(user) < 12) return false;
   if (db.getSetting('midcourse_unlocked') === 'true') return true; // admin manual override
   const courseStart = db.getUserCourseStartDate(user);
   if (!courseStart) return false;
@@ -2593,11 +2639,16 @@ app.post('/api/admin/time-travel/clear', requireAdmin, (req, res) => {
 // ─── Admin: Students ───────────────────────────────────────────────────────
 
 app.post('/api/admin/users', requireAdmin, (req, res) => {
-  const { name, email, password, role } = req.body;
+  const { name, email, password, role, course_length_weeks } = req.body;
   if (!name || !email || !password) return res.status(400).json({ error: 'Name, email, and password are required.' });
   if (!['student', 'admin'].includes(role)) return res.status(400).json({ error: 'Invalid role.' });
   try {
     const result = db.createUser(name.trim(), email.trim().toLowerCase(), password, role);
+    // Set cohort length if it was passed and isn't the default (12). Helper
+    // clamps to [1, 52].
+    if (course_length_weeks !== undefined && parseInt(course_length_weeks, 10) !== 12) {
+      db.setUserCourseLengthWeeks(result.lastInsertRowid, course_length_weeks);
+    }
     const newUser = db.getUserById(result.lastInsertRowid);
     res.json({ ok: true, user: newUser });
   } catch (e) {
@@ -2608,11 +2659,14 @@ app.post('/api/admin/users', requireAdmin, (req, res) => {
 
 app.put('/api/admin/users/:id', requireAdmin, (req, res) => {
   const id = parseInt(req.params.id);
-  const { name, email, role, password } = req.body;
+  const { name, email, role, password, course_length_weeks } = req.body;
   if (!name || !email) return res.status(400).json({ error: 'Name and email are required.' });
   if (!['student', 'admin'].includes(role)) return res.status(400).json({ error: 'Invalid role.' });
   try {
     db.updateUser(id, name, email, role, password || null);
+    if (course_length_weeks !== undefined) {
+      db.setUserCourseLengthWeeks(id, course_length_weeks);
+    }
     res.json({ ok: true });
   } catch (e) {
     if (e.message && e.message.includes('UNIQUE')) return res.status(409).json({ error: 'That email is already in use.' });
@@ -2788,17 +2842,22 @@ app.post('/admin/run-daily-reminders', async (req, res) => {
 
 function getUnlockState(user) {
   // Date-based (per-user) OR admin manual override — whichever is true wins.
-  const courseStart = db.getUserCourseStartDate(user);
+  // Trial students (course_length_weeks < 12) never see midcourse — the
+  // concept doesn't apply to a 3-week run. Closing always scales to (length-1)
+  // weeks since start so trial users get it during their final week.
+  const courseStart  = db.getUserCourseStartDate(user);
+  const lengthWeeks  = getCourseLengthWeeks(user);
+  const isFullCourse = lengthWeeks >= 12;
   let midcourseDate = false, closingDate = false;
   if (courseStart) {
     const now = getNow(user);
     const daysDiff = Math.floor((now.getTime() - new Date(courseStart + 'T00:00:00').getTime()) / 86400000);
-    midcourseDate = daysDiff >= 35;
-    closingDate   = daysDiff >= 77;
+    midcourseDate = isFullCourse && daysDiff >= 35;
+    closingDate   = daysDiff >= (lengthWeeks - 1) * 7;
   }
   return {
-    midcourseUnlocked: midcourseDate || db.getSetting('midcourse_unlocked') === 'true',
-    harvestUnlocked:   closingDate   || db.getSetting('harvest_unlocked')   === 'true'
+    midcourseUnlocked: isFullCourse && (midcourseDate || db.getSetting('midcourse_unlocked') === 'true'),
+    harvestUnlocked:   closingDate || db.getSetting('harvest_unlocked')   === 'true'
   };
 }
 
@@ -2832,6 +2891,15 @@ function getWeekStart(user) {
   monday.setDate(now.getDate() + diff);
   monday.setHours(0, 0, 0, 0);
   return toLocalDateString(monday);
+}
+
+// Resolve a user's course length (in weeks). Trial students get a smaller
+// number (typically 3); full course is 12. Default 12 covers legacy rows /
+// admin sessions that never set the field. Centralized so any future
+// fallback rule lives in one place.
+function getCourseLengthWeeks(user) {
+  const w = user && user.course_length_weeks;
+  return (typeof w === 'number' && w > 0) ? w : 12;
 }
 
 // Returns { weekNumber, weekStart, weekEnd } relative to course_start_date.
@@ -2962,10 +3030,13 @@ function formatDateRangeShort(weekStart) {
 
 const WEEK_ORDINALS = ['One','Two','Three','Four','Five','Six','Seven','Eight','Nine','Ten','Eleven','Twelve'];
 
-function generate12Weeks(startDate) {
+// Generate the Monday of each course week as a YYYY-MM-DD string.
+// Length defaults to 12 (full course) so old call sites that haven't been
+// threaded a user keep working. Trial students pass 3.
+function generateCourseWeeks(startDate, lengthWeeks = 12) {
   const weeks = [];
   const start = new Date(startDate + 'T00:00:00');
-  for (let i = 0; i < 12; i++) {
+  for (let i = 0; i < lengthWeeks; i++) {
     const d = new Date(start);
     d.setDate(d.getDate() + i * 7);
     weeks.push(d.toISOString().split('T')[0]);

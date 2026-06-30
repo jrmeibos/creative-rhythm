@@ -14,7 +14,13 @@
 
       <header class="cal-page-header">
         <div>
-          <h1 class="cal-page-title">Your 12-Week Journey</h1>
+          <h1 class="cal-page-title">
+            <% if (courseLengthWeeks < 12) { %>
+              Your <%= courseLengthWeeks %>-Week Trial
+            <% } else { %>
+              Your 12-Week Journey
+            <% } %>
+          </h1>
           <p class="cal-page-sub">Plan ahead, reflect back, tend the garden.</p>
         </div>
       </header>

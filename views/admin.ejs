@@ -138,9 +138,12 @@
               <span class="admin-user-role <%= u.role === 'admin' ? 'admin-role--admin' : '' %>">
                 <%= u.role === 'admin' ? 'Curator' : 'Gardener' %>
               </span>
+              <% if (typeof u.course_length_weeks === 'number' && u.course_length_weeks < 12) { %>
+                <span class="admin-lesson-tag" title="<%= u.course_length_weeks %>-week trial cohort">Trial · <%= u.course_length_weeks %>w</span>
+              <% } %>
               <div class="admin-row-actions">
                 <button class="admin-btn-icon" type="button" title="Edit"
-                  onclick="openEditStudent(<%= u.id %>, <%= JSON.stringify(u.name) %>, <%= JSON.stringify(u.email) %>, <%= JSON.stringify(u.role) %>)">
+                  onclick='openEditStudent(<%- JSON.stringify({ id: u.id, name: u.name, email: u.email, role: u.role, course_length_weeks: u.course_length_weeks || 12 }) %>)'>
                   ✎
                 </button>
                 <% if (u.id !== user.id) { %>
@@ -400,6 +403,13 @@
         <option value="admin">Curator</option>
       </select>
     </div>
+    <div class="admin-form-field">
+      <label class="admin-form-label">Cohort</label>
+      <select class="admin-input admin-select" id="add-student-length">
+        <option value="12">Full course · 12 weeks</option>
+        <option value="3">Trial · 3 weeks</option>
+      </select>
+    </div>
     <p class="admin-dialog-error" id="add-student-error" hidden></p>
     <div class="admin-dialog-footer">
       <button class="admin-dialog-cancel" type="button" onclick="closeDialog('dialog-add-student')">Cancel</button>
@@ -428,6 +438,13 @@
       <select class="admin-input admin-select" id="edit-student-role">
         <option value="student">Gardener</option>
         <option value="admin">Curator</option>
+      </select>
+    </div>
+    <div class="admin-form-field">
+      <label class="admin-form-label">Cohort</label>
+      <select class="admin-input admin-select" id="edit-student-length">
+        <option value="12">Full course · 12 weeks</option>
+        <option value="3">Trial · 3 weeks</option>
       </select>
     </div>
     <p class="admin-dialog-error" id="edit-student-error" hidden></p>
@@ -923,11 +940,12 @@
     });
 
     // ── Students ─────────────────────────────────────────────────────────────
-    function openEditStudent(id, name, email, role) {
-      document.getElementById('edit-student-id').value   = id;
-      document.getElementById('edit-student-name').value  = name;
-      document.getElementById('edit-student-email').value = email;
-      document.getElementById('edit-student-role').value  = role;
+    function openEditStudent(u) {
+      document.getElementById('edit-student-id').value   = u.id;
+      document.getElementById('edit-student-name').value  = u.name;
+      document.getElementById('edit-student-email').value = u.email;
+      document.getElementById('edit-student-role').value  = u.role;
+      document.getElementById('edit-student-length').value = String(u.course_length_weeks || 12);
       document.getElementById('edit-student-password').value = '';
       document.getElementById('edit-student-error').hidden = true;
       openDialog('dialog-edit-student');
@@ -938,22 +956,21 @@
       const email    = document.getElementById('add-student-email').value.trim();
       const password = document.getElementById('add-student-password').value;
       const role     = document.getElementById('add-student-role').value;
+      const courseLengthWeeks = parseInt(document.getElementById('add-student-length').value, 10) || 12;
       if (!name || !email || !password) {
         return showError('add-student-error', 'Name, email, and password are required.');
       }
       const res = await fetch('/api/admin/users', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ name, email, password, role })
+        body:    JSON.stringify({ name, email, password, role, course_length_weeks: courseLengthWeeks })
       });
       const data = await res.json();
       if (!res.ok) return showError('add-student-error', data.error);
 
-      const u = data.user;
-      const list = document.getElementById('student-list');
-      list.insertAdjacentHTML('beforeend', buildUserRow(u));
-      updateStudentCount(1);
-      closeDialog('dialog-add-student');
+      // Cheap full reload to keep the inline buildUserRow markup honest
+      // — easier than threading the new Trial chip into the row builder.
+      window.location.reload();
     }
 
     async function submitEditStudent() {
@@ -962,27 +979,21 @@
       const email    = document.getElementById('edit-student-email').value.trim();
       const password = document.getElementById('edit-student-password').value;
       const role     = document.getElementById('edit-student-role').value;
+      const courseLengthWeeks = parseInt(document.getElementById('edit-student-length').value, 10) || 12;
       if (!name || !email) return showError('edit-student-error', 'Name and email are required.');
 
       const res = await fetch(`/api/admin/users/${id}`, {
         method:  'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ name, email, role, password: password || undefined })
+        body:    JSON.stringify({ name, email, role, password: password || undefined, course_length_weeks: courseLengthWeeks })
       });
       const data = await res.json();
       if (!res.ok) return showError('edit-student-error', data.error);
 
-      const row = document.getElementById(`user-row-${id}`);
-      if (row) {
-        row.querySelector('.admin-user-name').textContent  = name;
-        row.querySelector('.admin-user-email').textContent = email;
-        const roleEl = row.querySelector('.admin-user-role');
-        roleEl.textContent = role === 'admin' ? 'Curator' : 'Gardener';
-        roleEl.classList.toggle('admin-role--admin', role === 'admin');
-        const initial = row.querySelector('.sidebar-avatar');
-        if (initial) initial.textContent = name.charAt(0).toUpperCase();
-      }
-      closeDialog('dialog-edit-student');
+      // Cohort toggle is visible in the row chip — easier to reload than
+      // surgically swap the chip in place.
+      window.location.reload();
+      return;
     }
 
     async function deleteUser(id, name) {

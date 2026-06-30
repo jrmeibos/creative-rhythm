@@ -18,10 +18,12 @@
             <%= greeting %>, <span class="dash-name"><%= user.name.split(' ')[0] %></span>
           </h1>
           <p class="dash-week-label">
-            <% if (isIntegrationWeek) { %>
+            <% if (trialComplete) { %>
+              <span class="integration-badge">Trial complete</span>
+            <% } else if (isIntegrationWeek) { %>
               <span class="integration-badge">Integration Week</span> · <%= weekLabel %>
             <% } else if (weekNumber >= 1) { %>
-              Week <%= weekNumber %> of 12 · <%= weekLabel %>
+              Week <%= weekNumber %> of <%= courseLengthWeeks %> · <%= weekLabel %>
             <% } else { %>
               Week of <%= weekLabel %>
             <% } %>
@@ -39,6 +41,20 @@
            outer #dayview-container is persistent — it stays in the DOM
            across day-to-day fetch-and-swap, and is what the inline
            controller below delegates events from. -->
+      <% if (trialComplete) { %>
+      <section class="dash-section">
+        <div class="mid-card">
+          <p class="mid-card-eyebrow">Your trial is complete</p>
+          <h2 class="mid-card-title">Want to keep going?</h2>
+          <p class="mid-card-body">
+            You've finished your <%= courseLengthWeeks %>-week trial of The Creative's Garden.
+            If this practice has felt useful, the full 12-week course goes deeper —
+            mid-course check-in, harvest reflection, and the remaining seasons.
+          </p>
+          <a href="https://www.meibostouch.com/the-creatives-garden" target="_blank" rel="noopener" class="mid-card-cta">Learn about the full course →</a>
+        </div>
+      </section>
+      <% } %>
       <% if (midcourseCardVisible) { %>
       <section class="dash-section">
         <div class="mid-card">
