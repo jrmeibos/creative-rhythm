@@ -360,12 +360,22 @@ app.get('/dashboard', requireAuth, (req, res) => {
     !db.hasMidcourseBeenSubmittedByUser(req.session.user.id)
   );
 
-  // Trial-aware fields: total weeks for the "Week N of X" label, plus a
-  // flag for the soft "Trial complete" state once a trial student passes
-  // their final week (Commit B swaps a closing-reflection CTA in here).
+  // Trial-aware fields: total weeks for the "Week N of X" label, plus
+  // flags driving the three trial-only dashboard states:
+  //   • trialClosingCardVisible — week 3 reached, closing not yet submitted
+  //   • trialComplete           — past week 3 (or closing already submitted),
+  //                                show the "Want to keep going?" CTA
   const courseLengthWeeks = getCourseLengthWeeks(req.session.user);
   const isTrial           = courseLengthWeeks < 12;
-  const trialComplete     = isTrial && typeof weekNumber === 'number' && weekNumber > courseLengthWeeks;
+  const trialClosingSubmitted = isTrial &&
+    db.hasTrialClosingBeenSubmittedByUser(req.session.user.id);
+  const trialClosingCardVisible = isTrial &&
+    !trialClosingSubmitted &&
+    isTrialClosingUnlockedFor(req.session.user);
+  const trialComplete = isTrial && (
+    trialClosingSubmitted ||
+    (typeof weekNumber === 'number' && weekNumber > courseLengthWeeks)
+  );
 
   res.render('dashboard', {
     title: 'Dashboard',
@@ -390,6 +400,7 @@ app.get('/dashboard', requireAuth, (req, res) => {
     courseLengthWeeks,
     isTrial,
     trialComplete,
+    trialClosingCardVisible,
   });
 });
 
@@ -1036,6 +1047,55 @@ const ASSESSMENT_QUESTIONS = [
   }
 ];
 
+// Trial students see this at the end of their 3-week run instead of the
+// 12-week harvest. Calibrated for a shorter window: lighter, more
+// open-ended, with an explicit "continue with the full course?" question.
+// Fields map into the existing self_assessments table — the schema is
+// generous enough that we don't need a parallel table.
+const TRIAL_CLOSING_QUESTIONS = [
+  { id: 'tq1', type: 'rating', field: 'q2_rating',
+    text: 'How do you feel about your relationship with sharing your work, three weeks in?',
+    low:  '1 = the same as when I started',
+    high: '10 = something has shifted'
+  },
+  { id: 'tq2', type: 'multi', field: 'q7_choices', max: 2,
+    text: "What's changed for you in these 3 weeks?",
+    choices: [
+      { val: 'A', label: 'I see my creative practice differently' },
+      { val: 'B', label: "I'm sharing with more intention" },
+      { val: 'C', label: 'My nervous system feels less reactive about being seen' },
+      { val: 'D', label: 'I have a clearer sense of what I want to say' },
+      { val: 'E', label: 'The way I think about visibility has shifted' },
+      { val: 'F', label: "Nothing has changed yet — I'd need more time" },
+    ]
+  },
+  { id: 'tq3', type: 'text', field: 'q9_text',
+    text: 'What surprised you most in these 3 weeks?',
+    placeholder: 'A small moment, a shift, anything you didn\'t expect.'
+  },
+  { id: 'tq4', type: 'text', field: 'q10_text',
+    text: "Is there anything from this trial you'll keep using?",
+    placeholder: 'A practice, a question, a frame to come back to.'
+  },
+  { id: 'tq5', type: 'text', field: 'q11_text',
+    text: 'Where did you get stuck, or where did the trial fall short for you?',
+    placeholder: 'Honesty here helps the next round of students.'
+  },
+  { id: 'tq6', type: 'choice', field: 'q8_choice',
+    text: 'Would you like to continue with the full 12-week Creative’s Garden?',
+    choices: [
+      { val: 'A', label: 'Yes — I want to enroll in the full course' },
+      { val: 'B', label: "Maybe — I'm interested, tell me more" },
+      { val: 'C', label: 'Not right now — but glad I tried this' },
+      { val: 'D', label: 'No' },
+    ]
+  },
+  { id: 'tq7', type: 'text', field: 'q12_text', optional: true,
+    text: 'Anything else you want me to know?',
+    placeholder: 'Optional.'
+  },
+];
+
 const CLOSING_QUESTIONS = [
   { id: 'q7', type: 'text', field: 'q7_choices',
     text: 'What surprised you most about this experience?',
@@ -1184,6 +1244,108 @@ async function notifyAdminOfMidcourseSubmission(submittingUser) {
     });
   } catch (err) {
     console.error('[midcourse] notify failed:', err);
+  }
+}
+
+// Trial students see this at the end of their 3-week run. Unlocks during
+// week 3 (day 14 onward — mirrors the full course's harvest at day 77).
+// Pilot students never reach this — gated to lengthWeeks < 12.
+function isTrialClosingUnlockedFor(user) {
+  if (getCourseLengthWeeks(user) >= 12) return false;
+  const courseStart = db.getUserCourseStartDate(user);
+  if (!courseStart) return false;
+  const daysDiff = Math.floor((Date.now() - new Date(courseStart + 'T00:00:00').getTime()) / 86400000);
+  return daysDiff >= (getCourseLengthWeeks(user) - 1) * 7;
+}
+
+app.get('/trial-closing', requireAuth, (req, res) => {
+  if (req.session.user.role === 'admin') return res.redirect('/dashboard');
+  if (!isTrialClosingUnlockedFor(req.session.user)) return res.redirect('/dashboard');
+  if (db.hasTrialClosingBeenSubmittedByUser(req.session.user.id)) return res.redirect('/dashboard');
+  res.render('trial-closing', {
+    title: 'Trial closing reflection',
+    page: 'dashboard',
+    questions: TRIAL_CLOSING_QUESTIONS,
+  });
+});
+
+app.post('/api/trial-closing/submit', requireAuth, async (req, res) => {
+  const user = req.session.user;
+  if (user.role === 'admin')                    return res.status(403).json({ error: 'Admins do not submit reflections.' });
+  if (!isTrialClosingUnlockedFor(user))         return res.status(403).json({ error: 'Trial closing is not unlocked yet.' });
+  if (db.hasTrialClosingBeenSubmittedByUser(user.id)) {
+    return res.status(409).json({ error: 'You have already submitted your trial reflection. Thank you.' });
+  }
+
+  const { answers } = req.body || {};
+  if (!answers || typeof answers !== 'object') return res.status(400).json({ error: 'Missing answers.' });
+
+  // Validate per question. tq7 is optional (anything-else); the rest are
+  // required so the closing reflection feels like a complete artifact.
+  for (const q of TRIAL_CLOSING_QUESTIONS) {
+    if (q.optional) continue;
+    const v = answers[q.field];
+    if (q.type === 'rating') {
+      const n = Number(v);
+      if (!Number.isFinite(n) || n < 1 || n > 10) return res.status(400).json({ error: `Question ${q.id} requires a 1–10 rating.` });
+    } else if (q.type === 'multi') {
+      if (!Array.isArray(v) || v.length === 0)    return res.status(400).json({ error: `Question ${q.id} requires at least one choice.` });
+    } else if (q.type === 'choice') {
+      if (typeof v !== 'string' || !v)            return res.status(400).json({ error: `Question ${q.id} requires a selection.` });
+    } else if (q.type === 'text') {
+      if (typeof v !== 'string' || !v.trim())     return res.status(400).json({ error: `Question ${q.id} requires an answer.` });
+    }
+  }
+
+  // Build the row in the shape upsertAssessment expects. Multi answers are
+  // stored as a comma-joined string to match the existing closing q7_choices
+  // convention; that keeps the admin View dialog rendering uniform.
+  const row = {};
+  for (const q of TRIAL_CLOSING_QUESTIONS) {
+    const v = answers[q.field];
+    if (q.type === 'rating')        row[q.field] = Number(v);
+    else if (q.type === 'multi')    row[q.field] = Array.isArray(v) ? v.join(',') : '';
+    else if (q.type === 'choice')   row[q.field] = String(v || '');
+    else if (q.type === 'text')     row[q.field] = (typeof v === 'string' ? v : '').trim();
+  }
+  db.upsertAssessment(user.id, 'trial_closing', row);
+
+  res.json({ ok: true });
+  // Fire-and-forget admin notification so Julia gets each closing as it lands.
+  setImmediate(() => notifyAdminOfTrialClosing(user, row));
+});
+
+async function notifyAdminOfTrialClosing(student, row) {
+  try {
+    // Format answers as a readable plaintext block. No PDF — keeps this
+    // commit small; the admin View dialog renders the full set anyway.
+    const lines = TRIAL_CLOSING_QUESTIONS.map(q => {
+      const v = row[q.field];
+      let label;
+      if (q.type === 'choice') {
+        const c = q.choices.find(c => c.val === v);
+        label = c ? c.label : v;
+      } else if (q.type === 'multi') {
+        const vals = String(v || '').split(',').filter(Boolean);
+        label = vals.map(val => {
+          const c = q.choices.find(c => c.val === val);
+          return c ? c.label : val;
+        }).join(' • ');
+      } else if (q.type === 'rating') {
+        label = `${v}/10`;
+      } else {
+        label = v || '(no answer)';
+      }
+      return `${q.text}\n  → ${label}\n`;
+    }).join('\n');
+
+    await sendAdminMilestoneEmail({
+      studentName: student.name,
+      subject:     `[Creative's Garden] ${student.name} finished the 3-week trial`,
+      bodyLine:    `${student.name} just submitted their trial closing reflection.\n\n${lines}`,
+    });
+  } catch (err) {
+    console.error('[trial-closing] notify failed:', err);
   }
 }
 
@@ -2481,6 +2643,9 @@ app.get('/admin', requireAdmin, (req, res) => {
     seedPacketAngles: ANGLES,
     midcourseSubmittedCount: db.countMidcourseSubmissionsByStudents(),
     quotes: db.getAllQuotes(),
+    // Trial closing question catalog — the View dialog needs the labels to
+    // render readable answers (rating low/high, choice labels, etc).
+    trialClosingQuestions: TRIAL_CLOSING_QUESTIONS,
   });
 });
 

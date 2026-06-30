@@ -684,6 +684,7 @@
     // Seed Packet angles are surfaced by the route once for the whole page so
     // the View dialog can join answers ↔ questions without a second fetch.
     const SEED_PACKET_ANGLES = <%- JSON.stringify(seedPacketAngles) %>;
+    const TRIAL_CLOSING_QS   = <%- JSON.stringify(trialClosingQuestions) %>;
 
     const esc = v => String(v == null ? '' : v)
       .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
@@ -809,6 +810,32 @@
         if (q.q10_text)   html += `<p><em>Will keep doing:</em> ${esc(q.q10_text)}</p>`;
         if (q.q11_text)   html += `<p><em>To someone starting out:</em> ${esc(q.q11_text)}</p>`;
         if (q.q12_text)   html += `<p><em>Feedback:</em> ${esc(q.q12_text)}</p>`;
+      }
+
+      // ─── Trial closing reflection ─────────────────────────────────────────
+      // 3-week trial students get a custom closing instead of the 12-week
+      // harvest. Render each TRIAL_CLOSING_QUESTIONS entry with its label,
+      // converting choice/multi values to their human-readable form.
+      if (data.trialClosing) {
+        html += '<h4 style="font-weight:700;margin:1rem 0 0.5rem;color:var(--color-bloem)">Trial Closing Reflection</h4>';
+        const q = data.trialClosing;
+        for (const def of TRIAL_CLOSING_QS) {
+          const raw = q[def.field];
+          if (raw == null || raw === '') continue;
+          let label;
+          if (def.type === 'rating')      label = raw + '/10';
+          else if (def.type === 'choice') {
+            const c = (def.choices || []).find(c => c.val === raw);
+            label = c ? c.label : raw;
+          } else if (def.type === 'multi') {
+            const vals = String(raw).split(',').filter(Boolean);
+            label = vals.map(v => {
+              const c = (def.choices || []).find(c => c.val === v);
+              return c ? c.label : v;
+            }).join(' • ');
+          } else label = raw;
+          html += `<div style="margin:0.4rem 0"><div style="font-style:italic;color:rgba(16,15,16,0.6)">${esc(def.text)}</div><div>${esc(label)}</div></div>`;
+        }
       }
 
       // ─── Cuttings (daily reflections) ─────────────────────────────────────

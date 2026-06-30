@@ -1906,6 +1906,21 @@ module.exports = {
     return !!(r && r.midcourse_submitted_at);
   },
 
+  // Trial students store their closing reflection in self_assessments with
+  // assessment_type = 'trial_closing'. Mirrors the existing opening/closing
+  // row pattern so getStudentFullData can surface it in the admin view.
+  hasTrialClosingBeenSubmittedByUser(userId) {
+    return !!db.prepare(
+      "SELECT id FROM self_assessments WHERE user_id = ? AND assessment_type = 'trial_closing'"
+    ).get(userId);
+  },
+
+  getTrialClosingForUser(userId) {
+    return db.prepare(
+      "SELECT * FROM self_assessments WHERE user_id = ? AND assessment_type = 'trial_closing'"
+    ).get(userId) || null;
+  },
+
   // All anonymous responses, oldest first. Used by the PDF generator each
   // time a new response lands — Julia gets a cumulative snapshot per email.
   getAllMidcourseResponses() {
@@ -2101,13 +2116,16 @@ module.exports = {
 
   getStudentFullData(userId) {
     const user = db.prepare(
-      'SELECT id, name, email, avatar_initial, midcourse_submitted_at FROM users WHERE id=?'
+      'SELECT id, name, email, avatar_initial, midcourse_submitted_at, course_length_weeks FROM users WHERE id=?'
     ).get(userId);
     const opening = db.prepare(
       "SELECT * FROM self_assessments WHERE user_id=? AND assessment_type='opening'"
     ).get(userId);
     const closing = db.prepare(
       "SELECT * FROM self_assessments WHERE user_id=? AND assessment_type='closing'"
+    ).get(userId);
+    const trialClosing = db.prepare(
+      "SELECT * FROM self_assessments WHERE user_id=? AND assessment_type='trial_closing'"
     ).get(userId);
     const goals    = db.prepare('SELECT * FROM goals WHERE user_id=? ORDER BY seed_number').all(userId);
 
@@ -2122,8 +2140,9 @@ module.exports = {
     // on users.midcourse_submitted_at. Surface just that — the dialog turns
     // it into a "✓ Submitted on DATE" line.
     return {
-      user, opening, closing, goals,
+      user, opening, closing, trialClosing, goals,
       midcourseSubmittedAt: user ? user.midcourse_submitted_at : null,
+      courseLengthWeeks:    user ? (user.course_length_weeks || 12) : 12,
       seedPacketAnswers, seedPacketSeeds, cuttings,
     };
   },
