@@ -25,19 +25,22 @@
 .up-step { }
 .up-step.is-hidden { display: none; }
 
-/* ─── Tier cards ────────────────────────────────────────────────────────── */
+/* ─── Tier cards: pricing-table style ──────────────────────────────────── */
 
 .up-tier-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  grid-template-columns: repeat(3, 1fr);
   gap: 1.25rem;
-  margin-bottom: 2rem;
+  margin: 2rem 0 1.5rem;
+  align-items: stretch;
 }
 
 .up-tier {
   display: block;
   cursor: pointer;
   position: relative;
+  /* Radio input is visually hidden but still keyboard-focusable via the
+     label wrapper. */
 }
 .up-tier-radio {
   position: absolute; opacity: 0; pointer-events: none;
@@ -45,86 +48,169 @@
 
 .up-tier-inner {
   background: var(--color-blank-page);
-  border: 2px solid rgba(112, 92, 108, 0.15);
-  border-radius: var(--radius-md);
-  padding: 1.5rem 1.5rem 1.25rem;
-  transition: border-color 0.15s, box-shadow 0.15s, transform 0.15s;
+  border: 2px solid rgba(112, 92, 108, 0.14);
+  border-radius: 16px;
+  padding: 2rem 1.75rem 1.5rem;
+  transition: border-color 0.18s, box-shadow 0.18s, transform 0.18s;
   height: 100%;
   display: flex;
   flex-direction: column;
+  position: relative;
 }
 .up-tier:hover .up-tier-inner {
-  border-color: var(--color-bloem);
-  box-shadow: var(--shadow-sm);
-  transform: translateY(-1px);
+  border-color: rgba(112, 92, 108, 0.5);
+  box-shadow: 0 6px 24px -12px rgba(112, 92, 108, 0.28);
+  transform: translateY(-2px);
 }
 .up-tier.is-selected .up-tier-inner {
   border-color: var(--color-bloem);
-  box-shadow: 0 0 0 3px rgba(112, 92, 108, 0.15);
+  box-shadow: 0 0 0 4px rgba(112, 92, 108, 0.15), 0 6px 24px -12px rgba(112, 92, 108, 0.35);
 }
 
-.up-tier-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 0.75rem;
-  margin-bottom: 0.5rem;
+/* "Most popular" middle tier — subtle warm-cream background so it reads
+   as elevated without shouting. Badge sits at the top-right corner. */
+.up-tier--recommended .up-tier-inner {
+  background: linear-gradient(180deg, rgba(246, 201, 92, 0.06) 0%, var(--color-blank-page) 40%);
+  border-color: var(--color-apricity);
+}
+.up-tier--recommended:hover .up-tier-inner {
+  border-color: var(--color-apricity);
+}
+.up-tier-badge {
+  position: absolute;
+  top: -0.75rem;
+  right: 1.25rem;
+  background: var(--color-apricity);
+  color: var(--color-ink-stained);
+  font-family: var(--font-body);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 0.35rem 0.8rem;
+  border-radius: 999px;
+  box-shadow: 0 2px 8px -2px rgba(16, 15, 16, 0.15);
+}
+
+.up-tier-headline {
+  margin-bottom: 1.25rem;
+  min-height: 4.5rem;
 }
 .up-tier-name {
   font-family: var(--font-display);
-  font-size: 1.2rem;
+  font-size: 1.5rem;
   font-weight: 400;
   color: var(--color-ink-stained);
-  margin: 0;
+  margin: 0 0 0.35rem;
+  letter-spacing: -0.005em;
 }
-.up-tier-price {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  text-align: right;
-}
-.up-tier-price-amount {
-  font-family: var(--font-display);
-  font-size: 1.35rem;
-  font-weight: 400;
-  color: var(--color-bloem);
-}
-.up-tier-price-note {
-  font-size: 0.7rem;
-  font-style: italic;
-  color: rgba(16, 15, 16, 0.5);
-  margin-top: 0.15rem;
-}
-
 .up-tier-tagline {
   font-family: var(--font-body);
   font-style: italic;
-  font-size: 0.9rem;
+  font-size: 0.88rem;
   font-weight: 300;
   color: rgba(16, 15, 16, 0.6);
-  margin: 0 0 1rem;
+  line-height: 1.45;
+  margin: 0;
 }
 
-.up-tier-bullets {
+.up-tier-price-block {
+  display: flex;
+  flex-direction: column;
+  align-items: baseline;
+  gap: 0.15rem;
+  padding-bottom: 1.25rem;
+  margin-bottom: 1.25rem;
+  border-bottom: 1px solid rgba(112, 92, 108, 0.12);
+}
+.up-tier-price-amount {
+  font-family: var(--font-display);
+  font-size: 2.5rem;
+  font-weight: 400;
+  color: var(--color-bloem);
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+.up-tier-price-once {
+  font-family: var(--font-body);
+  font-size: 0.78rem;
+  font-weight: 400;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(16, 15, 16, 0.45);
+  margin-top: 0.3rem;
+}
+.up-tier-price-note {
+  font-family: var(--font-body);
+  font-size: 0.75rem;
+  font-style: italic;
+  color: rgba(16, 15, 16, 0.55);
+  margin-top: 0.35rem;
+}
+
+/* ─── Feature checklist ────────────────────────────────────────────────── */
+
+.up-features {
   list-style: none;
   padding: 0;
-  margin: 0;
+  margin: 0 0 1.5rem;
+  flex: 1;  /* pushes the CTA to the bottom of the card */
+}
+.up-feature {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  padding: 0.4rem 0;
+  font-family: var(--font-body);
   font-size: 0.88rem;
-  line-height: 1.55;
+  line-height: 1.45;
+}
+.up-feature.is-included {
   color: var(--color-ink-stained);
 }
-.up-tier-bullets li {
-  padding-left: 1.2rem;
-  position: relative;
-  margin-bottom: 0.35rem;
+.up-feature.is-included .up-feature-mark {
+  color: var(--color-understory);  /* sage-green check */
 }
-.up-tier-bullets li:before {
-  content: '·';
-  position: absolute;
-  left: 0.4rem;
-  top: -0.05rem;
-  font-weight: 700;
+.up-feature.is-excluded {
+  color: rgba(16, 15, 16, 0.35);
+}
+.up-feature.is-excluded .up-feature-mark {
+  color: rgba(16, 15, 16, 0.2);
+}
+.up-feature-mark {
+  flex-shrink: 0;
+  margin-top: 0.05rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+}
+
+/* Card CTA — appears as a subtle "Choose X" pill at the bottom. Filled
+   when the tier is selected so it feels like the button has committed. */
+.up-tier-cta {
+  border-top: 1px dashed rgba(112, 92, 108, 0.15);
+  padding-top: 1.25rem;
+  text-align: center;
+}
+.up-tier-cta-label {
+  display: inline-block;
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  font-weight: 400;
   color: var(--color-bloem);
+  padding: 0.55rem 1.25rem;
+  border: 1.5px solid var(--color-bloem);
+  border-radius: 999px;
+  transition: background 0.15s, color 0.15s;
+}
+.up-tier:hover .up-tier-cta-label {
+  background: rgba(112, 92, 108, 0.06);
+}
+.up-tier.is-selected .up-tier-cta-label {
+  background: var(--color-bloem);
+  color: var(--color-pearl);
 }
 
 /* ─── Actions ──────────────────────────────────────────────────────────── */
@@ -298,8 +384,13 @@
 .up-success-banner-close:hover { opacity: 1; }
 
 /* ─── Responsive ───────────────────────────────────────────────────────── */
+@media (max-width: 960px) {
+  .up-tier-grid { grid-template-columns: 1fr; gap: 1.5rem; }
+  .up-tier-headline { min-height: 0; }
+}
 @media (max-width: 680px) {
   .up-title { font-size: 1.6rem; }
-  .up-tier-inner { padding: 1.25rem; }
+  .up-tier-inner { padding: 1.5rem 1.25rem 1.25rem; }
+  .up-tier-price-amount { font-size: 2.15rem; }
   .up-summary, .up-card-panel { padding: 1.25rem; }
 }

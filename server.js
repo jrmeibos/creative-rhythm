@@ -602,9 +602,11 @@ app.get('/upgrade', requireAuth, (req, res) => {
     // dashboard where they can see everything they have access to.
     return res.redirect('/dashboard');
   }
+  const features = STRIPE.getFeatures();
   res.render('upgrade', {
     title: 'Continue with the full course',
     page: 'upgrade',
+    features,
     tiers: STRIPE.getTiers().map(t => ({
       id:         t.id,
       name:       t.name,
@@ -612,7 +614,7 @@ app.get('/upgrade', requireAuth, (req, res) => {
       priceLabel: STRIPE.formatPrice(t.priceCents),
       priceNote:  t.priceNote || null,
       tagline:    t.tagline,
-      bullets:    t.bullets,
+      includes:   t.includes,
     })),
     stripeConfigured: STRIPE.isConfigured(),
     publishableKey:   STRIPE.getPublishableKey(),

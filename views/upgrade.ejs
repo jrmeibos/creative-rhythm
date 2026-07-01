@@ -28,25 +28,53 @@
       <!-- ─── Step 1: Tier selection ─────────────────────────────────────── -->
       <section class="up-step" id="up-step-tier" data-step="tier">
         <div class="up-tier-grid">
-          <% tiers.forEach(function(t) { %>
-            <label class="up-tier" data-tier="<%= t.id %>">
+          <% tiers.forEach(function(t, idx) {
+            const includes = new Set(t.includes);
+          %>
+            <label class="up-tier<%= idx === 1 ? ' up-tier--recommended' : '' %>" data-tier="<%= t.id %>">
               <input type="radio" name="tier" value="<%= t.id %>" class="up-tier-radio">
               <div class="up-tier-inner">
-                <div class="up-tier-head">
+                <% if (idx === 1) { %>
+                  <span class="up-tier-badge">Most popular</span>
+                <% } %>
+
+                <div class="up-tier-headline">
                   <h2 class="up-tier-name"><%= t.name %></h2>
-                  <div class="up-tier-price">
-                    <span class="up-tier-price-amount"><%= t.priceLabel %></span>
-                    <% if (t.priceNote) { %>
-                      <span class="up-tier-price-note"><%= t.priceNote %></span>
-                    <% } %>
-                  </div>
+                  <p class="up-tier-tagline"><%= t.tagline %></p>
                 </div>
-                <p class="up-tier-tagline"><%= t.tagline %></p>
-                <ul class="up-tier-bullets">
-                  <% t.bullets.forEach(function(b) { %>
-                    <li><%= b %></li>
+
+                <div class="up-tier-price-block">
+                  <span class="up-tier-price-amount"><%= t.priceLabel %></span>
+                  <span class="up-tier-price-once">one-time</span>
+                  <% if (t.priceNote) { %>
+                    <span class="up-tier-price-note"><%= t.priceNote %></span>
+                  <% } %>
+                </div>
+
+                <ul class="up-features">
+                  <% features.forEach(function(f) {
+                    const has = includes.has(f.id);
+                  %>
+                    <li class="up-feature <%= has ? 'is-included' : 'is-excluded' %>">
+                      <span class="up-feature-mark" aria-hidden="true">
+                        <% if (has) { %>
+                          <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
+                            <path d="M4 10.5l4 4 8-9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                          </svg>
+                        <% } else { %>
+                          <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
+                            <path d="M5 10h10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                          </svg>
+                        <% } %>
+                      </span>
+                      <span class="up-feature-label"><%= f.label %></span>
+                    </li>
                   <% }); %>
                 </ul>
+
+                <div class="up-tier-cta">
+                  <span class="up-tier-cta-label">Choose <%= t.name %></span>
+                </div>
               </div>
             </label>
           <% }); %>
