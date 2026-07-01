@@ -59,7 +59,8 @@
 
                 <ul class="up-features">
                   <% features.forEach(function(f) {
-                    const has = includes.has(f.id);
+                    const has   = includes.has(f.id);
+                    const label = (t.labelOverrides && t.labelOverrides[f.id]) || f.label;
                   %>
                     <li class="up-feature <%= has ? 'is-included' : 'is-excluded' %>">
                       <span class="up-feature-mark" aria-hidden="true">
@@ -73,7 +74,7 @@
                           </svg>
                         <% } %>
                       </span>
-                      <span class="up-feature-label"><%= f.label %></span>
+                      <span class="up-feature-label"><%= label %></span>
                     </li>
                   <% }); %>
                 </ul>

@@ -619,6 +619,7 @@ app.get('/upgrade', requireAuth, (req, res) => {
       priceNote:          t.priceNote || null,
       tagline:            t.tagline,
       includes:           t.includes,
+      labelOverrides:     t.labelOverrides || {},
     })),
     stripeConfigured: STRIPE.isConfigured(),
     publishableKey:   STRIPE.getPublishableKey(),
