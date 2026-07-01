@@ -1845,9 +1845,13 @@ module.exports = {
         q12_text           = excluded.q12_text,
         harvest_reflection = excluded.harvest_reflection,
         completed_at       = CURRENT_TIMESTAMP
-    `).run(userId, type,
-      q1_choice || '', q2_rating || null, q3_choice || '', q4_rating || null,
-      q5_choice || '', q6_rating || null, q7_choices || '', q8_choice || '',
+    `)
+    // Ratings use ?? not || because 0 is a valid rating (the trial closing's
+    // scale starts at 0 = "the same as when I started"). With ||, 0 would
+    // coerce to null and the row would lose the user's actual answer.
+    .run(userId, type,
+      q1_choice || '', q2_rating ?? null, q3_choice || '', q4_rating ?? null,
+      q5_choice || '', q6_rating ?? null, q7_choices || '', q8_choice || '',
       q9_text || '', q10_text || '', q11_text || '', q12_text || '',
       harvest_reflection || '');
   },

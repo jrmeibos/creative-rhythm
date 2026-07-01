@@ -15,7 +15,7 @@
       <div class="ob-step is-active" style="position: static; padding: 1rem 0 4rem;">
         <div class="ob-content" style="margin: 0 auto; max-width: 720px;">
 
-          <h2 class="ob-title">Trial closing reflection</h2>
+          <h2 class="ob-title">Closing Reflection</h2>
           <p class="ob-subtitle" style="line-height:1.6;">
             Three weeks in. A short reflection on how this has landed for you —
             and a question at the end about whether you'd like to continue with
@@ -60,9 +60,15 @@
                   </div>
 
                 <% } else if (q.type === 'rating') { %>
-                  <p class="ob-rating-scale"><span><%= q.low %></span><span><%= q.high %></span></p>
+                  <% const _min = q.scaleMin != null ? q.scaleMin : 1; %>
+                  <% const _max = q.scaleMax != null ? q.scaleMax : 10; %>
+                  <p class="ob-rating-scale">
+                    <span><%= q.low %></span>
+                    <% if (q.mid) { %><span style="opacity:0.75"><%= q.mid %></span><% } %>
+                    <span><%= q.high %></span>
+                  </p>
                   <div class="ob-rating-row">
-                    <% for (let i = 1; i <= 10; i++) { %>
+                    <% for (let i = _min; i <= _max; i++) { %>
                       <button type="button" class="ob-rating-btn"
                         data-group="<%= q.field %>" data-value="<%= i %>">
                         <%= i %>

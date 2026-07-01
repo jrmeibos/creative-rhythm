@@ -1051,34 +1051,31 @@ const ASSESSMENT_QUESTIONS = [
 // 12-week harvest. Calibrated for a shorter window: lighter, more
 // open-ended, with an explicit "continue with the full course?" question.
 // Fields map into the existing self_assessments table — the schema is
-// generous enough that we don't need a parallel table.
+// generous enough that we don't need a parallel table. Q7 ("anything else")
+// reuses the q1_choice column as plain TEXT storage; SQLite is dynamically
+// typed so the column type doesn't constrain us, and the admin View dialog
+// renders by question-type lookup not column-name lookup.
 const TRIAL_CLOSING_QUESTIONS = [
-  { id: 'tq1', type: 'rating', field: 'q2_rating',
-    text: 'How do you feel about your relationship with sharing your work, three weeks in?',
-    low:  '1 = the same as when I started',
-    high: '10 = something has shifted'
+  { id: 'tq1', type: 'rating', field: 'q2_rating', scaleMin: 0, scaleMax: 10,
+    text: 'How do you feel about your relationship with being on camera, three weeks in?',
+    low:  '1 = worse than when I started',
+    mid:  '0 = the same as when I started',
+    high: '10 = something has shifted for the better'
   },
-  { id: 'tq2', type: 'multi', field: 'q7_choices', max: 2,
+  { id: 'tq2', type: 'text', field: 'q9_text',
     text: "What's changed for you in these 3 weeks?",
-    choices: [
-      { val: 'A', label: 'I see my creative practice differently' },
-      { val: 'B', label: "I'm sharing with more intention" },
-      { val: 'C', label: 'My nervous system feels less reactive about being seen' },
-      { val: 'D', label: 'I have a clearer sense of what I want to say' },
-      { val: 'E', label: 'The way I think about visibility has shifted' },
-      { val: 'F', label: "Nothing has changed yet — I'd need more time" },
-    ]
+    placeholder: "Is there anything that's different for you now than from when we started? Tell me more."
   },
-  { id: 'tq3', type: 'text', field: 'q9_text',
-    text: 'What surprised you most in these 3 weeks?',
-    placeholder: 'A small moment, a shift, anything you didn\'t expect.'
+  { id: 'tq3', type: 'text', field: 'q10_text',
+    text: "Was there anything I could've done better as a program curator?",
+    placeholder: 'Your honesty will help me improve this program for other people in the future.'
   },
-  { id: 'tq4', type: 'text', field: 'q10_text',
-    text: "Is there anything from this trial you'll keep using?",
+  { id: 'tq4', type: 'text', field: 'q11_text',
+    text: 'Is there anything from this experience that you intend to keep using?',
     placeholder: 'A practice, a question, a frame to come back to.'
   },
-  { id: 'tq5', type: 'text', field: 'q11_text',
-    text: 'Where did you get stuck, or where did the trial fall short for you?',
+  { id: 'tq5', type: 'text', field: 'q12_text',
+    text: 'Where did you get stuck, or where did the program fall short for you?',
     placeholder: 'Honesty here helps the next round of students.'
   },
   { id: 'tq6', type: 'choice', field: 'q8_choice',
@@ -1087,10 +1084,10 @@ const TRIAL_CLOSING_QUESTIONS = [
       { val: 'A', label: 'Yes — I want to enroll in the full course' },
       { val: 'B', label: "Maybe — I'm interested, tell me more" },
       { val: 'C', label: 'Not right now — but glad I tried this' },
-      { val: 'D', label: 'No' },
+      { val: 'D', label: 'No thank you' },
     ]
   },
-  { id: 'tq7', type: 'text', field: 'q12_text', optional: true,
+  { id: 'tq7', type: 'text', field: 'q1_choice', optional: true,
     text: 'Anything else you want me to know?',
     placeholder: 'Optional.'
   },
@@ -1263,7 +1260,7 @@ app.get('/trial-closing', requireAuth, (req, res) => {
   if (!isTrialClosingUnlockedFor(req.session.user)) return res.redirect('/dashboard');
   if (db.hasTrialClosingBeenSubmittedByUser(req.session.user.id)) return res.redirect('/dashboard');
   res.render('trial-closing', {
-    title: 'Trial closing reflection',
+    title: 'Closing Reflection',
     page: 'dashboard',
     questions: TRIAL_CLOSING_QUESTIONS,
   });
@@ -1287,7 +1284,9 @@ app.post('/api/trial-closing/submit', requireAuth, async (req, res) => {
     const v = answers[q.field];
     if (q.type === 'rating') {
       const n = Number(v);
-      if (!Number.isFinite(n) || n < 1 || n > 10) return res.status(400).json({ error: `Question ${q.id} requires a 1–10 rating.` });
+      const min = q.scaleMin != null ? q.scaleMin : 1;
+      const max = q.scaleMax != null ? q.scaleMax : 10;
+      if (!Number.isFinite(n) || n < min || n > max) return res.status(400).json({ error: `Question ${q.id} requires a ${min}–${max} rating.` });
     } else if (q.type === 'multi') {
       if (!Array.isArray(v) || v.length === 0)    return res.status(400).json({ error: `Question ${q.id} requires at least one choice.` });
     } else if (q.type === 'choice') {
