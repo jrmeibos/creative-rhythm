@@ -123,6 +123,21 @@
   margin-bottom: 1.25rem;
   border-bottom: 1px solid rgba(112, 92, 108, 0.12);
 }
+
+/* Struck-through "was $X" line above the discounted price. Reads as the
+   old, no-longer-current number so the current price feels like a real
+   savings and not just an arbitrary amount. */
+.up-tier-price-original {
+  font-family: var(--font-display);
+  font-size: 1.35rem;
+  font-weight: 400;
+  color: rgba(16, 15, 16, 0.35);
+  text-decoration: line-through;
+  text-decoration-thickness: 1.5px;
+  line-height: 1;
+  margin-bottom: 0.15rem;
+}
+
 .up-tier-price-amount {
   font-family: var(--font-display);
   font-size: 2.5rem;
@@ -140,12 +155,31 @@
   color: rgba(16, 15, 16, 0.45);
   margin-top: 0.3rem;
 }
+
+/* Base note style stays quiet for tiers that use it as flavor text; the
+   discount variant (below) turns it into an amber pill for emphasis. */
 .up-tier-price-note {
   font-family: var(--font-body);
   font-size: 0.75rem;
   font-style: italic;
   color: rgba(16, 15, 16, 0.55);
   margin-top: 0.35rem;
+}
+.up-tier-price-block--discounted .up-tier-price-note {
+  display: inline-block;
+  background: rgba(246, 201, 92, 0.22);
+  color: #8a6f1a;
+  font-style: normal;
+  font-weight: 400;
+  font-size: 0.78rem;
+  padding: 0.3rem 0.65rem;
+  border-radius: 999px;
+  margin-top: 0.6rem;
+  align-self: flex-start;
+}
+.up-tier-price-block--discounted .up-tier-price-note strong {
+  font-weight: 700;
+  color: #6b5610;
 }
 
 /* ─── Feature checklist ────────────────────────────────────────────────── */

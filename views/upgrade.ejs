@@ -43,11 +43,17 @@
                   <p class="up-tier-tagline"><%= t.tagline %></p>
                 </div>
 
-                <div class="up-tier-price-block">
+                <div class="up-tier-price-block<%= t.originalPriceLabel ? ' up-tier-price-block--discounted' : '' %>">
+                  <% if (t.originalPriceLabel) { %>
+                    <span class="up-tier-price-original"><%= t.originalPriceLabel %></span>
+                  <% } %>
                   <span class="up-tier-price-amount"><%= t.priceLabel %></span>
                   <span class="up-tier-price-once">one-time</span>
                   <% if (t.priceNote) { %>
-                    <span class="up-tier-price-note"><%= t.priceNote %></span>
+                    <span class="up-tier-price-note">
+                      <% if (t.savingsLabel) { %><strong>Save <%= t.savingsLabel %></strong> · <% } %>
+                      <%= t.priceNote %>
+                    </span>
                   <% } %>
                 </div>
 
