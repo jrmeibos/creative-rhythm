@@ -1506,11 +1506,12 @@ const MIDCOURSE_QUESTIONS = [
 // True if THIS user's mid-course should be visible — either their own
 // course_start_date is ≥35 days ago, or admin force-unlocked globally.
 function isMidcourseUnlockedFor(user) {
-  // Mid-course doesn't apply to short trials. Gating here prevents both the
-  // global admin override AND the date-based unlock from leaking the
-  // mid-course card / route to a 3-week trial student.
+  // Mid-course doesn't apply to short trials. Purely per-user timeline now —
+  // the old global midcourse_unlocked "force on for everyone" override was
+  // fine for the single-cohort pilot but is wrong once students start on
+  // different dates. If an individual student needs an early unlock, adjust
+  // their course_start_date on /admin.
   if (getCourseLengthWeeks(user) < 12) return false;
-  if (db.getSetting('midcourse_unlocked') === 'true') return true; // admin manual override
   const courseStart = db.getUserCourseStartDate(user);
   if (!courseStart) return false;
   const daysDiff = Math.floor((Date.now() - new Date(courseStart + 'T00:00:00').getTime()) / 86400000);
@@ -3357,8 +3358,12 @@ function getUnlockState(user) {
     closingDate   = daysDiff >= (lengthWeeks - 1) * 7;
   }
   return {
-    midcourseUnlocked: isFullCourse && (midcourseDate || db.getSetting('midcourse_unlocked') === 'true'),
-    harvestUnlocked:   closingDate || db.getSetting('harvest_unlocked')   === 'true'
+    // Purely per-user timeline — the old global "unlocked for everyone"
+    // override was appropriate for one synchronized cohort but is wrong
+    // with rolling signups. Timing is driven by each student's own
+    // course_start_date; adjust that on /admin if you need to shift one.
+    midcourseUnlocked: isFullCourse && midcourseDate,
+    harvestUnlocked:   closingDate
   };
 }
 
