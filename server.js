@@ -117,6 +117,26 @@ app.use((req, res, next) => {
   next();
 });
 
+// Session-freshen middleware — re-syncs course_length_weeks + enrollment_tier
+// from the DB on every authenticated request. Without this, a student's
+// session still carries the pre-upgrade course_length_weeks=3 after the
+// Stripe webhook flips them to 12, and their dashboard keeps saying
+// "Week 1 of 3" until they log out and back in. Cheap read at pilot scale.
+app.use((req, res, next) => {
+  const s = req.session.user;
+  if (s && s.id) {
+    const fresh = db.getUserById(s.id);
+    if (fresh) {
+      s.course_length_weeks = fresh.course_length_weeks || 12;
+      s.enrollment_tier     = fresh.enrollment_tier || null;
+      s.current_season      = fresh.current_season || null;
+      s.profile_photo       = fresh.profile_photo || null;
+      s.course_start_date   = fresh.course_start_date || null;
+    }
+  }
+  next();
+});
+
 // Onboarding guard — students who haven't completed onboarding can only access onboarding routes
 app.use((req, res, next) => {
   const u = req.session.user;
@@ -1187,12 +1207,57 @@ app.get('/calendar', requireAuth, (req, res) => {
   const currentWeekStart     = courseCurrentWeekStart;
   const courseStartDate      = db.getUserCourseStartDate(req.session.user) || currentWeekStart;
   const courseLengthWeeks    = getCourseLengthWeeks(req.session.user);
-  const weekStarts           = generateCourseWeeks(courseStartDate, courseLengthWeeks);
+
+  // Calendar always shows the full 12 weeks. Weeks beyond the student's
+  // paid access get rendered as locked/greyed tiles that link to /upgrade.
+  // This keeps the shape of the journey consistent and previews what's
+  // available with an upgrade.
+  const weekStarts           = generateCourseWeeks(courseStartDate, 12);
   const allGoalsRaw          = db.getGoalsForWeeks(userId, weekStarts);
   const reflectionsRaw       = db.getWeeklyReflections(userId, weekStarts);
   const cats                 = ['curiosity', 'create', 'share', 'connect'];
 
+  // Which meeting types the student is entitled to see labels for.
+  // Solo (course_length_weeks === 12 && tier === 'solo') and trial students
+  // see no meeting labels — they have no calls with Julia. Community sees
+  // group + office-hours. Coaching adds one-on-one.
+  const tier = req.session.user.enrollment_tier;
+  let visibleMeetingTypes;
+  if (tier === 'coaching')       visibleMeetingTypes = new Set(['group', 'office-hours', 'one-on-one']);
+  else if (tier === 'community') visibleMeetingTypes = new Set(['group', 'office-hours']);
+  else                           visibleMeetingTypes = new Set();
+
   const weeks = weekStarts.map((weekStart, idx) => {
+    const weekNum = idx + 1;
+    const isLocked = weekNum > courseLengthWeeks;
+
+    // Locked weeks skip the goals/reflections/season computation — nothing
+    // to render inside the tile. We still emit a stub so the view can
+    // iterate uniformly.
+    if (isLocked) {
+      return {
+        weekStart,
+        weekIndex:         idx,
+        weekNum,
+        weekName:          'Week ' + WEEK_ORDINALS[idx],
+        dateRange:         formatDateRangeShort(weekStart),
+        isLocked:          true,
+        isCurrentWeek:     false,
+        isPastWeek:        false,
+        isFutureWeek:      true,
+        isPastCourseWeek:  false,
+        isIntegration:     false,
+        curricularSeason:  getCurricularSeason(weekNum),
+        curricularSeasonLabel: getCurricularSeasonLabel(getCurricularSeason(weekNum)),
+        meeting:           null,
+        goalsData:         null,
+        goalsMap:          {},
+        goalsExist:        {},
+        allGoalsSet:       false,
+        reflection:        null,
+      };
+    }
+
     const goalsMap   = allGoalsRaw[weekStart] || {};
     const goalsData  = {};
     const goalsExist = {};
@@ -1203,15 +1268,19 @@ app.get('/calendar', requireAuth, (req, res) => {
     }
     const allGoalsSet   = cats.every(cat => goalsExist[cat]);
     const isIntegration = cats.some(cat => goalsMap[cat]?.is_integration_week);
-    const weekNum = idx + 1;
     const curricularSeason = getCurricularSeason(weekNum);
     const curricularSeasonLabel = getCurricularSeasonLabel(curricularSeason);
+    const meetingDef = WEEKLY_MEETINGS[weekNum] || null;
+    // Only show the meeting label if this student's tier includes that
+    // meeting type. Other tiers get a null → view hides the label row.
+    const meeting = meetingDef && visibleMeetingTypes.has(meetingDef.type) ? meetingDef : null;
     return {
       weekStart,
       weekIndex:          idx,
       weekNum,
       weekName:           'Week ' + WEEK_ORDINALS[idx],
       dateRange:          formatDateRangeShort(weekStart),
+      isLocked:           false,
       isCurrentWeek:      weekStart === currentWeekStart,
       isPastWeek:         weekStart < currentWeekStart,
       isFutureWeek:       weekStart > currentWeekStart,
@@ -1219,7 +1288,7 @@ app.get('/calendar', requireAuth, (req, res) => {
       isIntegration,
       curricularSeason,
       curricularSeasonLabel,
-      meeting:            WEEKLY_MEETINGS[weekNum] || null,
+      meeting,
       goalsData,
       goalsMap,
       goalsExist,
@@ -1229,13 +1298,14 @@ app.get('/calendar', requireAuth, (req, res) => {
   });
 
   res.render('calendar', {
-    title:                courseLengthWeeks < 12 ? `Your ${courseLengthWeeks}-Week Trial` : 'Your 12-Week Journey',
+    title:                'Your 12-Week Journey',
     page:                 'calendar',
     weeks,
     currentWeekStart,
     courseCurrentWeekStart,
     courseStartDate,
     courseLengthWeeks,
+    hasLockedWeeks:       courseLengthWeeks < 12,
     todayStr: toLocalDateString(getNow(req.session.user))
   });
 });

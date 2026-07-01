@@ -14,53 +14,75 @@
 
       <header class="cal-page-header">
         <div>
-          <h1 class="cal-page-title">
-            <% if (courseLengthWeeks < 12) { %>
-              Your <%= courseLengthWeeks %>-Week Trial
-            <% } else { %>
-              Your 12-Week Journey
+          <h1 class="cal-page-title">Your 12-Week Journey</h1>
+          <p class="cal-page-sub">
+            Plan ahead, reflect back, tend the garden.
+            <% if (hasLockedWeeks) { %>
+              <a href="/upgrade" class="cal-upgrade-link">Weeks <%= courseLengthWeeks + 1 %>–12 unlock with the full course →</a>
             <% } %>
-          </h1>
-          <p class="cal-page-sub">Plan ahead, reflect back, tend the garden.</p>
+          </p>
         </div>
       </header>
 
-      <!-- 12-week tile grid -->
+      <!-- 12-week tile grid. Weeks the student hasn't paid for render as
+           inert anchor tiles that link to /upgrade — the drawer opener
+           won't fire on them (no data-week attribute needed). -->
       <div class="cal-grid">
         <% for (const w of weeks) { %>
-          <button
-            class="cal-tile <%= w.isCurrentWeek ? 'cal-tile--current' : w.isPastWeek ? 'cal-tile--past' : 'cal-tile--future' %><% if (w.curricularSeason && !w.isCurrentWeek) { %> cal-tile--season-<%= w.curricularSeason %><% } %>"
-            data-week="<%= w.weekStart %>"
-            type="button"
-            aria-expanded="false">
+          <% if (w.isLocked) { %>
+            <a class="cal-tile cal-tile--locked<% if (w.curricularSeason) { %> cal-tile--season-<%= w.curricularSeason %><% } %>"
+               href="/upgrade"
+               title="Unlock this week with the full course">
+              <div class="cal-tile-head">
+                <span class="cal-tile-name"><%= w.weekName %></span>
+                <span class="cal-tile-locked-icon" aria-hidden="true">
+                  <svg width="14" height="14" viewBox="0 0 20 20" fill="none">
+                    <rect x="4" y="9" width="12" height="8" rx="1.5" stroke="currentColor" stroke-width="1.6"/>
+                    <path d="M7 9V6.5a3 3 0 016 0V9" stroke="currentColor" stroke-width="1.6"/>
+                  </svg>
+                </span>
+              </div>
+              <p class="cal-tile-range"><%= w.dateRange %></p>
+              <% if (w.curricularSeasonLabel) { %>
+                <span class="cal-tile-season"><%= w.curricularSeasonLabel %></span>
+              <% } %>
+              <span class="cal-tile-locked-cta">Unlock →</span>
+            </a>
+          <% } else { %>
+            <button
+              class="cal-tile <%= w.isCurrentWeek ? 'cal-tile--current' : w.isPastWeek ? 'cal-tile--past' : 'cal-tile--future' %><% if (w.curricularSeason && !w.isCurrentWeek) { %> cal-tile--season-<%= w.curricularSeason %><% } %>"
+              data-week="<%= w.weekStart %>"
+              type="button"
+              aria-expanded="false">
 
-            <div class="cal-tile-head">
-              <span class="cal-tile-name"><%= w.weekName %></span>
-              <% if (w.isCurrentWeek) { %><span class="cal-tile-badge">Current</span><% } %>
-              <% if (w.allGoalsSet) { %><span class="cal-tile-sparkle" aria-hidden="true">✨</span><% } %>
-            </div>
+              <div class="cal-tile-head">
+                <span class="cal-tile-name"><%= w.weekName %></span>
+                <% if (w.isCurrentWeek) { %><span class="cal-tile-badge">Current</span><% } %>
+                <% if (w.allGoalsSet) { %><span class="cal-tile-sparkle" aria-hidden="true">✨</span><% } %>
+              </div>
 
-            <p class="cal-tile-range"><%= w.dateRange %></p>
+              <p class="cal-tile-range"><%= w.dateRange %></p>
 
-            <div class="cal-tile-dots" aria-hidden="true">
-              <span class="cal-dot cal-dot--curiosity <%= w.goalsExist.curiosity ? 'is-set' : '' %>"></span>
-              <span class="cal-dot cal-dot--create <%= w.goalsExist.create ? 'is-set' : '' %>"></span>
-              <span class="cal-dot cal-dot--share <%= w.goalsExist.share ? 'is-set' : '' %>"></span>
-              <span class="cal-dot cal-dot--connect <%= w.goalsExist.connect ? 'is-set' : '' %>"></span>
-            </div>
+              <div class="cal-tile-dots" aria-hidden="true">
+                <span class="cal-dot cal-dot--curiosity <%= w.goalsExist.curiosity ? 'is-set' : '' %>"></span>
+                <span class="cal-dot cal-dot--create <%= w.goalsExist.create ? 'is-set' : '' %>"></span>
+                <span class="cal-dot cal-dot--share <%= w.goalsExist.share ? 'is-set' : '' %>"></span>
+                <span class="cal-dot cal-dot--connect <%= w.goalsExist.connect ? 'is-set' : '' %>"></span>
+              </div>
 
-            <% if (w.curricularSeasonLabel) { %>
-              <span class="cal-tile-season"><%= w.curricularSeasonLabel %></span>
-            <% } %>
+              <% if (w.curricularSeasonLabel) { %>
+                <span class="cal-tile-season"><%= w.curricularSeasonLabel %></span>
+              <% } %>
 
-            <% if (w.meeting) { %>
-              <span class="cal-tile-meeting"><%= w.meeting.label %></span>
-            <% } %>
+              <% if (w.meeting) { %>
+                <span class="cal-tile-meeting"><%= w.meeting.label %></span>
+              <% } %>
 
-            <% if (w.isIntegration) { %>
-              <span class="cal-tile-intg">Integration Week</span>
-            <% } %>
-          </button>
+              <% if (w.isIntegration) { %>
+                <span class="cal-tile-intg">Integration Week</span>
+              <% } %>
+            </button>
+          <% } %>
         <% } %>
       </div>
 
@@ -76,6 +98,7 @@
         </div>
 
         <% for (const w of weeks) { %>
+          <% if (w.isLocked) { continue; } %>
           <%
             // Build seven day-cell descriptors for this week. State drives
             // both visual treatment and whether the cell is tappable:

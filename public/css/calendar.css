@@ -250,6 +250,59 @@
   .cal-grid { grid-template-columns: 1fr; }
 }
 
+/* ─── Locked tile (weeks beyond the student's paid access) ─────────────── */
+/* Same footprint as a normal tile so the grid stays visually even. Rendered
+   as an anchor (not a button) so a click routes to /upgrade instead of
+   opening the drawer. Muted so it clearly reads as "you don't have this
+   yet" without being ugly. */
+
+.cal-tile--locked {
+  opacity: 0.55;
+  color: rgba(16, 15, 16, 0.65);
+  text-decoration: none;
+  background: rgba(112, 92, 108, 0.05);
+  border-color: rgba(112, 92, 108, 0.15);
+  cursor: pointer;
+}
+.cal-tile--locked:hover {
+  opacity: 0.85;
+  border-color: var(--color-bloem);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+}
+.cal-tile-locked-icon {
+  display: inline-flex;
+  align-items: center;
+  color: var(--color-bloem);
+  opacity: 0.7;
+  flex-shrink: 0;
+}
+.cal-tile-locked-cta {
+  font-family: var(--font-body);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-bloem);
+  margin-top: auto;
+  padding-top: 0.4rem;
+}
+
+/* Upgrade-link chip in the header subtitle when locked weeks exist */
+.cal-upgrade-link {
+  display: inline-block;
+  margin-left: 0.6rem;
+  padding: 0.2rem 0.65rem;
+  background: rgba(112, 92, 108, 0.12);
+  color: var(--color-bloem);
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 400;
+  text-decoration: none;
+  transition: background 0.15s;
+}
+.cal-upgrade-link:hover { background: rgba(112, 92, 108, 0.2); }
+
 /* ─── Curricular season tinting (non-current tiles only) ─────────────────── */
 
 .cal-tile--season-winter {
