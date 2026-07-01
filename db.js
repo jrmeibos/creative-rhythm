@@ -211,6 +211,17 @@ db.exec(`
   );
   CREATE INDEX IF NOT EXISTS idx_push_subscriptions_user ON push_subscriptions(user_id);
 
+  -- Stripe webhook event ledger. One row per successfully-processed event
+  -- (identified by the Stripe event.id, which is globally unique). Guards
+  -- against double-processing when Stripe retries a webhook delivery — the
+  -- webhook handler inserts here inside a transaction with the upgrade, so
+  -- either both happen or neither does.
+  CREATE TABLE IF NOT EXISTS stripe_events (
+    id             TEXT    PRIMARY KEY,
+    type           TEXT    NOT NULL,
+    processed_at   DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+
   -- Rotating dashboard quotes. season is one of spring|summer|autumn|winter
   -- or NULL ("any season"). The dashboard helper filters to (user's chosen
   -- season OR NULL) so a student who hasn't picked a season still gets the
@@ -2448,5 +2459,17 @@ module.exports = {
 
   deleteQuote(id) {
     return db.prepare('DELETE FROM quotes WHERE id = ?').run(id);
+  },
+
+  // ─── Stripe events (webhook idempotency) ──────────────────────────────────
+
+  // INSERT OR IGNORE returns changes>0 only if the event is new. Callers use
+  // that as "should I process this event now" — if the row already exists,
+  // we've already handled it and the webhook should ack without acting again.
+  tryClaimStripeEvent(eventId, eventType) {
+    const r = db.prepare(
+      'INSERT OR IGNORE INTO stripe_events (id, type) VALUES (?, ?)'
+    ).run(eventId, eventType);
+    return r.changes > 0;
   },
 };

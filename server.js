@@ -17,6 +17,7 @@ const { getDailyPrompt } = require('./lib/daily-prompts');
 const CUTTING_PROMPTS = require('./lib/cutting-prompts');
 const { renderHtmlToPdf } = require('./lib/pdf-render');
 const PUSH = require('./lib/push');
+const STRIPE = require('./lib/stripe');
 const ejs = require('ejs');
 const ALL_QUESTION_IDS = new Set(ANGLES.flatMap(a => a.questions.map(q => q.id)));
 
@@ -76,7 +77,12 @@ app.locals.cuttingPrompts = CUTTING_PROMPTS;
 
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.urlencoded({ extended: true }));
-app.use(express.json());
+// Capture the raw request body while still parsing JSON. Stripe webhook
+// signature verification needs the exact bytes Stripe signed, not the
+// re-serialized version. Only 1 KB or so per request — negligible overhead.
+app.use(express.json({
+  verify: (req, res, buf) => { req.rawBody = buf; },
+}));
 
 app.set('trust proxy', 1);
 
@@ -563,6 +569,108 @@ app.post('/api/timezone', requireAuth, (req, res) => {
   db.setUserTimezone(req.session.user.id, tz);
   req.session.user.timezone = tz;
   req.session.save(() => res.json({ ok: true, timezone: tz }));
+});
+
+// ─── Stripe checkout + webhook ─────────────────────────────────────────────
+// Two-endpoint model for Elements checkout:
+//   1. Client POSTs /api/checkout/create-payment-intent → server creates a
+//      PaymentIntent stamped with the user's id in metadata, returns the
+//      client_secret. Client mounts Stripe Elements and confirms with that.
+//   2. Stripe fires payment_intent.succeeded to /webhooks/stripe. We verify
+//      signature, claim event.id (idempotent), then flip
+//      course_length_weeks 3 → 12 for the user in metadata.user_id.
+//
+// Only trial students (course_length_weeks < 12) can initiate a checkout —
+// keeps the "already paid" case from paying twice.
+
+app.post('/api/checkout/create-payment-intent', requireAuth, async (req, res) => {
+  if (!STRIPE.isConfigured()) {
+    return res.status(503).json({ error: 'Payments are not configured yet.' });
+  }
+  const sessionUser = req.session.user;
+  if (sessionUser.role === 'admin') {
+    return res.status(400).json({ error: 'Admins do not need to upgrade.' });
+  }
+  // Re-read from DB in case course_length_weeks changed since login. The
+  // session copy would be stale if an admin manually flipped their cohort.
+  const dbUser = db.getUserById(sessionUser.id);
+  if (!dbUser) return res.status(404).json({ error: 'User not found.' });
+  if ((dbUser.course_length_weeks || 12) >= 12) {
+    return res.status(409).json({ error: 'You already have full access to the course.' });
+  }
+
+  try {
+    const intent = await STRIPE.createUpgradePaymentIntent(dbUser.id, dbUser.email);
+    res.json({
+      ok: true,
+      clientSecret: intent.client_secret,
+      publishableKey: STRIPE.getPublishableKey(),
+      amount: STRIPE.getUpgradePriceCents(),
+      currency: STRIPE.getUpgradeCurrency(),
+    });
+  } catch (err) {
+    console.error('[stripe] createPaymentIntent failed:', err.message);
+    res.status(500).json({ error: 'Could not start checkout. Try again in a moment.' });
+  }
+});
+
+// Stripe posts here on payment_intent.succeeded (and other events). No
+// session — the request comes from Stripe's servers, authenticated by the
+// signature header we verify. Note this route DOES need JSON parsing (the
+// event body is JSON) but ALSO needs the raw bytes for signature verify —
+// captured earlier by express.json({ verify }).
+app.post('/webhooks/stripe', async (req, res) => {
+  if (!STRIPE.isConfigured()) return res.status(503).send('Stripe not configured');
+  const sig = req.get('Stripe-Signature') || '';
+  if (!sig || !req.rawBody) return res.status(400).send('Missing signature or body');
+
+  let event;
+  try {
+    event = STRIPE.constructWebhookEvent(req.rawBody, sig);
+  } catch (err) {
+    console.warn('[stripe] webhook signature verification failed:', err.message);
+    return res.status(400).send(`Signature failed: ${err.message}`);
+  }
+
+  // Idempotency: reject the second delivery of the same event.id so a Stripe
+  // retry (or an accidental replay) doesn't upgrade someone twice.
+  const claimed = db.tryClaimStripeEvent(event.id, event.type);
+  if (!claimed) {
+    console.log('[stripe] webhook already processed:', event.id, event.type);
+    return res.json({ ok: true, alreadyProcessed: true });
+  }
+
+  try {
+    if (event.type === 'payment_intent.succeeded') {
+      const pi = event.data.object;
+      const userIdStr = pi.metadata && pi.metadata.user_id;
+      const userId = parseInt(userIdStr, 10);
+      if (!Number.isFinite(userId)) {
+        console.warn('[stripe] payment_intent.succeeded without user_id metadata:', pi.id);
+      } else {
+        const user = db.getUserById(userId);
+        if (user && (user.course_length_weeks || 12) < 12) {
+          db.setUserCourseLengthWeeks(userId, 12);
+          console.log(`[stripe] upgraded user ${userId} (${user.email}) to full course after ${pi.id}`);
+        } else {
+          console.log(`[stripe] payment for user ${userId} arrived but they're already at 12 — no-op`);
+        }
+      }
+    } else {
+      // Other event types are ignored for now — we still 200 so Stripe stops
+      // retrying, and the id is stored in stripe_events so we never process
+      // a stray event again.
+      console.log('[stripe] ignoring event type:', event.type);
+    }
+    res.json({ ok: true });
+  } catch (err) {
+    // If handler throws AFTER claim, we've already recorded the event as
+    // processed — but the upgrade may not have happened. Log loudly so we
+    // can reconcile manually. Do NOT 500 — Stripe would retry, and the
+    // retry hits the "already claimed" branch above.
+    console.error('[stripe] webhook handler failed for', event.id, event.type, ':', err);
+    res.json({ ok: true, handlerError: true });
+  }
 });
 
 // ─── Push notifications ────────────────────────────────────────────────────
