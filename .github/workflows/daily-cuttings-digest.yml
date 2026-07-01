@@ -1,0 +1,53 @@
+# Daily cuttings digest — pings the live web app's /admin/run-daily-digest
+# route every morning. The route returns yesterday's cuttings as a per-user
+# PDF email; idempotent within the day via the (user, date) milestone key
+# in notification_log, so a re-fire is a no-op.
+#
+# Setup (one-time, in this repo's settings):
+#   1. Settings → Secrets and variables → Actions → New repository secret
+#   2. Add CRON_SECRET (reuse the one from the daily reminders workflow)
+#   3. Confirm the same CRON_SECRET env var is set on Railway.
+#
+# Manual trigger: Actions tab → "Daily cuttings digest" → "Run workflow"
+# (uses the same secret; useful for testing without waiting for tomorrow).
+
+name: Daily cuttings digest
+
+on:
+  schedule:
+    # 13:00 UTC daily = 7am MST / 8am MDT (matches Julia's morning).
+    # GitHub cron drift (a few minutes) is fine for a digest.
+    - cron: '0 13 * * *'
+  workflow_dispatch:
+    inputs:
+      dryRun:
+        description: 'Dry run (writes PDFs to /tmp on the server, skips email)'
+        required: false
+        default: 'false'
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger digest on production
+        env:
+          CRON_SECRET:    ${{ secrets.CRON_SECRET }}
+          DIGEST_URL:     https://www.creativesgarden.com/admin/run-daily-digest
+          DRY_RUN_FLAG:   ${{ github.event.inputs.dryRun == 'true' && '?dryRun=1' || '' }}
+        run: |
+          if [ -z "$CRON_SECRET" ]; then
+            echo "::error::CRON_SECRET repository secret is not set."
+            exit 1
+          fi
+          echo "POSTing to $DIGEST_URL$DRY_RUN_FLAG"
+          response=$(curl -sS -X POST "$DIGEST_URL$DRY_RUN_FLAG" \
+            -H "X-Cron-Secret: $CRON_SECRET" \
+            -H "Content-Type: application/json" \
+            --max-time 300 \
+            -w "\nHTTP_STATUS:%{http_code}\n")
+          echo "$response"
+          status=$(echo "$response" | tail -1 | sed 's/HTTP_STATUS://')
+          if [ "$status" -lt 200 ] || [ "$status" -ge 300 ]; then
+            echo "::error::Digest endpoint returned HTTP $status"
+            exit 1
+          fi
