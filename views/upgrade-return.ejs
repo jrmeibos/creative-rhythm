@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <%- include('partials/head') %>
+  <link rel="stylesheet" href="/css/dashboard.css">
+  <link rel="stylesheet" href="/css/upgrade.css">
+  <script src="https://js.stripe.com/v3/"></script>
+</head>
+<body class="app-body">
+  <div class="app-layout">
+    <%- include('partials/sidebar') %>
+    <main class="main-content">
+
+      <div class="up-return" id="up-return">
+        <h1 class="up-title">Confirming your payment…</h1>
+        <p class="up-subtitle" id="up-return-status">
+          Just checking in with Stripe. This usually takes a second.
+        </p>
+        <p class="up-error" id="up-return-error" hidden></p>
+      </div>
+
+    </main>
+  </div>
+
+  <script>
+    const stripe = Stripe(<%- JSON.stringify(publishableKey) %>);
+    const clientSecret = <%- JSON.stringify(clientSecret) %>;
+
+    (async () => {
+      const errEl    = document.getElementById('up-return-error');
+      const statusEl = document.getElementById('up-return-status');
+      const { paymentIntent, error } = await stripe.retrievePaymentIntent(clientSecret);
+      if (error) {
+        errEl.textContent = error.message || 'Could not confirm the payment.';
+        errEl.hidden = false;
+        statusEl.textContent = '';
+        return;
+      }
+      // Terminal statuses per Stripe docs
+      switch (paymentIntent && paymentIntent.status) {
+        case 'succeeded': {
+          const tier = paymentIntent.metadata && paymentIntent.metadata.tier;
+          window.location.href = '/dashboard?upgraded=1' + (tier ? '&tier=' + encodeURIComponent(tier) : '');
+          return;
+        }
+        case 'processing':
+          statusEl.textContent = 'Payment is processing. You can leave this page — we\'ll email you when it clears.';
+          return;
+        case 'requires_payment_method':
+          statusEl.textContent = 'That payment method didn\'t go through. Try again.';
+          setTimeout(() => window.location.href = '/upgrade', 2500);
+          return;
+        default:
+          statusEl.textContent = 'Unexpected status: ' + (paymentIntent && paymentIntent.status);
+          return;
+      }
+    })();
+  </script>
+
+</body>
+</html>

@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <%- include('partials/head') %>
+  <link rel="stylesheet" href="/css/dashboard.css">
+  <link rel="stylesheet" href="/css/upgrade.css">
+  <!-- Stripe.js MUST be loaded from js.stripe.com per Stripe policy (PCI +
+       fingerprinting guarantees). Not bundled locally. Only pulled in when
+       the /upgrade page renders, not globally. -->
+  <script src="https://js.stripe.com/v3/"></script>
+</head>
+<body class="app-body">
+  <div class="app-layout">
+    <%- include('partials/sidebar') %>
+    <main class="main-content">
+
+      <a href="/dashboard" class="cm-back-link" style="display:inline-block; margin: 1.5rem 0 1rem;">← Back to dashboard</a>
+
+      <header class="up-header">
+        <h1 class="up-title">Continue with the full Creative's Garden</h1>
+        <p class="up-subtitle">
+          Three paths through the rest of the course. All three unlock every
+          week of the material — the difference is how much of me comes with
+          it.
+        </p>
+      </header>
+
+      <!-- ─── Step 1: Tier selection ─────────────────────────────────────── -->
+      <section class="up-step" id="up-step-tier" data-step="tier">
+        <div class="up-tier-grid">
+          <% tiers.forEach(function(t) { %>
+            <label class="up-tier" data-tier="<%= t.id %>">
+              <input type="radio" name="tier" value="<%= t.id %>" class="up-tier-radio">
+              <div class="up-tier-inner">
+                <div class="up-tier-head">
+                  <h2 class="up-tier-name"><%= t.name %></h2>
+                  <div class="up-tier-price">
+                    <span class="up-tier-price-amount"><%= t.priceLabel %></span>
+                    <% if (t.priceNote) { %>
+                      <span class="up-tier-price-note"><%= t.priceNote %></span>
+                    <% } %>
+                  </div>
+                </div>
+                <p class="up-tier-tagline"><%= t.tagline %></p>
+                <ul class="up-tier-bullets">
+                  <% t.bullets.forEach(function(b) { %>
+                    <li><%= b %></li>
+                  <% }); %>
+                </ul>
+              </div>
+            </label>
+          <% }); %>
+        </div>
+
+        <div class="up-actions">
+          <button type="button" class="up-btn up-btn--primary" id="up-continue-btn" disabled>Continue →</button>
+        </div>
+      </section>
+
+      <!-- ─── Step 2: Card form ──────────────────────────────────────────── -->
+      <section class="up-step is-hidden" id="up-step-pay" data-step="pay">
+        <div class="up-summary">
+          <button type="button" class="up-back-inline" id="up-back-to-tier">← Change tier</button>
+          <div class="up-summary-row">
+            <span class="up-summary-label">You selected</span>
+            <span class="up-summary-tier" id="up-summary-tier-name">—</span>
+          </div>
+          <div class="up-summary-row">
+            <span class="up-summary-label">Total</span>
+            <span class="up-summary-price" id="up-summary-price">—</span>
+          </div>
+        </div>
+
+        <div class="up-card-panel">
+          <label class="up-card-label">Card information</label>
+          <!-- Stripe Payment Element mounts here (single element covers card
+               fields + wallets like Apple Pay when configured). -->
+          <div id="up-payment-element" class="up-payment-element"></div>
+
+          <p class="up-error" id="up-pay-error" hidden></p>
+
+          <button type="button" class="up-btn up-btn--primary up-btn--full" id="up-pay-btn">
+            Pay <span id="up-pay-btn-amount">—</span>
+          </button>
+
+          <% if (!stripeConfigured) { %>
+            <p class="up-note up-note--warn" style="margin-top:1rem">
+              Payments aren't configured yet. Reach out to Julia directly.
+            </p>
+          <% } %>
+
+          <p class="up-note">
+            Secure checkout powered by Stripe. We never see or store your card
+            details.
+          </p>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <script>
+    // Server-serialized tier catalog so the client can look up name/price on
+    // selection without another round-trip. Same source as the API validator.
+    const TIERS = <%- JSON.stringify(tiers) %>;
+    const STRIPE_CONFIGURED = <%= stripeConfigured ? 'true' : 'false' %>;
+
+    let selectedTierId = null;
+    let stripe = null;
+    let paymentElement = null;
+    let elements = null;
+    let currentClientSecret = null;
+
+    // ── Step 1 → Step 2: tier selection ────────────────────────────────────
+    document.querySelectorAll('.up-tier').forEach(function (label) {
+      label.addEventListener('click', function () {
+        const tierId = label.dataset.tier;
+        selectedTierId = tierId;
+        document.querySelectorAll('.up-tier').forEach(function (l) {
+          l.classList.toggle('is-selected', l.dataset.tier === tierId);
+        });
+        document.getElementById('up-continue-btn').disabled = false;
+      });
+    });
+
+    document.getElementById('up-continue-btn').addEventListener('click', async function () {
+      if (!selectedTierId) return;
+      if (!STRIPE_CONFIGURED) {
+        alert('Payments are not configured yet. Please reach out to Julia directly.');
+        return;
+      }
+      const tier = TIERS.find(function (t) { return t.id === selectedTierId; });
+      if (!tier) return;
+
+      // Fill the summary panel
+      document.getElementById('up-summary-tier-name').textContent = tier.name;
+      document.getElementById('up-summary-price').textContent      = tier.priceLabel;
+      document.getElementById('up-pay-btn-amount').textContent     = tier.priceLabel;
+
+      // Swap steps
+      document.getElementById('up-step-tier').classList.add('is-hidden');
+      document.getElementById('up-step-pay').classList.remove('is-hidden');
+
+      // Create the PaymentIntent + mount the Payment Element (lazy — only
+      // when the user actually reaches step 2, so a bounce off step 1 costs
+      // nothing on our Stripe account).
+      try {
+        const res = await fetch('/api/checkout/create-payment-intent', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ tier: tier.id }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          document.getElementById('up-pay-error').textContent = data.error || 'Could not start checkout.';
+          document.getElementById('up-pay-error').hidden = false;
+          return;
+        }
+        currentClientSecret = data.clientSecret;
+
+        stripe   = Stripe(data.publishableKey);
+        elements = stripe.elements({ clientSecret: data.clientSecret, appearance: { theme: 'stripe' } });
+        paymentElement = elements.create('payment', { layout: 'tabs' });
+        paymentElement.mount('#up-payment-element');
+      } catch (err) {
+        document.getElementById('up-pay-error').textContent = 'Network error. Please try again.';
+        document.getElementById('up-pay-error').hidden = false;
+      }
+    });
+
+    // ── Back to tier selection (Change tier) ───────────────────────────────
+    document.getElementById('up-back-to-tier').addEventListener('click', function () {
+      document.getElementById('up-step-pay').classList.add('is-hidden');
+      document.getElementById('up-step-tier').classList.remove('is-hidden');
+      // Tear down the mounted Payment Element so a re-continue starts fresh.
+      if (paymentElement) { try { paymentElement.unmount(); } catch (_) {} }
+      paymentElement = null;
+      elements = null;
+      stripe = null;
+      currentClientSecret = null;
+    });
+
+    // ── Submit payment ─────────────────────────────────────────────────────
+    document.getElementById('up-pay-btn').addEventListener('click', async function () {
+      const errEl = document.getElementById('up-pay-error');
+      const btn   = document.getElementById('up-pay-btn');
+      errEl.hidden = true;
+
+      if (!stripe || !elements || !currentClientSecret) {
+        errEl.textContent = 'Something went wrong loading the payment form. Please refresh and try again.';
+        errEl.hidden = false;
+        return;
+      }
+
+      btn.disabled = true;
+      btn.textContent = 'Processing…';
+
+      // confirmPayment triggers Stripe's confirmation. On 3DS challenge,
+      // Stripe handles the redirect and comes back to return_url. On
+      // immediate success/failure with no redirect needed, we get { error }
+      // or { paymentIntent } here directly.
+      const { error, paymentIntent } = await stripe.confirmPayment({
+        elements,
+        confirmParams: {
+          return_url: window.location.origin + '/upgrade/return',
+        },
+        redirect: 'if_required',
+      });
+
+      if (error) {
+        errEl.textContent = error.message || 'Payment failed. Please try again.';
+        errEl.hidden = false;
+        btn.disabled = false;
+        const tier = TIERS.find(function (t) { return t.id === selectedTierId; });
+        btn.innerHTML = 'Pay <span id="up-pay-btn-amount">' + (tier ? tier.priceLabel : '') + '</span>';
+        return;
+      }
+
+      if (paymentIntent && paymentIntent.status === 'succeeded') {
+        // Webhook will flip the user's course_length_weeks server-side; the
+        // dashboard banner detection uses ?upgraded=1&tier=... query params.
+        window.location.href = '/dashboard?upgraded=1&tier=' + encodeURIComponent(selectedTierId);
+      } else {
+        // Rare — status like 'processing' or 'requires_action'. Land them on
+        // the return page which polls / renders their final state.
+        window.location.href = '/upgrade/return';
+      }
+    });
+  </script>
+
+</body>
+</html>

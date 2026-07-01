@@ -141,6 +141,11 @@
               <% if (typeof u.course_length_weeks === 'number' && u.course_length_weeks < 12) { %>
                 <span class="admin-lesson-tag" title="<%= u.course_length_weeks %>-week trial cohort">Trial · <%= u.course_length_weeks %>w</span>
               <% } %>
+              <% if (u.enrollment_tier) {
+                const tierLabels = { solo: 'Grow Solo', community: 'Grow in Community', coaching: 'Grow with Me' };
+              %>
+                <span class="admin-lesson-tag" title="Paid tier"><%= tierLabels[u.enrollment_tier] || u.enrollment_tier %></span>
+              <% } %>
               <div class="admin-row-actions">
                 <button class="admin-btn-icon" type="button" title="Edit"
                   onclick='openEditStudent(<%- JSON.stringify({ id: u.id, name: u.name, email: u.email, role: u.role, course_length_weeks: u.course_length_weeks || 12 }) %>)'>

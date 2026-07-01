@@ -12,6 +12,23 @@
     <main class="main-content" id="main">
 
       <!-- Dashboard header -->
+      <% if (typeof upgradeBanner !== 'undefined' && upgradeBanner) { %>
+      <link rel="stylesheet" href="/css/upgrade.css">
+      <section class="up-success-banner" id="up-success-banner">
+        <div class="up-success-banner-copy">
+          <strong>Welcome to <%= upgradeBanner.tierName %>.</strong>
+          <span>
+            Weeks 4–12 are now unlocked.
+            <% if (upgradeBanner.discordUrl) { %>
+              Join the community on
+              <a href="<%= upgradeBanner.discordUrl %>" target="_blank" rel="noopener" class="up-success-banner-cta">Discord →</a>
+            <% } %>
+          </span>
+        </div>
+        <button type="button" class="up-success-banner-close" onclick="document.getElementById('up-success-banner').remove()" aria-label="Dismiss">×</button>
+      </section>
+      <% } %>
+
       <header class="dash-header">
         <div class="dash-greeting">
           <h1 class="dash-greeting-text">
@@ -64,7 +81,7 @@
             If this practice has felt useful, the full 12-week course goes deeper —
             mid-course check-in, harvest reflection, and the remaining seasons.
           </p>
-          <a href="https://www.meibostouch.com/the-creatives-garden" target="_blank" rel="noopener" class="mid-card-cta">Learn about the full course →</a>
+          <a href="/upgrade" class="mid-card-cta">Continue with the full course →</a>
         </div>
       </section>
       <% } %>

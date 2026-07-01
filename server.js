@@ -190,6 +190,7 @@ app.post('/login', async (req, res) => {
     timezone: user.timezone || null,
     course_start_date: user.course_start_date || null,
     course_length_weeks: user.course_length_weeks || 12,
+    enrollment_tier: user.enrollment_tier || null,
   };
   if (user.role !== 'admin' && !user.onboarding_completed) {
     return res.redirect('/onboarding');
@@ -454,10 +455,26 @@ app.get('/dashboard', requireAuth, (req, res) => {
     (typeof weekNumber === 'number' && weekNumber > courseLengthWeeks)
   );
 
+  // Post-checkout confirmation banner. Set when /upgrade redirects here
+  // after payment_intent.succeeded. Even if the webhook hasn't landed yet,
+  // showing this banner is safe — worst case the user reloads once and it's
+  // gone. The banner reads tier from ?tier=... query, and can include a
+  // Discord invite pulled from env for immediate community access.
+  let upgradeBanner = null;
+  if (req.query.upgraded === '1') {
+    const tierId  = String(req.query.tier || '');
+    const tier    = STRIPE.findTier(tierId);
+    upgradeBanner = {
+      tierName:    tier ? tier.name : 'the full course',
+      discordUrl:  process.env.COMMUNITY_DISCORD_URL || '',
+    };
+  }
+
   res.render('dashboard', {
     title: 'Dashboard',
     page: 'dashboard',
     greeting: getGreeting(req.session.user),
+    upgradeBanner,
     weekStart,
     weekNumber,
     weekLabel: formatWeekLabel(weekStart),
@@ -571,6 +588,57 @@ app.post('/api/timezone', requireAuth, (req, res) => {
   req.session.save(() => res.json({ ok: true, timezone: tz }));
 });
 
+// ─── Upgrade page ──────────────────────────────────────────────────────────
+// Two-step visual flow on one page: pick a tier → Continue → card form
+// (Stripe Elements). JS toggles between the two panels; server hands the
+// tier catalog to the view once so we can't drift between UI and API.
+app.get('/upgrade', requireAuth, (req, res) => {
+  const user = req.session.user;
+  if (user.role === 'admin') return res.redirect('/dashboard');
+  const dbUser = db.getUserById(user.id);
+  if (!dbUser) return res.redirect('/dashboard');
+  if ((dbUser.course_length_weeks || 12) >= 12) {
+    // Already upgraded — no need to see the checkout page. Fall through to
+    // dashboard where they can see everything they have access to.
+    return res.redirect('/dashboard');
+  }
+  res.render('upgrade', {
+    title: 'Continue with the full course',
+    page: 'upgrade',
+    tiers: STRIPE.getTiers().map(t => ({
+      id:         t.id,
+      name:       t.name,
+      priceCents: t.priceCents,
+      priceLabel: STRIPE.formatPrice(t.priceCents),
+      priceNote:  t.priceNote || null,
+      tagline:    t.tagline,
+      bullets:    t.bullets,
+    })),
+    stripeConfigured: STRIPE.isConfigured(),
+    publishableKey:   STRIPE.getPublishableKey(),
+  });
+});
+
+// Return URL Stripe redirects to after 3DS challenge / async payment
+// methods complete. We look at ?payment_intent + ?payment_intent_client_secret
+// query params Stripe appends, ask Stripe for the intent's final status,
+// and route the student to the confirmation banner or an error state.
+app.get('/upgrade/return', requireAuth, async (req, res) => {
+  if (!STRIPE.isConfigured()) return res.redirect('/dashboard');
+  const clientSecret = req.query.payment_intent_client_secret;
+  if (!clientSecret) return res.redirect('/upgrade');
+  // We don't have Stripe.js server-side; we re-render the upgrade page with
+  // a small client-side script that polls the PaymentIntent status via
+  // stripe.retrievePaymentIntent and forwards to /dashboard?upgraded=1 on
+  // success. Simpler than round-tripping status via a server endpoint.
+  res.render('upgrade-return', {
+    title: 'Confirming your payment',
+    page: 'upgrade',
+    publishableKey: STRIPE.getPublishableKey(),
+    clientSecret,
+  });
+});
+
 // ─── Stripe checkout + webhook ─────────────────────────────────────────────
 // Two-endpoint model for Elements checkout:
 //   1. Client POSTs /api/checkout/create-payment-intent → server creates a
@@ -599,14 +667,20 @@ app.post('/api/checkout/create-payment-intent', requireAuth, async (req, res) =>
     return res.status(409).json({ error: 'You already have full access to the course.' });
   }
 
+  // Validate tier client-side value against server-side catalog.
+  const tierId = (req.body && req.body.tier) || '';
+  const tier = STRIPE.findTier(tierId);
+  if (!tier) return res.status(400).json({ error: 'Please choose a tier before continuing.' });
+
   try {
-    const intent = await STRIPE.createUpgradePaymentIntent(dbUser.id, dbUser.email);
+    const intent = await STRIPE.createUpgradePaymentIntent(dbUser.id, dbUser.email, tier.id);
     res.json({
       ok: true,
       clientSecret: intent.client_secret,
       publishableKey: STRIPE.getPublishableKey(),
-      amount: STRIPE.getUpgradePriceCents(),
-      currency: STRIPE.getUpgradeCurrency(),
+      amount: tier.priceCents,
+      currency: STRIPE.getCurrency(),
+      tier: { id: tier.id, name: tier.name },
     });
   } catch (err) {
     console.error('[stripe] createPaymentIntent failed:', err.message);
@@ -644,16 +718,25 @@ app.post('/webhooks/stripe', async (req, res) => {
     if (event.type === 'payment_intent.succeeded') {
       const pi = event.data.object;
       const userIdStr = pi.metadata && pi.metadata.user_id;
+      const tierId    = pi.metadata && pi.metadata.tier;
       const userId = parseInt(userIdStr, 10);
       if (!Number.isFinite(userId)) {
         console.warn('[stripe] payment_intent.succeeded without user_id metadata:', pi.id);
       } else {
         const user = db.getUserById(userId);
-        if (user && (user.course_length_weeks || 12) < 12) {
-          db.setUserCourseLengthWeeks(userId, 12);
-          console.log(`[stripe] upgraded user ${userId} (${user.email}) to full course after ${pi.id}`);
-        } else {
-          console.log(`[stripe] payment for user ${userId} arrived but they're already at 12 — no-op`);
+        if (user) {
+          // Record the tier regardless of prior state (a re-purchase would
+          // update the tier). Only flip course_length_weeks if not already
+          // upgraded — avoids clobbering an admin-manually-flipped user.
+          if (tierId && STRIPE.findTier(tierId)) {
+            db.setUserEnrollmentTier(userId, tierId);
+          }
+          if ((user.course_length_weeks || 12) < 12) {
+            db.setUserCourseLengthWeeks(userId, 12);
+            console.log(`[stripe] upgraded user ${userId} (${user.email}) to full course [${tierId || 'no-tier'}] after ${pi.id}`);
+          } else {
+            console.log(`[stripe] payment for user ${userId} arrived but they're already at 12 — tier recorded, no length flip`);
+          }
         }
       }
     } else {

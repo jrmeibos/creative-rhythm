@@ -337,6 +337,14 @@ db.exec(`
     db.exec("ALTER TABLE users ADD COLUMN course_length_weeks INTEGER DEFAULT 12");
     console.log('✓ Migrated: added course_length_weeks column');
   }
+  // Enrollment tier — which paid tier the student purchased, if any.
+  // Values: 'solo' | 'community' | 'coaching' | NULL (= free Winter tier).
+  // Course access itself gates on course_length_weeks; this column exists so
+  // admin can see who's on which tier and the dashboard banner can name it.
+  if (!userCols.includes('enrollment_tier')) {
+    db.exec("ALTER TABLE users ADD COLUMN enrollment_tier TEXT");
+    console.log('✓ Migrated: added enrollment_tier column');
+  }
   // Per-user course start date for multi-cohort support. NULL means "fall
   // back to the global settings.course_start_date" so existing students keep
   // their current timeline observable behavior without a one-time backfill
@@ -1140,7 +1148,7 @@ module.exports = {
   },
 
   getUserById(id) {
-    return db.prepare('SELECT id, name, email, role, avatar_initial, current_season, profile_photo, course_start_date, course_length_weeks FROM users WHERE id = ?').get(id);
+    return db.prepare('SELECT id, name, email, role, avatar_initial, current_season, profile_photo, course_start_date, course_length_weeks, enrollment_tier FROM users WHERE id = ?').get(id);
   },
 
   // ─── Per-user course start date (multi-cohort support) ────────────────────
@@ -1176,6 +1184,17 @@ module.exports = {
     ).run(w, userId);
   },
 
+  // Paid tier the student purchased. Values kept in sync with the TIERS
+  // catalog in lib/stripe.js — the webhook writes here on
+  // payment_intent.succeeded, admin roster reads it to show a chip.
+  setUserEnrollmentTier(userId, tier) {
+    const allowed = ['solo', 'community', 'coaching'];
+    const t = allowed.includes(tier) ? tier : null;
+    return db.prepare(
+      'UPDATE users SET enrollment_tier = ? WHERE id = ?'
+    ).run(t, userId);
+  },
+
   hasVisitedGreenhouse(userId) {
     const row = db.prepare('SELECT has_visited_greenhouse FROM users WHERE id = ?').get(userId);
     return !!(row && row.has_visited_greenhouse);
@@ -1186,7 +1205,7 @@ module.exports = {
   },
 
   getAllUsers() {
-    return db.prepare('SELECT id, name, email, role, avatar_initial, current_season, profile_photo, community_goals_public, community_season_public, course_start_date, course_length_weeks, created_at FROM users ORDER BY role DESC, name ASC').all();
+    return db.prepare('SELECT id, name, email, role, avatar_initial, current_season, profile_photo, community_goals_public, community_season_public, course_start_date, course_length_weeks, enrollment_tier, created_at FROM users ORDER BY role DESC, name ASC').all();
   },
 
   getUserFullProfile(id) {
