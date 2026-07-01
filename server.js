@@ -191,6 +191,77 @@ app.post('/login', async (req, res) => {
   res.redirect('/dashboard');
 });
 
+// ─── Self-serve signup ─────────────────────────────────────────────────────
+// Public route. New signups land as trial (course_length_weeks = 3) with
+// today as their start date — this is the free Winter (weeks 1–3) tier.
+// To upgrade past week 3 they hit /upgrade (Phase C, Stripe Elements).
+//
+// Existing pilot students keep their default course_length_weeks = 12 so
+// they aren't affected by this change. Only NEW signups are trial-by-default.
+
+// Same password rule the existing account-settings form uses, kept in sync
+// so students who signed up under one path can change under the other.
+function isPasswordValid(pw) {
+  if (typeof pw !== 'string' || pw.length < 8) return false;
+  return /[0-9!@#$%^&*()\-_=+\[\]{};:'",.<>/?\\|`~]/.test(pw);
+}
+
+app.get('/signup', (req, res) => {
+  if (req.session.user) return res.redirect('/dashboard');
+  res.render('signup', { error: null, name: '', email: '' });
+});
+
+app.post('/signup', async (req, res) => {
+  const name     = (req.body.name  || '').trim();
+  const email    = (req.body.email || '').trim().toLowerCase();
+  const password = req.body.password || '';
+  const timezone = (req.body.timezone || 'America/Denver').trim();
+
+  const rerender = (error) => res.render('signup', { error, name, email });
+
+  if (!name || !email || !password) return rerender('Please fill in all fields.');
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return rerender('Please enter a valid email address.');
+  if (!isPasswordValid(password)) return rerender('Password must be at least 8 characters and include a number or symbol.');
+  if (db.getUserByEmail(email)) return rerender('An account with that email already exists. Try signing in.');
+
+  try {
+    const result = db.createUser(name, email, password, 'student');
+    const userId = result.lastInsertRowid;
+
+    // Every new self-serve signup starts on the free Winter (3-week) tier.
+    // Course starts today so week 1 is today; timezone comes from the form's
+    // JS-detected value (or the default fallback).
+    db.setUserCourseLengthWeeks(userId, 3);
+    const todayLocal = new Intl.DateTimeFormat('en-CA', {
+      timeZone: timezone, year: 'numeric', month: '2-digit', day: '2-digit'
+    }).format(new Date());
+    db.setUserCourseStartDate(userId, todayLocal);
+    // Trust any IANA timezone that Intl.DateTimeFormat accepts. Anything
+    // invalid stays on the users.timezone default (America/Denver).
+    try {
+      if (timezone && timezone !== 'America/Denver') {
+        new Intl.DateTimeFormat('en-US', { timeZone: timezone });
+        db.setUserTimezone(userId, timezone);
+      }
+    } catch (_) { /* invalid TZ — leave default */ }
+
+    const user = db.getUserById(userId);
+    req.session.user = {
+      id: user.id, name: user.name, email: user.email, role: user.role,
+      avatar_initial: user.avatar_initial, current_season: null,
+      onboarding_completed: false,
+      profile_photo: null,
+      timezone: user.timezone || 'America/Denver',
+      course_start_date: user.course_start_date || null,
+      course_length_weeks: user.course_length_weeks || 3,
+    };
+    req.session.save(() => res.redirect('/onboarding'));
+  } catch (err) {
+    console.error('[signup] failed:', err);
+    return rerender('Sign-up failed. Try again in a moment, or reach out to Julia directly.');
+  }
+});
+
 app.get('/logout', (req, res) => {
   req.session.destroy(() => res.redirect('/'));
 });

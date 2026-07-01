@@ -40,8 +40,8 @@
             class="login-logo">
         </a>
 
-        <p class="login-form-eyebrow">Welcome back</p>
-        <h2 class="login-form-title">Sign in to your studio</h2>
+        <p class="login-form-eyebrow">Start with Winter — free</p>
+        <h2 class="login-form-title">Create your account</h2>
 
         <% if (error) { %>
           <div class="login-error" role="alert">
@@ -49,7 +49,20 @@
           </div>
         <% } %>
 
-        <form action="/login" method="POST" class="login-form" novalidate>
+        <form action="/signup" method="POST" class="login-form" novalidate>
+          <div class="form-group">
+            <label for="name" class="form-label">Name</label>
+            <input
+              type="text"
+              id="name"
+              name="name"
+              class="form-input"
+              placeholder="Your name"
+              autocomplete="name"
+              value="<%= name %>"
+              required>
+          </div>
+
           <div class="form-group">
             <label for="email" class="form-label">Email</label>
             <input
@@ -59,6 +72,7 @@
               class="form-input"
               placeholder="you@example.com"
               autocomplete="email"
+              value="<%= email %>"
               required>
           </div>
 
@@ -69,32 +83,46 @@
               id="password"
               name="password"
               class="form-input"
-              placeholder="••••••••"
-              autocomplete="current-password"
+              placeholder="At least 8 characters"
+              autocomplete="new-password"
               required>
+            <p class="login-help" style="margin-top:0.4rem;font-size:0.78rem">
+              Minimum 8 characters. Include a number or symbol.
+            </p>
           </div>
 
+          <!-- Timezone is detected client-side (see script below) and posted as
+               a hidden field. Server falls back to America/Denver if empty. -->
+          <input type="hidden" id="timezone" name="timezone" value="">
+
           <button type="submit" class="btn btn-primary btn-full">
-            Enter the studio
+            Create account →
           </button>
         </form>
 
         <p class="login-forgot">
-          <a href="/forgot-password" class="login-forgot-link">Forgot your password?</a>
-        </p>
-
-        <p class="login-forgot">
-          New here? <a href="/signup" class="login-forgot-link">Start your free Winter journey →</a>
+          Already have an account? <a href="/" class="login-forgot-link">Sign in</a>
         </p>
 
         <p class="login-help">
-          Trouble signing in? <a href="mailto:julia@meibostouch.com" class="login-help-link">Reach out to Julia directly</a>.
+          Signing up starts your free three-week Winter journey. You can continue
+          into the full 12-week course any time.
         </p>
 
       </div>
     </div>
 
   </div>
+
+  <script>
+    // Pass the user's IANA timezone to the server so their course_start_date
+    // matches their wall clock. Falls back to America/Denver server-side if
+    // this is empty or unrecognized.
+    try {
+      const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      if (tz) document.getElementById('timezone').value = tz;
+    } catch (_) { /* no-op — fallback handles it */ }
+  </script>
 
 </body>
 </html>
