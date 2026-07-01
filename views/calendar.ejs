@@ -70,12 +70,12 @@
                 <span class="cal-dot cal-dot--connect <%= w.goalsExist.connect ? 'is-set' : '' %>"></span>
               </div>
 
-              <% if (w.curricularSeasonLabel) { %>
-                <span class="cal-tile-season"><%= w.curricularSeasonLabel %></span>
-              <% } %>
-
               <% if (w.meeting) { %>
                 <span class="cal-tile-meeting"><%= w.meeting.label %></span>
+              <% } %>
+
+              <% if (w.curricularSeasonLabel) { %>
+                <span class="cal-tile-season"><%= w.curricularSeasonLabel %></span>
               <% } %>
 
               <% if (w.isIntegration) { %>
