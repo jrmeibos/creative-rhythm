@@ -1184,12 +1184,10 @@ app.get('/community', requireAuth, (req, res) => {
 // ─── Calendar ──────────────────────────────────────────────────────────────
 
 // Weekly meeting cadence — hardcoded per the course curriculum design.
-// 3-week cadence (Group → 1:1 → Office Hours) repeats Weeks 1-9, then the
-// final block (Weeks 10-12) breaks pattern: Group, 1:1, Group.
+// Meetings begin in Week 4 (Weeks 1-3 = Winter, self-led). From Week 4 on,
+// a 3-week cadence (Group → 1:1 → Office Hours) repeats through Week 9;
+// the final block (Weeks 10-12) breaks pattern: Group, 1:1, Group.
 const WEEKLY_MEETINGS = {
-  1:  { type: 'group',        label: 'Group Meeting', note: "Recorded if you can't attend" },
-  2:  { type: 'one-on-one',   label: 'One-on-One' },
-  3:  { type: 'office-hours', label: 'Office Hours' },
   4:  { type: 'group',        label: 'Group Meeting', note: "Recorded if you can't attend" },
   5:  { type: 'one-on-one',   label: 'One-on-One' },
   6:  { type: 'office-hours', label: 'Office Hours' },
