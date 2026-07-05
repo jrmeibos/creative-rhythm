@@ -13,7 +13,7 @@
       <a href="/dashboard" class="lesson-back">← Back to dashboard</a>
 
       <header class="tending-header">
-        <h1 class="tending-title">The Gardener</h1>
+        <h1 class="tending-title">Tending</h1>
         <p class="tending-intro">
           A weekly return to your past cuttings — read what you noticed, watch
           the recording if you can find it, and choose where each one goes.
@@ -129,7 +129,10 @@
 
                 <!-- ── LEFT: original cutting ────────────────────────────── -->
                 <div class="tending-card-left">
-                  <div class="tending-card-date"><%= dateLabel %></div>
+                  <div class="tending-card-datebanner" role="note">
+                    <span class="tending-card-datebanner-eyebrow">Find this recording in your camera roll</span>
+                    <span class="tending-card-datebanner-date"><%= dateLabel %></span>
+                  </div>
 
                   <% if (c.talked_about) { %>
                     <div class="tending-field">
@@ -175,15 +178,15 @@
                   <div class="tending-category-buttons" role="group" aria-label="Where does this cutting go?">
                     <button type="button" class="tending-cat tending-cat--grow"    data-category="keep_growing">
                       <span class="tending-cat-title">Keep growing</span>
-                      <span class="tending-cat-sub">Save for Summer's editing pile</span>
+                      <span class="tending-cat-sub">There's something here I can use down the line.</span>
                     </button>
                     <button type="button" class="tending-cat tending-cat--return"  data-category="return_later">
                       <span class="tending-cat-title">Return to later</span>
-                      <span class="tending-cat-sub">Come back in ~3 weeks</span>
+                      <span class="tending-cat-sub">There might be something here. I'm not sure yet.</span>
                     </button>
                     <button type="button" class="tending-cat tending-cat--archive" data-category="archive">
                       <span class="tending-cat-title">Archive</span>
-                      <span class="tending-cat-sub">Filed. Practice was the point.</span>
+                      <span class="tending-cat-sub">The meaning was in the doing — there's no more here.</span>
                     </button>
                   </div>
 

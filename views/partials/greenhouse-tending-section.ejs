@@ -1,0 +1,19 @@
+<!-- Tend Your Cuttings — parallel section to Your Cuttings. Appears only
+     when locals.showTending is true (Week 4+ in the course). Clicking the
+     button takes the student to /tending, the actual weekly review page.
+     Reuses the .gh-cuttings-section-* classes for identical visual, plus
+     a --tending modifier so future divergence is a one-line change. -->
+<% if (locals.showTending) { %>
+<section class="dash-section gh-cuttings-section gh-cuttings-section--tending">
+  <h2 class="gh-cuttings-section-title">Tend Your Cuttings</h2>
+  <p class="gh-cuttings-section-body">
+    A weekly return to what you recorded — read what you noticed, watch the
+    recording if you can find it, and choose where each cutting goes.
+  </p>
+  <img class="gh-cuttings-section-art"
+       src="/images/greenhouse/cuttings-vessels.svg"
+       alt=""
+       width="320" height="220">
+  <a href="/tending" class="gh-cuttings-section-btn">Tend Your Cuttings</a>
+</section>
+<% } %>

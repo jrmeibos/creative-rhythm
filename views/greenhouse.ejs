@@ -73,6 +73,9 @@
       <!-- ── Your Cuttings — full section, in beds-empty state ───────────── -->
       <%- include('partials/greenhouse-cuttings-section') %>
 
+      <!-- ── Tend Your Cuttings — Spring+ only (self-hides pre-Spring) ────── -->
+      <%- include('partials/greenhouse-tending-section') %>
+
       <% } else { %>
       <!-- ══ TENDING STATE ════════════════════════════════════════════════ -->
       <header class="dash-header">
@@ -372,6 +375,9 @@
 
       <!-- ── Your Cuttings — full section, in tending state ──────────────── -->
       <%- include('partials/greenhouse-cuttings-section') %>
+
+      <!-- ── Tend Your Cuttings — Spring+ only (self-hides pre-Spring) ────── -->
+      <%- include('partials/greenhouse-tending-section') %>
 
       <!-- ── Growth Check (locked / form — hidden once completed) ────────── -->
       <% if (!closing) { %>

@@ -2635,7 +2635,7 @@ app.get('/tending', requireAuth, (req, res) => {
   const showIntro  = !db.hasSeenTendingIntro(user.id);
 
   res.render('tending', {
-    title: 'The Gardener',
+    title: 'Tending',
     page: 'tending',
     user,
     currentCourseWeek,
