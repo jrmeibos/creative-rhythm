@@ -114,6 +114,19 @@ app.use((req, res, next) => {
   } else {
     res.locals.simulatedToday = null;
   }
+
+  // showTending is the sidebar gate for The Gardener nav item. True once
+  // the user is past the Winter (Weeks 1–3) unlock cliff — Week 4+. Nulls
+  // for anon/pre-course users, matching how the /tending route redirects.
+  res.locals.showTending = false;
+  const u = req.session.user;
+  if (u && u.id) {
+    try {
+      const wk = getCurrentCourseWeek(u).weekNumber;
+      if (typeof wk === 'number' && wk >= 4) res.locals.showTending = true;
+    } catch (_) { /* pre-course or no start date — keep false */ }
+  }
+
   next();
 });
 
@@ -2593,6 +2606,86 @@ app.post('/api/greenhouse/update', requireAuth, (req, res) => {
   }
   db.updateGoalByIdFacets(parseInt(seedId), req.session.user.id, { soil, seed, water, bloom });
   res.json({ ok: true });
+});
+
+// ─── Tending: the Gardener's weekly review ────────────────────────────────
+// The Spring-onward practice of re-watching past cuttings and sorting each
+// into keep_growing / return_later / archive. Locked before Week 4. Queue
+// lags 3 weeks (Week 4 reviews Week 1) and is week-anchored: only advances
+// to Week N+1 once Week N is fully sorted. return_later cuttings resurface
+// after 21 days. Pause is always available; the student's optional pause
+// note is captured but not surfaced back to them.
+
+app.get('/tending', requireAuth, (req, res) => {
+  const user = req.session.user;
+  const courseStartDate  = db.getUserCourseStartDate(user);
+  const courseWeek       = getCurrentCourseWeek(user, courseStartDate);
+  const currentCourseWeek = courseWeek.weekNumber;
+
+  // Pre-Spring: Tending unlocks at Week 4. Bounce with a query-param the
+  // dashboard can convert to a soft "this unlocks in Spring" note.
+  if (!currentCourseWeek || currentCourseWeek < 4) {
+    return res.redirect('/dashboard?tending_locked=1');
+  }
+
+  const reviewWeek = db.getTendingReviewWeek(user.id, currentCourseWeek, courseStartDate);
+  const todayStr   = toLocalDateString(getNow(user));
+  const queue      = db.getTendingQueue(user.id, reviewWeek, courseStartDate, todayStr);
+  const counts     = db.getTendingDestinationCounts(user.id);
+  const showIntro  = !db.hasSeenTendingIntro(user.id);
+
+  res.render('tending', {
+    title: 'The Gardener',
+    page: 'tending',
+    user,
+    currentCourseWeek,
+    reviewWeek,
+    queue,
+    counts,
+    showIntro,
+  });
+});
+
+// Save a curation for one cutting. Body: { category, reflection }.
+// category is one of keep_growing / return_later / archive. reflection is
+// the optional right-side text field (student's while-watching thought).
+// Returns { ok, category, resurfaceAfter } — client removes the card and
+// advances to the next.
+app.post('/tending/curate/:cuttingId', requireAuth, (req, res) => {
+  const cuttingId = parseInt(req.params.cuttingId, 10);
+  if (!Number.isInteger(cuttingId) || cuttingId <= 0) {
+    return res.status(400).json({ error: 'Invalid cutting id.' });
+  }
+  const { category, reflection } = req.body || {};
+  if (!['keep_growing', 'return_later', 'archive'].includes(category)) {
+    return res.status(400).json({ error: 'Invalid category.' });
+  }
+  const todayStr = toLocalDateString(getNow(req.session.user));
+  try {
+    const resurfaceAfter = db.setCuttingCuration(
+      cuttingId, req.session.user.id, category, todayStr, reflection
+    );
+    return res.json({ ok: true, category, resurfaceAfter });
+  } catch (e) {
+    console.error('setCuttingCuration failed:', e);
+    return res.status(500).json({ error: 'Could not save.' });
+  }
+});
+
+// Record a Tending pause event. Body: { note }. Optional single-line note
+// ("what's here today?"). Response is a plain ok — the client redirects
+// to /dashboard after receiving it.
+app.post('/tending/pause', requireAuth, (req, res) => {
+  const { note } = req.body || {};
+  db.recordTendingPause(req.session.user.id, note);
+  return res.json({ ok: true });
+});
+
+// Dismiss the first-time Meet-the-Gardener overlay. Idempotent — the flag
+// is a boolean, not a counter.
+app.post('/tending/intro-seen', requireAuth, (req, res) => {
+  db.markTendingIntroSeen(req.session.user.id);
+  return res.json({ ok: true });
 });
 
 // ─── Harvest ───────────────────────────────────────────────────────────────

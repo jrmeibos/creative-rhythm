@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <%- include('partials/head') %>
+  <link rel="stylesheet" href="/css/dashboard.css">
+  <link rel="stylesheet" href="/css/tending.css">
+</head>
+<body class="app-body">
+  <div class="app-layout">
+    <%- include('partials/sidebar') %>
+    <main class="main-content" id="main">
+
+      <a href="/dashboard" class="lesson-back">← Back to dashboard</a>
+
+      <header class="tending-header">
+        <h1 class="tending-title">The Gardener</h1>
+        <p class="tending-intro">
+          A weekly return to your past cuttings — read what you noticed, watch
+          the recording if you can find it, and choose where each one goes.
+        </p>
+        <button type="button" class="tending-learn-more-toggle" data-tending-learn-more>
+          Learn more
+        </button>
+      </header>
+
+      <!-- ── Persistent "Learn more" panel (collapsed by default) ──────────── -->
+      <section class="tending-learn-more" data-tending-learn-more-panel hidden>
+        <h2 class="tending-learn-more-title">Meeting the Gardener</h2>
+        <p>
+          In Winter you recorded — no watching, no judging, just showing up.
+          The critic that used to press play on every take now has a new job:
+          <strong>tending</strong>. Not editing. Not deciding what's good. Just
+          walking through the beds and quietly noticing which cuttings want to
+          keep growing, which want more time, and which have already given
+          what they had to give.
+        </p>
+        <p>
+          Three buckets. You can move a cutting later. There's no rush.
+        </p>
+        <ul class="tending-learn-more-list">
+          <li><strong>Keep growing</strong> — this one's alive. Goes to your idea bank for Summer's editing work.</li>
+          <li><strong>Return to later</strong> — not sure yet. It'll come back to you in a few weeks for another look.</li>
+          <li><strong>Archive</strong> — this one was for the practice, not for the harvest. Filed, but still findable.</li>
+        </ul>
+        <p class="tending-learn-more-close-note">
+          If the critic shows up instead of the Gardener today, pause and try again tomorrow.
+        </p>
+      </section>
+
+      <!-- ── Destination summary ──────────────────────────────────────────── -->
+      <% const totalSorted = counts.keep_growing + counts.return_later + counts.archive; %>
+      <% if (totalSorted > 0) { %>
+        <section class="tending-counts" aria-label="What you've tended so far">
+          <div class="tending-count">
+            <span class="tending-count-n"><%= counts.keep_growing %></span>
+            <span class="tending-count-label">growing</span>
+          </div>
+          <div class="tending-count">
+            <span class="tending-count-n"><%= counts.return_later %></span>
+            <span class="tending-count-label">returning to</span>
+          </div>
+          <div class="tending-count">
+            <span class="tending-count-n"><%= counts.archive %></span>
+            <span class="tending-count-label">archived</span>
+          </div>
+        </section>
+      <% } %>
+
+      <!-- ── Queue ─────────────────────────────────────────────────────────── -->
+      <% if (queue.length === 0) { %>
+
+        <% if (reviewWeek === null) { %>
+          <!-- Fully caught up (or nothing to review yet — either way, a soft empty state). -->
+          <section class="tending-empty">
+            <p class="tending-empty-headline">Nothing waiting for the Gardener right now.</p>
+            <p class="tending-empty-body">
+              When your earliest un-tended cuttings become old enough
+              (three weeks back), they'll appear here. Any "return to later"
+              cuttings will resurface once their three weeks are up.
+            </p>
+          </section>
+        <% } else { %>
+          <!-- Review week is set but its recording-week had zero cuttings. -->
+          <section class="tending-empty">
+            <p class="tending-empty-headline">No cuttings from Week <%= reviewWeek %>.</p>
+            <p class="tending-empty-body">Come back next week — the queue will advance.</p>
+          </section>
+        <% } %>
+
+      <% } else { %>
+
+        <div class="tending-queue-header">
+          <% if (reviewWeek) { %>
+            <h2 class="tending-queue-title">Reviewing Week <%= reviewWeek %></h2>
+            <p class="tending-queue-sub">
+              <%= queue.filter(function (q) { return !q.isResurfacing; }).length %>
+              <%= queue.filter(function (q) { return !q.isResurfacing; }).length === 1 ? 'cutting' : 'cuttings' %>
+              from that week
+              <% var resurfacingCount = queue.filter(function (q) { return q.isResurfacing; }).length; %>
+              <% if (resurfacingCount > 0) { %>
+                · <%= resurfacingCount %> resurfacing
+              <% } %>
+            </p>
+          <% } else { %>
+            <h2 class="tending-queue-title">Cuttings returning to you</h2>
+            <p class="tending-queue-sub">These came back for another look.</p>
+          <% } %>
+
+          <button type="button" class="tending-pause-btn" data-tending-pause-open>
+            Pause today — try again tomorrow
+          </button>
+        </div>
+
+        <ul class="tending-cards" data-tending-cards>
+          <% queue.forEach(function (item) {
+               const c = item.cutting;
+               const dateLabel = c.recorded_date
+                 ? new Date(c.recorded_date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
+                 : '';
+          %>
+            <li class="tending-card" data-tending-card data-cutting-id="<%= c.id %>">
+              <% if (item.isResurfacing) { %>
+                <div class="tending-card-resurfacing">
+                  Returning to this — you set it aside <%= new Date(item.lastCuratedAt.replace(' ', 'T') + 'Z').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) %>
+                </div>
+              <% } %>
+
+              <div class="tending-card-body">
+
+                <!-- ── LEFT: original cutting ────────────────────────────── -->
+                <div class="tending-card-left">
+                  <div class="tending-card-date"><%= dateLabel %></div>
+
+                  <% if (c.talked_about) { %>
+                    <div class="tending-field">
+                      <div class="tending-field-label">What you talked about</div>
+                      <p class="tending-field-value"><%= c.talked_about %></p>
+                    </div>
+                  <% } %>
+                  <% if (c.how_it_felt) { %>
+                    <div class="tending-field">
+                      <div class="tending-field-label">How it felt</div>
+                      <p class="tending-field-value"><%= c.how_it_felt %></p>
+                    </div>
+                  <% } %>
+                  <% if (c.takeaway) { %>
+                    <div class="tending-field">
+                      <div class="tending-field-label">Takeaway</div>
+                      <p class="tending-field-value"><%= c.takeaway %></p>
+                    </div>
+                  <% } %>
+                  <% if (c.reflection_text) { %>
+                    <div class="tending-field">
+                      <div class="tending-field-label">Reflection</div>
+                      <p class="tending-field-value"><%= c.reflection_text %></p>
+                    </div>
+                  <% } %>
+                  <% if (!c.talked_about && !c.how_it_felt && !c.takeaway && !c.reflection_text) { %>
+                    <p class="tending-field-empty">You didn't write anything for this one — just watch, and choose where it goes.</p>
+                  <% } %>
+                </div>
+
+                <!-- ── RIGHT: watching reflection + category picker ─────── -->
+                <div class="tending-card-right">
+                  <label class="tending-field-label" for="reflect-<%= c.id %>">
+                    What was it like to watch this?
+                  </label>
+                  <textarea
+                    class="tending-reflection"
+                    id="reflect-<%= c.id %>"
+                    name="reflection"
+                    rows="4"
+                    placeholder="Optional — a note from the Gardener."></textarea>
+
+                  <div class="tending-category-buttons" role="group" aria-label="Where does this cutting go?">
+                    <button type="button" class="tending-cat tending-cat--grow"    data-category="keep_growing">
+                      <span class="tending-cat-title">Keep growing</span>
+                      <span class="tending-cat-sub">Save for Summer's editing pile</span>
+                    </button>
+                    <button type="button" class="tending-cat tending-cat--return"  data-category="return_later">
+                      <span class="tending-cat-title">Return to later</span>
+                      <span class="tending-cat-sub">Come back in ~3 weeks</span>
+                    </button>
+                    <button type="button" class="tending-cat tending-cat--archive" data-category="archive">
+                      <span class="tending-cat-title">Archive</span>
+                      <span class="tending-cat-sub">Filed. Practice was the point.</span>
+                    </button>
+                  </div>
+
+                  <p class="tending-card-error" hidden></p>
+                </div>
+
+              </div>
+            </li>
+          <% }); %>
+        </ul>
+
+        <!-- Fires when the last card is curated: reload to fetch the next week's queue. -->
+      <% } %>
+
+    </main>
+  </div>
+
+  <!-- ── First-time intro overlay ─────────────────────────────────────── -->
+  <% if (showIntro) { %>
+    <div class="tending-intro-overlay" data-tending-intro-overlay>
+      <div class="tending-intro-modal" role="dialog" aria-labelledby="tending-intro-title">
+        <h2 class="tending-intro-modal-title" id="tending-intro-title">Meet the Gardener</h2>
+        <p>
+          Winter's over. You showed up. You have a small pile of cuttings —
+          things you noticed, half-thoughts, moments — and none of them have
+          been asked to be anything yet.
+        </p>
+        <p>
+          Now the critic that used to press play on your takes gets a new job.
+          You can call them the Gardener. Their work isn't to decide what's
+          good. It's to walk the beds and notice which cuttings want to keep
+          growing, which want more time, and which were already whole as
+          practice.
+        </p>
+        <p>
+          Each week from here on, a set of your past cuttings will show up
+          here for a gentle look. Three buckets. No wrong answers. You can
+          always move a cutting later. And if the Gardener can't come today,
+          you can pause and try again tomorrow.
+        </p>
+        <button type="button" class="tending-intro-modal-btn" data-tending-intro-dismiss>
+          Ready — let me in
+        </button>
+      </div>
+    </div>
+  <% } %>
+
+  <!-- ── Pause modal ─────────────────────────────────────────────────── -->
+  <div class="tending-pause-modal" data-tending-pause-modal hidden>
+    <div class="tending-pause-inner" role="dialog" aria-labelledby="tending-pause-title">
+      <h2 class="tending-pause-title" id="tending-pause-title">Pause today</h2>
+      <p class="tending-pause-body">
+        The Gardener can rest. Your queue will be here tomorrow — the same one,
+        unchanged, waiting.
+      </p>
+      <label class="tending-pause-label" for="tending-pause-note">
+        What's here today? <span class="tending-pause-optional">(optional)</span>
+      </label>
+      <input type="text" id="tending-pause-note" class="tending-pause-note" maxlength="180" placeholder="A word or two, if you want.">
+      <div class="tending-pause-actions">
+        <button type="button" class="tending-pause-cancel" data-tending-pause-cancel>Nevermind</button>
+        <button type="button" class="tending-pause-confirm" data-tending-pause-confirm>Pause &amp; go</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      // ── First-time intro overlay ─────────────────────────────────────────
+      var overlay        = document.querySelector('[data-tending-intro-overlay]');
+      var introDismissBtn = document.querySelector('[data-tending-intro-dismiss]');
+      if (overlay && introDismissBtn) {
+        introDismissBtn.addEventListener('click', function () {
+          overlay.classList.add('is-dismissed');
+          fetch('/tending/intro-seen', { method: 'POST', credentials: 'same-origin' })
+            .catch(function () {}); // Best-effort; visual state already updated.
+          setTimeout(function () { overlay.remove(); }, 220);
+        });
+      }
+
+      // ── Learn more toggle ────────────────────────────────────────────────
+      var lmToggle = document.querySelector('[data-tending-learn-more]');
+      var lmPanel  = document.querySelector('[data-tending-learn-more-panel]');
+      if (lmToggle && lmPanel) {
+        lmToggle.addEventListener('click', function () {
+          var isHidden = lmPanel.hasAttribute('hidden');
+          if (isHidden) { lmPanel.removeAttribute('hidden'); lmToggle.textContent = 'Hide'; }
+          else          { lmPanel.setAttribute('hidden', '');  lmToggle.textContent = 'Learn more'; }
+        });
+      }
+
+      // ── Curate a cutting (fetch → remove card → reload if empty) ──────────
+      var cardList = document.querySelector('[data-tending-cards]');
+      if (cardList) {
+        cardList.addEventListener('click', function (ev) {
+          var btn = ev.target.closest('.tending-cat');
+          if (!btn) return;
+          var card = btn.closest('[data-tending-card]');
+          if (!card) return;
+          var cuttingId = card.dataset.cuttingId;
+          var category  = btn.dataset.category;
+          var textarea  = card.querySelector('.tending-reflection');
+          var reflection = textarea ? textarea.value.trim() : '';
+          var errEl     = card.querySelector('.tending-card-error');
+
+          // Disable all buttons on this card while the request is in flight.
+          card.querySelectorAll('.tending-cat').forEach(function (b) { b.disabled = true; });
+
+          fetch('/tending/curate/' + encodeURIComponent(cuttingId), {
+            method:      'POST',
+            credentials: 'same-origin',
+            headers:     { 'Content-Type': 'application/json' },
+            body:        JSON.stringify({ category: category, reflection: reflection }),
+          }).then(function (r) { return r.json().then(function (d) { return { r: r, d: d }; }); })
+            .then(function (o) {
+              if (!o.r.ok || !o.d.ok) {
+                if (errEl) { errEl.textContent = (o.d && o.d.error) || 'Could not save. Try again.'; errEl.hidden = false; }
+                card.querySelectorAll('.tending-cat').forEach(function (b) { b.disabled = false; });
+                return;
+              }
+              // Card fades out; when the last card goes, reload to pull the
+              // next queue (either next recording-week or the empty state).
+              card.classList.add('is-curated');
+              setTimeout(function () {
+                card.remove();
+                var remaining = cardList.querySelectorAll('[data-tending-card]').length;
+                if (remaining === 0) window.location.reload();
+              }, 260);
+            })
+            .catch(function () {
+              if (errEl) { errEl.textContent = 'Network error. Try again.'; errEl.hidden = false; }
+              card.querySelectorAll('.tending-cat').forEach(function (b) { b.disabled = false; });
+            });
+        });
+      }
+
+      // ── Pause modal ──────────────────────────────────────────────────────
+      var pauseOpen    = document.querySelector('[data-tending-pause-open]');
+      var pauseModal   = document.querySelector('[data-tending-pause-modal]');
+      var pauseCancel  = document.querySelector('[data-tending-pause-cancel]');
+      var pauseConfirm = document.querySelector('[data-tending-pause-confirm]');
+      var pauseNote    = document.getElementById('tending-pause-note');
+      if (pauseOpen && pauseModal) {
+        pauseOpen.addEventListener('click', function () {
+          pauseModal.removeAttribute('hidden');
+          if (pauseNote) pauseNote.focus();
+        });
+      }
+      if (pauseCancel && pauseModal) {
+        pauseCancel.addEventListener('click', function () {
+          pauseModal.setAttribute('hidden', '');
+        });
+      }
+      if (pauseConfirm) {
+        pauseConfirm.addEventListener('click', function () {
+          pauseConfirm.disabled = true;
+          var note = pauseNote ? pauseNote.value : '';
+          fetch('/tending/pause', {
+            method:      'POST',
+            credentials: 'same-origin',
+            headers:     { 'Content-Type': 'application/json' },
+            body:        JSON.stringify({ note: note }),
+          }).catch(function () {})
+            .finally(function () {
+              // Land back on the dashboard regardless of whether the log
+              // wrote successfully — the student's intent was to leave.
+              window.location.href = '/dashboard';
+            });
+        });
+      }
+    })();
+  </script>
+</body>
+</html>

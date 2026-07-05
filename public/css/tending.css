@@ -1,0 +1,489 @@
+/* ─── Tending — the Gardener's weekly review ──────────────────────────────── */
+
+.tending-header {
+  padding: 1.5rem 0 1rem;
+}
+.tending-title {
+  font-family: var(--font-display);
+  font-size: 2.75rem;
+  color: var(--color-ink-stained);
+  margin-bottom: 0.5rem;
+}
+.tending-intro {
+  font-family: var(--font-body);
+  color: var(--color-ink-stained);
+  opacity: 0.75;
+  max-width: 44rem;
+  line-height: 1.55;
+}
+.tending-learn-more-toggle {
+  background: transparent;
+  border: none;
+  color: var(--color-bloem);
+  font-family: var(--font-body);
+  font-weight: 400;
+  font-size: 0.9rem;
+  cursor: pointer;
+  padding: 0;
+  margin-top: 0.6rem;
+  border-bottom: 1px solid currentColor;
+  line-height: 1;
+}
+.tending-learn-more-toggle:hover {
+  color: var(--color-bloem-mid);
+}
+
+.tending-learn-more {
+  background: var(--color-new-growth);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem 1.75rem;
+  margin: 1rem 0 2rem;
+  max-width: 44rem;
+}
+.tending-learn-more-title {
+  font-family: var(--font-display);
+  font-size: 1.35rem;
+  margin-bottom: 0.75rem;
+  color: var(--color-ink-stained);
+}
+.tending-learn-more p {
+  font-family: var(--font-body);
+  color: var(--color-ink-stained);
+  line-height: 1.6;
+  margin-bottom: 0.75rem;
+}
+.tending-learn-more-list {
+  list-style: none;
+  padding: 0;
+  margin: 0.5rem 0 1rem;
+}
+.tending-learn-more-list li {
+  font-family: var(--font-body);
+  color: var(--color-ink-stained);
+  line-height: 1.6;
+  padding-left: 1.25rem;
+  position: relative;
+  margin-bottom: 0.4rem;
+}
+.tending-learn-more-list li::before {
+  content: '·';
+  position: absolute;
+  left: 0.35rem;
+  color: var(--color-bloem);
+  font-weight: 700;
+}
+.tending-learn-more-close-note {
+  font-style: italic;
+  opacity: 0.75;
+  margin-top: 0.5rem;
+}
+
+/* ── Destination summary counts ─────────────────────────────────────────── */
+.tending-counts {
+  display: flex;
+  gap: 2rem;
+  padding: 1rem 0 1.5rem;
+  border-bottom: 1px solid rgba(16, 15, 16, 0.08);
+  margin-bottom: 1.5rem;
+}
+.tending-count {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+.tending-count-n {
+  font-family: var(--font-display);
+  font-size: 1.65rem;
+  color: var(--color-bloem);
+  line-height: 1;
+}
+.tending-count-label {
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  color: var(--color-ink-stained);
+  opacity: 0.65;
+  letter-spacing: 0.02em;
+}
+
+/* ── Empty state ────────────────────────────────────────────────────────── */
+.tending-empty {
+  background: var(--color-blank-page);
+  border: 1px dashed rgba(16, 15, 16, 0.15);
+  border-radius: var(--radius-lg);
+  padding: 2.5rem 2rem;
+  text-align: center;
+  max-width: 40rem;
+  margin: 2rem auto;
+}
+.tending-empty-headline {
+  font-family: var(--font-display);
+  font-size: 1.35rem;
+  color: var(--color-ink-stained);
+  margin-bottom: 0.6rem;
+}
+.tending-empty-body {
+  font-family: var(--font-body);
+  color: var(--color-ink-stained);
+  opacity: 0.75;
+  line-height: 1.55;
+  max-width: 30rem;
+  margin: 0 auto;
+}
+
+/* ── Queue header + pause button ───────────────────────────────────────── */
+.tending-queue-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+}
+.tending-queue-title {
+  font-family: var(--font-display);
+  font-size: 1.65rem;
+  color: var(--color-ink-stained);
+  margin-bottom: 0.2rem;
+}
+.tending-queue-sub {
+  font-family: var(--font-body);
+  color: var(--color-ink-stained);
+  opacity: 0.65;
+  font-size: 0.9rem;
+}
+.tending-pause-btn {
+  background: transparent;
+  border: 1px solid rgba(16, 15, 16, 0.18);
+  border-radius: var(--radius-md);
+  color: var(--color-ink-stained);
+  font-family: var(--font-body);
+  padding: 0.55rem 1rem;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: var(--transition);
+}
+.tending-pause-btn:hover {
+  background: var(--color-bloem-light);
+  border-color: var(--color-bloem);
+  color: var(--color-bloem);
+}
+
+/* ── Cards list ─────────────────────────────────────────────────────────── */
+.tending-cards {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+.tending-card {
+  background: var(--color-blank-page);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+  transition: opacity 0.24s ease, transform 0.24s ease;
+}
+.tending-card.is-curated {
+  opacity: 0;
+  transform: translateY(-8px);
+  pointer-events: none;
+}
+.tending-card-resurfacing {
+  background: var(--color-apricity);
+  color: var(--color-ink-stained);
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  padding: 0.5rem 1rem;
+  letter-spacing: 0.02em;
+}
+.tending-card-body {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+}
+.tending-card-left,
+.tending-card-right {
+  padding: 1.5rem 1.75rem;
+}
+.tending-card-left {
+  background: var(--color-pearl);
+  border-right: 1px solid rgba(16, 15, 16, 0.08);
+}
+.tending-card-date {
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  color: var(--color-ink-stained);
+  margin-bottom: 1rem;
+}
+.tending-field {
+  margin-bottom: 1rem;
+}
+.tending-field-label {
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-ink-stained);
+  opacity: 0.55;
+  margin-bottom: 0.3rem;
+  display: block;
+}
+.tending-field-value {
+  font-family: var(--font-body);
+  color: var(--color-ink-stained);
+  line-height: 1.55;
+  white-space: pre-wrap;
+}
+.tending-field-empty {
+  font-family: var(--font-body);
+  color: var(--color-ink-stained);
+  opacity: 0.55;
+  font-style: italic;
+  line-height: 1.5;
+}
+
+/* ── Right side: reflection + category buttons ─────────────────────────── */
+.tending-reflection {
+  width: 100%;
+  min-height: 5.5rem;
+  border: 1px solid rgba(16, 15, 16, 0.18);
+  border-radius: var(--radius-md);
+  padding: 0.75rem 0.9rem;
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+  color: var(--color-ink-stained);
+  line-height: 1.5;
+  background: var(--color-blank-page);
+  resize: vertical;
+  margin-top: 0.5rem;
+  margin-bottom: 1.25rem;
+}
+.tending-reflection:focus {
+  outline: none;
+  border-color: var(--color-bloem);
+  box-shadow: 0 0 0 3px rgba(112, 92, 108, 0.12);
+}
+
+.tending-category-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+.tending-cat {
+  background: var(--color-blank-page);
+  border: 1px solid rgba(16, 15, 16, 0.16);
+  border-radius: var(--radius-md);
+  padding: 0.75rem 1rem;
+  text-align: left;
+  cursor: pointer;
+  font-family: var(--font-body);
+  transition: var(--transition);
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+.tending-cat:hover:not(:disabled) {
+  border-color: var(--color-bloem);
+  background: var(--color-bloem-light);
+}
+.tending-cat:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+.tending-cat-title {
+  font-weight: 700;
+  color: var(--color-ink-stained);
+  font-size: 0.95rem;
+}
+.tending-cat-sub {
+  font-size: 0.8rem;
+  color: var(--color-ink-stained);
+  opacity: 0.65;
+}
+.tending-cat--grow:hover:not(:disabled)    { border-color: var(--color-understory); background: rgba(118, 133, 108, 0.08); }
+.tending-cat--return:hover:not(:disabled)  { border-color: var(--color-apricity);   background: rgba(246, 201, 92, 0.12); }
+.tending-cat--archive:hover:not(:disabled) { border-color: var(--color-bloem);      background: var(--color-bloem-light); }
+
+.tending-card-error {
+  color: #b13a3a;
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  margin-top: 0.75rem;
+}
+
+/* ── First-time intro overlay ─────────────────────────────────────────── */
+.tending-intro-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(16, 15, 16, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  /* Above the sidebar (z-index 200) so clicks land on the modal, not the
+     nav items beneath. */
+  z-index: 300;
+  animation: tending-fade-in 0.24s ease;
+}
+.tending-intro-overlay.is-dismissed {
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+.tending-intro-modal {
+  background: var(--color-blank-page);
+  border-radius: var(--radius-xl);
+  padding: 2rem 2.25rem;
+  max-width: 34rem;
+  box-shadow: var(--shadow-lg);
+}
+.tending-intro-modal-title {
+  font-family: var(--font-display);
+  font-size: 1.85rem;
+  color: var(--color-ink-stained);
+  margin-bottom: 1rem;
+}
+.tending-intro-modal p {
+  font-family: var(--font-body);
+  color: var(--color-ink-stained);
+  line-height: 1.6;
+  margin-bottom: 0.9rem;
+}
+.tending-intro-modal-btn {
+  margin-top: 0.5rem;
+  background: var(--color-bloem);
+  color: white;
+  border: none;
+  border-radius: var(--radius-md);
+  padding: 0.75rem 1.4rem;
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: var(--transition);
+}
+.tending-intro-modal-btn:hover {
+  background: var(--color-bloem-mid);
+}
+
+/* ── Pause modal ─────────────────────────────────────────────────────── */
+.tending-pause-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(16, 15, 16, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  /* Same story as .tending-intro-overlay — must be above the sidebar. */
+  z-index: 290;
+  animation: tending-fade-in 0.2s ease;
+}
+.tending-pause-modal[hidden] {
+  display: none !important;
+}
+.tending-pause-inner {
+  background: var(--color-blank-page);
+  border-radius: var(--radius-xl);
+  padding: 1.75rem 2rem;
+  max-width: 28rem;
+  width: 100%;
+  box-shadow: var(--shadow-lg);
+}
+.tending-pause-title {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  color: var(--color-ink-stained);
+  margin-bottom: 0.75rem;
+}
+.tending-pause-body {
+  font-family: var(--font-body);
+  color: var(--color-ink-stained);
+  opacity: 0.75;
+  line-height: 1.55;
+  margin-bottom: 1.25rem;
+}
+.tending-pause-label {
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--color-ink-stained);
+  display: block;
+  margin-bottom: 0.4rem;
+}
+.tending-pause-optional {
+  font-weight: 400;
+  opacity: 0.55;
+}
+.tending-pause-note {
+  width: 100%;
+  padding: 0.6rem 0.85rem;
+  border: 1px solid rgba(16, 15, 16, 0.18);
+  border-radius: var(--radius-md);
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+  color: var(--color-ink-stained);
+  background: var(--color-blank-page);
+}
+.tending-pause-note:focus {
+  outline: none;
+  border-color: var(--color-bloem);
+  box-shadow: 0 0 0 3px rgba(112, 92, 108, 0.12);
+}
+.tending-pause-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 1.25rem;
+}
+.tending-pause-cancel,
+.tending-pause-confirm {
+  padding: 0.6rem 1.1rem;
+  border-radius: var(--radius-md);
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: var(--transition);
+}
+.tending-pause-cancel {
+  background: transparent;
+  color: var(--color-ink-stained);
+  border-color: rgba(16, 15, 16, 0.18);
+}
+.tending-pause-cancel:hover {
+  border-color: var(--color-bloem);
+  color: var(--color-bloem);
+}
+.tending-pause-confirm {
+  background: var(--color-bloem);
+  color: white;
+  border-color: var(--color-bloem);
+}
+.tending-pause-confirm:hover {
+  background: var(--color-bloem-mid);
+  border-color: var(--color-bloem-mid);
+}
+.tending-pause-confirm:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+@keyframes tending-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* ── Small-screen: stack the card body vertically ─────────────────────── */
+@media (max-width: 780px) {
+  .tending-card-body {
+    grid-template-columns: 1fr;
+  }
+  .tending-card-left {
+    border-right: none;
+    border-bottom: 1px solid rgba(16, 15, 16, 0.08);
+  }
+  .tending-counts {
+    gap: 1.25rem;
+  }
+}
