@@ -625,6 +625,53 @@ db.exec(`
     console.log('✓ Migrated: added edited to cuttings');
   }
 
+  // Tending: the Gardener's weekly review of past cuttings. Unlocks in Spring
+  // (Week 4+). Each curation event is a row (history-preserving) so a cutting
+  // can move between categories over time — latest row wins as the "current"
+  // state. return_later carries a resurface_after date (curated_at + 21 days)
+  // so the queue can re-serve it for another look. reflection_text is the
+  // right-side reflection written during the watching session.
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS cutting_curations (
+      id              INTEGER PRIMARY KEY AUTOINCREMENT,
+      cutting_id      INTEGER NOT NULL,
+      user_id         INTEGER NOT NULL,
+      category        TEXT NOT NULL CHECK (category IN ('keep_growing','return_later','archive')),
+      curated_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      resurface_after TEXT,
+      reflection_text TEXT,
+      FOREIGN KEY (cutting_id) REFERENCES cuttings(id),
+      FOREIGN KEY (user_id)    REFERENCES users(id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_cutting_curations_cutting  ON cutting_curations (cutting_id);
+    CREATE INDEX IF NOT EXISTS idx_cutting_curations_user     ON cutting_curations (user_id);
+    CREATE INDEX IF NOT EXISTS idx_cutting_curations_resurface ON cutting_curations (resurface_after);
+  `);
+
+  // Tending: pause events. Small append-only log so we can see how often
+  // students choose to pause vs push through, and let the student leave a
+  // one-line "what's here today" note if they want. No stats surfaced yet —
+  // just captured for later study.
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS tending_pauses (
+      id        INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id   INTEGER NOT NULL,
+      paused_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      note      TEXT,
+      FOREIGN KEY (user_id) REFERENCES users(id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_tending_pauses_user ON tending_pauses (user_id);
+  `);
+
+  // Users: first-time Meet-the-Gardener flag so the intro overlay only shows
+  // once per student. Existing rows read as 0 (haven't seen); flipped to 1
+  // when the student dismisses the intro.
+  const userCols2 = db.prepare("PRAGMA table_info(users)").all().map(r => r.name);
+  if (!userCols2.includes('tending_intro_seen')) {
+    db.exec("ALTER TABLE users ADD COLUMN tending_intro_seen INTEGER DEFAULT 0");
+    console.log('✓ Migrated: added tending_intro_seen to users');
+  }
+
   // Avatars moved to /data/avatars — old paths pointing to /uploads/avatars/ are now broken.
   // Reset them so users see initials until they re-upload.
   db.exec("UPDATE users SET profile_photo = NULL WHERE profile_photo LIKE '/uploads/avatars/%'");
@@ -2108,6 +2155,209 @@ module.exports = {
     return db.prepare(
       'DELETE FROM cuttings WHERE id = ? AND user_id = ?'
     ).run(cuttingId, userId).changes;
+  },
+
+  // ── Tending helpers ─────────────────────────────────────────────────────
+  // Related tables: cutting_curations (history-preserving; latest row per
+  // cutting_id defines its "current" bucket), tending_pauses (append-only
+  // log of pause events). Week math is computed in-JS from the user's
+  // course_start_date since it's cheap (≤ ~84 cuttings/user).
+
+  // Compute a cutting's recording week (1-based) relative to the user's
+  // course_start_date. Returns null if either input is missing or the
+  // cutting is pre-course.
+  _cuttingWeekNumber(recordedDate, courseStartDate) {
+    if (!recordedDate || !courseStartDate) return null;
+    const start = new Date(courseStartDate + 'T00:00:00');
+    const rd    = new Date(recordedDate    + 'T00:00:00');
+    const days  = Math.floor((rd - start) / 86400000);
+    if (days < 0) return null;
+    return Math.floor(days / 7) + 1;
+  },
+
+  // Which recording-week's queue should the student see this session?
+  //   currentCourseWeek — the student's 1-based week-of-course (from the
+  //     server's getCurrentCourseWeek helper). Tending starts Week 4, and
+  //     the queue lags 3 weeks (Week 4 reviews Week 1, Week 5 reviews Week 2).
+  //   courseStartDate  — user's per-user override or the global default.
+  // Returns the earliest recording-week (1..maxReviewable) that still has
+  // any uncurated cuttings. If everything up to maxReviewable is sorted,
+  // returns null (queue is caught up; only resurfacing cuttings, if any,
+  // remain to show).
+  getTendingReviewWeek(userId, currentCourseWeek, courseStartDate) {
+    if (!courseStartDate || !currentCourseWeek || currentCourseWeek < 4) return null;
+    const maxReviewable = currentCourseWeek - 3;
+    if (maxReviewable < 1) return null;
+
+    const rows = db.prepare(`
+      SELECT c.id, c.recorded_date
+      FROM cuttings c
+      WHERE c.user_id = ?
+        AND NOT EXISTS (
+          SELECT 1 FROM cutting_curations cc
+          WHERE cc.cutting_id = c.id
+        )
+      ORDER BY c.recorded_date ASC
+    `).all(userId);
+
+    let minWeek = null;
+    for (const r of rows) {
+      const wk = this._cuttingWeekNumber(r.recorded_date, courseStartDate);
+      if (wk === null) continue;
+      if (wk > maxReviewable) continue;
+      if (minWeek === null || wk < minWeek) minWeek = wk;
+    }
+    return minWeek;
+  },
+
+  // Build the Tending queue for a session:
+  //   A) all uncurated cuttings whose recording-week == reviewWeek
+  //   B) all cuttings whose latest curation is return_later AND
+  //      resurface_after ≤ todayStr (any recording-week they've reached)
+  // Each item comes back as { cutting: {...}, isResurfacing, lastCategory,
+  // lastCuratedAt } so the view can render a small "returning to" badge
+  // on resurfacing cards. todayStr is YYYY-MM-DD in the user's timezone.
+  getTendingQueue(userId, reviewWeek, courseStartDate, todayStr) {
+    const items = [];
+
+    // ── (A) Uncurated cuttings from the review week ──────────────────────
+    if (reviewWeek) {
+      const uncurated = db.prepare(`
+        SELECT c.id, c.created_at, c.recorded_date, c.season, c.prompt,
+               c.reflection_text, c.talked_about, c.how_it_felt, c.takeaway
+        FROM cuttings c
+        WHERE c.user_id = ?
+          AND NOT EXISTS (
+            SELECT 1 FROM cutting_curations cc WHERE cc.cutting_id = c.id
+          )
+        ORDER BY c.recorded_date ASC, c.created_at ASC
+      `).all(userId);
+      for (const c of uncurated) {
+        const wk = this._cuttingWeekNumber(c.recorded_date, courseStartDate);
+        if (wk === reviewWeek) {
+          items.push({ cutting: c, isResurfacing: false, lastCategory: null, lastCuratedAt: null });
+        }
+      }
+    }
+
+    // ── (B) Resurfacing return_later cuttings ────────────────────────────
+    // "Latest curation per cutting" via a correlated subquery. Filtered
+    // to those still in return_later and past their resurface date.
+    const resurfacing = db.prepare(`
+      SELECT c.id, c.created_at, c.recorded_date, c.season, c.prompt,
+             c.reflection_text, c.talked_about, c.how_it_felt, c.takeaway,
+             latest.category  AS last_category,
+             latest.curated_at AS last_curated_at
+      FROM cuttings c
+      JOIN (
+        SELECT cc1.*
+        FROM cutting_curations cc1
+        WHERE cc1.id = (
+          SELECT cc2.id FROM cutting_curations cc2
+          WHERE cc2.cutting_id = cc1.cutting_id
+          ORDER BY cc2.curated_at DESC, cc2.id DESC
+          LIMIT 1
+        )
+      ) latest ON latest.cutting_id = c.id
+      WHERE c.user_id = ?
+        AND latest.category = 'return_later'
+        AND latest.resurface_after IS NOT NULL
+        AND latest.resurface_after <= ?
+      ORDER BY latest.resurface_after ASC, c.recorded_date ASC
+    `).all(userId, todayStr);
+    for (const r of resurfacing) {
+      const { last_category, last_curated_at, ...cut } = r;
+      items.push({
+        cutting:       cut,
+        isResurfacing: true,
+        lastCategory:  last_category,
+        lastCuratedAt: last_curated_at,
+      });
+    }
+
+    return items;
+  },
+
+  // Record a curation event. New row per event, so history is preserved and
+  // "latest wins" everywhere else. For return_later, resurface_after is
+  // stamped to todayStr + 21 days so the queue re-serves it later. Optional
+  // reflection is the right-side text the student wrote while watching.
+  // Also flips cuttings.watched = 1 as a side effect (auto-mark on curate),
+  // wrapped in a single transaction so the two writes stay consistent.
+  setCuttingCuration(cuttingId, userId, category, todayStr, reflectionText) {
+    if (!['keep_growing', 'return_later', 'archive'].includes(category)) {
+      throw new Error('Invalid curation category: ' + category);
+    }
+    let resurfaceAfter = null;
+    if (category === 'return_later') {
+      const d = new Date(todayStr + 'T00:00:00');
+      d.setDate(d.getDate() + 21);
+      resurfaceAfter = d.toISOString().split('T')[0];
+    }
+    // node:sqlite has no better-sqlite3-style .transaction(); use explicit
+    // BEGIN/COMMIT so the insert + watched flag land atomically. On any
+    // error, ROLLBACK is best-effort — the throw still surfaces to the
+    // caller either way.
+    db.exec('BEGIN');
+    try {
+      db.prepare(`
+        INSERT INTO cutting_curations
+          (cutting_id, user_id, category, resurface_after, reflection_text)
+        VALUES (?, ?, ?, ?, ?)
+      `).run(cuttingId, userId, category, resurfaceAfter, reflectionText || null);
+      db.prepare(
+        `UPDATE cuttings SET watched = 1 WHERE id = ? AND user_id = ?`
+      ).run(cuttingId, userId);
+      db.exec('COMMIT');
+    } catch (e) {
+      try { db.exec('ROLLBACK'); } catch (_) {}
+      throw e;
+    }
+    return resurfaceAfter;
+  },
+
+  // Append a Tending pause event. `note` is optional (the "what's here
+  // today?" text field on the pause modal — one line, may be null).
+  recordTendingPause(userId, note) {
+    return db.prepare(
+      'INSERT INTO tending_pauses (user_id, note) VALUES (?, ?)'
+    ).run(userId, (note || '').trim() || null).lastInsertRowid;
+  },
+
+  // Whether the student has dismissed the "Meet the Gardener" intro overlay.
+  hasSeenTendingIntro(userId) {
+    const row = db.prepare('SELECT tending_intro_seen FROM users WHERE id = ?').get(userId);
+    return !!(row && row.tending_intro_seen);
+  },
+  markTendingIntroSeen(userId) {
+    return db.prepare(
+      'UPDATE users SET tending_intro_seen = 1 WHERE id = ?'
+    ).run(userId).changes;
+  },
+
+  // Rollup counts for the destination summary displayed on /tending
+  // ("since you started: N growing / M returning / K archived"). Uses the
+  // latest curation per cutting so cuttings that moved between categories
+  // count only in their current bucket.
+  getTendingDestinationCounts(userId) {
+    const rows = db.prepare(`
+      SELECT latest.category AS category, COUNT(*) AS n
+      FROM (
+        SELECT cc1.cutting_id, cc1.category
+        FROM cutting_curations cc1
+        WHERE cc1.user_id = ?
+          AND cc1.id = (
+            SELECT cc2.id FROM cutting_curations cc2
+            WHERE cc2.cutting_id = cc1.cutting_id
+            ORDER BY cc2.curated_at DESC, cc2.id DESC
+            LIMIT 1
+          )
+      ) latest
+      GROUP BY latest.category
+    `).all(userId);
+    const counts = { keep_growing: 0, return_later: 0, archive: 0 };
+    for (const r of rows) counts[r.category] = r.n;
+    return counts;
   },
 
   // Count-only: for each user, how many DISTINCT days within [startDate,
