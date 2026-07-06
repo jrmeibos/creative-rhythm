@@ -115,25 +115,23 @@
 /* Per-stem size overrides for flowers whose natural head is oversized
    relative to the rest of the set. Each gets a shorter height AND a
    raised bottom offset — so its head lifts to the same "top line" as
-   the taller flowers (baseline stem is 480 tall; a 340 tall stem lifted
-   140px = same head height). Bases stay hidden behind the wrap-front. */
-.grove-bouquet-stem[src$="stem-06.svg"],
-.grove-bouquet-stem[src$="stem-09.svg"],
-.grove-bouquet-stem[src$="stem-10.svg"],
-.grove-bouquet-stem[src$="stem-11.svg"],
-.grove-bouquet-stem[src$="stem-12.svg"] {
-  height: 340px;
-  bottom: 140px;
-}
+   the taller flowers (baseline stem is 480 tall; a stem X tall lifted
+   (480-X)px = same head height). Bases stay hidden behind the wrap-front.
+   Sizes tuned individually so every flower reads at roughly the same
+   scale in the bouquet. */
+.grove-bouquet-stem[src$="stem-06.svg"] { height: 320px; bottom: 160px; }
+.grove-bouquet-stem[src$="stem-09.svg"] { height: 320px; bottom: 160px; }
+.grove-bouquet-stem[src$="stem-10.svg"] { height: 280px; bottom: 200px; }
+.grove-bouquet-stem[src$="stem-11.svg"] { height: 300px; bottom: 180px; }
+.grove-bouquet-stem[src$="stem-12.svg"] { height: 320px; bottom: 160px; }
+.grove-bouquet-stem[src$="stem-01.svg"] { height: 360px; bottom: 120px; }
 @media (max-width: 1179px) {
-  .grove-bouquet-stem[src$="stem-06.svg"],
-  .grove-bouquet-stem[src$="stem-09.svg"],
-  .grove-bouquet-stem[src$="stem-10.svg"],
-  .grove-bouquet-stem[src$="stem-11.svg"],
-  .grove-bouquet-stem[src$="stem-12.svg"] {
-    height: 270px;
-    bottom: 110px;
-  }
+  .grove-bouquet-stem[src$="stem-06.svg"] { height: 254px; bottom: 126px; }
+  .grove-bouquet-stem[src$="stem-09.svg"] { height: 254px; bottom: 126px; }
+  .grove-bouquet-stem[src$="stem-10.svg"] { height: 222px; bottom: 158px; }
+  .grove-bouquet-stem[src$="stem-11.svg"] { height: 238px; bottom: 142px; }
+  .grove-bouquet-stem[src$="stem-12.svg"] { height: 254px; bottom: 126px; }
+  .grove-bouquet-stem[src$="stem-01.svg"] { height: 285px; bottom: 95px; }
 }
 /* Stem ends poking out below the tied bottom of the wrap. Each end
    shares the same --dx and --tilt as its matching flower stem above,
