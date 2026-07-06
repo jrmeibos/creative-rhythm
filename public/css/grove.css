@@ -61,6 +61,39 @@
   .grove-bouquet-back,
   .grove-bouquet-front { width: 180px; }
 }
+/* Masked stems layer — clips only the LOWER half so leaves/stems that
+   would otherwise poke past the paper's narrow tied bottom (or its
+   curved sides) are cropped out, while flower heads at the top of the
+   wrap remain fully visible.
+   Compound mask: a linear gradient keeps the top ~45% fully visible;
+   bouquet-full.svg's alpha silhouette shapes the bottom ~55%. The two
+   are OR'd via mask-composite: add, so stems appear wherever EITHER
+   mask is opaque. */
+.grove-bouquet-stems-layer {
+  position: absolute;
+  inset: 0;
+  -webkit-mask-image:
+    linear-gradient(to bottom, black 0%, black 45%, transparent 45.1%, transparent 100%),
+    url('/images/grove/bouquet-full.svg');
+          mask-image:
+    linear-gradient(to bottom, black 0%, black 45%, transparent 45.1%, transparent 100%),
+    url('/images/grove/bouquet-full.svg');
+  -webkit-mask-repeat: no-repeat, no-repeat;
+          mask-repeat: no-repeat, no-repeat;
+  -webkit-mask-position: center top, center bottom;
+          mask-position: center top, center bottom;
+  -webkit-mask-size: 100% 100%, 220px auto;
+          mask-size: 100% 100%, 220px auto;
+  -webkit-mask-composite: source-over;
+          mask-composite: add;
+}
+@media (max-width: 1179px) {
+  .grove-bouquet-stems-layer {
+    -webkit-mask-size: 100% 100%, 180px auto;
+            mask-size: 100% 100%, 180px auto;
+  }
+}
+
 /* Height-locked, natural-width stems. Julia's SVGs have wildly varying
    aspect ratios (1:2 compact heads, 1:13 lavender spikes), so we
    constrain them to a shared height and let width flow naturally. All

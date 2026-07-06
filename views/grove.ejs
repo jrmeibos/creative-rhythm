@@ -55,6 +55,12 @@
                   const fanRange = 20; // total degrees, split symmetrically
                   const fanStep  = fanRange / Math.max(stemCount - 1, 1);
                 %>
+                <!-- Stems wrapped in a masked layer so anything rendered
+                     outside the wrap silhouette (e.g. leaves poking past
+                     the tied bottom's narrow sides) is clipped. The mask
+                     uses bouquet-full.svg's alpha — stems appear only
+                     where paper exists. -->
+                <div class="grove-bouquet-stems-layer">
                 <% stemEntries.forEach(function (e, i) {
                      const variant = e.stem_variant || (((e.make_id * 7) % 12) + 1);
                      const paddedVariant = String(variant).padStart(2, '0');
@@ -70,6 +76,7 @@
                        style="--dx: <%= dx %>px; --tilt: <%= tilt %>deg; z-index: <%= zi %>;"
                        alt="">
                 <% }); %>
+                </div>
                 <img class="grove-bouquet-front" src="/images/grove/bouquet-front.svg" alt="">
               <% } %>
             </div>
