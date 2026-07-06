@@ -38,9 +38,14 @@
         <aside class="grove-bouquet-aside" aria-hidden="true">
           <div class="grove-bouquet-sticky">
             <div class="grove-bouquet-stack" data-stem-count="<%= stemCount %>">
-              <% if (stemCount === 0) { %>
-                <img class="grove-bouquet-back" src="/images/grove/bouquet-full.svg" alt="">
-              <% } else { %>
+              <!-- Back of the wrap — always rendered so the paper is
+                   visible behind and between the flower stems. In the
+                   empty state it's the only image shown; when stems are
+                   present, the front piece sits over the lower half and
+                   only the pointy top of the back peeks up between the
+                   blooms. -->
+              <img class="grove-bouquet-back" src="/images/grove/bouquet-full.svg" alt="">
+              <% if (stemCount > 0) { %>
                 <%
                   // Spacing shrinks as stems multiply so the bouquet stays
                   // bunched inside the wrap. Cap at 32px between centers so
