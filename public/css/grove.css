@@ -136,12 +136,12 @@
 /* Stem ends poking out below the tied bottom of the wrap. Each end
    shares the same --dx and --tilt as its matching flower stem above,
    but the tilt is negated so the line continues in the same axis
-   through the tie point. */
+   through the tie point. Layer is wide enough for the fan to spread. */
 .grove-bouquet-stem-ends-layer {
   position: relative;
-  width: 80px;
-  height: 40px;
-  margin: -4px auto 0;
+  width: 200px;
+  height: 90px;
+  margin: -6px auto 0;
   pointer-events: none;
 }
 .grove-bouquet-stem-end {
