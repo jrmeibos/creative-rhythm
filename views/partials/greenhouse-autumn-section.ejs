@@ -1,0 +1,21 @@
+<!-- Share the Fruit From Your Garden — parallel section to Your Cuttings,
+     Tend Your Cuttings, and Make Something. Appears only when
+     locals.showAutumn is true (effective season is Autumn). Clicking the
+     button takes the student to /grove, where every "created" cutting
+     lives and links to shared posts are added. Reuses the .gh-cuttings-
+     section-* classes for identical visual, plus an --autumn modifier so
+     future visual divergence is a one-line change. -->
+<% if (locals.showAutumn) { %>
+<section class="dash-section gh-cuttings-section gh-cuttings-section--autumn">
+  <h2 class="gh-cuttings-section-title">Share the Fruit From Your Garden</h2>
+  <p class="gh-cuttings-section-body">
+    Every cutting you've marked as created lives here. As you share what
+    you've made — a post, a video, a note — come back and add the links.
+  </p>
+  <img class="gh-cuttings-section-art"
+       src="/images/greenhouse/cuttings-vessels.svg"
+       alt=""
+       width="240" height="220">
+  <a href="/grove" class="gh-cuttings-section-btn">Share the Fruit From Your Garden</a>
+</section>
+<% } %>

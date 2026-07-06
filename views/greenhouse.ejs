@@ -79,6 +79,9 @@
       <!-- ── Make Something — Summer+ only (self-hides pre-Summer) ────── -->
       <%- include('partials/greenhouse-summer-section') %>
 
+      <!-- ── Share the Fruit — Autumn only (self-hides otherwise) ─────── -->
+      <%- include('partials/greenhouse-autumn-section') %>
+
       <% } else { %>
       <!-- ══ TENDING STATE ════════════════════════════════════════════════ -->
       <header class="dash-header">
@@ -384,6 +387,9 @@
 
       <!-- ── Make Something — Summer+ only (self-hides pre-Summer) ────── -->
       <%- include('partials/greenhouse-summer-section') %>
+
+      <!-- ── Share the Fruit — Autumn only (self-hides otherwise) ─────── -->
+      <%- include('partials/greenhouse-autumn-section') %>
 
       <!-- ── Growth Check (locked / form — hidden once completed) ────────── -->
       <% if (!closing) { %>

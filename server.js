@@ -203,6 +203,12 @@ app.use((req, res, next) => {
     // to what you shared" flow reads from Cultivated Ideas / The Grove).
     res.locals.showSummer =
       ['summer', 'autumn'].includes(res.locals.effectiveSeason);
+
+    // Autumn unlocks the sharing practice — students post the URLs of
+    // what they've made out into the world. Strictly Autumn only for
+    // the Greenhouse entry point; the /grove page itself is always
+    // reachable via its URL so students can revisit later.
+    res.locals.showAutumn = res.locals.effectiveSeason === 'autumn';
   }
 
   next();
