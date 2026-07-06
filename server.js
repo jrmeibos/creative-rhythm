@@ -3006,7 +3006,7 @@ app.get('/grove', requireAuth, (req, res) => {
     linksByMake.get(l.make_id).push(l);
   }
   res.render('grove', {
-    title: 'Share the Fruit From Your Garden',
+    title: 'Share the Bounty',
     page: 'grove',
     user: req.session.user,
     entries,
