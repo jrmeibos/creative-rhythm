@@ -13,12 +13,12 @@
       <a href="/dashboard" class="lesson-back">← Back to dashboard</a>
 
       <header class="summer-header">
-        <h1 class="summer-title">Summer</h1>
+        <h1 class="summer-title">Cultivated Ideas</h1>
         <p class="summer-intro">
-          Pick a cutting from your Cultivate pile and try turning it into
-          content. There are many ways to shape the same thought — a written
-          post, a talk-to-camera video, a quote graphic. You can make the same
-          cutting into more than one thing over time.
+          Every cutting you've marked Cultivate lives here. For each one, try
+          out format ideas — a written post, a talk-to-camera video, a quote
+          graphic. Mark an idea as created once you've actually made it, and
+          it'll grow into The Grove.
         </p>
         <p class="summer-links">
           <a href="/grove" class="summer-link">Visit The Grove →</a>
@@ -63,30 +63,41 @@
 
               <% if (existing.length > 0) { %>
                 <div class="summer-cutting-existing">
-                  <span class="summer-cutting-existing-label">Already made as</span>
+                  <span class="summer-cutting-existing-label">Format ideas</span>
                   <% existing.forEach(function (m) { %>
-                    <a class="summer-existing-chip" href="/summer/format/<%= m.format_slug %>">
-                      <span aria-hidden="true"><%= m.format_emoji || '🌿' %></span>
-                      <%= m.format_name %>
-                    </a>
+                    <button type="button"
+                            class="summer-existing-chip <%= m.created ? 'is-created' : '' %>"
+                            data-summer-toggle data-make-id="<%= m.id %>"
+                            data-created="<%= m.created ? '1' : '0' %>"
+                            aria-pressed="<%= m.created ? 'true' : 'false' %>"
+                            title="<%= m.created ? 'Marked as created — click to unmark' : 'Not yet created — click to mark created' %>">
+                      <span class="summer-existing-chip-check" aria-hidden="true"><%= m.created ? '✓' : '○' %></span>
+                      <span class="summer-existing-chip-emoji" aria-hidden="true"><%= m.format_emoji || '🌿' %></span>
+                      <span class="summer-existing-chip-name"><%= m.format_name %></span>
+                    </button>
                   <% }); %>
                 </div>
               <% } %>
 
               <button type="button" class="summer-make-btn"
                       data-summer-make data-cutting-id="<%= c.id %>">
-                + Make something
+                + Add a format idea
               </button>
 
-              <!-- Inline picker (hidden until "+ Make something" clicked) -->
+              <!-- Inline picker (hidden until "+ Add a format idea" clicked) -->
               <div class="summer-make-picker" hidden data-summer-make-picker="<%= c.id %>">
                 <label class="summer-make-picker-label" for="summer-note-<%= c.id %>">
-                  Note about this make (optional)
+                  Note about this idea (optional)
                 </label>
                 <textarea class="summer-make-picker-note"
                           id="summer-note-<%= c.id %>"
                           rows="2"
-                          placeholder="Anything to remember about how you shaped this."></textarea>
+                          placeholder="Anything to remember about how you'd shape this."></textarea>
+
+                <label class="summer-make-picker-created">
+                  <input type="checkbox" data-summer-make-created>
+                  <span>I've already created this one</span>
+                </label>
 
                 <p class="summer-make-picker-help">Pick a format — the click saves it.</p>
                 <div class="summer-format-grid">
@@ -146,6 +157,8 @@
           const formatId  = fmtBtn.getAttribute('data-summer-format');
           const ta        = picker.querySelector('.summer-make-picker-note');
           const note      = ta ? ta.value.trim() : '';
+          const createdCb = picker.querySelector('[data-summer-make-created]');
+          const created   = createdCb ? !!createdCb.checked : false;
           const errEl     = picker.querySelector('.summer-make-picker-error');
           picker.querySelectorAll('.summer-format-chip').forEach(function (b) { b.disabled = true; });
 
@@ -153,13 +166,35 @@
             method: 'POST',
             credentials: 'same-origin',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ formatId: formatId, note: note }),
+            body: JSON.stringify({ formatId: formatId, note: note, created: created }),
           }).then(function (r) {
             if (!r.ok) throw new Error('save failed');
             window.location.reload();
           }).catch(function () {
             if (errEl) { errEl.textContent = 'Could not save. Try again.'; errEl.hidden = false; }
             picker.querySelectorAll('.summer-format-chip').forEach(function (b) { b.disabled = false; });
+          });
+          return;
+        }
+
+        // Toggle a format idea's created state (existing chip on a card).
+        const toggleBtn = e.target.closest('[data-summer-toggle]');
+        if (toggleBtn) {
+          const makeId  = toggleBtn.getAttribute('data-make-id');
+          const wasOn   = toggleBtn.getAttribute('data-created') === '1';
+          const nextOn  = !wasOn;
+          toggleBtn.disabled = true;
+          fetch('/summer/make/' + encodeURIComponent(makeId) + '/toggle-created', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ created: nextOn }),
+          }).then(function (r) {
+            if (!r.ok) throw new Error('toggle failed');
+            window.location.reload();
+          }).catch(function () {
+            toggleBtn.disabled = false;
+            alert('Could not update. Try again.');
           });
         }
       });

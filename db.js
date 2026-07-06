@@ -707,10 +707,11 @@ db.exec(`
   `);
 
   // Summer: history-preserving log of "made as X" events. Each row records
-  // that a specific cutting was made into a specific format at a specific
-  // time. A cutting can be made multiple times (three formats over the
-  // season → three rows). published_url is reserved for Fall — student
-  // pastes the actual posted URL once they've shared it.
+  // a format IDEA — the student has planned to (or already has) turn
+  // this cutting into a specific format. `created` distinguishes the two
+  // states: 0 = idea (planned, not yet made), 1 = actually created.
+  // Students can flip the flag any time. published_url is reserved for
+  // Fall — student pastes the actual posted URL once they've shared it.
   db.exec(`
     CREATE TABLE IF NOT EXISTS cutting_makes (
       id            INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -728,6 +729,16 @@ db.exec(`
     CREATE INDEX IF NOT EXISTS idx_cutting_makes_cutting ON cutting_makes (cutting_id);
     CREATE INDEX IF NOT EXISTS idx_cutting_makes_format  ON cutting_makes (format_id);
   `);
+
+  // Guarded add of the created flag for existing installs — new rows land
+  // as ideas (0) by default. Backfill leaves any pre-existing rows at 0;
+  // there are no such rows in production (Summer just shipped), so this
+  // is safe.
+  const makesCols = db.prepare("PRAGMA table_info(cutting_makes)").all().map(r => r.name);
+  if (!makesCols.includes('created')) {
+    db.exec("ALTER TABLE cutting_makes ADD COLUMN created INTEGER NOT NULL DEFAULT 0");
+    console.log('✓ Migrated: added created flag to cutting_makes');
+  }
 
   // Avatars moved to /data/avatars — old paths pointing to /uploads/avatars/ are now broken.
   // Reset them so users see initials until they re-upload.
@@ -2530,22 +2541,27 @@ module.exports = {
   // view can render the emoji+name inline. Ordered newest-make first.
   // The Grove renders one row per cutting_make, so a cutting made as three
   // formats produces three entries.
+  // Grove entries — only shows format ideas the student marked as
+  // created (m.created = 1). Ideas still in the "planned" state live on
+  // the Cultivated Ideas page and don't appear here.
   getGroveEntries(userId) {
     return db.prepare(`
-      SELECT m.id           AS make_id,
-             m.made_at      AS made_at,
-             m.note         AS make_note,
+      SELECT m.id            AS make_id,
+             m.made_at       AS made_at,
+             m.note          AS make_note,
              m.published_url AS published_url,
-             c.id           AS cutting_id,
+             m.created       AS created,
+             c.id            AS cutting_id,
              c.recorded_date, c.season, c.talked_about, c.how_it_felt, c.takeaway,
-             f.id           AS format_id,
-             f.slug         AS format_slug,
-             f.name         AS format_name,
-             f.emoji        AS format_emoji
+             f.id            AS format_id,
+             f.slug          AS format_slug,
+             f.name          AS format_name,
+             f.emoji         AS format_emoji
       FROM cutting_makes m
       JOIN cuttings       c ON c.id = m.cutting_id
       JOIN content_formats f ON f.id = m.format_id
       WHERE m.user_id = ?
+        AND m.created = 1
       ORDER BY m.made_at DESC, m.id DESC
     `).all(userId);
   },
@@ -2629,6 +2645,7 @@ module.exports = {
   getMakesForUser(userId) {
     return db.prepare(`
       SELECT m.id, m.cutting_id, m.format_id, m.made_at, m.note, m.published_url,
+             m.created,
              f.slug  AS format_slug,
              f.name  AS format_name,
              f.emoji AS format_emoji
@@ -2663,19 +2680,29 @@ module.exports = {
     return row ? row.id : null;
   },
 
-  // Insert a fresh "made as X" event. New row every time — history is
-  // never overwritten. `note` and `publishedUrl` are optional; they can be
-  // filled in later (Fall re-opens Grove entries for URL entry).
-  recordCuttingMake(cuttingId, userId, formatId, note, publishedUrl) {
+  // Insert a fresh format-idea row. `created` defaults to false (an idea);
+  // pass true to mark it as already made at insert time. `note` and
+  // `publishedUrl` remain optional. Never overwrites — each add is its
+  // own row so a student's history is preserved.
+  recordCuttingMake(cuttingId, userId, formatId, note, publishedUrl, created) {
     return db.prepare(`
       INSERT INTO cutting_makes
-        (cutting_id, user_id, format_id, note, published_url)
-      VALUES (?, ?, ?, ?, ?)
+        (cutting_id, user_id, format_id, note, published_url, created)
+      VALUES (?, ?, ?, ?, ?, ?)
     `).run(
       cuttingId, userId, formatId,
       (note || '').trim() || null,
       (publishedUrl || '').trim() || null,
+      created ? 1 : 0,
     ).lastInsertRowid;
+  },
+
+  // Flip the created flag on an existing make. Ownership scoped via the
+  // WHERE clause so a student can only touch their own rows.
+  setCuttingMakeCreated(makeId, userId, created) {
+    return db.prepare(
+      'UPDATE cutting_makes SET created = ? WHERE id = ? AND user_id = ?'
+    ).run(created ? 1 : 0, makeId, userId).changes;
   },
 
   // Rollup counts for the destination summary displayed on /tending

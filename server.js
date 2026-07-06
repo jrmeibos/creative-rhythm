@@ -2818,7 +2818,7 @@ app.get('/summer', requireAuth, (req, res) => {
   }
 
   res.render('summer', {
-    title: 'Summer',
+    title: 'Cultivated Ideas',
     page: 'summer',
     user: req.session.user,
     cuttings,
@@ -2921,22 +2921,24 @@ app.get('/summer/format/:slug', requireAuth, (req, res) => {
   });
 });
 
-// Record a "made as X" event. Body: { formatId, note }. Only Cultivate
-// cuttings owned by the student can be marked. New row per event —
-// making the same cutting three times inserts three rows.
+// Record a format-idea for a Cultivate cutting. Body:
+//   { formatId, note, created }
+// `created` is optional — default 0 = still an idea, 1 = already made.
+// New row per POST (history preserved). Only Cultivate cuttings owned by
+// the student can be posted against.
 app.post('/summer/make/:cuttingId', requireAuth, (req, res) => {
   const cuttingId = parseInt(req.params.cuttingId, 10);
   if (!Number.isInteger(cuttingId) || cuttingId <= 0) {
     return res.status(400).json({ error: 'Invalid cutting id.' });
   }
-  const { formatId, note } = req.body || {};
+  const { formatId, note, created } = req.body || {};
   const fid = parseInt(formatId, 10);
   if (!Number.isInteger(fid) || fid <= 0) {
     return res.status(400).json({ error: 'Invalid format id.' });
   }
   // Ownership + eligibility checks — only Cultivate cuttings the student
-  // owns can be made. Ineligible cases (Sit-with, Compost, other user's
-  // cutting) return 403 rather than silently succeeding.
+  // owns can be posted against. Ineligible cases (Sit-with, Compost,
+  // other user's cutting) return 403 rather than silently succeeding.
   if (!db.isCuttingCultivateForUser(cuttingId, req.session.user.id)) {
     return res.status(403).json({ error: 'Cutting is not in your Cultivate pile.' });
   }
@@ -2944,8 +2946,26 @@ app.post('/summer/make/:cuttingId', requireAuth, (req, res) => {
   if (!format) {
     return res.status(400).json({ error: 'Format not found.' });
   }
-  const makeId = db.recordCuttingMake(cuttingId, req.session.user.id, format.id, note);
-  return res.json({ ok: true, makeId, format: { emoji: format.emoji, name: format.name } });
+  const isCreated = created === true || created === 1 || created === '1';
+  const makeId = db.recordCuttingMake(
+    cuttingId, req.session.user.id, format.id, note, null, isCreated
+  );
+  return res.json({ ok: true, makeId, created: isCreated,
+                    format: { emoji: format.emoji, name: format.name } });
+});
+
+// Flip an existing idea between "idea" and "created." Body: { created }.
+// Ownership check inside setCuttingMakeCreated's WHERE clause.
+app.post('/summer/make/:makeId/toggle-created', requireAuth, (req, res) => {
+  const makeId = parseInt(req.params.makeId, 10);
+  if (!Number.isInteger(makeId) || makeId <= 0) {
+    return res.status(400).json({ error: 'Invalid make id.' });
+  }
+  const { created } = req.body || {};
+  const value = created === true || created === 1 || created === '1';
+  const changed = db.setCuttingMakeCreated(makeId, req.session.user.id, value);
+  if (changed === 0) return res.status(404).json({ error: 'Not found.' });
+  return res.json({ ok: true, created: value });
 });
 
 // ─── The Grove — where Cultivate cuttings that have been "made" live ──────
