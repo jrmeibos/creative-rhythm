@@ -71,7 +71,13 @@
    mask is opaque. */
 .grove-bouquet-stems-layer {
   position: absolute;
-  inset: 0;
+  /* Wider than the stack so flowers at the outer fan positions don't
+     get chopped by the layer's left/right edge. The mask still centers
+     on the wrap silhouette regardless. */
+  top: 0;
+  bottom: 0;
+  left: -60px;
+  right: -60px;
   -webkit-mask-image:
     linear-gradient(to bottom, black 0%, black 45%, transparent 45.1%, transparent 100%),
     url('/images/grove/bouquet-full.svg');
