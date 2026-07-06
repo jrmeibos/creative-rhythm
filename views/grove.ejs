@@ -93,16 +93,21 @@
                 <% if (entryLinks.length > 0) { %>
                   <ul class="grove-entry-links-list">
                     <% entryLinks.forEach(function (l) { %>
-                      <li class="grove-entry-link" data-link-id="<%= l.id %>">
-                        <% if (l.label) { %>
-                          <span class="grove-entry-link-label"><%= l.label %></span>
+                      <li class="grove-entry-link-item" data-link-id="<%= l.id %>">
+                        <div class="grove-entry-link">
+                          <% if (l.label) { %>
+                            <span class="grove-entry-link-label"><%= l.label %></span>
+                          <% } %>
+                          <a href="<%= l.url %>" target="_blank" rel="noopener" class="grove-entry-link-url">
+                            <%= l.url %>
+                          </a>
+                          <button type="button" class="grove-entry-link-remove"
+                                  data-grove-link-remove data-link-id="<%= l.id %>"
+                                  aria-label="Remove this link">×</button>
+                        </div>
+                        <% if (l.note) { %>
+                          <p class="grove-entry-link-note"><%= l.note %></p>
                         <% } %>
-                        <a href="<%= l.url %>" target="_blank" rel="noopener" class="grove-entry-link-url">
-                          <%= l.url %>
-                        </a>
-                        <button type="button" class="grove-entry-link-remove"
-                                data-grove-link-remove data-link-id="<%= l.id %>"
-                                aria-label="Remove this link">×</button>
                       </li>
                     <% }); %>
                   </ul>
@@ -127,6 +132,11 @@
                       <input type="url" name="url" required placeholder="https://…">
                     </label>
                   </div>
+                  <label class="grove-entry-link-field grove-entry-link-field--note">
+                    <span class="grove-entry-link-field-hint">What was it like to share this? (optional)</span>
+                    <textarea name="note" rows="2"
+                              placeholder="How it felt, what happened, what you noticed."></textarea>
+                  </label>
                   <div class="grove-entry-link-form-actions">
                     <button type="button" class="grove-entry-link-form-cancel"
                             data-grove-link-cancel>Cancel</button>
@@ -188,13 +198,15 @@
                 const makeId = form.getAttribute('data-grove-link-form');
                 const url    = form.querySelector('input[name="url"]').value.trim();
                 const label  = form.querySelector('input[name="label"]').value.trim();
+                const noteEl = form.querySelector('textarea[name="note"]');
+                const note   = noteEl ? noteEl.value.trim() : '';
                 const errEl  = form.querySelector('.grove-entry-link-form-error');
                 if (!url) { errEl.textContent = 'A URL is required.'; errEl.hidden = false; return; }
                 saveBtn.disabled = true;
                 fetch('/grove/link/' + encodeURIComponent(makeId), {
                   method: 'POST', credentials: 'same-origin',
                   headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ url: url, label: label }),
+                  body: JSON.stringify({ url: url, label: label, note: note }),
                 }).then(function (r) { return r.json().then(function (d) { return { r: r, d: d }; }); })
                   .then(function (o) {
                     if (!o.r.ok || !o.d.ok) throw new Error(o.d && o.d.error);

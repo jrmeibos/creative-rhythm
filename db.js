@@ -749,8 +749,10 @@ db.exec(`
 
   // Fall: multiple published-URL links per make. Each row is one link,
   // ordered by posted_at ASC so the earliest post reads first. `label`
-  // is an optional platform tag ("Instagram", "LinkedIn"). Deletions are
-  // hard because a link is just a URL, no important history.
+  // is an optional platform tag ("Instagram", "LinkedIn"). `note` is an
+  // optional reflection the student can leave about what it was like to
+  // share this post. Deletions are hard because a link is just a URL,
+  // no important history.
   db.exec(`
     CREATE TABLE IF NOT EXISTS cutting_make_links (
       id        INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -758,6 +760,7 @@ db.exec(`
       user_id   INTEGER NOT NULL,
       url       TEXT NOT NULL,
       label     TEXT,
+      note      TEXT,
       posted_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (make_id) REFERENCES cutting_makes(id),
       FOREIGN KEY (user_id) REFERENCES users(id)
@@ -765,6 +768,13 @@ db.exec(`
     CREATE INDEX IF NOT EXISTS idx_cutting_make_links_make ON cutting_make_links (make_id);
     CREATE INDEX IF NOT EXISTS idx_cutting_make_links_user ON cutting_make_links (user_id);
   `);
+  // Guarded add for the reflection column so a fresh boot on an existing
+  // install picks it up.
+  const linkCols = db.prepare("PRAGMA table_info(cutting_make_links)").all().map(r => r.name);
+  if (!linkCols.includes('note')) {
+    db.exec("ALTER TABLE cutting_make_links ADD COLUMN note TEXT");
+    console.log('✓ Migrated: added note to cutting_make_links');
+  }
 
   // Avatars moved to /data/avatars — old paths pointing to /uploads/avatars/ are now broken.
   // Reset them so users see initials until they re-upload.
@@ -2752,13 +2762,17 @@ module.exports = {
   // ── Published links (Fall) ─────────────────────────────────────────────
   // A single make can hold many published links (multiple platforms).
   // Ownership scoped in every helper.
-  createCuttingMakeLink(makeId, userId, url, label) {
+  createCuttingMakeLink(makeId, userId, url, label, note) {
     const clean = String(url || '').trim();
     if (!clean) throw new Error('URL required');
     return db.prepare(`
-      INSERT INTO cutting_make_links (make_id, user_id, url, label)
-      VALUES (?, ?, ?, ?)
-    `).run(makeId, userId, clean, (label || '').trim() || null).lastInsertRowid;
+      INSERT INTO cutting_make_links (make_id, user_id, url, label, note)
+      VALUES (?, ?, ?, ?, ?)
+    `).run(
+      makeId, userId, clean,
+      (label || '').trim() || null,
+      (note  || '').trim() || null,
+    ).lastInsertRowid;
   },
   deleteCuttingMakeLink(linkId, userId) {
     return db.prepare(
@@ -2770,7 +2784,7 @@ module.exports = {
   // extra round-trip per make.
   getMakeLinksForUser(userId) {
     return db.prepare(`
-      SELECT id, make_id, url, label, posted_at
+      SELECT id, make_id, url, label, note, posted_at
       FROM cutting_make_links
       WHERE user_id = ?
       ORDER BY posted_at ASC, id ASC

@@ -3014,20 +3014,21 @@ app.get('/grove', requireAuth, (req, res) => {
   });
 });
 
-// Add a published link to a created make. Body: { url, label }. url is
-// required; label is an optional platform tag ("Instagram", etc.).
-// Ownership check inside the DB helper's WHERE.
+// Add a published link to a created make. Body: { url, label, note }.
+// url is required; label is an optional platform tag ("Instagram", etc.);
+// note is an optional reflection about what it was like to share the
+// post. Ownership check inside the DB helper's WHERE.
 app.post('/grove/link/:makeId', requireAuth, (req, res) => {
   const makeId = parseInt(req.params.makeId, 10);
   if (!Number.isInteger(makeId) || makeId <= 0) {
     return res.status(400).json({ error: 'Invalid make id.' });
   }
-  const { url, label } = req.body || {};
+  const { url, label, note } = req.body || {};
   if (!url || !String(url).trim()) {
     return res.status(400).json({ error: 'URL required.' });
   }
   try {
-    const id = db.createCuttingMakeLink(makeId, req.session.user.id, url, label);
+    const id = db.createCuttingMakeLink(makeId, req.session.user.id, url, label, note);
     return res.json({ ok: true, id });
   } catch (e) {
     return res.status(400).json({ error: e.message || 'Could not save.' });
