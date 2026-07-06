@@ -71,6 +71,16 @@
   border: 1.5px solid rgba(112, 92, 108, 0.1);
   border-radius: 16px;
   padding: 1.5rem;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  column-gap: 1.5rem;
+  align-items: start;
+}
+@media (max-width: 680px) {
+  .gh-seed-card {
+    grid-template-columns: 1fr;
+    row-gap: 0.5rem;
+  }
 }
 
 .gh-seed-num {
@@ -811,9 +821,19 @@ details[open] .gh-planted-summary::before { content: '▾  '; }
 }
 .gh-seed-art {
   display: block;
-  width: 96px;
+  width: 110px;
   height: auto;
-  margin: 0.25rem auto 0.75rem;
+  margin: 0;
+  grid-row: 1 / -1;
+  align-self: start;
+}
+@media (max-width: 680px) {
+  .gh-seed-art {
+    grid-row: auto;
+    justify-self: center;
+    width: 96px;
+    margin-bottom: 0.25rem;
+  }
 }
 
 .gh-bed-cta {
