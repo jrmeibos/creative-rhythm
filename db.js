@@ -753,6 +753,25 @@ db.exec(`
     db.exec("ALTER TABLE cutting_makes ADD COLUMN share_note TEXT");
     console.log('✓ Migrated: added share_note to cutting_makes');
   }
+  // stem_variant: which of the 12 flower-stem SVGs this creation blooms
+  // as in the /grove bouquet. Assigned once, on the student's first link
+  // add for this make, and persists forever. NULL until first link.
+  // Backfill: any make that already has links but no variant gets a
+  // random 1-12 so existing bouquets aren't blank on first load.
+  if (!makesCols.includes('stem_variant')) {
+    db.exec("ALTER TABLE cutting_makes ADD COLUMN stem_variant INTEGER");
+    const backfillRows = db.prepare(`
+      SELECT DISTINCT m.id
+      FROM cutting_makes m
+      JOIN cutting_make_links l ON l.make_id = m.id
+      WHERE m.stem_variant IS NULL
+    `).all();
+    const upd = db.prepare('UPDATE cutting_makes SET stem_variant = ? WHERE id = ?');
+    for (const row of backfillRows) {
+      upd.run(Math.floor(Math.random() * 12) + 1, row.id);
+    }
+    console.log(`✓ Migrated: added stem_variant to cutting_makes (backfilled ${backfillRows.length} rows)`);
+  }
 
   // Fall: multiple published-URL links per make. Each row is one link,
   // ordered by posted_at ASC so the earliest post reads first. `label`
@@ -2595,6 +2614,7 @@ module.exports = {
              m.share_note    AS share_note,
              m.just_for_me   AS just_for_me,
              m.created       AS created,
+             m.stem_variant  AS stem_variant,
              c.id            AS cutting_id,
              c.recorded_date, c.season, c.talked_about, c.how_it_felt, c.takeaway,
              f.id            AS format_id,
@@ -2765,6 +2785,17 @@ module.exports = {
     return db.prepare(
       'UPDATE cutting_makes SET just_for_me = ? WHERE id = ? AND user_id = ?'
     ).run(value ? 1 : 0, makeId, userId).changes;
+  },
+
+  // Assign a stem variant to a make, but only if it doesn't have one yet.
+  // Called from POST /grove/link/:makeId so the first link on a creation
+  // "blooms" the bouquet with a random flower; subsequent links leave the
+  // stem alone. Returns 1 if a variant was newly written, 0 if the make
+  // already had one (or doesn't belong to this user).
+  setCuttingMakeStemVariantIfNull(makeId, userId, variant) {
+    return db.prepare(
+      'UPDATE cutting_makes SET stem_variant = ? WHERE id = ? AND user_id = ? AND stem_variant IS NULL'
+    ).run(variant, makeId, userId).changes;
   },
 
   // Write the per-entry share reflection ("what was it like to share

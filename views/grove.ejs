@@ -22,6 +22,61 @@
         </p>
       </header>
 
+      <%
+        // Only creations that have (a) at least one shared link AND (b)
+        // are NOT marked just-for-me contribute a flower to the bouquet.
+        // stem_variant is set on the make's first link add; if it's null
+        // for some legacy reason, fall back to a stable per-make choice.
+        const stemEntries = entries.filter(function (e) {
+          const hasLinks = (linksByMake.get(e.make_id) || []).length > 0;
+          return hasLinks && !e.just_for_me;
+        });
+        const stemCount = stemEntries.length;
+      %>
+
+      <div class="grove-layout">
+        <aside class="grove-bouquet-aside" aria-hidden="true">
+          <div class="grove-bouquet-sticky">
+            <div class="grove-bouquet-stack" data-stem-count="<%= stemCount %>">
+              <% if (stemCount === 0) { %>
+                <img class="grove-bouquet-back" src="/images/grove/bouquet-full.svg" alt="">
+              <% } else { %>
+                <%
+                  // Spacing shrinks as stems multiply so the bouquet stays
+                  // bunched inside the wrap. Cap at 32px between centers so
+                  // 2-3 stems still show a subtle spread.
+                  const stemSpacing = Math.min(32, 180 / Math.max(stemCount, 1));
+                %>
+                <% stemEntries.forEach(function (e, i) {
+                     const variant = e.stem_variant || (((e.make_id * 7) % 12) + 1);
+                     const paddedVariant = String(variant).padStart(2, '0');
+                     const dx = Math.round((i - (stemCount - 1) / 2) * stemSpacing);
+                     const tilt = ((e.make_id * 37) % 11) - 5;
+                     const zi = stemCount - i;
+                %>
+                  <img class="grove-bouquet-stem"
+                       src="/images/grove/stems/stem-<%= paddedVariant %>.svg"
+                       data-make-id="<%= e.make_id %>"
+                       style="--dx: <%= dx %>px; --tilt: <%= tilt %>deg; z-index: <%= zi %>;"
+                       alt="">
+                <% }); %>
+                <img class="grove-bouquet-front" src="/images/grove/bouquet-front.svg" alt="">
+              <% } %>
+            </div>
+            <p class="grove-bouquet-caption">
+              <% if (stemCount === 0) { %>
+                A wrap waiting for your first bloom.
+              <% } else if (stemCount === 1) { %>
+                1 bloom in your bouquet.
+              <% } else { %>
+                <%= stemCount %> blooms in your bouquet.
+              <% } %>
+            </p>
+          </div>
+        </aside>
+
+        <div class="grove-content">
+
       <% if (entries.length === 0) { %>
 
         <section class="grove-empty">
@@ -236,6 +291,12 @@
                 }).then(function (r) { return r.json().then(function (d) { return { r: r, d: d }; }); })
                   .then(function (o) {
                     if (!o.r.ok || !o.d.ok) throw new Error(o.d && o.d.error);
+                    // Server assigns a stemVariant only on the make's first
+                    // link — the "bloom" moment. Stash the make id so the
+                    // page-load handler below can animate the new flower in.
+                    if (o.d.stemVariant) {
+                      try { localStorage.setItem('grove_just_bloomed', String(makeId)); } catch (_) {}
+                    }
                     window.location.reload();
                   })
                   .catch(function (err) {
@@ -310,6 +371,26 @@
         </script>
 
       <% } %>
+
+        </div>
+      </div>
+
+      <!-- Bouquet bloom-in animation. Runs on every /grove load so the
+           empty-state page can still recover if someone reloads before
+           the animation completes. -->
+      <script>
+        (function () {
+          try {
+            const bloomedId = localStorage.getItem('grove_just_bloomed');
+            if (!bloomedId) return;
+            localStorage.removeItem('grove_just_bloomed');
+            const stem = document.querySelector(
+              '.grove-bouquet-stem[data-make-id="' + bloomedId + '"]'
+            );
+            if (stem) stem.classList.add('is-just-bloomed');
+          } catch (_) {}
+        })();
+      </script>
 
     </main>
   </div>

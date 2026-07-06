@@ -3029,7 +3029,13 @@ app.post('/grove/link/:makeId', requireAuth, (req, res) => {
   }
   try {
     const id = db.createCuttingMakeLink(makeId, req.session.user.id, url, label);
-    return res.json({ ok: true, id });
+    // If this was the first link on this make, assign a random stem
+    // variant (1-12) so the bouquet blooms a flower. Subsequent links
+    // leave the existing stem alone. `changes` = 1 only when a variant
+    // was newly written, meaning this is the "bloom" moment.
+    const newVariant = Math.floor(Math.random() * 12) + 1;
+    const changed = db.setCuttingMakeStemVariantIfNull(makeId, req.session.user.id, newVariant);
+    return res.json({ ok: true, id, stemVariant: changed === 1 ? newVariant : null });
   } catch (e) {
     return res.status(400).json({ error: e.message || 'Could not save.' });
   }

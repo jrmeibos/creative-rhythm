@@ -1,5 +1,115 @@
 /* ─── The Grove — cuttings that have been made into content ───────────── */
 
+/* Two-column layout: bouquet aside on the left, entries on the right.
+   Collapses to single-column with the bouquet as a hero above the
+   entries when the main-content region is narrow. */
+.grove-layout {
+  display: block;
+}
+@media (min-width: 1180px) {
+  .grove-layout {
+    display: grid;
+    grid-template-columns: 280px 1fr;
+    gap: 3rem;
+    align-items: start;
+  }
+}
+
+.grove-bouquet-aside {
+  margin: 0 auto 2rem;
+  max-width: 280px;
+}
+@media (min-width: 1180px) {
+  .grove-bouquet-aside {
+    margin: 0;
+    max-width: none;
+  }
+}
+.grove-bouquet-sticky {
+  position: sticky;
+  top: 2rem;
+  text-align: center;
+}
+.grove-bouquet-stack {
+  position: relative;
+  width: 260px;
+  height: 620px;
+  margin: 0 auto;
+  overflow: visible;
+}
+@media (max-width: 1179px) {
+  .grove-bouquet-stack {
+    width: 220px;
+    height: 500px;
+  }
+}
+.grove-bouquet-back,
+.grove-bouquet-front {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 220px;
+  height: auto;
+  display: block;
+}
+.grove-bouquet-front {
+  z-index: 999;      /* always on top of the stem layer */
+  pointer-events: none;
+}
+@media (max-width: 1179px) {
+  .grove-bouquet-back,
+  .grove-bouquet-front { width: 180px; }
+}
+/* Height-locked, natural-width stems. Julia's SVGs have wildly varying
+   aspect ratios (1:2 compact heads, 1:13 lavender spikes), so we
+   constrain them to a shared height and let width flow naturally. All
+   flowers rise to the same top line; wider ones look bushy, thin ones
+   like foliage — exactly how a real bunched bouquet reads. */
+.grove-bouquet-stem {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  width: auto;
+  height: 480px;
+  transform: translate(calc(-50% + var(--dx, 0px)), 0) rotate(var(--tilt, 0deg));
+  transform-origin: bottom center;
+  display: block;
+}
+@media (max-width: 1179px) {
+  .grove-bouquet-stem { height: 380px; }
+}
+.grove-bouquet-caption {
+  margin-top: 1rem;
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  color: var(--color-bloem-mid);
+  font-style: italic;
+  opacity: 0.85;
+}
+
+/* Bloom animation — new stems rise + fade in when a link is added.
+   Keyframes reuse the same --dx / --tilt custom props so the flower
+   settles into its final tilted, offset resting position. */
+@keyframes grove-bloom {
+  from {
+    opacity: 0;
+    transform: translate(calc(-50% + var(--dx, 0px)), 80px)
+               rotate(var(--tilt, 0deg)) scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: translate(calc(-50% + var(--dx, 0px)), 0)
+               rotate(var(--tilt, 0deg)) scale(1);
+  }
+}
+.grove-bouquet-stem.is-just-bloomed {
+  animation: grove-bloom 900ms cubic-bezier(.34, 1.4, .64, 1) both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .grove-bouquet-stem.is-just-bloomed { animation: none; }
+}
+
 .grove-header {
   padding: 1.5rem 0 1rem;
 }
