@@ -111,22 +111,17 @@
         </div>
       </section>
 
-      <!-- ── Current Season ─────────────────────────────────────────────── -->
+      <!-- ── Current Season — only shown when the student can actually pick.
+           Pre-Week-4 trial students see nothing here at all; the selector
+           appears the moment they're eligible (Week 4 or an upgrade). -->
+      <% if (locals.canPickSeason) { %>
       <section class="dash-section">
         <div class="dash-section-header">
           <h2 class="dash-section-title">Your Current Season</h2>
         </div>
-        <% const canPick = locals.canPickSeason; %>
-        <% if (!canPick) { %>
-          <p class="season-locked-note">
-            Your season unlocks after Week 3 — or right away with the full course.
-            While you're in Winter, the platform stays in its Winter cadence.
-          </p>
-        <% } else { %>
-          <p class="season-picker-help">
-            Your season shapes what the platform shows you. Change it anytime.
-          </p>
-        <% } %>
+        <p class="season-picker-help">
+          Your season shapes what the platform shows you. Change it anytime.
+        </p>
         <%
           const seasonDefs = [
             { key: 'spring', name: 'Spring', category: 'Prioritizing Curiosity' },
@@ -135,12 +130,11 @@
             { key: 'winter', name: 'Winter', category: 'Time to Connect' }
           ];
         %>
-        <div class="season-cards <%= canPick ? '' : 'is-locked' %>" id="season-cards" data-can-pick="<%= canPick ? '1' : '0' %>">
+        <div class="season-cards" id="season-cards">
           <% for (const s of seasonDefs) { %>
             <button class="season-card season-card--<%= s.key %> <%= user.current_season === s.key ? 'is-selected' : '' %>"
                     data-season="<%= s.key %>" type="button"
-                    aria-pressed="<%= user.current_season === s.key %>"
-                    <%= canPick ? '' : 'disabled aria-disabled="true"' %>>
+                    aria-pressed="<%= user.current_season === s.key %>">
               <span class="season-card-emoji"><%- include('partials/season-icon', { season: s.key, size: 40 }) %></span>
               <span class="season-card-name"><%= s.name %></span>
               <span class="season-card-category"><%= s.category %></span>
@@ -149,6 +143,7 @@
           <% } %>
         </div>
       </section>
+      <% } %>
 
     </main>
   </div>

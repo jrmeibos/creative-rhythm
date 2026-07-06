@@ -492,21 +492,18 @@
         <% } %>
       </section>
 
-      <!-- Current Season -->
+      <!-- Current Season — hidden entirely for pre-Week-4 trial students.
+           The selector appears the moment they're eligible (Week 4 or an
+           upgrade); the profile has the parallel picker for later edits. -->
+      <% if (locals.canPickSeason) { %>
       <section class="dash-section">
         <div class="dash-section-header">
           <h2 class="dash-section-title">Your Current Season</h2>
         </div>
-        <% const canPick = locals.canPickSeason; %>
-        <% if (!canPick) { %>
-          <p class="season-locked-note">
-            Your season unlocks after Week 3 — or right away with the full course.
-            While you're in Winter, the platform stays in its Winter cadence.
-          </p>
-        <% } else if (!user.current_season) { %>
+        <% if (!user.current_season) { %>
           <p class="season-first-prompt">What season are you in right now?</p>
         <% } %>
-        <div class="season-cards <%= canPick ? '' : 'is-locked' %>" id="season-cards" data-can-pick="<%= canPick ? '1' : '0' %>">
+        <div class="season-cards" id="season-cards">
           <%
             const seasonDefs = [
               { key: 'spring', name: 'Spring', category: 'Prioritizing Curiosity',
@@ -522,8 +519,7 @@
           <% for (const s of seasonDefs) { %>
             <button class="season-card season-card--<%= s.key %> <%= user.current_season === s.key ? 'is-selected' : '' %>"
                     data-season="<%= s.key %>" type="button"
-                    aria-pressed="<%= user.current_season === s.key %>"
-                    <%= canPick ? '' : 'disabled aria-disabled="true"' %>>
+                    aria-pressed="<%= user.current_season === s.key %>">
               <span class="season-card-emoji"><%- include('partials/season-icon', { season: s.key, size: 48 }) %></span>
               <span class="season-card-name"><%= s.name %></span>
               <span class="season-card-category"><%= s.category %></span>
@@ -533,6 +529,7 @@
           <% } %>
         </div>
       </section>
+      <% } %>
 
       <!-- Continue learning -->
       <% if (currentLesson) { %>
