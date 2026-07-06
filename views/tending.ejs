@@ -38,9 +38,9 @@
           Three buckets. You can move a cutting later. There's no rush.
         </p>
         <ul class="tending-learn-more-list">
-          <li><strong>Keep growing</strong> — this one's alive. Goes to your idea bank for Summer's editing work.</li>
-          <li><strong>Return to later</strong> — not sure yet. It'll come back to you in a few weeks for another look.</li>
-          <li><strong>Archive</strong> — this one was for the practice, not for the harvest. Filed, but still findable.</li>
+          <li>🪴 <strong>Keep growing</strong> — this one's alive. Goes to your idea bank for Summer's editing work.</li>
+          <li>🌱 <strong>Return to later</strong> — not sure yet. It'll come back to you in a few weeks for another look.</li>
+          <li>🗑️ <strong>Compost</strong> — this one was for the practice, not for the harvest. Filed, but still findable.</li>
         </ul>
         <p class="tending-learn-more-close-note">
           If the critic shows up instead of the Gardener today, pause and try again tomorrow.
@@ -61,7 +61,7 @@
           </div>
           <div class="tending-count">
             <span class="tending-count-n"><%= counts.archive %></span>
-            <span class="tending-count-label">archived</span>
+            <span class="tending-count-label">composted</span>
           </div>
         </section>
       <% } %>
@@ -177,15 +177,19 @@
 
                   <div class="tending-category-buttons" role="group" aria-label="Where does this cutting go?">
                     <button type="button" class="tending-cat tending-cat--grow"    data-category="keep_growing">
-                      <span class="tending-cat-title">Keep growing</span>
+                      <span class="tending-cat-title">🪴 Keep growing</span>
                       <span class="tending-cat-sub">There's something here I can use down the line.</span>
                     </button>
                     <button type="button" class="tending-cat tending-cat--return"  data-category="return_later">
-                      <span class="tending-cat-title">Return to later</span>
+                      <span class="tending-cat-title">🌱 Return to later</span>
                       <span class="tending-cat-sub">There might be something here. I'm not sure yet.</span>
                     </button>
+                    <!-- data-category stays 'archive' — the DB column value is
+                         still 'archive' under the hood; only the UI label is
+                         being renamed to Compost. If we ever migrate the DB
+                         value too, swap this to 'compost'. -->
                     <button type="button" class="tending-cat tending-cat--archive" data-category="archive">
-                      <span class="tending-cat-title">Archive</span>
+                      <span class="tending-cat-title">🗑️ Compost</span>
                       <span class="tending-cat-sub">The meaning was in the doing — there's no more here.</span>
                     </button>
                   </div>
