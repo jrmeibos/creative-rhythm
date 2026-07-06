@@ -123,14 +123,14 @@
 .grove-bouquet-stem[src$="stem-09.svg"] { height: 320px; bottom: 160px; }
 .grove-bouquet-stem[src$="stem-10.svg"] { height: 280px; bottom: 200px; }
 .grove-bouquet-stem[src$="stem-11.svg"] { height: 300px; bottom: 180px; }
-.grove-bouquet-stem[src$="stem-12.svg"] { height: 320px; bottom: 160px; }
+.grove-bouquet-stem[src$="stem-12.svg"] { height: 270px; bottom: 210px; }
 .grove-bouquet-stem[src$="stem-01.svg"] { height: 360px; bottom: 120px; }
 @media (max-width: 1179px) {
   .grove-bouquet-stem[src$="stem-06.svg"] { height: 254px; bottom: 126px; }
   .grove-bouquet-stem[src$="stem-09.svg"] { height: 254px; bottom: 126px; }
   .grove-bouquet-stem[src$="stem-10.svg"] { height: 222px; bottom: 158px; }
   .grove-bouquet-stem[src$="stem-11.svg"] { height: 238px; bottom: 142px; }
-  .grove-bouquet-stem[src$="stem-12.svg"] { height: 254px; bottom: 126px; }
+  .grove-bouquet-stem[src$="stem-12.svg"] { height: 214px; bottom: 166px; }
   .grove-bouquet-stem[src$="stem-01.svg"] { height: 285px; bottom: 95px; }
 }
 /* Stem ends poking out below the tied bottom of the wrap. Each end
