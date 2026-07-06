@@ -198,11 +198,11 @@ app.use((req, res, next) => {
       ['spring', 'summer', 'autumn'].includes(res.locals.effectiveSeason);
 
     // Summer unlocks the Make-something practice — a student turns
-    // Cultivate cuttings into content. Strictly gated to Summer only:
-    // dashboard nudge + Greenhouse section hide as soon as the student
-    // steps into Autumn (or back into Spring/Winter). /summer and
-    // /grove URLs stay reachable if visited directly.
-    res.locals.showSummer = res.locals.effectiveSeason === 'summer';
+    // Cultivate cuttings into content. Stays available in Autumn since
+    // Autumn is Summer + a sharing layer on top (Fall's "post the link
+    // to what you shared" flow reads from Cultivated Ideas / The Grove).
+    res.locals.showSummer =
+      ['summer', 'autumn'].includes(res.locals.effectiveSeason);
   }
 
   next();
