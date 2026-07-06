@@ -55,8 +55,9 @@
                   const fanRange = 30; // total degrees, split symmetrically
                   const fanStep  = fanRange / Math.max(stemCount - 1, 1);
                   // How wide the stem ends spread across the tied bottom.
-                  // Bounded so the bunch never gets wider than the tie.
-                  const endSpread    = Math.min(60, 6 * stemCount);
+                  // Capped at 34px total so even at high stem counts the
+                  // bunch stays inside the wrap's narrow tied portion.
+                  const endSpread    = Math.min(34, 3 * stemCount);
                   const endSpreadStep = endSpread / Math.max(stemCount - 1, 1);
                   // Precompute per-stem layout so the flower up top and the
                   // matching stem-end below the wrap share the same tilt/dx.
