@@ -833,13 +833,13 @@ details[open] .gh-planted-summary::before { content: '▾  '; }
 }
 .gh-seed-art {
   display: block;
-  width: 100px;
+  width: 60px;
   height: auto;
   margin: 0;
   align-self: center;
 }
 @media (max-width: 680px) {
-  .gh-seed-art { width: 96px; }
+  .gh-seed-art { width: 58px; }
 }
 
 .gh-bed-cta {
