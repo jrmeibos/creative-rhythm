@@ -2809,6 +2809,37 @@ module.exports = {
     ).run(value ? 1 : 0, makeId, userId).changes;
   },
 
+  // Recent cohort shares across the whole cohort — powers the "Recent
+  // shares" section on /community. Joined with cutting/format/user so
+  // the template can render one card per share without further queries.
+  // Only shows created + not-just-for-me + cohort_shared = 1. Sorted by
+  // when the share happened (newest first). Limit protects the query.
+  getRecentCohortShares(limit) {
+    const cap = Math.max(1, Math.min(50, parseInt(limit, 10) || 20));
+    return db.prepare(`
+      SELECT m.id                AS make_id,
+             m.cohort_shared_at  AS cohort_shared_at,
+             m.discord_url       AS discord_url,
+             c.talked_about, c.takeaway, c.recorded_date,
+             f.name              AS format_name,
+             f.emoji             AS format_emoji,
+             u.id                AS user_id,
+             u.name              AS user_name,
+             u.avatar_initial    AS user_avatar_initial,
+             u.current_season    AS user_current_season,
+             u.profile_photo     AS user_profile_photo
+      FROM cutting_makes m
+      JOIN cuttings       c ON c.id = m.cutting_id
+      JOIN content_formats f ON f.id = m.format_id
+      JOIN users           u ON u.id = m.user_id
+      WHERE m.cohort_shared = 1
+        AND m.created       = 1
+        AND m.just_for_me   = 0
+      ORDER BY m.cohort_shared_at DESC, m.id DESC
+      LIMIT ?
+    `).all(cap);
+  },
+
   // Flip the cohort-shared flag on a make and optionally set the Discord
   // message URL. Passing shared=false clears the timestamp and URL.
   // Ownership scoped via the WHERE clause. Returns rows changed.

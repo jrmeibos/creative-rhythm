@@ -214,6 +214,23 @@
   max-width: 44rem;
   line-height: 1.55;
 }
+.grove-discord-callout {
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  color: var(--color-ink-stained);
+  margin: 1rem 0 0;
+  padding: 0.7rem 1rem;
+  background: rgba(118, 133, 108, 0.08);
+  border-left: 3px solid var(--color-understory);
+  border-radius: var(--radius-sm);
+  max-width: 44rem;
+}
+.grove-discord-callout a {
+  color: var(--color-bloem);
+  text-decoration: none;
+  border-bottom: 1px solid currentColor;
+}
+.grove-discord-callout a:hover { color: var(--color-bloem-mid); }
 
 .grove-empty {
   background: var(--color-blank-page);

@@ -20,6 +20,14 @@
           and what you don't. This is a space to choose which of your bounty
           to send out — and which was just for you.
         </p>
+        <% if (locals.communityDiscordUrl) { %>
+          <p class="grove-discord-callout">
+            <span aria-hidden="true">💬</span>
+            To share with the cohort, head to
+            <a href="<%= locals.communityDiscordUrl %>" target="_blank" rel="noopener">the cohort Discord</a>
+            and post your creation there.
+          </p>
+        <% } %>
       </header>
 
       <%
@@ -290,8 +298,14 @@
                 <form class="grove-entry-cohort-form" hidden
                       data-grove-cohort-form="<%= e.make_id %>" onsubmit="return false">
                   <p class="grove-entry-cohort-form-hint">
-                    Head to Discord and post your creation. Then paste the
-                    message link here (optional — you can add it later).
+                    <% if (locals.communityDiscordUrl) { %>
+                      Head to <a href="<%= locals.communityDiscordUrl %>" target="_blank" rel="noopener">the cohort Discord</a>
+                      and post your creation. Then paste the message link
+                      here (optional — you can add it later).
+                    <% } else { %>
+                      Head to Discord and post your creation. Then paste the
+                      message link here (optional — you can add it later).
+                    <% } %>
                   </p>
                   <label class="grove-entry-cohort-field">
                     <span class="grove-entry-cohort-field-hint">Discord message link (optional)</span>

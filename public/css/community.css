@@ -467,3 +467,113 @@
   font-style: italic;
   padding: 1.5rem 0;
 }
+
+/* ─── Recent shares from the cohort ──────────────────────────────────────── */
+.comm-shares {
+  margin: 3rem auto 0;
+  max-width: 44rem;
+}
+.comm-shares-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  padding-bottom: 0.6rem;
+  border-bottom: 1px solid rgba(16, 15, 16, 0.08);
+}
+.comm-shares-title {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: normal;
+  color: var(--color-ink-stained);
+  margin: 0;
+}
+.comm-shares-discord {
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  color: var(--color-bloem);
+  text-decoration: none;
+  border-bottom: 1px solid currentColor;
+}
+.comm-shares-discord:hover { color: var(--color-bloem-mid); }
+.comm-shares-empty {
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  color: rgba(16, 15, 16, 0.55);
+  font-style: italic;
+  padding: 1.2rem 0;
+  margin: 0;
+}
+.comm-shares-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+.comm-share {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.85rem;
+  padding: 0.85rem 1rem;
+  background: var(--color-blank-page);
+  border-radius: var(--radius-md);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+.comm-share-avatar {
+  flex: 0 0 auto;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--color-new-growth);
+  color: var(--color-ink-stained);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 0.95rem;
+  overflow: hidden;
+}
+.comm-share-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.comm-share-body {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+.comm-share-line {
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  color: var(--color-ink-stained);
+  margin: 0;
+  line-height: 1.4;
+}
+.comm-share-format {
+  color: var(--color-bloem);
+}
+.comm-share-when {
+  color: rgba(16, 15, 16, 0.5);
+  font-size: 0.82rem;
+  margin-left: 0.25rem;
+}
+.comm-share-quote {
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  font-style: italic;
+  color: rgba(16, 15, 16, 0.72);
+  margin: 0;
+  line-height: 1.45;
+}
+.comm-share-link {
+  font-family: var(--font-body);
+  font-size: 0.82rem;
+  color: var(--color-bloem);
+  text-decoration: none;
+  border-bottom: 1px solid currentColor;
+  align-self: flex-start;
+}
+.comm-share-link:hover { color: var(--color-bloem-mid); }

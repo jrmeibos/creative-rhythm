@@ -104,8 +104,15 @@ app.use(session({
   }
 }));
 
+// Discord channel for the pilot cohort — set as COMMUNITY_DISCORD_URL
+// on Railway. Read once at boot and cached; null if unset (dev without
+// the env var). Used by the Grove page callout + the /grove/make/:id
+// /cohort-share form to link students directly to the channel.
+const COMMUNITY_DISCORD_URL = (process.env.COMMUNITY_DISCORD_URL || '').trim() || null;
+
 app.use((req, res, next) => {
   res.locals.user = req.session.user || null;
+  res.locals.communityDiscordUrl = COMMUNITY_DISCORD_URL;
   // Make simulatedToday available in every template for the sidebar banner.
   // Only set for admins and TEST_ACCOUNT_ALLOWLIST users; everyone else gets null.
   if (isTimeTravelUser(req.session.user)) {
@@ -1258,6 +1265,8 @@ app.get('/community', requireAuth, (req, res) => {
     recordedDayCount:        dayCounts.get(u.id) || 0
   }));
 
+  const recentShares = db.getRecentCohortShares(20);
+
   res.render('community', {
     title: 'Community',
     page:  'community',
@@ -1270,7 +1279,8 @@ app.get('/community', requireAuth, (req, res) => {
     hasPrevWeek,
     hasNextWeek,
     isCurrentWeek: weekStart === currentWeekStart,
-    currentUserId: req.session.user.id
+    currentUserId: req.session.user.id,
+    recentShares,
   });
 });
 
