@@ -115,20 +115,29 @@ app.use((req, res, next) => {
     res.locals.simulatedToday = null;
   }
 
-  // showTending is the sidebar gate for The Gardener nav item. True once
-  // the user is past the Winter (Weeks 1–3) unlock cliff — Week 4+. Nulls
-  // for anon/pre-course users, matching how the /tending route redirects.
-  res.locals.showTending = false;
-  const u = req.session.user;
-  if (u && u.id) {
-    try {
-      const wk = getCurrentCourseWeek(u).weekNumber;
-      if (typeof wk === 'number' && wk >= 4) res.locals.showTending = true;
-    } catch (_) { /* pre-course or no start date — keep false */ }
-  }
-
   next();
 });
+
+// ── Effective season ───────────────────────────────────────────────────
+// Runs AFTER session-freshen (so u.current_season reflects any /api/season
+// write from this or a prior request). The student's internal season drives
+// feature gates (Tending prompts, future Summer/Autumn features). Trial
+// students pre-Week-4 are locked to Winter regardless of any stray DB
+// value. Curriculum-progress UI (calendar tiles, "Week X of 12", growth
+// visual) still uses the curricular season — that's about the course's
+// structure, not the student's pace.
+//
+// Eligibility to pick a season:
+//   - Paid students (course_length_weeks >= 12) — always eligible.
+//   - Trial students — eligible once their course week reaches 4.
+//
+// Auto-advance: when a newly eligible student has current_season = null,
+// we write 'spring' server-side on first render. This keeps downstream
+// code simple (effectiveSeason === current_season, no fallbacks) and
+// makes community/sidebar avatar colors correct.
+//
+// NOTE: mounted here — after the session-freshen middleware defined below
+// — so we read the fresh current_season, not the stale session value.
 
 // Session-freshen middleware — re-syncs course_length_weeks + enrollment_tier
 // from the DB on every authenticated request. Without this, a student's
@@ -147,6 +156,48 @@ app.use((req, res, next) => {
       s.course_start_date   = fresh.course_start_date || null;
     }
   }
+  next();
+});
+
+// Effective-season middleware (see docblock above the session-freshen block).
+app.use((req, res, next) => {
+  res.locals.canPickSeason       = false;
+  res.locals.effectiveSeason     = null;
+  res.locals.showTending         = false;
+  res.locals.showSeasonIntroCard = false;
+
+  const u = req.session.user;
+  if (u && u.id) {
+    let weekNumber = null;
+    try { weekNumber = getCurrentCourseWeek(u).weekNumber; } catch (_) {}
+    const courseLen  = u.course_length_weeks || 12;
+    const isPaid     = courseLen >= 12;
+    const isEligible = isPaid || (typeof weekNumber === 'number' && weekNumber >= 4);
+
+    res.locals.canPickSeason = isEligible;
+
+    if (isEligible) {
+      // Auto-advance to Spring on first eligible render (students only —
+      // admins get eligibility for testing/preview but no auto-write).
+      if (!u.current_season && u.role === 'student') {
+        db.updateUserSeason(u.id, 'spring');
+        u.current_season = 'spring';
+      }
+      res.locals.effectiveSeason = u.current_season || 'spring';
+      if (u.role === 'student' && !db.hasSeenSeasonIntro(u.id)) {
+        res.locals.showSeasonIntroCard = true;
+      }
+    } else {
+      res.locals.effectiveSeason = 'winter';
+    }
+
+    // Tending unlocks once the student is past Winter. Any Spring+ season
+    // — including Autumn/Summer if they moved themselves there — keeps
+    // Tending accessible.
+    res.locals.showTending =
+      ['spring', 'summer', 'autumn'].includes(res.locals.effectiveSeason);
+  }
+
   next();
 });
 
@@ -992,8 +1043,24 @@ app.post('/api/season', requireAuth, (req, res) => {
   if (season && !['spring', 'summer', 'autumn', 'winter'].includes(season)) {
     return res.status(400).json({ error: 'Invalid season.' });
   }
+  // Belt-and-suspenders: refuse writes from pre-Week-4 trial students.
+  // The UI already disables their picker (see profile.ejs canPickSeason),
+  // but the API check makes it impossible to bypass via a hand-crafted
+  // POST. Admins are always allowed through so they can preview any state.
+  if (req.session.user.role !== 'admin' && !res.locals.canPickSeason) {
+    return res.status(403).json({
+      error: 'Your season unlocks after Week 3 or with the full course.',
+    });
+  }
   db.updateUserSeason(req.session.user.id, season || null);
   req.session.user.current_season = season || null;
+  res.json({ ok: true });
+});
+
+// Dismiss the one-time "Welcome to Spring" intro card on the dashboard.
+// Idempotent — the flag is a boolean, not a counter.
+app.post('/api/season/intro-seen', requireAuth, (req, res) => {
+  db.markSeasonIntroSeen(req.session.user.id);
   res.json({ ok: true });
 });
 
@@ -2622,9 +2689,11 @@ app.get('/tending', requireAuth, (req, res) => {
   const courseWeek       = getCurrentCourseWeek(user, courseStartDate);
   const currentCourseWeek = courseWeek.weekNumber;
 
-  // Pre-Spring: Tending unlocks at Week 4. Bounce with a query-param the
-  // dashboard can convert to a soft "this unlocks in Spring" note.
-  if (!currentCourseWeek || currentCourseWeek < 4) {
+  // Gate on effective season — matches what the Greenhouse "Tend Your
+  // Cuttings" section shows. A Winter-set student (either pre-Week-4 or
+  // deliberately stepped back) doesn't have access. res.locals.showTending
+  // is set by the effective-season middleware and covers both cases.
+  if (!res.locals.showTending) {
     return res.redirect('/dashboard?tending_locked=1');
   }
 

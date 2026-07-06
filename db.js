@@ -672,6 +672,15 @@ db.exec(`
     console.log('✓ Migrated: added tending_intro_seen to users');
   }
 
+  // Users: one-time "Welcome to Spring" intro card flag. Fires the first time
+  // a student becomes eligible for the season selector — either their course
+  // week crosses into 4 or they upgrade to the full 12-week course. Set to 1
+  // when they dismiss the card so it doesn't keep re-appearing.
+  if (!userCols2.includes('season_intro_seen')) {
+    db.exec("ALTER TABLE users ADD COLUMN season_intro_seen INTEGER DEFAULT 0");
+    console.log('✓ Migrated: added season_intro_seen to users');
+  }
+
   // Avatars moved to /data/avatars — old paths pointing to /uploads/avatars/ are now broken.
   // Reset them so users see initials until they re-upload.
   db.exec("UPDATE users SET profile_photo = NULL WHERE profile_photo LIKE '/uploads/avatars/%'");
@@ -2332,6 +2341,20 @@ module.exports = {
   markTendingIntroSeen(userId) {
     return db.prepare(
       'UPDATE users SET tending_intro_seen = 1 WHERE id = ?'
+    ).run(userId).changes;
+  },
+
+  // Whether the student has dismissed the "Welcome to Spring" intro card.
+  // Returns true if they have OR if the flag column doesn't exist yet
+  // (safe fallback that suppresses the card rather than showing it in a
+  // half-migrated state).
+  hasSeenSeasonIntro(userId) {
+    const row = db.prepare('SELECT season_intro_seen FROM users WHERE id = ?').get(userId);
+    return !!(row && row.season_intro_seen);
+  },
+  markSeasonIntroSeen(userId) {
+    return db.prepare(
+      'UPDATE users SET season_intro_seen = 1 WHERE id = ?'
     ).run(userId).changes;
   },
 
