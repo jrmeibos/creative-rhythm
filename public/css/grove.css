@@ -111,7 +111,9 @@
   left: 50%;
   width: auto;
   height: 480px;
-  transform: translate(calc(-50% + var(--dx, 0px)), 0) rotate(var(--tilt, 0deg));
+  transform: translate(calc(-50% + var(--dx, 0px)), 0)
+             rotate(var(--tilt, 0deg))
+             scaleX(var(--flip, 1));
   transform-origin: bottom center;
   display: block;
 }
@@ -179,12 +181,14 @@
   from {
     opacity: 0;
     transform: translate(calc(-50% + var(--dx, 0px)), 80px)
-               rotate(var(--tilt, 0deg)) scale(0.92);
+               rotate(var(--tilt, 0deg))
+               scale(calc(0.92 * var(--flip, 1)), 0.92);
   }
   to {
     opacity: 1;
     transform: translate(calc(-50% + var(--dx, 0px)), 0)
-               rotate(var(--tilt, 0deg)) scale(1);
+               rotate(var(--tilt, 0deg))
+               scale(var(--flip, 1), 1);
   }
 }
 .grove-bouquet-stem.is-just-bloomed {
