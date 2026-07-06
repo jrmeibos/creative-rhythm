@@ -57,6 +57,27 @@
   padding-bottom: 1.5rem;
   border-bottom: 1px solid rgba(118, 133, 108, 0.2);
 }
+/* Header layout when there's a decorative watercolor beside the title.
+   Art on the left, title stack on the right on wide viewports; art
+   above the title on narrow ones (the flex-wrap handles it). */
+.cm-header--with-art {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1.5rem;
+  text-align: left;
+  flex-wrap: wrap;
+}
+.cm-header-art {
+  display: block;
+  width: 110px;
+  height: auto;
+  flex: 0 0 auto;
+}
+.cm-header-text {
+  flex: 0 1 auto;
+  max-width: 32rem;
+}
 
 .cm-title {
   font-family: var(--font-display);
