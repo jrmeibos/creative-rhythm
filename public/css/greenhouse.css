@@ -1509,14 +1509,62 @@ details[open] .gh-planted-summary::before { content: '▾  '; }
 
 /* ─── Cuttings controls: sort + filter ─────────────────────────────────── */
 
+/* Collapsible <details> wrapper — summary is always visible, the
+   controls inside expand/collapse. Header carries its own top/bottom
+   rules so the container reads as one unit whether open or closed. */
+.cuttings-controls-wrap {
+  margin: 0 0 2.25rem;
+  border-top: 1px solid rgba(16, 15, 16, 0.08);
+  border-bottom: 1px solid rgba(16, 15, 16, 0.08);
+}
+.cuttings-controls-summary {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 0;
+  cursor: pointer;
+  list-style: none;
+  /* Firefox */
+}
+.cuttings-controls-summary::-webkit-details-marker { display: none; }
+.cuttings-controls-summary::marker { content: ''; }
+
+.cuttings-controls-summary-title {
+  font-family: var(--font-body);
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: rgba(16, 15, 16, 0.72);
+  letter-spacing: 0.02em;
+}
+.cuttings-controls-summary-count {
+  font-family: var(--font-body);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-pearl);
+  background: var(--color-bloem);
+  padding: 0.12rem 0.5rem;
+  border-radius: 999px;
+}
+.cuttings-controls-summary-chevron {
+  margin-left: auto;
+  font-size: 0.85rem;
+  color: rgba(16, 15, 16, 0.5);
+  transition: transform 0.18s ease;
+}
+.cuttings-controls-wrap[open] .cuttings-controls-summary-chevron {
+  transform: rotate(180deg);
+}
+.cuttings-controls-summary:hover .cuttings-controls-summary-chevron {
+  color: var(--color-bloem);
+}
+
 .cuttings-controls {
   display: flex;
   flex-direction: column;
   gap: 0.4rem;
-  margin: 0 0 2.25rem;
-  padding: 0.85rem 0;
-  border-top: 1px solid rgba(16, 15, 16, 0.08);
-  border-bottom: 1px solid rgba(16, 15, 16, 0.08);
+  padding: 0.15rem 0 0.85rem;
 }
 
 .cuttings-control-row {

@@ -53,7 +53,20 @@
           function chipCls(active)   { return 'cuttings-chip' + (active ? ' is-active' : ''); }
         %>
 
-        <!-- ── Controls ─────────────────────────────────────────────── -->
+        <!-- ── Controls (collapsible <details>) ─────────────────────────
+             Collapsed by default so the header doesn't crowd the archive.
+             Auto-opens when any filter is active (status || rating) so
+             students don't wonder why a cutting seems to be "missing." -->
+        <details class="cuttings-controls-wrap"<%= (status || rating) ? ' open' : '' %>>
+          <summary class="cuttings-controls-summary">
+            <span class="cuttings-controls-summary-title">Sort and Filter</span>
+            <% if (status || rating) { %>
+              <span class="cuttings-controls-summary-count">
+                <%= (status ? 1 : 0) + (rating ? 1 : 0) %> active
+              </span>
+            <% } %>
+            <span class="cuttings-controls-summary-chevron" aria-hidden="true">▾</span>
+          </summary>
         <div class="cuttings-controls" role="group" aria-label="Sort and filter cuttings">
 
           <!-- Sort: segmented [Newest | Oldest] pill toggle -->
@@ -97,6 +110,7 @@
             </div>
           <% } %>
         </div>
+        </details>
 
         <% if (filteredCount === 0) { %>
 
