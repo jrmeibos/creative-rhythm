@@ -47,17 +47,22 @@
               <img class="grove-bouquet-back" src="/images/grove/bouquet-full.svg" alt="">
               <% if (stemCount > 0) { %>
                 <%
-                  // Spacing shrinks as stems multiply so the bouquet stays
-                  // bunched inside the wrap. Cap at 32px between centers so
-                  // 2-3 stems still show a subtle spread.
-                  const stemSpacing = Math.min(32, 180 / Math.max(stemCount, 1));
+                  // Real-bouquet layout: all stems come from ~the same base
+                  // point (tiny per-stem horizontal jitter for organic feel),
+                  // and fan out across a ±22° spread so their flower heads
+                  // splay across the top of the wrap. The fan step shrinks as
+                  // more stems join so they distribute evenly within the fan.
+                  const fanRange = 44; // total degrees, split symmetrically
+                  const fanStep  = fanRange / Math.max(stemCount - 1, 1);
                 %>
                 <% stemEntries.forEach(function (e, i) {
                      const variant = e.stem_variant || (((e.make_id * 7) % 12) + 1);
                      const paddedVariant = String(variant).padStart(2, '0');
-                     const dx = Math.round((i - (stemCount - 1) / 2) * stemSpacing);
-                     const tilt = ((e.make_id * 37) % 11) - 5;
-                     const zi = stemCount - i;
+                     const baseTilt   = (i - (stemCount - 1) / 2) * fanStep;
+                     const tiltJitter = ((e.make_id * 11) % 7) - 3;
+                     const tilt       = Math.round(baseTilt + tiltJitter);
+                     const dx         = ((e.make_id * 7) % 7) - 3;
+                     const zi         = stemCount - i;
                 %>
                   <img class="grove-bouquet-stem"
                        src="/images/grove/stems/stem-<%= paddedVariant %>.svg"
