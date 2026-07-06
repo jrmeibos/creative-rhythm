@@ -890,20 +890,36 @@ details[open] .gh-planted-summary::before { content: '▾  '; }
   opacity: 0.78;
 }
 
+/* Same pill shape as .gh-bed-cta but in a lighter sage tone so the two
+   buttons read as a paired primary + secondary. */
 .gh-bed-fallow-link {
   display: inline-block;
-  margin-top: 0.6rem;
   font-family: var(--font-body);
-  font-size: 0.78rem;
-  font-style: italic;
+  font-size: 0.85rem;
+  font-weight: 400;
   color: var(--color-understory);
-  text-decoration: underline;
-  text-underline-offset: 3px;
-  opacity: 0.7;
-  transition: opacity 0.15s;
+  border: 1.5px solid var(--color-understory);
+  border-radius: 20px;
+  padding: 0.45rem 1rem;
+  text-decoration: none;
   cursor: pointer;
+  transition: background 0.15s, opacity 0.15s;
+  opacity: 0.8;
 }
-.gh-bed-fallow-link:hover { opacity: 1; }
+.gh-bed-fallow-link:hover {
+  background: rgba(118, 133, 108, 0.08);
+  opacity: 1;
+}
+
+/* Container for the two empty-bed buttons — sits them side by side, wraps
+   to two rows on narrow columns. */
+.gh-bed-empty-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  margin-top: 0.5rem;
+}
+.gh-bed-empty-actions .gh-bed-cta { margin-top: 0; }
 
 .gh-bed-fallow-note {
   font-family: var(--font-display);

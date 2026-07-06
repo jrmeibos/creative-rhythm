@@ -82,8 +82,10 @@
               <% } else if (isWinterLocked) { %>
                 <p class="gh-bed-winter-note">It's currently Winter. Come back in Spring to plant your goals.</p>
               <% } else { %>
-                <a href="/greenhouse/plant?bed=<%= n %>" class="gh-bed-cta">+ plant a goal</a>
-                <a href="#" class="gh-bed-fallow-link" data-bed="<%= n %>">Leave this bed fallow</a>
+                <div class="gh-bed-empty-actions">
+                  <a href="/greenhouse/plant?bed=<%= n %>" class="gh-bed-cta">+ plant a goal</a>
+                  <a href="#" class="gh-bed-fallow-link" data-bed="<%= n %>">Leave this bed fallow</a>
+                </div>
               <% } %>
             </div>
           <% } %>
@@ -350,19 +352,23 @@
                     <% } %>
                   </div>
                   <div id="gh-view-<%= n %>">
-                    <%- renderFacets(orig, false) %>
-                    <% if (!orig) { %>
-                      <!-- Empty bed in tending state: surface the same plant CTA
-                           the beds-empty template uses, so students can plant
-                           goals 2 and 3 after planting goal 1. No Winter gate
-                           here — once tending starts, the "wait for Spring"
-                           gate has been crossed. -->
-                      <% if (fallowBedNumbers.includes(n)) { %>
-                        <p class="gh-bed-fallow-note">Resting this season</p>
-                        <a href="/greenhouse/plant?bed=<%= n %>" class="gh-bed-fallow-replant">Plant something here →</a>
-                      <% } else { %>
-                        <a href="/greenhouse/plant?bed=<%= n %>" class="gh-bed-cta">+ plant a goal</a>
-                        <a href="#" class="gh-bed-fallow-link" data-bed="<%= n %>">Leave this bed fallow</a>
+                    <% if (!orig && fallowBedNumbers.includes(n)) { %>
+                      <!-- Fallow bed: skip renderFacets so "Not yet planted"
+                           doesn't sit above "Resting this season". -->
+                      <p class="gh-bed-fallow-note">Resting this season</p>
+                      <a href="/greenhouse/plant?bed=<%= n %>" class="gh-bed-fallow-replant">Plant something here →</a>
+                    <% } else { %>
+                      <%- renderFacets(orig, false) %>
+                      <% if (!orig) { %>
+                        <!-- Empty bed in tending state: surface the same plant CTA
+                             the beds-empty template uses, so students can plant
+                             goals 2 and 3 after planting goal 1. No Winter gate
+                             here — once tending starts, the "wait for Spring"
+                             gate has been crossed. -->
+                        <div class="gh-bed-empty-actions">
+                          <a href="/greenhouse/plant?bed=<%= n %>" class="gh-bed-cta">+ plant a goal</a>
+                          <a href="#" class="gh-bed-fallow-link" data-bed="<%= n %>">Leave this bed fallow</a>
+                        </div>
                       <% } %>
                     <% } %>
                   </div>
