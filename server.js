@@ -2821,6 +2821,79 @@ app.get('/summer', requireAuth, (req, res) => {
   });
 });
 
+// Manage custom formats — student-created + editable + archivable.
+// Built-ins are shown read-only for context; the CRUD only touches the
+// student's own rows.
+app.get('/summer/formats', requireAuth, (req, res) => {
+  const builtins = db.getFormatsForUser(req.session.user.id).filter(f => f.user_id === null);
+  const customs  = db.getAllCustomFormats(req.session.user.id);
+  // Attach a small "usedCount" per custom so the manage UI can decide
+  // whether to offer delete (0 uses) or archive-only (≥1).
+  for (const c of customs) c.usedCount = db.countMakesForFormat(c.id);
+  res.render('summer-formats', {
+    title: 'Content formats',
+    page: 'summer',
+    user: req.session.user,
+    builtins,
+    customs,
+  });
+});
+
+app.post('/summer/formats', requireAuth, (req, res) => {
+  const { name, emoji, description } = req.body || {};
+  if (!name || !String(name).trim()) {
+    return res.status(400).json({ error: 'Name required.' });
+  }
+  const id = db.createCustomFormat(req.session.user.id, name, emoji, description);
+  res.json({ ok: true, id });
+});
+
+app.post('/summer/formats/:id/edit', requireAuth, (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (!Number.isInteger(id) || id <= 0) {
+    return res.status(400).json({ error: 'Invalid format id.' });
+  }
+  const { name, emoji, description } = req.body || {};
+  if (!name || !String(name).trim()) {
+    return res.status(400).json({ error: 'Name required.' });
+  }
+  // Ownership is enforced inside the helper's WHERE user_id = ?.
+  const changed = db.updateCustomFormat(id, req.session.user.id, { name, emoji, description });
+  res.json({ ok: true, changed });
+});
+
+// One route for "get rid of this format" — server decides delete vs
+// archive based on whether any cutting_makes rows still reference it.
+// Client sees the same success shape either way.
+app.post('/summer/formats/:id/remove', requireAuth, (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (!Number.isInteger(id) || id <= 0) {
+    return res.status(400).json({ error: 'Invalid format id.' });
+  }
+  // Guard: format must belong to this user (built-ins have user_id NULL
+  // so getFormatById already blocks them via the ownership check).
+  const format = db.getFormatById(id, req.session.user.id);
+  if (!format || format.user_id === null) {
+    return res.status(403).json({ error: 'Format is not yours to remove.' });
+  }
+  const uses = db.countMakesForFormat(id);
+  if (uses > 0) {
+    db.archiveCustomFormat(id, req.session.user.id);
+    return res.json({ ok: true, action: 'archived', uses });
+  }
+  db.deleteCustomFormat(id, req.session.user.id);
+  res.json({ ok: true, action: 'deleted', uses: 0 });
+});
+
+app.post('/summer/formats/:id/unarchive', requireAuth, (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (!Number.isInteger(id) || id <= 0) {
+    return res.status(400).json({ error: 'Invalid format id.' });
+  }
+  db.unarchiveCustomFormat(id, req.session.user.id);
+  res.json({ ok: true });
+});
+
 // Per-format "how to repurpose into this format" detail page. Built-ins
 // only for now — URL is /summer/format/:slug. Custom formats surface
 // their name + emoji + one-line "how I use this" note directly on the

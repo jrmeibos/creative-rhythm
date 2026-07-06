@@ -302,3 +302,236 @@
 .summer-format-back {
   margin-top: 1.5rem;
 }
+
+/* ── /summer/formats manage page ─────────────────────────────────────── */
+.summer-fmts-section {
+  margin-bottom: 2rem;
+}
+.summer-fmts-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 1rem;
+  margin-bottom: 0.85rem;
+  flex-wrap: wrap;
+}
+.summer-fmts-section-title {
+  font-family: var(--font-display);
+  font-size: 1.4rem;
+  color: var(--color-ink-stained);
+}
+.summer-fmts-add-btn {
+  background: transparent;
+  border: 1px dashed rgba(112, 92, 108, 0.4);
+  border-radius: var(--radius-md);
+  color: var(--color-bloem);
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  padding: 0.45rem 0.95rem;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+.summer-fmts-add-btn:hover {
+  background: var(--color-bloem-light);
+  border-color: var(--color-bloem);
+}
+.summer-fmts-empty {
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  color: rgba(16, 15, 16, 0.55);
+  font-style: italic;
+  padding: 0.75rem 0;
+}
+.summer-fmts-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.summer-fmts-item {
+  background: var(--color-blank-page);
+  border-radius: var(--radius-md);
+  padding: 0.75rem 1rem;
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+.summer-fmts-item--builtin,
+.summer-fmts-item--archived {
+  background: transparent;
+  box-shadow: none;
+  border: 1px solid rgba(16, 15, 16, 0.08);
+}
+.summer-fmts-item-body {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  min-width: 0;
+}
+.summer-fmts-item-emoji {
+  font-size: 1.4rem;
+  line-height: 1;
+  flex: 0 0 auto;
+}
+.summer-fmts-item-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
+.summer-fmts-item-name {
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--color-ink-stained);
+}
+.summer-fmts-item-desc {
+  font-family: var(--font-body);
+  font-size: 0.82rem;
+  color: rgba(16, 15, 16, 0.65);
+  line-height: 1.4;
+}
+.summer-fmts-item-used {
+  font-family: var(--font-body);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(16, 15, 16, 0.5);
+  margin-top: 0.2rem;
+}
+.summer-fmts-item-actions {
+  display: inline-flex;
+  gap: 0.4rem;
+  flex: 0 0 auto;
+}
+.summer-fmts-item-btn {
+  background: transparent;
+  border: 1px solid rgba(16, 15, 16, 0.16);
+  border-radius: 999px;
+  padding: 0.3rem 0.75rem;
+  font-family: var(--font-body);
+  font-size: 0.8rem;
+  color: var(--color-ink-stained);
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s, color 0.15s;
+}
+.summer-fmts-item-btn:hover {
+  border-color: var(--color-bloem);
+  color: var(--color-bloem);
+  background: rgba(112, 92, 108, 0.05);
+}
+.summer-fmts-item-btn--remove {
+  color: rgba(177, 58, 58, 0.75);
+  border-color: rgba(177, 58, 58, 0.35);
+}
+.summer-fmts-item-btn--remove:hover {
+  color: #b13a3a;
+  border-color: #b13a3a;
+  background: rgba(177, 58, 58, 0.06);
+}
+.summer-fmts-item-link {
+  font-family: var(--font-body);
+  font-size: 0.82rem;
+  color: var(--color-bloem);
+  text-decoration: none;
+  border-bottom: 1px solid currentColor;
+  padding-bottom: 1px;
+}
+
+.summer-fmts-archived {
+  margin-top: 0.75rem;
+}
+.summer-fmts-archived summary {
+  font-family: var(--font-body);
+  font-size: 0.82rem;
+  color: rgba(16, 15, 16, 0.55);
+  cursor: pointer;
+  padding: 0.4rem 0;
+}
+
+/* ── Add / edit form ────────────────────────────────────────────────── */
+.summer-fmts-form {
+  background: var(--color-pearl);
+  border: 1px dashed rgba(112, 92, 108, 0.35);
+  border-radius: var(--radius-md);
+  padding: 1rem 1.1rem;
+  margin-bottom: 0.85rem;
+}
+.summer-fmts-form[hidden] { display: none !important; }
+.summer-fmts-form-row {
+  display: flex;
+  gap: 0.85rem;
+  margin-bottom: 0.7rem;
+}
+.summer-fmts-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.summer-fmts-field--emoji { flex: 0 0 4.5rem; }
+.summer-fmts-field-label {
+  font-family: var(--font-body);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-bloem);
+}
+.summer-fmts-field input {
+  padding: 0.55rem 0.7rem;
+  border: 1px solid rgba(16, 15, 16, 0.16);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  color: var(--color-ink-stained);
+  background: white;
+}
+.summer-fmts-field input:focus {
+  outline: none;
+  border-color: var(--color-bloem);
+  box-shadow: 0 0 0 2px rgba(112, 92, 108, 0.15);
+}
+.summer-fmts-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 0.7rem;
+  margin-top: 0.6rem;
+}
+.summer-fmts-form-cancel {
+  background: transparent;
+  border: none;
+  padding: 0.35rem 0.7rem;
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  color: rgba(16, 15, 16, 0.55);
+  cursor: pointer;
+}
+.summer-fmts-form-cancel:hover { color: var(--color-bloem); }
+.summer-fmts-form-save {
+  background: var(--color-bloem);
+  color: var(--color-pearl);
+  border: none;
+  border-radius: var(--radius-md);
+  padding: 0.5rem 1.1rem;
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.summer-fmts-form-save:hover:not(:disabled) { background: var(--color-bloem-mid); }
+.summer-fmts-form-save:disabled { opacity: 0.6; cursor: default; }
+.summer-fmts-form-error {
+  color: #b13a3a;
+  font-family: var(--font-body);
+  font-size: 0.82rem;
+  margin: 0;
+  flex: 1 1 auto;
+}

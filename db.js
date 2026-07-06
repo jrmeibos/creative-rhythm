@@ -2550,6 +2550,79 @@ module.exports = {
     `).all(userId);
   },
 
+  // ── Custom-format CRUD (per-student) ───────────────────────────────────
+  // Student-created formats live in the same content_formats table with
+  // a non-null user_id. slug is auto-derived from the name (kebab-case,
+  // uniqueness scoped per user); Julia's built-ins have their own slug
+  // namespace via user_id IS NULL.
+
+  createCustomFormat(userId, name, emoji, description) {
+    const clean = String(name || '').trim();
+    if (!clean) throw new Error('Format name required');
+    // Slug — kebab-case, alnum only, uniquified per user by appending a
+    // short suffix if a collision exists. Not shown in UI; used only if
+    // we later add /summer/format/custom/:slug pages.
+    const base = clean.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'custom';
+    let slug = base;
+    let n = 2;
+    while (db.prepare('SELECT id FROM content_formats WHERE user_id = ? AND slug = ?').get(userId, slug)) {
+      slug = base + '-' + n++;
+    }
+    // New rows go to the end of the user's list by default (position >
+    // any existing user format).
+    const maxPos = db.prepare(
+      'SELECT COALESCE(MAX(position), 0) AS m FROM content_formats WHERE user_id = ?'
+    ).get(userId).m;
+    return db.prepare(`
+      INSERT INTO content_formats
+        (user_id, slug, name, emoji, description, position)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `).run(userId, slug, clean, (emoji || '').trim() || null, (description || '').trim() || null, maxPos + 1).lastInsertRowid;
+  },
+
+  updateCustomFormat(formatId, userId, { name, emoji, description }) {
+    const clean = String(name || '').trim();
+    if (!clean) throw new Error('Format name required');
+    return db.prepare(`
+      UPDATE content_formats
+      SET name = ?, emoji = ?, description = ?
+      WHERE id = ? AND user_id = ?
+    `).run(clean, (emoji || '').trim() || null, (description || '').trim() || null, formatId, userId).changes;
+  },
+
+  // Any references from cutting_makes prevent a hard delete — archiving
+  // preserves history. Route decides delete vs archive based on this.
+  countMakesForFormat(formatId) {
+    return db.prepare('SELECT COUNT(*) AS c FROM cutting_makes WHERE format_id = ?').get(formatId).c;
+  },
+
+  deleteCustomFormat(formatId, userId) {
+    return db.prepare(
+      'DELETE FROM content_formats WHERE id = ? AND user_id = ?'
+    ).run(formatId, userId).changes;
+  },
+  archiveCustomFormat(formatId, userId) {
+    return db.prepare(
+      'UPDATE content_formats SET archived = 1 WHERE id = ? AND user_id = ?'
+    ).run(formatId, userId).changes;
+  },
+  unarchiveCustomFormat(formatId, userId) {
+    return db.prepare(
+      'UPDATE content_formats SET archived = 0 WHERE id = ? AND user_id = ?'
+    ).run(formatId, userId).changes;
+  },
+
+  // All custom formats for a user, both live and archived. Used by
+  // /summer/formats management page. Ordered by position then id.
+  getAllCustomFormats(userId) {
+    return db.prepare(`
+      SELECT id, user_id, slug, name, emoji, description, position, archived
+      FROM content_formats
+      WHERE user_id = ?
+      ORDER BY archived ASC, position ASC, id ASC
+    `).all(userId);
+  },
+
   // All makes for a user, joined with the format they used. Ordered
   // newest-first. The /summer view groups these by cutting_id in JS so
   // each Cultivate entry can render "already made as ..." chips inline.

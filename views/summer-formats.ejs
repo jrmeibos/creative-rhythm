@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <%- include('partials/head') %>
+  <link rel="stylesheet" href="/css/dashboard.css">
+  <link rel="stylesheet" href="/css/summer.css">
+</head>
+<body class="app-body">
+  <div class="app-layout">
+    <%- include('partials/sidebar') %>
+    <main class="main-content" id="main">
+
+      <a href="/summer" class="lesson-back">← Back to Summer</a>
+
+      <header class="summer-header">
+        <h1 class="summer-title">Content formats</h1>
+        <p class="summer-intro">
+          The built-in formats are always available. Add your own for the
+          ways you like to shape content that aren't in the list — each with
+          a short note to remind you what you meant.
+        </p>
+      </header>
+
+      <!-- ── Your custom formats ─────────────────────────────────────── -->
+      <section class="summer-fmts-section">
+        <div class="summer-fmts-section-header">
+          <h2 class="summer-fmts-section-title">Your formats</h2>
+          <button type="button" class="summer-fmts-add-btn" data-add-format>+ Add a format</button>
+        </div>
+
+        <!-- Add / edit form (hidden until "Add" is clicked) -->
+        <form class="summer-fmts-form" hidden data-format-form
+              onsubmit="return false">
+          <input type="hidden" name="formatId" value="">
+          <div class="summer-fmts-form-row summer-fmts-form-row--head">
+            <label class="summer-fmts-field summer-fmts-field--emoji">
+              <span class="summer-fmts-field-label">Emoji</span>
+              <input type="text" name="emoji" maxlength="4" placeholder="🌱">
+            </label>
+            <label class="summer-fmts-field summer-fmts-field--name">
+              <span class="summer-fmts-field-label">Name</span>
+              <input type="text" name="name" maxlength="64" placeholder="Zine, sticker set, voice memo…" required>
+            </label>
+          </div>
+          <label class="summer-fmts-field">
+            <span class="summer-fmts-field-label">How I use this (optional)</span>
+            <input type="text" name="description" maxlength="180" placeholder="A note to remember what you meant.">
+          </label>
+          <div class="summer-fmts-form-actions">
+            <button type="button" class="summer-fmts-form-cancel" data-format-cancel>Cancel</button>
+            <button type="button" class="summer-fmts-form-save"   data-format-save>Save</button>
+            <p class="summer-fmts-form-error" hidden></p>
+          </div>
+        </form>
+
+        <% const live = customs.filter(function (f) { return !f.archived; }); %>
+        <% const arch = customs.filter(function (f) { return  f.archived; }); %>
+
+        <% if (live.length === 0) { %>
+          <p class="summer-fmts-empty">Nothing yet. Add one when a format you use isn't in the built-in list.</p>
+        <% } else { %>
+          <ul class="summer-fmts-list">
+            <% live.forEach(function (f) { %>
+              <li class="summer-fmts-item" data-format-item data-format-id="<%= f.id %>">
+                <div class="summer-fmts-item-body">
+                  <span class="summer-fmts-item-emoji"><%= f.emoji || '🌿' %></span>
+                  <div class="summer-fmts-item-text">
+                    <span class="summer-fmts-item-name"><%= f.name %></span>
+                    <% if (f.description) { %>
+                      <span class="summer-fmts-item-desc"><%= f.description %></span>
+                    <% } %>
+                    <% if (f.usedCount > 0) { %>
+                      <span class="summer-fmts-item-used"><%= f.usedCount %> use<%= f.usedCount === 1 ? '' : 's' %></span>
+                    <% } %>
+                  </div>
+                </div>
+                <div class="summer-fmts-item-actions">
+                  <button type="button" class="summer-fmts-item-btn"
+                          data-format-edit
+                          data-emoji="<%= f.emoji || '' %>"
+                          data-name="<%= f.name %>"
+                          data-desc="<%= f.description || '' %>">Edit</button>
+                  <button type="button" class="summer-fmts-item-btn summer-fmts-item-btn--remove"
+                          data-format-remove
+                          data-uses="<%= f.usedCount %>"
+                          data-name="<%= f.name %>">
+                    <%= f.usedCount > 0 ? 'Archive' : 'Delete' %>
+                  </button>
+                </div>
+              </li>
+            <% }); %>
+          </ul>
+        <% } %>
+
+        <% if (arch.length > 0) { %>
+          <details class="summer-fmts-archived">
+            <summary>Archived (<%= arch.length %>)</summary>
+            <ul class="summer-fmts-list">
+              <% arch.forEach(function (f) { %>
+                <li class="summer-fmts-item summer-fmts-item--archived" data-format-item data-format-id="<%= f.id %>">
+                  <div class="summer-fmts-item-body">
+                    <span class="summer-fmts-item-emoji"><%= f.emoji || '🌿' %></span>
+                    <div class="summer-fmts-item-text">
+                      <span class="summer-fmts-item-name"><%= f.name %></span>
+                      <% if (f.description) { %>
+                        <span class="summer-fmts-item-desc"><%= f.description %></span>
+                      <% } %>
+                      <span class="summer-fmts-item-used"><%= f.usedCount %> use<%= f.usedCount === 1 ? '' : 's' %></span>
+                    </div>
+                  </div>
+                  <div class="summer-fmts-item-actions">
+                    <button type="button" class="summer-fmts-item-btn"
+                            data-format-unarchive>Bring back</button>
+                  </div>
+                </li>
+              <% }); %>
+            </ul>
+          </details>
+        <% } %>
+      </section>
+
+      <!-- ── Built-in formats (read-only) ────────────────────────────── -->
+      <section class="summer-fmts-section">
+        <h2 class="summer-fmts-section-title">Built-in formats</h2>
+        <ul class="summer-fmts-list summer-fmts-list--builtins">
+          <% builtins.forEach(function (f) { %>
+            <li class="summer-fmts-item summer-fmts-item--builtin">
+              <div class="summer-fmts-item-body">
+                <span class="summer-fmts-item-emoji"><%= f.emoji %></span>
+                <div class="summer-fmts-item-text">
+                  <span class="summer-fmts-item-name"><%= f.name %></span>
+                  <% if (f.description) { %>
+                    <span class="summer-fmts-item-desc"><%= f.description %></span>
+                  <% } %>
+                </div>
+              </div>
+              <a href="/summer/format/<%= f.slug %>" class="summer-fmts-item-link">How to →</a>
+            </li>
+          <% }); %>
+        </ul>
+      </section>
+
+    </main>
+  </div>
+
+  <script>
+    (function () {
+      const form = document.querySelector('[data-format-form]');
+      const idIn  = form.querySelector('[name="formatId"]');
+      const nameI = form.querySelector('[name="name"]');
+      const emojI = form.querySelector('[name="emoji"]');
+      const descI = form.querySelector('[name="description"]');
+      const errEl = form.querySelector('.summer-fmts-form-error');
+
+      function openForm(mode, prefill) {
+        idIn.value  = prefill.id   || '';
+        nameI.value = prefill.name || '';
+        emojI.value = prefill.emoji || '';
+        descI.value = prefill.desc  || '';
+        form.hidden = false;
+        errEl.hidden = true;
+        nameI.focus();
+      }
+      function closeForm() { form.hidden = true; }
+
+      document.querySelector('[data-add-format]').addEventListener('click', function () {
+        openForm('create', {});
+      });
+
+      document.addEventListener('click', function (e) {
+        const cancelBtn = e.target.closest('[data-format-cancel]');
+        if (cancelBtn) { closeForm(); return; }
+
+        const editBtn = e.target.closest('[data-format-edit]');
+        if (editBtn) {
+          const item = editBtn.closest('[data-format-item]');
+          openForm('edit', {
+            id:    item.getAttribute('data-format-id'),
+            emoji: editBtn.getAttribute('data-emoji'),
+            name:  editBtn.getAttribute('data-name'),
+            desc:  editBtn.getAttribute('data-desc'),
+          });
+          return;
+        }
+
+        const rmBtn = e.target.closest('[data-format-remove]');
+        if (rmBtn) {
+          const item = rmBtn.closest('[data-format-item]');
+          const id   = item.getAttribute('data-format-id');
+          const uses = parseInt(rmBtn.getAttribute('data-uses'), 10) || 0;
+          const name = rmBtn.getAttribute('data-name');
+          const msg  = uses > 0
+            ? `Archive "${name}"? It won't appear in the picker but past makes will still show it.`
+            : `Delete "${name}"?`;
+          if (!confirm(msg)) return;
+          fetch('/summer/formats/' + encodeURIComponent(id) + '/remove', {
+            method: 'POST', credentials: 'same-origin',
+          }).then(function (r) {
+            if (!r.ok) throw new Error();
+            window.location.reload();
+          }).catch(function () { alert('Could not remove. Try again.'); });
+          return;
+        }
+
+        const unBtn = e.target.closest('[data-format-unarchive]');
+        if (unBtn) {
+          const item = unBtn.closest('[data-format-item]');
+          const id   = item.getAttribute('data-format-id');
+          fetch('/summer/formats/' + encodeURIComponent(id) + '/unarchive', {
+            method: 'POST', credentials: 'same-origin',
+          }).then(function (r) {
+            if (!r.ok) throw new Error();
+            window.location.reload();
+          }).catch(function () { alert('Could not bring back. Try again.'); });
+          return;
+        }
+
+        const saveBtn = e.target.closest('[data-format-save]');
+        if (saveBtn) {
+          const id    = idIn.value.trim();
+          const name  = nameI.value.trim();
+          const emoji = emojI.value.trim();
+          const desc  = descI.value.trim();
+          if (!name) { errEl.textContent = 'Give it a name.'; errEl.hidden = false; return; }
+          saveBtn.disabled = true;
+          const url = id ? '/summer/formats/' + encodeURIComponent(id) + '/edit' : '/summer/formats';
+          fetch(url, {
+            method: 'POST', credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name: name, emoji: emoji, description: desc }),
+          }).then(function (r) {
+            if (!r.ok) throw new Error();
+            window.location.reload();
+          }).catch(function () {
+            errEl.textContent = 'Could not save. Try again.'; errEl.hidden = false;
+            saveBtn.disabled = false;
+          });
+        }
+      });
+    })();
+  </script>
+</body>
+</html>
