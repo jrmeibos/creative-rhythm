@@ -70,17 +70,29 @@
   background: var(--color-blank-page);
   border: 1.5px solid rgba(112, 92, 108, 0.1);
   border-radius: 16px;
-  padding: 1.5rem;
+  padding: 1.25rem 1.5rem;
   display: grid;
-  grid-template-columns: auto 1fr;
-  column-gap: 1.5rem;
+  grid-template-columns: 1fr auto;
+  column-gap: 1.25rem;
+  row-gap: 0.75rem;
   align-items: start;
 }
+/* Card layout, by grid slot:
+     Row 1: "Goal N" header, full width
+     Row 2: text/CTAs on the left, watercolor illustration on the right
+     Row 3+: Keep/Replace buttons + kept confirm + replace form, full width */
+.gh-seed-card > .gh-seed-num       { grid-column: 1 / -1; grid-row: 1; }
+.gh-seed-card > .gh-active-block   { grid-column: 1;      grid-row: 2; }
+.gh-seed-card > .gh-seed-art       { grid-column: 2;      grid-row: 2; }
+.gh-seed-card > .gh-actions,
+.gh-seed-card > .gh-kept-confirm,
+.gh-seed-card > .gh-replace-form   { grid-column: 1 / -1; }
+
 @media (max-width: 680px) {
   .gh-seed-card {
     grid-template-columns: 1fr;
-    row-gap: 0.5rem;
   }
+  .gh-seed-card > .gh-seed-art { grid-column: 1; grid-row: auto; justify-self: center; }
 }
 
 .gh-seed-num {
@@ -88,8 +100,8 @@
   font-size: 0.9rem;
   font-weight: 400;
   color: var(--color-bloem);
-  margin-bottom: 1rem;
   letter-spacing: 0.02em;
+  margin: 0;
 }
 
 /* ─── Two-column row ─────────────────────────────────────────────────────── */
@@ -821,19 +833,13 @@ details[open] .gh-planted-summary::before { content: '▾  '; }
 }
 .gh-seed-art {
   display: block;
-  width: 110px;
+  width: 100px;
   height: auto;
   margin: 0;
-  grid-row: 1 / -1;
-  align-self: start;
+  align-self: center;
 }
 @media (max-width: 680px) {
-  .gh-seed-art {
-    grid-row: auto;
-    justify-self: center;
-    width: 96px;
-    margin-bottom: 0.25rem;
-  }
+  .gh-seed-art { width: 96px; }
 }
 
 .gh-bed-cta {
