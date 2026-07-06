@@ -1,0 +1,22 @@
+<!-- Make Something with Your Cuttings — parallel section to Your Cuttings
+     and Tend Your Cuttings. Appears only when locals.showSummer is true
+     (effective season is Summer or Autumn). Clicking the button takes
+     the student to /summer, where they turn Cultivate cuttings into
+     content in the format of their choice. Reuses the .gh-cuttings-
+     section-* classes for identical visual, plus a --summer modifier so
+     future visual divergence is a one-line change. -->
+<% if (locals.showSummer) { %>
+<section class="dash-section gh-cuttings-section gh-cuttings-section--summer">
+  <h2 class="gh-cuttings-section-title">Make Something</h2>
+  <p class="gh-cuttings-section-body">
+    Pick a cutting from your Cultivate pile and try turning it into
+    content — a post, a video, a note. Once you've shared it, add the
+    link in <a href="/grove">The Grove</a>.
+  </p>
+  <img class="gh-cuttings-section-art"
+       src="/images/greenhouse/cuttings-vessels.svg"
+       alt=""
+       width="240" height="220">
+  <a href="/summer" class="gh-cuttings-section-btn">Make Something</a>
+</section>
+<% } %>

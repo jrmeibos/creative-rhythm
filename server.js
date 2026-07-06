@@ -196,6 +196,12 @@ app.use((req, res, next) => {
     // Tending accessible.
     res.locals.showTending =
       ['spring', 'summer', 'autumn'].includes(res.locals.effectiveSeason);
+
+    // Summer unlocks the Make-something practice — a student turns
+    // Cultivate cuttings into content. Stays available in Autumn too;
+    // if a student hasn't gotten to it yet, they can still browse it.
+    res.locals.showSummer =
+      ['summer', 'autumn'].includes(res.locals.effectiveSeason);
   }
 
   next();
