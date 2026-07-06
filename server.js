@@ -2784,6 +2784,22 @@ app.post('/tending/intro-seen', requireAuth, (req, res) => {
   return res.json({ ok: true });
 });
 
+// ─── The Grove — where Cultivate cuttings that have been "made" live ──────
+// Summer's downstream view: every cutting_makes row rendered as a card
+// showing what the cutting was, what format it became, and when. Fully
+// accessible before Summer — it just shows an empty state until the
+// student starts making things. Fall will add published_url editing here.
+
+app.get('/grove', requireAuth, (req, res) => {
+  const entries = db.getGroveEntries(req.session.user.id);
+  res.render('grove', {
+    title: 'The Grove',
+    page: 'grove',
+    user: req.session.user,
+    entries,
+  });
+});
+
 // ─── Harvest ───────────────────────────────────────────────────────────────
 
 app.get('/harvest', requireAuth, (req, res) => {

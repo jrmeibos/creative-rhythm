@@ -681,6 +681,54 @@ db.exec(`
     console.log('✓ Migrated: added season_intro_seen to users');
   }
 
+  // Summer: content formats a cutting can be turned into. user_id NULL means
+  // a Julia-authored built-in ("Written carousel", "Talk-to-camera snippet",
+  // …). Non-null user_id is a student's custom format — only that student
+  // sees it in their menu. `slug` is URL-safe and unique across built-ins.
+  // `detail_content` holds the long-form "how to repurpose" markdown for
+  // built-ins (custom formats leave it null and just use `description`).
+  // `archived` hides a custom format from the picker without breaking any
+  // cutting_makes rows that already reference it.
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS content_formats (
+      id             INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id        INTEGER,
+      slug           TEXT NOT NULL,
+      name           TEXT NOT NULL,
+      emoji          TEXT,
+      description    TEXT,
+      detail_content TEXT,
+      position       INTEGER NOT NULL DEFAULT 0,
+      archived       INTEGER NOT NULL DEFAULT 0,
+      created_at     DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (user_id) REFERENCES users(id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_content_formats_user ON content_formats (user_id);
+  `);
+
+  // Summer: history-preserving log of "made as X" events. Each row records
+  // that a specific cutting was made into a specific format at a specific
+  // time. A cutting can be made multiple times (three formats over the
+  // season → three rows). published_url is reserved for Fall — student
+  // pastes the actual posted URL once they've shared it.
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS cutting_makes (
+      id            INTEGER PRIMARY KEY AUTOINCREMENT,
+      cutting_id    INTEGER NOT NULL,
+      user_id       INTEGER NOT NULL,
+      format_id     INTEGER NOT NULL,
+      made_at       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      note          TEXT,
+      published_url TEXT,
+      FOREIGN KEY (cutting_id) REFERENCES cuttings(id),
+      FOREIGN KEY (user_id)    REFERENCES users(id),
+      FOREIGN KEY (format_id)  REFERENCES content_formats(id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_cutting_makes_user    ON cutting_makes (user_id);
+    CREATE INDEX IF NOT EXISTS idx_cutting_makes_cutting ON cutting_makes (cutting_id);
+    CREATE INDEX IF NOT EXISTS idx_cutting_makes_format  ON cutting_makes (format_id);
+  `);
+
   // Avatars moved to /data/avatars — old paths pointing to /uploads/avatars/ are now broken.
   // Reset them so users see initials until they re-upload.
   db.exec("UPDATE users SET profile_photo = NULL WHERE profile_photo LIKE '/uploads/avatars/%'");
@@ -1176,6 +1224,44 @@ function seedLesson1Homework() {
   console.log('✓ Seeded Lesson 1 homework tasks');
 }
 
+// Built-in Summer content formats. Seeded on first boot after the
+// content_formats migration. Placeholder detail_content is a heading + a
+// short teaser paragraph — Julia will edit each one with real "how to
+// repurpose" guidance later. Emojis mirror the Tending/Cultivate
+// vocabulary the student already knows.
+const BUILTIN_CONTENT_FORMATS = [
+  { slug: 'carousel',         emoji: '📱', name: 'Written carousel',       description: 'A multi-slide post — words on stacked cards.' },
+  { slug: 'talk-to-camera',   emoji: '🎥', name: 'Talk-to-camera snippet', description: 'A short video of you speaking directly to the lens.' },
+  { slug: 'video-with-text',  emoji: '📝', name: 'Video with text overlay', description: 'A clip with captions or key words shown over it.' },
+  { slug: 'video-voice-over', emoji: '🎙️', name: 'Video with voice-over',   description: 'B-roll or footage with your voice narrating.' },
+  { slug: 'essay',            emoji: '✍️', name: 'Written post',            description: 'A long-form essay, blog post, or newsletter piece.' },
+  { slug: 'short-post',       emoji: '💬', name: 'Short written post',      description: 'A quick post for Threads, X, or LinkedIn.' },
+  { slug: 'audio',            emoji: '🎧', name: 'Audio clip',              description: 'A podcast segment or voice note.' },
+  { slug: 'story',            emoji: '📖', name: 'Story / ephemeral',       description: 'A story-format post that expires (IG, LinkedIn).' },
+  { slug: 'newsletter',       emoji: '✉️', name: 'Newsletter / email',      description: 'A direct-to-inbox letter to your list.' },
+  { slug: 'quote-graphic',    emoji: '🖼️', name: 'Quote graphic',           description: 'A single image with one of your lines as text.' },
+  { slug: 'q-and-a',          emoji: '💭', name: 'Q&A / response post',     description: 'A post that answers a question, real or imagined.' },
+  { slug: 'photo-caption',    emoji: '📷', name: 'Photo + caption',         description: 'A still image with your words underneath.' },
+];
+
+function seedContentFormats() {
+  const existing = db.prepare(
+    'SELECT COUNT(*) AS c FROM content_formats WHERE user_id IS NULL'
+  ).get().c;
+  if (existing > 0) return;
+  const ins = db.prepare(`
+    INSERT INTO content_formats
+      (user_id, slug, name, emoji, description, detail_content, position)
+    VALUES (NULL, ?, ?, ?, ?, ?, ?)
+  `);
+  BUILTIN_CONTENT_FORMATS.forEach((f, i) => {
+    // Placeholder detail — Julia will replace with real guidance later.
+    const detail = `## ${f.name}\n\n${f.description}\n\n_How to repurpose a cutting into this format — coming soon._`;
+    ins.run(f.slug, f.name, f.emoji, f.description, detail, i);
+  });
+  console.log(`✓ Seeded ${BUILTIN_CONTENT_FORMATS.length} built-in content formats`);
+}
+
 // Each init call wrapped so a failure (often caused by an upstream migration
 // not finishing) logs loudly but lets the app boot anyway. Pairs with the
 // try/catch around migrate() above.
@@ -1197,6 +1283,7 @@ safeInit('seedDefaultAccounts', seedDefaultAccounts);
 safeInit('seedLessons',             seedLessons);
 safeInit('seedCourseIntroduction',  seedCourseIntroduction);
 safeInit('seedLesson1Homework',     seedLesson1Homework);
+safeInit('seedContentFormats',      seedContentFormats);
 
 module.exports = {
   getUserByEmail(email) {
@@ -2391,6 +2478,87 @@ module.exports = {
         )
     `).get(userId);
     return row ? row.c : 0;
+  },
+
+  // ── Summer helpers ─────────────────────────────────────────────────────
+
+  // All formats a user can pick from — built-ins (user_id IS NULL) plus
+  // their own non-archived customs. Ordered by (built-in first, then
+  // position). Archived customs are excluded from the picker but stay in
+  // the DB so cutting_makes rows that reference them still render.
+  getFormatsForUser(userId) {
+    return db.prepare(`
+      SELECT id, user_id, slug, name, emoji, description, detail_content,
+             position, archived
+      FROM content_formats
+      WHERE (user_id IS NULL OR user_id = ?)
+        AND archived = 0
+      ORDER BY (user_id IS NULL) DESC, position ASC, id ASC
+    `).all(userId);
+  },
+
+  // Look up a single format by id. Ownership check: built-ins (user_id
+  // IS NULL) are visible to everyone; custom formats only to their owner.
+  // Returns null if not found or not owned.
+  getFormatById(formatId, userId) {
+    const row = db.prepare(`
+      SELECT id, user_id, slug, name, emoji, description, detail_content,
+             position, archived
+      FROM content_formats
+      WHERE id = ?
+        AND (user_id IS NULL OR user_id = ?)
+    `).get(formatId, userId);
+    return row || null;
+  },
+
+  // Look up a built-in format by its stable slug (used by the per-format
+  // detail-page URL /summer/format/:slug).
+  getBuiltinFormatBySlug(slug) {
+    return db.prepare(`
+      SELECT id, user_id, slug, name, emoji, description, detail_content,
+             position, archived
+      FROM content_formats
+      WHERE user_id IS NULL AND slug = ?
+    `).get(slug) || null;
+  },
+
+  // Every "made as X" record for this user, joined with the format so the
+  // view can render the emoji+name inline. Ordered newest-make first.
+  // The Grove renders one row per cutting_make, so a cutting made as three
+  // formats produces three entries.
+  getGroveEntries(userId) {
+    return db.prepare(`
+      SELECT m.id           AS make_id,
+             m.made_at      AS made_at,
+             m.note         AS make_note,
+             m.published_url AS published_url,
+             c.id           AS cutting_id,
+             c.recorded_date, c.season, c.talked_about, c.how_it_felt, c.takeaway,
+             f.id           AS format_id,
+             f.slug         AS format_slug,
+             f.name         AS format_name,
+             f.emoji        AS format_emoji
+      FROM cutting_makes m
+      JOIN cuttings       c ON c.id = m.cutting_id
+      JOIN content_formats f ON f.id = m.format_id
+      WHERE m.user_id = ?
+      ORDER BY m.made_at DESC, m.id DESC
+    `).all(userId);
+  },
+
+  // Insert a fresh "made as X" event. New row every time — history is
+  // never overwritten. `note` and `publishedUrl` are optional; they can be
+  // filled in later (Fall re-opens Grove entries for URL entry).
+  recordCuttingMake(cuttingId, userId, formatId, note, publishedUrl) {
+    return db.prepare(`
+      INSERT INTO cutting_makes
+        (cutting_id, user_id, format_id, note, published_url)
+      VALUES (?, ?, ?, ?, ?)
+    `).run(
+      cuttingId, userId, formatId,
+      (note || '').trim() || null,
+      (publishedUrl || '').trim() || null,
+    ).lastInsertRowid;
   },
 
   // Rollup counts for the destination summary displayed on /tending

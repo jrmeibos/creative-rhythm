@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <%- include('partials/head') %>
+  <link rel="stylesheet" href="/css/dashboard.css">
+  <link rel="stylesheet" href="/css/grove.css">
+</head>
+<body class="app-body">
+  <div class="app-layout">
+    <%- include('partials/sidebar') %>
+    <main class="main-content" id="main">
+
+      <a href="/greenhouse" class="lesson-back">← Back to Greenhouse</a>
+
+      <header class="grove-header">
+        <h1 class="grove-title">The Grove</h1>
+        <p class="grove-intro">
+          Cuttings that grew into something. Each entry is a moment you took a
+          reflection and made it into content — a post, a video, a note to
+          someone. Once you share what you've made, come back here to add the
+          link.
+        </p>
+      </header>
+
+      <% if (entries.length === 0) { %>
+
+        <section class="grove-empty">
+          <p class="grove-empty-headline">The Grove is empty.</p>
+          <p class="grove-empty-body">
+            When you head into Summer and make something from a cutting in your
+            <a href="/greenhouse/cuttings?rating=keep-growing">Cultivate</a> pile,
+            it'll grow here.
+          </p>
+        </section>
+
+      <% } else { %>
+
+        <ul class="grove-list">
+          <% entries.forEach(function (e) {
+               const dateLabel = e.recorded_date
+                 ? new Date(e.recorded_date + 'T00:00:00').toLocaleDateString('en-US', {
+                     weekday: 'long', month: 'long', day: 'numeric',
+                   })
+                 : '';
+               const madeAtLabel = e.made_at
+                 ? new Date(e.made_at.replace(' ', 'T') + 'Z').toLocaleDateString('en-US', {
+                     month: 'short', day: 'numeric', year: 'numeric',
+                   })
+                 : '';
+          %>
+            <li class="grove-entry">
+              <div class="grove-entry-header">
+                <span class="grove-entry-format">
+                  <span aria-hidden="true"><%= e.format_emoji || '🌿' %></span>
+                  <%= e.format_name %>
+                </span>
+                <span class="grove-entry-date">Made <%= madeAtLabel %></span>
+              </div>
+
+              <div class="grove-entry-cutting">
+                <div class="grove-entry-cutting-date"><%= dateLabel %></div>
+                <% if (e.talked_about) { %>
+                  <p class="grove-entry-cutting-line"><%= e.talked_about %></p>
+                <% } %>
+                <% if (e.takeaway) { %>
+                  <p class="grove-entry-cutting-takeaway"><%= e.takeaway %></p>
+                <% } %>
+              </div>
+
+              <% if (e.published_url) { %>
+                <div class="grove-entry-published">
+                  <span class="grove-entry-published-label">Shared</span>
+                  <a href="<%= e.published_url %>" target="_blank" rel="noopener" class="grove-entry-published-url">
+                    <%= e.published_url %>
+                  </a>
+                </div>
+              <% } %>
+            </li>
+          <% }); %>
+        </ul>
+
+      <% } %>
+
+    </main>
+  </div>
+</body>
+</html>
