@@ -237,6 +237,9 @@
   text-transform: uppercase;
   color: var(--color-bloem);
   display: block;
+  /* Space above so the label sits comfortably below the format grid, not
+     crowding it. */
+  margin-top: 1rem;
   margin-bottom: 0.35rem;
 }
 .summer-make-picker-note {
@@ -250,7 +253,6 @@
   line-height: 1.5;
   resize: vertical;
   background: white;
-  margin-bottom: 0.85rem;
 }
 .summer-make-picker-note:focus {
   outline: none;

@@ -92,20 +92,14 @@
 
               <!-- Inline picker (hidden until "+ Add a format idea" clicked) -->
               <div class="summer-make-picker" hidden data-summer-make-picker="<%= c.id %>">
-                <label class="summer-make-picker-label" for="summer-note-<%= c.id %>">
-                  Note about this idea (optional)
-                </label>
-                <textarea class="summer-make-picker-note"
-                          id="summer-note-<%= c.id %>"
-                          rows="2"
-                          placeholder="Anything to remember about how you'd shape this."></textarea>
-
                 <label class="summer-make-picker-created">
                   <input type="checkbox" data-summer-make-created>
                   <span>I've already created this one</span>
                 </label>
 
-                <p class="summer-make-picker-help">Pick a format — the click saves it.</p>
+                <p class="summer-make-picker-help">
+                  Add a note below (optional) and pick a format — the click saves it.
+                </p>
                 <div class="summer-format-grid">
                   <% formats.forEach(function (f) { %>
                     <button type="button" class="summer-format-chip"
@@ -115,6 +109,14 @@
                     </button>
                   <% }); %>
                 </div>
+
+                <label class="summer-make-picker-label" for="summer-note-<%= c.id %>">
+                  Note about this idea (optional)
+                </label>
+                <textarea class="summer-make-picker-note"
+                          id="summer-note-<%= c.id %>"
+                          rows="2"
+                          placeholder="Anything to remember about how you'd shape this."></textarea>
 
                 <div class="summer-make-picker-footer">
                   <button type="button" class="summer-make-picker-cancel"
