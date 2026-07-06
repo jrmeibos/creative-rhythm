@@ -1501,6 +1501,35 @@
 .season-card.is-selected.season-card--autumn { background: rgba(118, 133, 108, 0.22); border-color: #76856C; }
 .season-card.is-selected.season-card--winter { background: rgba(169, 144, 164, 0.22); border-color: #a990a4; }
 
+/* Locked state — trial students pre-Week-4 see the picker greyed out and
+   not clickable. Message rendered above the grid explains why. */
+.season-cards.is-locked .season-card {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.season-cards.is-locked .season-card:hover {
+  transform: none;
+  box-shadow: none;
+}
+.season-locked-note {
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: rgba(16, 15, 16, 0.65);
+  max-width: 34rem;
+  margin: 0.5rem 0 1rem;
+  padding: 0.75rem 1rem;
+  background: rgba(112, 92, 108, 0.06);
+  border-left: 3px solid var(--color-bloem);
+  border-radius: var(--radius-sm);
+}
+.season-picker-help {
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  color: rgba(16, 15, 16, 0.55);
+  margin: 0.35rem 0 0.9rem;
+}
+
 .season-card-emoji {
   display: block;
   margin-bottom: 0.625rem;
@@ -2633,6 +2662,33 @@
   transition: background 0.15s;
 }
 .mid-card-cta:hover { background: var(--color-bloem-mid); }
+
+/* Ghost variant + horizontal actions row — used by the season-intro card
+   which pairs a primary "Got it" with a soft link to /profile. */
+.mid-card-actions {
+  display: flex;
+  gap: 0.6rem;
+  align-items: center;
+  margin-top: 0.25rem;
+  flex-wrap: wrap;
+}
+button.mid-card-cta {
+  border: none;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+.mid-card-cta--ghost {
+  background: transparent;
+  color: var(--color-bloem);
+  border: 1px solid rgba(112, 92, 108, 0.3);
+}
+.mid-card-cta--ghost:hover {
+  background: rgba(112, 92, 108, 0.06);
+  color: var(--color-bloem-mid);
+  border-color: var(--color-bloem);
+}
 
 /* ─── Admin: per-user course start date editor ─────────────────────────── */
 

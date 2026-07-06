@@ -100,6 +100,42 @@
       </section>
       <% } %>
 
+      <% if (locals.showSeasonIntroCard) { %>
+      <section class="dash-section" data-season-intro-card>
+        <div class="mid-card">
+          <p class="mid-card-eyebrow">Winter's behind you</p>
+          <h2 class="mid-card-title">You've stepped into Spring</h2>
+          <p class="mid-card-body">
+            From here on, you can shape your season. The platform follows your
+            lead — if you're in Spring, you get Spring's prompts; if you step
+            back into Winter, everything quiets down again. There's no wrong
+            answer, and no need to keep pace with the calendar.
+          </p>
+          <div class="mid-card-actions">
+            <a href="/profile" class="mid-card-cta mid-card-cta--ghost">Adjust in Profile</a>
+            <button type="button" class="mid-card-cta" data-season-intro-dismiss>Got it</button>
+          </div>
+        </div>
+      </section>
+      <script>
+        (function () {
+          var card = document.querySelector('[data-season-intro-card]');
+          var btn  = document.querySelector('[data-season-intro-dismiss]');
+          if (!card || !btn) return;
+          btn.addEventListener('click', function () {
+            btn.disabled = true;
+            fetch('/api/season/intro-seen', {
+              method: 'POST', credentials: 'same-origin',
+            }).catch(function () {}).finally(function () {
+              card.style.transition = 'opacity 0.22s ease';
+              card.style.opacity = '0';
+              setTimeout(function () { card.remove(); }, 240);
+            });
+          });
+        })();
+      </script>
+      <% } %>
+
       <section class="dash-section">
         <div id="dayview-container"
              class="recording-card"
