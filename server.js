@@ -2097,30 +2097,30 @@ app.get('/greenhouse/plant', requireAuth, (req, res) => {
 // Season order itself always stays in curricular sequence (Winter → Spring
 // → Summer → Autumn) — the course's natural reading direction.
 app.get('/greenhouse/cuttings', requireAuth, (req, res) => {
+  // Two independent filter axes now: status (watch/edit state) and rating
+  // (Tending category). Either can be null (no filter); a value in each
+  // narrows the result set as an AND. The old single ?filter= param is
+  // gone — status and rating replace it.
   const allowedSort   = new Set(['newest', 'oldest']);
-  const allowedFilter = new Set([
-    'all',
-    // Mark-based filters
-    'watched', 'unwatched', 'edited', 'not-edited',
-    // Tending-rating filters (URL uses hyphens; DB stores underscores)
-    'keep-growing', 'return-later', 'compost',
-  ]);
-  const sort   = allowedSort.has(req.query.sort)     ? req.query.sort   : 'newest';
-  const filter = allowedFilter.has(req.query.filter) ? req.query.filter : 'all';
+  const allowedStatus = new Set(['watched', 'unwatched', 'edited', 'not-edited']);
+  const allowedRating = new Set(['keep-growing', 'return-later', 'compost']);
+  const sort   = allowedSort.has(req.query.sort)     ? req.query.sort     : 'newest';
+  const status = allowedStatus.has(req.query.status) ? req.query.status   : null;
+  const rating = allowedRating.has(req.query.rating) ? req.query.rating   : null;
 
   let cuttings = db.getCuttingsForUser(req.session.user.id);
   const totalCount = cuttings.length;
 
-  // Filter by mark state.
-  if (filter === 'watched')      cuttings = cuttings.filter(c => c.watched);
-  else if (filter === 'unwatched') cuttings = cuttings.filter(c => !c.watched);
-  else if (filter === 'edited')    cuttings = cuttings.filter(c => c.edited);
-  else if (filter === 'not-edited') cuttings = cuttings.filter(c => !c.edited);
-  // Filter by Tending rating. Note: the DB category value 'archive' is
-  // still what gets stored — the UI label just renamed to Compost.
-  else if (filter === 'keep-growing') cuttings = cuttings.filter(c => c.tending_category === 'keep_growing');
-  else if (filter === 'return-later') cuttings = cuttings.filter(c => c.tending_category === 'return_later');
-  else if (filter === 'compost')      cuttings = cuttings.filter(c => c.tending_category === 'archive');
+  // Status filter (mark state)
+  if      (status === 'watched')    cuttings = cuttings.filter(c => c.watched);
+  else if (status === 'unwatched')  cuttings = cuttings.filter(c => !c.watched);
+  else if (status === 'edited')     cuttings = cuttings.filter(c => c.edited);
+  else if (status === 'not-edited') cuttings = cuttings.filter(c => !c.edited);
+
+  // Rating filter (Tending category — DB value 'archive' → 'compost' label)
+  if      (rating === 'keep-growing') cuttings = cuttings.filter(c => c.tending_category === 'keep_growing');
+  else if (rating === 'return-later') cuttings = cuttings.filter(c => c.tending_category === 'return_later');
+  else if (rating === 'compost')      cuttings = cuttings.filter(c => c.tending_category === 'archive');
 
   // Sort within-day order. getCuttingsForUser already returns rows in
   // recorded_date DESC + created_at ASC, so 'newest' is a no-op. For
@@ -2179,7 +2179,8 @@ app.get('/greenhouse/cuttings', requireAuth, (req, res) => {
     totalCount,                    // total before filtering — for the page-level empty state
     filteredCount: cuttings.length, // after filtering — for the empty-filter state
     sort,
-    filter,
+    status,
+    rating,
     seasonGroups,
     emptyExportNotice: req.query.empty === '1',
   });

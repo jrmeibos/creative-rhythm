@@ -33,55 +33,78 @@
       <% } else { %>
 
         <%
-          // href helper: preserves the other param so each link only changes
-          // its own dimension. Omit defaults so /cuttings stays the canonical
-          // 'all/newest' URL.
-          function controlHref(s, f) {
+          // href helper: builds a /greenhouse/cuttings URL with the given
+          // sort/status/rating, omitting any that are default so
+          // /greenhouse/cuttings stays the canonical "all" URL. Each
+          // toolbar control passes ONE next-value and inherits the other
+          // two from the current request — so clicking flips just that
+          // dimension.
+          function urlWith(nextSort, nextStatus, nextRating) {
             const params = [];
-            if (s !== 'newest') params.push('sort=' + encodeURIComponent(s));
-            if (f !== 'all')    params.push('filter=' + encodeURIComponent(f));
+            if (nextSort && nextSort !== 'newest') params.push('sort='   + encodeURIComponent(nextSort));
+            if (nextStatus)                         params.push('status=' + encodeURIComponent(nextStatus));
+            if (nextRating)                         params.push('rating=' + encodeURIComponent(nextRating));
             return params.length ? '?' + params.join('&') : '/greenhouse/cuttings';
           }
-          const cls = (active) => 'cuttings-control-link' + (active ? ' is-active' : '');
+          // Chip href: if the chip's value is already the active filter,
+          // clicking clears it. Otherwise it becomes the new selection.
+          function statusChipHref(v) { return urlWith(sort, status === v ? null : v, rating); }
+          function ratingChipHref(v) { return urlWith(sort, status, rating === v ? null : v); }
+          function chipCls(active)   { return 'cuttings-chip' + (active ? ' is-active' : ''); }
         %>
 
-        <!-- ── Controls: order + filter ────────────────────────────── -->
+        <!-- ── Controls ─────────────────────────────────────────────── -->
         <div class="cuttings-controls" role="group" aria-label="Sort and filter cuttings">
-          <div class="cuttings-control-row">
-            <span class="cuttings-control-label">Order</span>
-            <a href="<%= controlHref('newest', filter) %>" class="<%= cls(sort === 'newest') %>">Newest</a>
-            <span class="cuttings-control-divider" aria-hidden="true">·</span>
-            <a href="<%= controlHref('oldest', filter) %>" class="<%= cls(sort === 'oldest') %>">Oldest</a>
+
+          <!-- Sort: segmented [Newest | Oldest] pill toggle -->
+          <div class="cuttings-control-row cuttings-control-row--sort">
+            <span class="cuttings-control-label">Sort</span>
+            <div class="cuttings-segmented" role="group" aria-label="Sort order">
+              <a href="<%= urlWith('newest', status, rating) %>"
+                 class="cuttings-segmented-btn <%= sort === 'newest' ? 'is-active' : '' %>"
+                 aria-pressed="<%= sort === 'newest' %>">Newest</a>
+              <a href="<%= urlWith('oldest', status, rating) %>"
+                 class="cuttings-segmented-btn <%= sort === 'oldest' ? 'is-active' : '' %>"
+                 aria-pressed="<%= sort === 'oldest' %>">Oldest</a>
+            </div>
           </div>
-          <div class="cuttings-control-row">
-            <span class="cuttings-control-label">Show</span>
-            <a href="<%= controlHref(sort, 'all')        %>" class="<%= cls(filter === 'all')        %>">All</a>
-            <span class="cuttings-control-divider" aria-hidden="true">·</span>
-            <a href="<%= controlHref(sort, 'watched')    %>" class="<%= cls(filter === 'watched')    %>">Watched</a>
-            <span class="cuttings-control-divider" aria-hidden="true">·</span>
-            <a href="<%= controlHref(sort, 'unwatched')  %>" class="<%= cls(filter === 'unwatched')  %>">Unwatched</a>
-            <span class="cuttings-control-divider" aria-hidden="true">·</span>
-            <a href="<%= controlHref(sort, 'edited')     %>" class="<%= cls(filter === 'edited')     %>">Edited</a>
-            <span class="cuttings-control-divider" aria-hidden="true">·</span>
-            <a href="<%= controlHref(sort, 'not-edited') %>" class="<%= cls(filter === 'not-edited') %>">Not edited</a>
+
+          <!-- Status: chip group, single-select within, click active to clear -->
+          <div class="cuttings-control-row cuttings-control-row--chips">
+            <span class="cuttings-control-label">Status</span>
+            <div class="cuttings-chips" role="group" aria-label="Filter by status">
+              <a href="<%= statusChipHref('watched')    %>" class="<%= chipCls(status === 'watched')    %>">Watched</a>
+              <a href="<%= statusChipHref('unwatched')  %>" class="<%= chipCls(status === 'unwatched')  %>">Unwatched</a>
+              <a href="<%= statusChipHref('edited')     %>" class="<%= chipCls(status === 'edited')     %>">Edited</a>
+              <a href="<%= statusChipHref('not-edited') %>" class="<%= chipCls(status === 'not-edited') %>">Not edited</a>
+            </div>
           </div>
-          <div class="cuttings-control-row">
+
+          <!-- Rating: chip group, independent of Status -->
+          <div class="cuttings-control-row cuttings-control-row--chips">
             <span class="cuttings-control-label">Rating</span>
-            <a href="<%= controlHref(sort, 'keep-growing') %>" class="<%= cls(filter === 'keep-growing') %>">🪴 Keep growing</a>
-            <span class="cuttings-control-divider" aria-hidden="true">·</span>
-            <a href="<%= controlHref(sort, 'return-later') %>" class="<%= cls(filter === 'return-later') %>">🌱 Return to later</a>
-            <span class="cuttings-control-divider" aria-hidden="true">·</span>
-            <a href="<%= controlHref(sort, 'compost')      %>" class="<%= cls(filter === 'compost')      %>">🗑️ Compost</a>
+            <div class="cuttings-chips" role="group" aria-label="Filter by rating">
+              <a href="<%= ratingChipHref('keep-growing') %>" class="<%= chipCls(rating === 'keep-growing') %>">🪴 Keep growing</a>
+              <a href="<%= ratingChipHref('return-later') %>" class="<%= chipCls(rating === 'return-later') %>">🌱 Return to later</a>
+              <a href="<%= ratingChipHref('compost')      %>" class="<%= chipCls(rating === 'compost')      %>">🗑️ Compost</a>
+            </div>
           </div>
+
+          <!-- Clear-all link — appears only when any filter is active -->
+          <% if (status || rating) { %>
+            <div class="cuttings-control-row cuttings-control-row--clear">
+              <a href="<%= urlWith(sort, null, null) %>" class="cuttings-clear-link">Clear filters</a>
+            </div>
+          <% } %>
         </div>
 
         <% if (filteredCount === 0) { %>
 
           <!-- ── Filter-result empty state (cuttings exist but none match) -->
           <section class="cuttings-empty cuttings-empty--filter">
-            <p class="cuttings-empty-text">Nothing matches that filter.</p>
+            <p class="cuttings-empty-text">Nothing matches that combination.</p>
             <p class="cuttings-empty-sub">
-              <a href="<%= controlHref(sort, 'all') %>" class="cuttings-control-link">Show all</a>
+              <a href="<%= urlWith(sort, null, null) %>" class="cuttings-control-link">Clear filters</a>
             </p>
           </section>
 
@@ -152,7 +175,7 @@
                     <article class="cutting-entry<%= day.items.length > 1 ? ' cutting-entry--stacked' : '' %>">
                       <div class="cutting-tending">
                         <% if (tending) { %>
-                          <a href="<%= controlHref(sort, c.tending_category === 'archive' ? 'compost' : c.tending_category.replace('_','-')) %>"
+                          <a href="<%= urlWith(sort, status, c.tending_category === 'archive' ? 'compost' : c.tending_category.replace('_','-')) %>"
                              class="cutting-tending-badge cutting-tending-badge--<%= c.tending_category %>">
                             <span aria-hidden="true"><%= tending.emoji %></span>
                             <%= tending.text %>

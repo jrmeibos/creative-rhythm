@@ -1561,6 +1561,90 @@ details[open] .gh-planted-summary::before { content: '▾  '; }
   font-size: 0.88rem;
 }
 
+/* Segmented sort control — [Newest | Oldest] as a single pill-shaped
+   control so it reads as one thing that toggles. Anchors underneath (no
+   JS needed), only visual chrome. */
+.cuttings-segmented {
+  display: inline-flex;
+  border: 1px solid rgba(16, 15, 16, 0.15);
+  border-radius: 999px;
+  padding: 2px;
+  background: rgba(255, 255, 255, 0.5);
+}
+.cuttings-segmented-btn {
+  display: inline-block;
+  padding: 0.28rem 0.85rem;
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: rgba(16, 15, 16, 0.55);
+  text-decoration: none;
+  border-radius: 999px;
+  transition: background 0.15s, color 0.15s;
+}
+.cuttings-segmented-btn:hover:not(.is-active) {
+  color: var(--color-bloem);
+}
+.cuttings-segmented-btn.is-active {
+  background: var(--color-bloem);
+  color: var(--color-pearl);
+}
+
+/* Chip groups (Status, Rating) — each chip is a filled OR outlined pill.
+   Filled = active (this filter is applied); outlined = inactive. Click
+   an active chip to clear it. Groups are independent (chip in Status
+   doesn't affect chip in Rating). */
+.cuttings-chips {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+.cuttings-chip {
+  display: inline-block;
+  padding: 0.32rem 0.85rem;
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  font-weight: 400;
+  color: rgba(16, 15, 16, 0.65);
+  background: transparent;
+  border: 1px solid rgba(16, 15, 16, 0.2);
+  border-radius: 999px;
+  text-decoration: none;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+.cuttings-chip:hover {
+  border-color: var(--color-bloem);
+  color: var(--color-bloem);
+}
+.cuttings-chip.is-active {
+  background: var(--color-bloem);
+  border-color: var(--color-bloem);
+  color: var(--color-pearl);
+  font-weight: 500;
+}
+.cuttings-chip.is-active::after {
+  content: ' ×';
+  opacity: 0.8;
+}
+.cuttings-chip.is-active:hover {
+  background: var(--color-bloem-mid);
+  border-color: var(--color-bloem-mid);
+  color: var(--color-pearl);
+}
+
+.cuttings-control-row--clear {
+  justify-content: flex-end;
+}
+.cuttings-clear-link {
+  font-family: var(--font-body);
+  font-size: 0.82rem;
+  color: var(--color-bloem);
+  text-decoration: none;
+  border-bottom: 1px solid currentColor;
+  padding-bottom: 1px;
+}
+.cuttings-clear-link:hover { color: var(--color-bloem-mid); }
+
 /* Filter-result empty state (still have cuttings but none match) */
 .cuttings-empty--filter {
   text-align: center;
