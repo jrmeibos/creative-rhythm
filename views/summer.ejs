@@ -65,16 +65,22 @@
                 <div class="summer-cutting-existing">
                   <span class="summer-cutting-existing-label">Format ideas</span>
                   <% existing.forEach(function (m) { %>
-                    <button type="button"
-                            class="summer-existing-chip <%= m.created ? 'is-created' : '' %>"
-                            data-summer-toggle data-make-id="<%= m.id %>"
-                            data-created="<%= m.created ? '1' : '0' %>"
-                            aria-pressed="<%= m.created ? 'true' : 'false' %>"
-                            title="<%= m.created ? 'Marked as created — click to unmark' : 'Not yet created — click to mark created' %>">
-                      <span class="summer-existing-chip-check" aria-hidden="true"><%= m.created ? '✓' : '○' %></span>
-                      <span class="summer-existing-chip-emoji" aria-hidden="true"><%= m.format_emoji || '🌿' %></span>
-                      <span class="summer-existing-chip-name"><%= m.format_name %></span>
-                    </button>
+                    <span class="summer-existing-chip <%= m.created ? 'is-created' : '' %>"
+                          data-make-id="<%= m.id %>">
+                      <button type="button" class="summer-existing-chip-toggle"
+                              data-summer-toggle data-make-id="<%= m.id %>"
+                              data-created="<%= m.created ? '1' : '0' %>"
+                              aria-pressed="<%= m.created ? 'true' : 'false' %>"
+                              title="<%= m.created ? 'Marked as created — click to unmark' : 'Not yet created — click to mark created' %>">
+                        <span class="summer-existing-chip-check" aria-hidden="true"><%= m.created ? '✓' : '○' %></span>
+                        <span class="summer-existing-chip-emoji" aria-hidden="true"><%= m.format_emoji || '🌿' %></span>
+                        <span class="summer-existing-chip-name"><%= m.format_name %></span>
+                      </button>
+                      <button type="button" class="summer-existing-chip-remove"
+                              data-summer-remove data-make-id="<%= m.id %>"
+                              data-name="<%= m.format_name %>"
+                              aria-label="Delete this format idea">×</button>
+                    </span>
                   <% }); %>
                 </div>
               <% } %>
@@ -195,6 +201,25 @@
           }).catch(function () {
             toggleBtn.disabled = false;
             alert('Could not update. Try again.');
+          });
+          return;
+        }
+
+        // Delete a format idea via the × button.
+        const rmBtn = e.target.closest('[data-summer-remove]');
+        if (rmBtn) {
+          const makeId = rmBtn.getAttribute('data-make-id');
+          const name   = rmBtn.getAttribute('data-name');
+          if (!confirm('Delete "' + name + '"? This removes the format idea.')) return;
+          rmBtn.disabled = true;
+          fetch('/summer/make/' + encodeURIComponent(makeId) + '/delete', {
+            method: 'POST', credentials: 'same-origin',
+          }).then(function (r) {
+            if (!r.ok) throw new Error();
+            window.location.reload();
+          }).catch(function () {
+            rmBtn.disabled = false;
+            alert('Could not delete. Try again.');
           });
         }
       });

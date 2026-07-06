@@ -2705,6 +2705,14 @@ module.exports = {
     ).run(created ? 1 : 0, makeId, userId).changes;
   },
 
+  // Hard delete a make. Ideas are cheap and disposable — no archive
+  // step for now. Ownership scoped via the WHERE clause.
+  deleteCuttingMake(makeId, userId) {
+    return db.prepare(
+      'DELETE FROM cutting_makes WHERE id = ? AND user_id = ?'
+    ).run(makeId, userId).changes;
+  },
+
   // Rollup counts for the destination summary displayed on /tending
   // ("since you started: N growing / M returning / K archived"). Uses the
   // latest curation per cutting so cuttings that moved between categories

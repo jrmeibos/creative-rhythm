@@ -2968,6 +2968,19 @@ app.post('/summer/make/:makeId/toggle-created', requireAuth, (req, res) => {
   return res.json({ ok: true, created: value });
 });
 
+// Hard-delete a format idea. Confirmation is on the client (browser
+// confirm dialog). Ownership enforced inside the DB helper's WHERE.
+app.post('/summer/make/:makeId/delete', requireAuth, (req, res) => {
+  const makeId = parseInt(req.params.makeId, 10);
+  if (!Number.isInteger(makeId) || makeId <= 0) {
+    return res.status(400).json({ error: 'Invalid make id.' });
+  }
+  const changed = db.deleteCuttingMake(makeId, req.session.user.id);
+  // 0 rows changed = row didn't exist or wasn't owned. Treat as no-op
+  // success so the client can reload without a scary error.
+  return res.json({ ok: true, changed });
+});
+
 // ─── The Grove — where Cultivate cuttings that have been "made" live ──────
 // Summer's downstream view: every cutting_makes row rendered as a card
 // showing what the cutting was, what format it became, and when. Fully

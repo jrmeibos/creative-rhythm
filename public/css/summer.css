@@ -118,37 +118,50 @@
   opacity: 0.55;
   margin-right: 0.2rem;
 }
-/* Existing-chip: represents a format IDEA on a Cultivate cutting.
-   Not created yet → outlined (dashed). Click flips to created.
-   Created         → filled (understory), with a checkmark. Click un-marks.
-   The circle/check glyph on the left signals the current state. */
+/* Existing-chip: represents a format IDEA on a Cultivate cutting. It's
+   now a two-part pill:
+   - Toggle body (glyph + emoji + name) — click flips created state.
+   - × button at the right — click deletes the idea (confirm dialog).
+   Idea state → dashed outline, ○ glyph. Created → filled, ✓ glyph. */
 .summer-existing-chip {
   display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  padding: 0.24rem 0.65rem;
-  background: transparent;
+  align-items: stretch;
   border: 1px dashed rgba(16, 15, 16, 0.25);
   border-radius: 999px;
+  overflow: hidden;
   font-family: var(--font-body);
   font-size: 0.78rem;
-  color: rgba(16, 15, 16, 0.75);
-  cursor: pointer;
-  transition: background 0.15s, border-color 0.15s, color 0.15s;
+  transition: background 0.15s, border-color 0.15s;
 }
-.summer-existing-chip:hover {
-  border-color: var(--color-bloem);
-  color: var(--color-bloem);
-}
+.summer-existing-chip:hover { border-color: var(--color-bloem); }
 .summer-existing-chip.is-created {
   background: rgba(118, 133, 108, 0.16);
   border-style: solid;
   border-color: rgba(118, 133, 108, 0.4);
-  color: var(--color-ink-stained);
 }
 .summer-existing-chip.is-created:hover {
   background: rgba(118, 133, 108, 0.24);
   border-color: var(--color-understory);
+}
+
+.summer-existing-chip-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.24rem 0.5rem 0.24rem 0.65rem;
+  background: transparent;
+  border: none;
+  color: rgba(16, 15, 16, 0.75);
+  font-family: inherit;
+  font-size: inherit;
+  cursor: pointer;
+  transition: color 0.15s;
+}
+.summer-existing-chip:hover .summer-existing-chip-toggle {
+  color: var(--color-bloem);
+}
+.summer-existing-chip.is-created .summer-existing-chip-toggle,
+.summer-existing-chip.is-created:hover .summer-existing-chip-toggle {
   color: var(--color-ink-stained);
 }
 .summer-existing-chip-check {
@@ -160,13 +173,35 @@
   color: var(--color-understory);
   opacity: 1;
 }
-.summer-existing-chip-name {
+.summer-existing-chip-name { line-height: 1; }
+
+/* Delete × — small button on the right of the chip. Quiet by default,
+   red on hover so accidents aren't inviting. Border-left creates a
+   subtle divider from the toggle body. */
+.summer-existing-chip-remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.75rem;
+  padding: 0 0.5rem;
+  background: transparent;
+  border: none;
+  border-left: 1px solid rgba(16, 15, 16, 0.15);
+  color: rgba(16, 15, 16, 0.4);
+  font-family: inherit;
+  font-size: 0.95rem;
   line-height: 1;
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s;
 }
-.summer-existing-chip:disabled {
-  opacity: 0.55;
-  cursor: default;
+.summer-existing-chip-remove:hover {
+  color: #b13a3a;
+  background: rgba(177, 58, 58, 0.08);
 }
+.summer-existing-chip.is-created .summer-existing-chip-remove {
+  border-left-color: rgba(118, 133, 108, 0.35);
+}
+.summer-existing-chip button:disabled { opacity: 0.55; cursor: default; }
 
 /* "+ Make something" button — the invitation to open the picker */
 .summer-make-btn {
