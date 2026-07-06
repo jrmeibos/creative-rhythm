@@ -926,7 +926,7 @@ details[open] .gh-planted-summary::before { content: '▾  '; }
   font-style: italic;
   font-size: 0.9rem;
   color: var(--color-understory);
-  text-align: center;
+  text-align: left;
   line-height: 1.5;
   margin: 0.5rem 0 0.4rem;
 }
