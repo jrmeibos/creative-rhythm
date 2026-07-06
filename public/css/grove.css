@@ -119,14 +119,69 @@
   line-height: 1.5;
 }
 
-.grove-entry-published {
+/* ── Just-for-me toggle ─────────────────────────────────────────────── */
+.grove-entry-jfm-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
   margin-top: 0.85rem;
+  flex-wrap: wrap;
+}
+.grove-entry-jfm-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.28rem 0.75rem;
+  background: transparent;
+  border: 1px dashed rgba(16, 15, 16, 0.25);
+  border-radius: 999px;
+  font-family: var(--font-body);
+  font-size: 0.8rem;
+  color: rgba(16, 15, 16, 0.75);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+.grove-entry-jfm-btn:hover {
+  border-color: var(--color-bloem);
+  color: var(--color-bloem);
+}
+.grove-entry-jfm-btn.is-on {
+  background: rgba(112, 92, 108, 0.12);
+  border-style: solid;
+  border-color: var(--color-bloem);
+  color: var(--color-bloem);
+  font-weight: 500;
+}
+.grove-entry-jfm-check {
+  font-size: 0.9rem;
+  line-height: 1;
+  opacity: 0.7;
+}
+.grove-entry-jfm-btn.is-on .grove-entry-jfm-check { opacity: 1; }
+.grove-entry-jfm-note {
+  font-family: var(--font-body);
+  font-size: 0.82rem;
+  color: rgba(16, 15, 16, 0.55);
+  font-style: italic;
+}
+
+/* ── Published-links section ───────────────────────────────────────── */
+.grove-entry-links {
+  margin-top: 0.85rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid rgba(16, 15, 16, 0.08);
+}
+.grove-entry-links.is-disabled {
+  opacity: 0.4;
+  pointer-events: none;
+}
+.grove-entry-links-header {
   display: flex;
   align-items: baseline;
   gap: 0.55rem;
-  flex-wrap: wrap;
+  margin-bottom: 0.5rem;
 }
-.grove-entry-published-label {
+.grove-entry-links-label {
   font-family: var(--font-body);
   font-size: 0.7rem;
   font-weight: 700;
@@ -134,14 +189,170 @@
   text-transform: uppercase;
   color: var(--color-understory);
 }
-.grove-entry-published-url {
+
+.grove-entry-links-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 0.6rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+.grove-entry-link {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.4rem 0.7rem;
+  background: rgba(112, 92, 108, 0.05);
+  border-radius: var(--radius-sm);
+  flex-wrap: wrap;
+}
+.grove-entry-link-label {
+  font-family: var(--font-body);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-bloem);
+  background: rgba(112, 92, 108, 0.12);
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  flex: 0 0 auto;
+}
+.grove-entry-link-url {
   font-family: var(--font-body);
   font-size: 0.85rem;
   color: var(--color-bloem);
   text-decoration: none;
   border-bottom: 1px solid currentColor;
   word-break: break-all;
+  flex: 1 1 auto;
+  min-width: 0;
 }
-.grove-entry-published-url:hover {
-  color: var(--color-bloem-mid);
+.grove-entry-link-url:hover { color: var(--color-bloem-mid); }
+.grove-entry-link-remove {
+  background: transparent;
+  border: none;
+  padding: 0.15rem 0.45rem;
+  color: rgba(16, 15, 16, 0.4);
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: color 0.15s, background 0.15s;
+  flex: 0 0 auto;
+}
+.grove-entry-link-remove:hover {
+  color: #b13a3a;
+  background: rgba(177, 58, 58, 0.08);
+}
+
+.grove-entry-link-add-btn {
+  background: transparent;
+  border: 1px dashed rgba(112, 92, 108, 0.4);
+  border-radius: var(--radius-md);
+  color: var(--color-bloem);
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  padding: 0.4rem 0.9rem;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+.grove-entry-link-add-btn:hover:not(:disabled) {
+  background: var(--color-bloem-light);
+  border-color: var(--color-bloem);
+}
+.grove-entry-link-add-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+/* ── Add-link form ─────────────────────────────────────────────────── */
+.grove-entry-link-form {
+  margin-top: 0.6rem;
+  padding: 0.85rem 1rem;
+  background: var(--color-pearl);
+  border: 1px dashed rgba(112, 92, 108, 0.35);
+  border-radius: var(--radius-md);
+}
+.grove-entry-link-form[hidden] { display: none !important; }
+.grove-entry-link-form-row {
+  display: flex;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+.grove-entry-link-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
+}
+.grove-entry-link-field--label { flex: 0 0 10rem; }
+.grove-entry-link-field--url   { flex: 1 1 15rem; }
+.grove-entry-link-field-hint {
+  font-family: var(--font-body);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-bloem);
+}
+.grove-entry-link-field input {
+  padding: 0.5rem 0.7rem;
+  border: 1px solid rgba(16, 15, 16, 0.16);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  color: var(--color-ink-stained);
+  background: white;
+  width: 100%;
+}
+.grove-entry-link-field input:focus {
+  outline: none;
+  border-color: var(--color-bloem);
+  box-shadow: 0 0 0 2px rgba(112, 92, 108, 0.15);
+}
+.grove-entry-link-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 0.7rem;
+  margin-top: 0.7rem;
+  flex-wrap: wrap;
+}
+.grove-entry-link-form-cancel {
+  background: transparent;
+  border: none;
+  padding: 0.35rem 0.7rem;
+  font-family: var(--font-body);
+  font-size: 0.82rem;
+  color: rgba(16, 15, 16, 0.55);
+  cursor: pointer;
+}
+.grove-entry-link-form-cancel:hover { color: var(--color-bloem); }
+.grove-entry-link-form-save {
+  background: var(--color-bloem);
+  color: var(--color-pearl);
+  border: none;
+  border-radius: var(--radius-md);
+  padding: 0.45rem 1rem;
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.grove-entry-link-form-save:hover:not(:disabled) { background: var(--color-bloem-mid); }
+.grove-entry-link-form-save:disabled { opacity: 0.6; cursor: default; }
+.grove-entry-link-form-error {
+  color: #b13a3a;
+  font-family: var(--font-body);
+  font-size: 0.82rem;
+  margin: 0;
+  flex: 1 1 auto;
+}
+
+/* When just-for-me is on, tint the whole entry card subtly so it reads
+   as a "private" item without hiding it entirely. */
+.grove-entry.is-just-for-me {
+  background: rgba(112, 92, 108, 0.04);
 }

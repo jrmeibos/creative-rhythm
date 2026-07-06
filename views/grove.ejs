@@ -48,7 +48,9 @@
                    })
                  : '';
           %>
-            <li class="grove-entry">
+            <% const entryLinks = linksByMake.get(e.make_id) || []; %>
+            <li class="grove-entry <%= e.just_for_me ? 'is-just-for-me' : '' %>"
+                data-make-id="<%= e.make_id %>">
               <div class="grove-entry-header">
                 <span class="grove-entry-format">
                   <span aria-hidden="true"><%= e.format_emoji || '🌿' %></span>
@@ -67,17 +69,163 @@
                 <% } %>
               </div>
 
-              <% if (e.published_url) { %>
-                <div class="grove-entry-published">
-                  <span class="grove-entry-published-label">Shared</span>
-                  <a href="<%= e.published_url %>" target="_blank" rel="noopener" class="grove-entry-published-url">
-                    <%= e.published_url %>
-                  </a>
+              <!-- ── Just-for-me toggle ─────────────────────────────── -->
+              <div class="grove-entry-jfm-row">
+                <button type="button"
+                        class="grove-entry-jfm-btn <%= e.just_for_me ? 'is-on' : '' %>"
+                        data-grove-jfm data-make-id="<%= e.make_id %>"
+                        data-value="<%= e.just_for_me ? '1' : '0' %>"
+                        aria-pressed="<%= e.just_for_me ? 'true' : 'false' %>">
+                  <span class="grove-entry-jfm-check" aria-hidden="true"><%= e.just_for_me ? '✓' : '○' %></span>
+                  Just for me
+                </button>
+                <% if (e.just_for_me) { %>
+                  <span class="grove-entry-jfm-note">Nothing to share — this one's yours.</span>
+                <% } %>
+              </div>
+
+              <!-- ── Published links (hidden when just-for-me) ─────── -->
+              <div class="grove-entry-links <%= e.just_for_me ? 'is-disabled' : '' %>">
+                <div class="grove-entry-links-header">
+                  <span class="grove-entry-links-label">Shared</span>
                 </div>
-              <% } %>
+
+                <% if (entryLinks.length > 0) { %>
+                  <ul class="grove-entry-links-list">
+                    <% entryLinks.forEach(function (l) { %>
+                      <li class="grove-entry-link" data-link-id="<%= l.id %>">
+                        <% if (l.label) { %>
+                          <span class="grove-entry-link-label"><%= l.label %></span>
+                        <% } %>
+                        <a href="<%= l.url %>" target="_blank" rel="noopener" class="grove-entry-link-url">
+                          <%= l.url %>
+                        </a>
+                        <button type="button" class="grove-entry-link-remove"
+                                data-grove-link-remove data-link-id="<%= l.id %>"
+                                aria-label="Remove this link">×</button>
+                      </li>
+                    <% }); %>
+                  </ul>
+                <% } %>
+
+                <!-- Add-link form -->
+                <button type="button" class="grove-entry-link-add-btn"
+                        data-grove-link-open data-make-id="<%= e.make_id %>"
+                        <%= e.just_for_me ? 'disabled' : '' %>>
+                  + Add a link
+                </button>
+
+                <form class="grove-entry-link-form" hidden
+                      data-grove-link-form="<%= e.make_id %>" onsubmit="return false">
+                  <div class="grove-entry-link-form-row">
+                    <label class="grove-entry-link-field grove-entry-link-field--label">
+                      <span class="grove-entry-link-field-hint">Platform (optional)</span>
+                      <input type="text" name="label" maxlength="40" placeholder="Instagram, LinkedIn…">
+                    </label>
+                    <label class="grove-entry-link-field grove-entry-link-field--url">
+                      <span class="grove-entry-link-field-hint">Link to your post</span>
+                      <input type="url" name="url" required placeholder="https://…">
+                    </label>
+                  </div>
+                  <div class="grove-entry-link-form-actions">
+                    <button type="button" class="grove-entry-link-form-cancel"
+                            data-grove-link-cancel>Cancel</button>
+                    <button type="button" class="grove-entry-link-form-save"
+                            data-grove-link-save>Save link</button>
+                    <p class="grove-entry-link-form-error" hidden></p>
+                  </div>
+                </form>
+              </div>
             </li>
           <% }); %>
         </ul>
+
+        <script>
+          (function () {
+            // Toggle just-for-me on/off. Reload to reconcile the greyed-
+            // out disabled state + hide any add-link form that was open.
+            document.addEventListener('click', function (e) {
+              const jfmBtn = e.target.closest('[data-grove-jfm]');
+              if (jfmBtn) {
+                const makeId = jfmBtn.getAttribute('data-make-id');
+                const nextOn = jfmBtn.getAttribute('data-value') !== '1';
+                jfmBtn.disabled = true;
+                fetch('/grove/make/' + encodeURIComponent(makeId) + '/just-for-me', {
+                  method: 'POST', credentials: 'same-origin',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ justForMe: nextOn }),
+                }).then(function (r) {
+                  if (!r.ok) throw new Error();
+                  window.location.reload();
+                }).catch(function () {
+                  jfmBtn.disabled = false;
+                  alert('Could not update. Try again.');
+                });
+                return;
+              }
+
+              const openBtn = e.target.closest('[data-grove-link-open]');
+              if (openBtn) {
+                const makeId = openBtn.getAttribute('data-make-id');
+                const form   = document.querySelector('[data-grove-link-form="' + makeId + '"]');
+                if (form) {
+                  form.hidden = false;
+                  form.querySelector('input[name="label"]').focus();
+                }
+                return;
+              }
+
+              const cancelBtn = e.target.closest('[data-grove-link-cancel]');
+              if (cancelBtn) {
+                const form = cancelBtn.closest('[data-grove-link-form]');
+                if (form) form.hidden = true;
+                return;
+              }
+
+              const saveBtn = e.target.closest('[data-grove-link-save]');
+              if (saveBtn) {
+                const form   = saveBtn.closest('[data-grove-link-form]');
+                const makeId = form.getAttribute('data-grove-link-form');
+                const url    = form.querySelector('input[name="url"]').value.trim();
+                const label  = form.querySelector('input[name="label"]').value.trim();
+                const errEl  = form.querySelector('.grove-entry-link-form-error');
+                if (!url) { errEl.textContent = 'A URL is required.'; errEl.hidden = false; return; }
+                saveBtn.disabled = true;
+                fetch('/grove/link/' + encodeURIComponent(makeId), {
+                  method: 'POST', credentials: 'same-origin',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ url: url, label: label }),
+                }).then(function (r) { return r.json().then(function (d) { return { r: r, d: d }; }); })
+                  .then(function (o) {
+                    if (!o.r.ok || !o.d.ok) throw new Error(o.d && o.d.error);
+                    window.location.reload();
+                  })
+                  .catch(function (err) {
+                    errEl.textContent = (err && err.message) || 'Could not save. Try again.';
+                    errEl.hidden = false;
+                    saveBtn.disabled = false;
+                  });
+                return;
+              }
+
+              const rmBtn = e.target.closest('[data-grove-link-remove]');
+              if (rmBtn) {
+                const linkId = rmBtn.getAttribute('data-link-id');
+                if (!confirm('Remove this link?')) return;
+                rmBtn.disabled = true;
+                fetch('/grove/link/' + encodeURIComponent(linkId) + '/delete', {
+                  method: 'POST', credentials: 'same-origin',
+                }).then(function (r) {
+                  if (!r.ok) throw new Error();
+                  window.location.reload();
+                }).catch(function () {
+                  rmBtn.disabled = false;
+                  alert('Could not remove. Try again.');
+                });
+              }
+            });
+          })();
+        </script>
 
       <% } %>
 

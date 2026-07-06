@@ -739,6 +739,32 @@ db.exec(`
     db.exec("ALTER TABLE cutting_makes ADD COLUMN created INTEGER NOT NULL DEFAULT 0");
     console.log('✓ Migrated: added created flag to cutting_makes');
   }
+  // just_for_me: student's private-vs-shareable choice on each created
+  // make. When 1, the links section on /grove renders greyed out and no
+  // links can be added. Default 0 so existing rows stay sharable.
+  if (!makesCols.includes('just_for_me')) {
+    db.exec("ALTER TABLE cutting_makes ADD COLUMN just_for_me INTEGER NOT NULL DEFAULT 0");
+    console.log('✓ Migrated: added just_for_me flag to cutting_makes');
+  }
+
+  // Fall: multiple published-URL links per make. Each row is one link,
+  // ordered by posted_at ASC so the earliest post reads first. `label`
+  // is an optional platform tag ("Instagram", "LinkedIn"). Deletions are
+  // hard because a link is just a URL, no important history.
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS cutting_make_links (
+      id        INTEGER PRIMARY KEY AUTOINCREMENT,
+      make_id   INTEGER NOT NULL,
+      user_id   INTEGER NOT NULL,
+      url       TEXT NOT NULL,
+      label     TEXT,
+      posted_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (make_id) REFERENCES cutting_makes(id),
+      FOREIGN KEY (user_id) REFERENCES users(id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_cutting_make_links_make ON cutting_make_links (make_id);
+    CREATE INDEX IF NOT EXISTS idx_cutting_make_links_user ON cutting_make_links (user_id);
+  `);
 
   // Avatars moved to /data/avatars — old paths pointing to /uploads/avatars/ are now broken.
   // Reset them so users see initials until they re-upload.
@@ -2549,7 +2575,7 @@ module.exports = {
       SELECT m.id            AS make_id,
              m.made_at       AS made_at,
              m.note          AS make_note,
-             m.published_url AS published_url,
+             m.just_for_me   AS just_for_me,
              m.created       AS created,
              c.id            AS cutting_id,
              c.recorded_date, c.season, c.talked_about, c.how_it_felt, c.takeaway,
@@ -2706,11 +2732,49 @@ module.exports = {
   },
 
   // Hard delete a make. Ideas are cheap and disposable — no archive
-  // step for now. Ownership scoped via the WHERE clause.
+  // step for now. Ownership scoped via the WHERE clause. Also cascades
+  // to any published-links rows so the make + its links vanish together.
   deleteCuttingMake(makeId, userId) {
+    db.prepare('DELETE FROM cutting_make_links WHERE make_id = ? AND user_id = ?').run(makeId, userId);
     return db.prepare(
       'DELETE FROM cutting_makes WHERE id = ? AND user_id = ?'
     ).run(makeId, userId).changes;
+  },
+
+  // Flip the just_for_me flag on a make. When 1, the /grove entry hides
+  // its link-add UI ("this one is just for you").
+  setCuttingMakeJustForMe(makeId, userId, value) {
+    return db.prepare(
+      'UPDATE cutting_makes SET just_for_me = ? WHERE id = ? AND user_id = ?'
+    ).run(value ? 1 : 0, makeId, userId).changes;
+  },
+
+  // ── Published links (Fall) ─────────────────────────────────────────────
+  // A single make can hold many published links (multiple platforms).
+  // Ownership scoped in every helper.
+  createCuttingMakeLink(makeId, userId, url, label) {
+    const clean = String(url || '').trim();
+    if (!clean) throw new Error('URL required');
+    return db.prepare(`
+      INSERT INTO cutting_make_links (make_id, user_id, url, label)
+      VALUES (?, ?, ?, ?)
+    `).run(makeId, userId, clean, (label || '').trim() || null).lastInsertRowid;
+  },
+  deleteCuttingMakeLink(linkId, userId) {
+    return db.prepare(
+      'DELETE FROM cutting_make_links WHERE id = ? AND user_id = ?'
+    ).run(linkId, userId).changes;
+  },
+  // All links for a user, joined onto a { make_id → [links] } shape by
+  // the /grove route so each entry can render its own list without an
+  // extra round-trip per make.
+  getMakeLinksForUser(userId) {
+    return db.prepare(`
+      SELECT id, make_id, url, label, posted_at
+      FROM cutting_make_links
+      WHERE user_id = ?
+      ORDER BY posted_at ASC, id ASC
+    `).all(userId);
   },
 
   // Rollup counts for the destination summary displayed on /tending

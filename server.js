@@ -2995,13 +2995,67 @@ app.post('/summer/make/:makeId/delete', requireAuth, (req, res) => {
 // student starts making things. Fall will add published_url editing here.
 
 app.get('/grove', requireAuth, (req, res) => {
-  const entries = db.getGroveEntries(req.session.user.id);
+  const userId  = req.session.user.id;
+  const entries = db.getGroveEntries(userId);
+  // Group published links by make_id in JS so each Grove entry can
+  // render its own list inline without an extra DB round-trip per row.
+  const links   = db.getMakeLinksForUser(userId);
+  const linksByMake = new Map();
+  for (const l of links) {
+    if (!linksByMake.has(l.make_id)) linksByMake.set(l.make_id, []);
+    linksByMake.get(l.make_id).push(l);
+  }
   res.render('grove', {
     title: 'Share the Fruit From Your Garden',
     page: 'grove',
     user: req.session.user,
     entries,
+    linksByMake,
   });
+});
+
+// Add a published link to a created make. Body: { url, label }. url is
+// required; label is an optional platform tag ("Instagram", etc.).
+// Ownership check inside the DB helper's WHERE.
+app.post('/grove/link/:makeId', requireAuth, (req, res) => {
+  const makeId = parseInt(req.params.makeId, 10);
+  if (!Number.isInteger(makeId) || makeId <= 0) {
+    return res.status(400).json({ error: 'Invalid make id.' });
+  }
+  const { url, label } = req.body || {};
+  if (!url || !String(url).trim()) {
+    return res.status(400).json({ error: 'URL required.' });
+  }
+  try {
+    const id = db.createCuttingMakeLink(makeId, req.session.user.id, url, label);
+    return res.json({ ok: true, id });
+  } catch (e) {
+    return res.status(400).json({ error: e.message || 'Could not save.' });
+  }
+});
+
+// Delete a single published link.
+app.post('/grove/link/:linkId/delete', requireAuth, (req, res) => {
+  const linkId = parseInt(req.params.linkId, 10);
+  if (!Number.isInteger(linkId) || linkId <= 0) {
+    return res.status(400).json({ error: 'Invalid link id.' });
+  }
+  db.deleteCuttingMakeLink(linkId, req.session.user.id);
+  return res.json({ ok: true });
+});
+
+// Flip the just_for_me flag on a make. When true, /grove hides the
+// links UI for that entry.
+app.post('/grove/make/:makeId/just-for-me', requireAuth, (req, res) => {
+  const makeId = parseInt(req.params.makeId, 10);
+  if (!Number.isInteger(makeId) || makeId <= 0) {
+    return res.status(400).json({ error: 'Invalid make id.' });
+  }
+  const { justForMe } = req.body || {};
+  const value = justForMe === true || justForMe === 1 || justForMe === '1';
+  const changed = db.setCuttingMakeJustForMe(makeId, req.session.user.id, value);
+  if (changed === 0) return res.status(404).json({ error: 'Not found.' });
+  return res.json({ ok: true, justForMe: value });
 });
 
 // ─── Harvest ───────────────────────────────────────────────────────────────
