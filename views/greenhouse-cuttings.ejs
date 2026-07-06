@@ -97,8 +97,8 @@
           <div class="cuttings-control-row cuttings-control-row--chips">
             <span class="cuttings-control-label">Rating</span>
             <div class="cuttings-chips" role="group" aria-label="Filter by rating">
-              <a href="<%= ratingChipHref('keep-growing') %>" class="<%= chipCls(rating === 'keep-growing') %>">🪴 Keep growing</a>
-              <a href="<%= ratingChipHref('return-later') %>" class="<%= chipCls(rating === 'return-later') %>">🌱 Return to later</a>
+              <a href="<%= ratingChipHref('keep-growing') %>" class="<%= chipCls(rating === 'keep-growing') %>">🪴 Cultivate</a>
+              <a href="<%= ratingChipHref('return-later') %>" class="<%= chipCls(rating === 'return-later') %>">🌱 Sit with</a>
               <a href="<%= ratingChipHref('compost')      %>" class="<%= chipCls(rating === 'compost')      %>">🗑️ Compost</a>
             </div>
           </div>
@@ -180,8 +180,8 @@
                       // /tending. DB category 'archive' still maps to the
                       // Compost UI label; only the visual name is changing.
                       const tendingLabels = {
-                        keep_growing: { emoji: '🪴', text: 'Keep growing' },
-                        return_later: { emoji: '🌱', text: 'Return to later' },
+                        keep_growing: { emoji: '🪴', text: 'Cultivate' },
+                        return_later: { emoji: '🌱', text: 'Sit with' },
                         archive:      { emoji: '🗑️', text: 'Compost' },
                       };
                       const tending = c.tending_category ? tendingLabels[c.tending_category] : null;
@@ -222,8 +222,8 @@
                                   rows="3"
                                   placeholder="A note from the Gardener."><%= c.tending_reflection || '' %></textarea>
                         <div class="cutting-tending-editor-cats" role="group" aria-label="Rate this cutting">
-                          <button type="button" class="cutting-tending-editor-cat" data-category="keep_growing">🪴 Keep growing</button>
-                          <button type="button" class="cutting-tending-editor-cat" data-category="return_later">🌱 Return to later</button>
+                          <button type="button" class="cutting-tending-editor-cat" data-category="keep_growing">🪴 Cultivate</button>
+                          <button type="button" class="cutting-tending-editor-cat" data-category="return_later">🌱 Sit with</button>
                           <!-- data-category stays 'archive' — the DB value doesn't change, only the label -->
                           <button type="button" class="cutting-tending-editor-cat" data-category="archive">🗑️ Compost</button>
                         </div>

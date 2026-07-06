@@ -38,8 +38,8 @@
           Three buckets. You can move a cutting later. There's no rush.
         </p>
         <ul class="tending-learn-more-list">
-          <li>🪴 <strong>Keep growing</strong> — this one's alive. Goes to your idea bank for Summer's editing work.</li>
-          <li>🌱 <strong>Return to later</strong> — not sure yet. It'll come back to you in a few weeks for another look.</li>
+          <li>🪴 <strong>Cultivate</strong> — this one's alive. Goes to your idea bank for Summer's editing work.</li>
+          <li>🌱 <strong>Sit with</strong> — not sure yet. It'll come back to you in a few weeks for another look.</li>
           <li>🗑️ <strong>Compost</strong> — this one was for the practice, not for the harvest. Filed, but still findable.</li>
         </ul>
         <p class="tending-learn-more-close-note">
@@ -57,7 +57,7 @@
            href="/greenhouse/cuttings?rating=keep-growing">
           <span class="tending-destination-emoji" aria-hidden="true">🪴</span>
           <span class="tending-destination-body">
-            <span class="tending-destination-name">Keep growing</span>
+            <span class="tending-destination-name">Cultivate</span>
             <span class="tending-destination-count"><%= counts.keep_growing %> <%= counts.keep_growing === 1 ? 'cutting' : 'cuttings' %></span>
           </span>
         </a>
@@ -65,7 +65,7 @@
            href="/greenhouse/cuttings?rating=return-later">
           <span class="tending-destination-emoji" aria-hidden="true">🌱</span>
           <span class="tending-destination-body">
-            <span class="tending-destination-name">Return to later</span>
+            <span class="tending-destination-name">Sit with</span>
             <span class="tending-destination-count"><%= counts.return_later %> <%= counts.return_later === 1 ? 'cutting' : 'cuttings' %></span>
           </span>
         </a>
@@ -194,11 +194,11 @@
 
                   <div class="tending-category-buttons" role="group" aria-label="Where does this cutting go?">
                     <button type="button" class="tending-cat tending-cat--grow"    data-category="keep_growing">
-                      <span class="tending-cat-title">🪴 Keep growing</span>
+                      <span class="tending-cat-title">🪴 Cultivate</span>
                       <span class="tending-cat-sub">There's something here I can use down the line.</span>
                     </button>
                     <button type="button" class="tending-cat tending-cat--return"  data-category="return_later">
-                      <span class="tending-cat-title">🌱 Return to later</span>
+                      <span class="tending-cat-title">🌱 Sit with</span>
                       <span class="tending-cat-sub">There might be something here. I'm not sure yet.</span>
                     </button>
                     <!-- data-category stays 'archive' — the DB column value is
