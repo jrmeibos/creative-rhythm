@@ -1053,7 +1053,11 @@ details[open] .gh-planted-summary::before { content: '▾  '; }
 
 /* A single reflection block inside a day card. No own chrome — sits naturally
    under the date label and any prior entries. */
-.cutting-entry { /* base — no chrome, kept as a hook for spacing modifiers */ }
+.cutting-entry {
+  /* base — no chrome, kept as a hook for spacing modifiers */
+  /* Needed as an anchor for the absolutely-positioned pencil icon. */
+  position: relative;
+}
 
 /* Second and subsequent entries on the same day get a quiet separator + a
    bit more breathing room so they read as distinct sessions. */
@@ -1300,9 +1304,36 @@ details[open] .gh-planted-summary::before { content: '▾  '; }
   color: var(--color-bloem);
 }
 
-/* Change / Rate button — subtle text-link affordance that reveals the
-   inline editor below the entry. Quiet by design so it doesn't fight
-   the badge or fields for attention. */
+/* Change (pencil icon in upper-right) — for entries that already have
+   a Tending rating. Absolutely positioned so it doesn't fight the
+   badge or fields for horizontal space. Quiet at rest, bloem on hover.
+   The empty-state affordance (+ Rate & note) stays as inline text —
+   see .cutting-tending-edit-btn--empty below. */
+.cutting-tending-edit-icon {
+  position: absolute;
+  top: 0.65rem;
+  right: 0.65rem;
+  background: transparent;
+  border: none;
+  padding: 0.35rem;
+  color: rgba(16, 15, 16, 0.35);
+  cursor: pointer;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.15s, background 0.15s;
+  z-index: 1;
+}
+.cutting-tending-edit-icon:hover {
+  color: var(--color-bloem);
+  background: var(--color-bloem-light);
+}
+.cutting-tending-edit-icon:focus-visible {
+  outline: 2px solid var(--color-bloem);
+  outline-offset: 1px;
+}
+
 .cutting-tending-edit-btn {
   background: transparent;
   border: none;
@@ -1483,27 +1514,27 @@ details[open] .gh-planted-summary::before { content: '▾  '; }
 /* Cuttings delete: small muted text link, sits at the right edge of the
    marks row. Hovers toward bloem to signal it's interactive without ever
    looking aggressive. */
+/* Delete: red trash icon. Quiet at rest (muted red), brighter on hover
+   so accidental clicks aren't inviting. Still opens the browser confirm. */
 .cutting-delete-btn {
   background: none;
   border: none;
-  padding: 0.3rem 0.25rem;
-  font-family: var(--font-body);
-  font-size: 0.78rem;
-  font-weight: 400;
-  color: rgba(16, 15, 16, 0.38);
+  padding: 0.35rem;
+  color: rgba(177, 58, 58, 0.55);
   cursor: pointer;
-  text-decoration: underline;
-  text-underline-offset: 3px;
-  text-decoration-thickness: 1px;
-  transition: color 0.15s, opacity 0.15s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  transition: color 0.15s, background 0.15s;
 }
 .cutting-delete-btn:hover {
-  color: var(--color-bloem);
+  color: #b13a3a;
+  background: rgba(177, 58, 58, 0.08);
 }
 .cutting-delete-btn:focus-visible {
-  outline: 2px solid var(--color-bloem);
+  outline: 2px solid #b13a3a;
   outline-offset: 2px;
-  border-radius: 2px;
 }
 .cutting-delete-btn:disabled { opacity: 0.5; cursor: default; }
 
