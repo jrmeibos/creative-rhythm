@@ -151,7 +151,7 @@
                 <% } else { %>
                   <button type="button" class="grove-entry-share-note-add-btn"
                           data-grove-share-open data-make-id="<%= e.make_id %>">
-                    + Add a note about sharing this
+                    + Add a note (optional)
                   </button>
                 <% } %>
 
@@ -164,7 +164,7 @@
                             id="grove-share-note-<%= e.make_id %>"
                             data-share-note-input
                             rows="3"
-                            placeholder="How it felt, what happened, what you noticed."><%= e.share_note || '' %></textarea>
+                            placeholder="Anything you'd like to note for yourself later."><%= e.share_note || '' %></textarea>
                   <div class="grove-entry-share-note-actions">
                     <button type="button" class="grove-entry-share-note-cancel"
                             data-grove-share-cancel>Cancel</button>
