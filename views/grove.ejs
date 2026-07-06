@@ -23,13 +23,15 @@
       </header>
 
       <%
-        // Only creations that have (a) at least one shared link AND (b)
-        // are NOT marked just-for-me contribute a flower to the bouquet.
-        // stem_variant is set on the make's first link add; if it's null
-        // for some legacy reason, fall back to a stable per-make choice.
+        // A creation contributes a flower to the bouquet when it has
+        // ANY share activity — a public link OR a cohort share — and
+        // isn't marked just-for-me. stem_variant is set on the first
+        // share of either kind; if it's null for a legacy row, fall
+        // back to a stable per-make choice.
         const stemEntries = entries.filter(function (e) {
           const hasLinks = (linksByMake.get(e.make_id) || []).length > 0;
-          return hasLinks && !e.just_for_me;
+          const hasCohortShare = !!e.cohort_shared;
+          return (hasLinks || hasCohortShare) && !e.just_for_me;
         });
         const stemCount = stemEntries.length;
       %>
@@ -194,7 +196,7 @@
               <!-- ── Published links (hidden when just-for-me) ─────── -->
               <div class="grove-entry-links <%= e.just_for_me ? 'is-disabled' : '' %>">
                 <div class="grove-entry-links-header">
-                  <span class="grove-entry-links-label">Shared</span>
+                  <span class="grove-entry-links-label">Shared publicly</span>
                 </div>
 
                 <% if (entryLinks.length > 0) { %>
@@ -242,6 +244,68 @@
                     <button type="button" class="grove-entry-link-form-save"
                             data-grove-link-save>Save link</button>
                     <p class="grove-entry-link-form-error" hidden></p>
+                  </div>
+                </form>
+              </div>
+
+              <!-- ── Shared with the cohort (via Discord) — hidden when
+                   just-for-me. Optional discord_url deep-links back to
+                   the post the student made in the cohort's Discord. -->
+              <div class="grove-entry-cohort <%= e.just_for_me ? 'is-disabled' : '' %>">
+                <div class="grove-entry-cohort-header">
+                  <span class="grove-entry-cohort-label">Shared with the cohort</span>
+                </div>
+
+                <% if (e.cohort_shared) { %>
+                  <%
+                    const cohortAtLabel = e.cohort_shared_at
+                      ? new Date(e.cohort_shared_at.replace(' ', 'T') + 'Z').toLocaleDateString('en-US', {
+                          month: 'short', day: 'numeric', year: 'numeric',
+                        })
+                      : '';
+                  %>
+                  <div class="grove-entry-cohort-view">
+                    <span class="grove-entry-cohort-pill" aria-hidden="true">🎉</span>
+                    <span class="grove-entry-cohort-body">
+                      Shared with the cohort<% if (cohortAtLabel) { %> on <%= cohortAtLabel %><% } %>.
+                      <% if (e.discord_url) { %>
+                        <a href="<%= e.discord_url %>" target="_blank" rel="noopener"
+                           class="grove-entry-cohort-url">View on Discord →</a>
+                      <% } %>
+                    </span>
+                    <button type="button" class="grove-entry-cohort-edit-btn"
+                            data-grove-cohort-open data-make-id="<%= e.make_id %>">Edit</button>
+                    <button type="button" class="grove-entry-cohort-undo-btn"
+                            data-grove-cohort-undo data-make-id="<%= e.make_id %>"
+                            aria-label="Un-share from the cohort">Undo</button>
+                  </div>
+                <% } else { %>
+                  <button type="button" class="grove-entry-cohort-add-btn"
+                          data-grove-cohort-open data-make-id="<%= e.make_id %>"
+                          <%= e.just_for_me ? 'disabled' : '' %>>
+                    + Share with the cohort
+                  </button>
+                <% } %>
+
+                <form class="grove-entry-cohort-form" hidden
+                      data-grove-cohort-form="<%= e.make_id %>" onsubmit="return false">
+                  <p class="grove-entry-cohort-form-hint">
+                    Head to Discord and post your creation. Then paste the
+                    message link here (optional — you can add it later).
+                  </p>
+                  <label class="grove-entry-cohort-field">
+                    <span class="grove-entry-cohort-field-hint">Discord message link (optional)</span>
+                    <input type="url" name="discord_url" placeholder="https://discord.com/channels/…"
+                           value="<%= e.discord_url || '' %>">
+                  </label>
+                  <div class="grove-entry-cohort-form-actions">
+                    <button type="button" class="grove-entry-cohort-form-cancel"
+                            data-grove-cohort-cancel>Cancel</button>
+                    <button type="button" class="grove-entry-cohort-form-save"
+                            data-grove-cohort-save data-make-id="<%= e.make_id %>">
+                      <%= e.cohort_shared ? 'Save' : 'Mark as shared' %>
+                    </button>
+                    <p class="grove-entry-cohort-form-error" hidden></p>
                   </div>
                 </form>
               </div>
@@ -372,6 +436,77 @@
                 }).catch(function () {
                   rmBtn.disabled = false;
                   alert('Could not remove. Try again.');
+                });
+                return;
+              }
+
+              // Cohort share — open the inline form.
+              const cohortOpen = e.target.closest('[data-grove-cohort-open]');
+              if (cohortOpen) {
+                const makeId = cohortOpen.getAttribute('data-make-id');
+                const form   = document.querySelector('[data-grove-cohort-form="' + makeId + '"]');
+                if (form) {
+                  form.hidden = false;
+                  const urlInput = form.querySelector('input[name="discord_url"]');
+                  if (urlInput) urlInput.focus();
+                }
+                return;
+              }
+
+              // Cohort share — cancel form.
+              const cohortCancel = e.target.closest('[data-grove-cohort-cancel]');
+              if (cohortCancel) {
+                const form = cohortCancel.closest('[data-grove-cohort-form]');
+                if (form) form.hidden = true;
+                return;
+              }
+
+              // Cohort share — save (marks shared + records optional
+              // Discord URL). Server assigns stemVariant on first share.
+              const cohortSave = e.target.closest('[data-grove-cohort-save]');
+              if (cohortSave) {
+                const form = cohortSave.closest('[data-grove-cohort-form]');
+                const makeId = cohortSave.getAttribute('data-make-id');
+                const url    = form.querySelector('input[name="discord_url"]').value.trim();
+                const errEl  = form.querySelector('.grove-entry-cohort-form-error');
+                cohortSave.disabled = true;
+                fetch('/grove/make/' + encodeURIComponent(makeId) + '/cohort-share', {
+                  method: 'POST', credentials: 'same-origin',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ shared: true, discord_url: url }),
+                }).then(function (r) { return r.json().then(function (d) { return { r: r, d: d }; }); })
+                  .then(function (o) {
+                    if (!o.r.ok || !o.d.ok) throw new Error(o.d && o.d.error);
+                    if (o.d.stemVariant) {
+                      try { localStorage.setItem('grove_just_bloomed', String(makeId)); } catch (_) {}
+                    }
+                    window.location.reload();
+                  })
+                  .catch(function (err) {
+                    errEl.textContent = (err && err.message) || 'Could not save. Try again.';
+                    errEl.hidden = false;
+                    cohortSave.disabled = false;
+                  });
+                return;
+              }
+
+              // Cohort share — undo (un-share). Stem stays; only the
+              // shared state clears so the entry drops from the bouquet.
+              const cohortUndo = e.target.closest('[data-grove-cohort-undo]');
+              if (cohortUndo) {
+                const makeId = cohortUndo.getAttribute('data-make-id');
+                if (!confirm('Un-share this from the cohort?')) return;
+                cohortUndo.disabled = true;
+                fetch('/grove/make/' + encodeURIComponent(makeId) + '/cohort-share', {
+                  method: 'POST', credentials: 'same-origin',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ shared: false }),
+                }).then(function (r) {
+                  if (!r.ok) throw new Error();
+                  window.location.reload();
+                }).catch(function () {
+                  cohortUndo.disabled = false;
+                  alert('Could not update. Try again.');
                 });
                 return;
               }

@@ -3064,6 +3064,31 @@ app.post('/grove/make/:makeId/share-note', requireAuth, (req, res) => {
   return res.json({ ok: true });
 });
 
+// Toggle cohort-share on a make. Body: { shared: bool, discord_url?: string }.
+// Same "first share blooms a flower" pattern as POST /grove/link/:makeId —
+// if this share turns cohort_shared from 0→1 AND the make has no stem
+// variant yet, assign a random 1-12 and return it so the client can
+// trigger the bloom animation. Un-sharing (shared:false) clears the URL
+// and timestamp but does NOT remove the stem variant (the bouquet already
+// bloomed once — we don't take that back on un-share).
+app.post('/grove/make/:makeId/cohort-share', requireAuth, (req, res) => {
+  const makeId = parseInt(req.params.makeId, 10);
+  if (!Number.isInteger(makeId) || makeId <= 0) {
+    return res.status(400).json({ error: 'Invalid make id.' });
+  }
+  const { shared, discord_url } = req.body || {};
+  const userId = req.session.user.id;
+  const changed = db.setCuttingMakeCohortShare(makeId, userId, !!shared, discord_url);
+  if (changed === 0) return res.status(404).json({ error: 'Not found.' });
+  let stemVariant = null;
+  if (shared) {
+    const newVariant = Math.floor(Math.random() * 12) + 1;
+    const varChanged = db.setCuttingMakeStemVariantIfNull(makeId, userId, newVariant);
+    if (varChanged === 1) stemVariant = newVariant;
+  }
+  return res.json({ ok: true, stemVariant });
+});
+
 // Flip the just_for_me flag on a make. When true, /grove hides the
 // links UI for that entry.
 app.post('/grove/make/:makeId/just-for-me', requireAuth, (req, res) => {

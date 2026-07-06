@@ -753,6 +753,25 @@ db.exec(`
     db.exec("ALTER TABLE cutting_makes ADD COLUMN share_note TEXT");
     console.log('✓ Migrated: added share_note to cutting_makes');
   }
+  // Cohort share: when a student shares a creation with the pilot
+  // cohort (via Discord) instead of, or alongside, a public link.
+  // discord_url is optional — the student may share to Discord without
+  // pasting the message permalink back. cohort_shared_at is the moment
+  // they marked it shared. Bouquet counts a make as "bloomed" if it has
+  // links OR cohort_shared = 1 (and isn't just_for_me).
+  if (!makesCols.includes('cohort_shared')) {
+    db.exec("ALTER TABLE cutting_makes ADD COLUMN cohort_shared INTEGER NOT NULL DEFAULT 0");
+    console.log('✓ Migrated: added cohort_shared to cutting_makes');
+  }
+  if (!makesCols.includes('cohort_shared_at')) {
+    db.exec("ALTER TABLE cutting_makes ADD COLUMN cohort_shared_at DATETIME");
+    console.log('✓ Migrated: added cohort_shared_at to cutting_makes');
+  }
+  if (!makesCols.includes('discord_url')) {
+    db.exec("ALTER TABLE cutting_makes ADD COLUMN discord_url TEXT");
+    console.log('✓ Migrated: added discord_url to cutting_makes');
+  }
+
   // stem_variant: which of the 12 flower-stem SVGs this creation blooms
   // as in the /grove bouquet. Assigned once, on the student's first link
   // add for this make, and persists forever. NULL until first link.
@@ -2608,13 +2627,16 @@ module.exports = {
   // the Cultivated Ideas page and don't appear here.
   getGroveEntries(userId) {
     return db.prepare(`
-      SELECT m.id            AS make_id,
-             m.made_at       AS made_at,
-             m.note          AS make_note,
-             m.share_note    AS share_note,
-             m.just_for_me   AS just_for_me,
-             m.created       AS created,
-             m.stem_variant  AS stem_variant,
+      SELECT m.id                AS make_id,
+             m.made_at           AS made_at,
+             m.note              AS make_note,
+             m.share_note        AS share_note,
+             m.just_for_me       AS just_for_me,
+             m.created           AS created,
+             m.stem_variant      AS stem_variant,
+             m.cohort_shared     AS cohort_shared,
+             m.cohort_shared_at  AS cohort_shared_at,
+             m.discord_url       AS discord_url,
              c.id            AS cutting_id,
              c.recorded_date, c.season, c.talked_about, c.how_it_felt, c.takeaway,
              f.id            AS format_id,
@@ -2785,6 +2807,29 @@ module.exports = {
     return db.prepare(
       'UPDATE cutting_makes SET just_for_me = ? WHERE id = ? AND user_id = ?'
     ).run(value ? 1 : 0, makeId, userId).changes;
+  },
+
+  // Flip the cohort-shared flag on a make and optionally set the Discord
+  // message URL. Passing shared=false clears the timestamp and URL.
+  // Ownership scoped via the WHERE clause. Returns rows changed.
+  setCuttingMakeCohortShare(makeId, userId, shared, discordUrl) {
+    if (shared) {
+      const cleanUrl = (discordUrl || '').trim() || null;
+      return db.prepare(
+        "UPDATE cutting_makes " +
+        "SET cohort_shared = 1, " +
+        "    cohort_shared_at = CURRENT_TIMESTAMP, " +
+        "    discord_url = ? " +
+        "WHERE id = ? AND user_id = ?"
+      ).run(cleanUrl, makeId, userId).changes;
+    }
+    return db.prepare(
+      "UPDATE cutting_makes " +
+      "SET cohort_shared = 0, " +
+      "    cohort_shared_at = NULL, " +
+      "    discord_url = NULL " +
+      "WHERE id = ? AND user_id = ?"
+    ).run(makeId, userId).changes;
   },
 
   // Assign a stem variant to a make, but only if it doesn't have one yet.

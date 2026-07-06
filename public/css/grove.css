@@ -705,3 +705,181 @@
   margin: 0;
   flex: 1 1 auto;
 }
+
+/* ── Cohort share (via Discord) ─────────────────────────────────────── */
+/* Mirrors the visual weight of the public-links section directly above,
+   with a distinct "shared" pill and Discord-toned accent so the two
+   sharing options are visually parallel. */
+.grove-entry-cohort {
+  margin-top: 0.85rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid rgba(16, 15, 16, 0.08);
+}
+.grove-entry-cohort.is-disabled {
+  opacity: 0.4;
+  pointer-events: none;
+}
+.grove-entry-cohort-header {
+  display: flex;
+  align-items: baseline;
+  gap: 0.55rem;
+  margin-bottom: 0.5rem;
+}
+.grove-entry-cohort-label {
+  font-family: var(--font-body);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-understory);
+}
+
+.grove-entry-cohort-view {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.55rem 0.8rem;
+  background: rgba(118, 133, 108, 0.08);
+  border-left: 3px solid var(--color-understory);
+  border-radius: var(--radius-sm);
+  flex-wrap: wrap;
+}
+.grove-entry-cohort-pill {
+  font-size: 1rem;
+  line-height: 1;
+  flex: 0 0 auto;
+}
+.grove-entry-cohort-body {
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  color: var(--color-ink-stained);
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.grove-entry-cohort-url {
+  color: var(--color-bloem);
+  text-decoration: none;
+  border-bottom: 1px solid currentColor;
+  margin-left: 0.35rem;
+}
+.grove-entry-cohort-url:hover { color: var(--color-bloem-mid); }
+.grove-entry-cohort-edit-btn,
+.grove-entry-cohort-undo-btn {
+  background: transparent;
+  border: none;
+  padding: 0.15rem 0.5rem;
+  font-family: var(--font-body);
+  font-size: 0.78rem;
+  color: var(--color-bloem);
+  cursor: pointer;
+  border-radius: 4px;
+  transition: background 0.15s, color 0.15s;
+  flex: 0 0 auto;
+}
+.grove-entry-cohort-edit-btn:hover:not(:disabled) {
+  background: rgba(112, 92, 108, 0.08);
+}
+.grove-entry-cohort-undo-btn {
+  color: rgba(16, 15, 16, 0.5);
+}
+.grove-entry-cohort-undo-btn:hover:not(:disabled) {
+  color: #b13a3a;
+  background: rgba(177, 58, 58, 0.06);
+}
+
+.grove-entry-cohort-add-btn {
+  background: transparent;
+  border: 1px dashed rgba(118, 133, 108, 0.5);
+  border-radius: var(--radius-md);
+  color: var(--color-understory);
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  padding: 0.4rem 0.9rem;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+.grove-entry-cohort-add-btn:hover:not(:disabled) {
+  background: rgba(118, 133, 108, 0.08);
+  border-color: var(--color-understory);
+  color: var(--color-ink-stained);
+}
+.grove-entry-cohort-add-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.grove-entry-cohort-form {
+  margin-top: 0.6rem;
+  padding: 0.85rem 1rem;
+  background: var(--color-pearl);
+  border: 1px dashed rgba(118, 133, 108, 0.4);
+  border-radius: var(--radius-md);
+}
+.grove-entry-cohort-form[hidden] { display: none !important; }
+.grove-entry-cohort-form-hint {
+  font-family: var(--font-body);
+  font-size: 0.82rem;
+  color: rgba(16, 15, 16, 0.7);
+  margin: 0 0 0.7rem;
+  line-height: 1.45;
+}
+.grove-entry-cohort-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-bottom: 0.7rem;
+}
+.grove-entry-cohort-field-hint {
+  font-family: var(--font-body);
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: rgba(16, 15, 16, 0.6);
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+.grove-entry-cohort-field input {
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  padding: 0.4rem 0.6rem;
+  border: 1px solid rgba(16, 15, 16, 0.15);
+  border-radius: var(--radius-sm);
+  background: var(--color-blank-page);
+}
+.grove-entry-cohort-field input:focus {
+  outline: none;
+  border-color: var(--color-understory);
+}
+.grove-entry-cohort-form-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+.grove-entry-cohort-form-cancel {
+  background: transparent;
+  border: none;
+  padding: 0.4rem 0.7rem;
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  color: rgba(16, 15, 16, 0.55);
+  cursor: pointer;
+}
+.grove-entry-cohort-form-cancel:hover { color: var(--color-ink-stained); }
+.grove-entry-cohort-form-save {
+  background: var(--color-understory);
+  color: var(--color-pearl);
+  border: none;
+  border-radius: var(--radius-md);
+  padding: 0.45rem 1rem;
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.grove-entry-cohort-form-save:hover:not(:disabled) { filter: brightness(0.92); }
+.grove-entry-cohort-form-save:disabled { opacity: 0.6; cursor: default; }
+.grove-entry-cohort-form-error {
+  color: #b13a3a;
+  font-family: var(--font-body);
+  font-size: 0.82rem;
+  margin: 0.4rem 0 0;
+}
