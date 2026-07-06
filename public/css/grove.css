@@ -112,6 +112,13 @@
 @media (max-width: 1179px) {
   .grove-bouquet-stem { height: 380px; }
 }
+/* Per-stem size overrides for flowers whose natural head is oversized
+   relative to the rest of the set. Keeps the bouquet balanced without
+   asking Julia to redraw. */
+.grove-bouquet-stem[src$="stem-10.svg"] { height: 340px; }
+@media (max-width: 1179px) {
+  .grove-bouquet-stem[src$="stem-10.svg"] { height: 270px; }
+}
 /* Stem ends poking out below the tied bottom of the wrap. Each end
    shares the same --dx and --tilt as its matching flower stem above,
    but the tilt is negated so the line continues in the same axis
