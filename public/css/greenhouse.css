@@ -802,6 +802,20 @@ details[open] .gh-planted-summary::before { content: '▾  '; }
   color: var(--color-understory);
 }
 
+.gh-bed-art {
+  display: block;
+  width: 90px;
+  height: auto;
+  margin: 0 0 0.5rem;
+  flex-shrink: 0;
+}
+.gh-seed-art {
+  display: block;
+  width: 96px;
+  height: auto;
+  margin: 0.25rem auto 0.75rem;
+}
+
 .gh-bed-cta {
   display: inline-block;
   font-family: var(--font-body);

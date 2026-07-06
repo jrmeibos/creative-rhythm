@@ -11,6 +11,26 @@
     <%- include('partials/sidebar') %>
     <main class="main-content" id="main">
 
+      <%
+        // Pick the watercolor illustration for a bed based on the goal's age.
+        // An empty bed shows a pot; 0-3 weeks shows just-planted; 3-6 shows a
+        // bud; 6-9 shows a young plant; 9+ shows one of three flowering
+        // variants keyed to bed number so the three beds look distinct at
+        // full bloom.
+        function pickGoalImage(goal, bedNumber) {
+          if (!goal) return 'goal-pot';
+          const plantedRaw = goal.created_at;
+          if (!plantedRaw) return 'goal-planted';
+          const planted = new Date(String(plantedRaw).replace(' ', 'T') + 'Z');
+          const weeks = Math.floor((Date.now() - planted.getTime()) / (7 * 24 * 3600 * 1000));
+          if (weeks < 3) return 'goal-planted';
+          if (weeks < 6) return 'goal-bud';
+          if (weeks < 9) return 'goal-plant';
+          const floweringVariants = ['goal-flowering', 'goal-flowering-2', 'goal-flowering-3'];
+          return floweringVariants[(bedNumber - 1) % floweringVariants.length];
+        }
+      %>
+
       <% if (state === 'welcome') { %>
       <!-- ══ WELCOME (first visit) ═════════════════════════════════════════ -->
       <div class="gh-locked">
@@ -53,6 +73,7 @@
             <% const isFallow = fallowBedNumbers.includes(n); %>
             <div class="gh-bed<%= isFallow ? ' gh-bed--fallow' : '' %>">
               <span class="gh-bed-label">Bed <%= n %></span>
+              <img class="gh-bed-art" src="/images/greenhouse/goal-pot.svg" alt="" width="120" height="120">
               <% if (!isBedEmpty) { %>
                 <span class="gh-bed-filled-note">Planted</span>
               <% } else if (isFallow) { %>
@@ -276,8 +297,12 @@
             <% const repl = entry.replacement; %>
             <% const seedLabel = ['One', 'Two', 'Three'][n - 1]; %>
             <% const isKept = orig && !!orig.kept_at; %>
+            <% const activeGoal = repl || orig; %>
+            <% const goalImageSlug = pickGoalImage(activeGoal, n); %>
 
             <div class="gh-seed-card" id="gh-card-<%= n %>">
+              <img class="gh-seed-art" src="/images/greenhouse/<%= goalImageSlug %>.svg"
+                   alt="" width="120" height="120">
               <div class="gh-seed-num">Goal <%= seedLabel %></div>
 
               <% if (repl) { %>
