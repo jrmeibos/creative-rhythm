@@ -497,10 +497,16 @@
         <div class="dash-section-header">
           <h2 class="dash-section-title">Your Current Season</h2>
         </div>
-        <% if (!user.current_season) { %>
+        <% const canPick = locals.canPickSeason; %>
+        <% if (!canPick) { %>
+          <p class="season-locked-note">
+            Your season unlocks after Week 3 — or right away with the full course.
+            While you're in Winter, the platform stays in its Winter cadence.
+          </p>
+        <% } else if (!user.current_season) { %>
           <p class="season-first-prompt">What season are you in right now?</p>
         <% } %>
-        <div class="season-cards" id="season-cards">
+        <div class="season-cards <%= canPick ? '' : 'is-locked' %>" id="season-cards" data-can-pick="<%= canPick ? '1' : '0' %>">
           <%
             const seasonDefs = [
               { key: 'spring', name: 'Spring', category: 'Prioritizing Curiosity',
@@ -515,7 +521,9 @@
           %>
           <% for (const s of seasonDefs) { %>
             <button class="season-card season-card--<%= s.key %> <%= user.current_season === s.key ? 'is-selected' : '' %>"
-                    data-season="<%= s.key %>" type="button" aria-pressed="<%= user.current_season === s.key %>">
+                    data-season="<%= s.key %>" type="button"
+                    aria-pressed="<%= user.current_season === s.key %>"
+                    <%= canPick ? '' : 'disabled aria-disabled="true"' %>>
               <span class="season-card-emoji"><%- include('partials/season-icon', { season: s.key, size: 48 }) %></span>
               <span class="season-card-name"><%= s.name %></span>
               <span class="season-card-category"><%= s.category %></span>
