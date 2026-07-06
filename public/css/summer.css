@@ -1,0 +1,265 @@
+/* ─── Summer — turn Cultivate cuttings into content ─────────────────────── */
+
+.summer-header {
+  padding: 1.5rem 0 1rem;
+}
+.summer-title {
+  font-family: var(--font-display);
+  font-size: 2.75rem;
+  color: var(--color-ink-stained);
+  margin-bottom: 0.5rem;
+}
+.summer-intro {
+  font-family: var(--font-body);
+  color: var(--color-ink-stained);
+  opacity: 0.75;
+  max-width: 44rem;
+  line-height: 1.55;
+}
+.summer-links {
+  margin-top: 0.6rem;
+}
+.summer-link {
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  color: var(--color-bloem);
+  text-decoration: none;
+  border-bottom: 1px solid currentColor;
+  padding-bottom: 1px;
+}
+.summer-link:hover { color: var(--color-bloem-mid); }
+
+/* ── Empty state ─────────────────────────────────────────────────────── */
+.summer-empty {
+  background: var(--color-blank-page);
+  border: 1px dashed rgba(16, 15, 16, 0.15);
+  border-radius: var(--radius-lg);
+  padding: 2.5rem 2rem;
+  text-align: center;
+  max-width: 40rem;
+  margin: 2rem auto;
+}
+.summer-empty-headline {
+  font-family: var(--font-display);
+  font-size: 1.35rem;
+  color: var(--color-ink-stained);
+  margin-bottom: 0.6rem;
+}
+.summer-empty-body {
+  font-family: var(--font-body);
+  color: var(--color-ink-stained);
+  opacity: 0.75;
+  line-height: 1.55;
+  max-width: 30rem;
+  margin: 0 auto;
+}
+.summer-empty-body a {
+  color: var(--color-bloem);
+  text-decoration: none;
+  border-bottom: 1px solid currentColor;
+}
+
+/* ── Cutting cards ───────────────────────────────────────────────────── */
+.summer-cuttings {
+  list-style: none;
+  padding: 0;
+  margin: 1rem 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+.summer-cutting {
+  background: var(--color-blank-page);
+  border-radius: var(--radius-lg);
+  padding: 1.15rem 1.35rem;
+  box-shadow: var(--shadow-sm);
+}
+.summer-cutting-date {
+  font-family: var(--font-body);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-bloem);
+  margin-bottom: 0.55rem;
+}
+.summer-cutting-body {
+  margin-bottom: 0.85rem;
+}
+.summer-cutting-field {
+  font-family: var(--font-body);
+  color: var(--color-ink-stained);
+  line-height: 1.5;
+  margin-bottom: 0.4rem;
+}
+.summer-cutting-takeaway {
+  font-family: var(--font-body);
+  font-style: italic;
+  color: var(--color-ink-stained);
+  opacity: 0.75;
+  line-height: 1.5;
+}
+
+/* Already-made chips row */
+.summer-cutting-existing {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  align-items: center;
+  margin: 0.4rem 0 0.85rem;
+}
+.summer-cutting-existing-label {
+  font-family: var(--font-body);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-ink-stained);
+  opacity: 0.55;
+  margin-right: 0.2rem;
+}
+.summer-existing-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.24rem 0.65rem;
+  background: rgba(118, 133, 108, 0.14);
+  border: 1px solid rgba(118, 133, 108, 0.35);
+  border-radius: 999px;
+  font-family: var(--font-body);
+  font-size: 0.78rem;
+  color: var(--color-ink-stained);
+  text-decoration: none;
+  transition: background 0.15s, border-color 0.15s;
+}
+.summer-existing-chip:hover {
+  background: rgba(118, 133, 108, 0.22);
+  border-color: var(--color-understory);
+}
+
+/* "+ Make something" button — the invitation to open the picker */
+.summer-make-btn {
+  background: transparent;
+  border: 1px dashed rgba(112, 92, 108, 0.4);
+  border-radius: var(--radius-md);
+  color: var(--color-bloem);
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+.summer-make-btn:hover {
+  background: var(--color-bloem-light);
+  border-color: var(--color-bloem);
+}
+
+/* ── Inline picker (revealed under a cutting when + Make is clicked) ── */
+.summer-make-picker {
+  margin-top: 0.85rem;
+  padding: 1rem 1.1rem 0.9rem;
+  background: var(--color-pearl);
+  border: 1px dashed rgba(112, 92, 108, 0.35);
+  border-radius: var(--radius-md);
+}
+.summer-make-picker[hidden] { display: none !important; }
+.summer-make-picker-label {
+  font-family: var(--font-body);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-bloem);
+  display: block;
+  margin-bottom: 0.35rem;
+}
+.summer-make-picker-note {
+  width: 100%;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid rgba(16, 15, 16, 0.16);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  color: var(--color-ink-stained);
+  line-height: 1.5;
+  resize: vertical;
+  background: white;
+  margin-bottom: 0.85rem;
+}
+.summer-make-picker-note:focus {
+  outline: none;
+  border-color: var(--color-bloem);
+  box-shadow: 0 0 0 2px rgba(112, 92, 108, 0.15);
+}
+.summer-make-picker-help {
+  font-family: var(--font-body);
+  font-size: 0.8rem;
+  color: var(--color-ink-stained);
+  opacity: 0.6;
+  margin-bottom: 0.55rem;
+}
+
+.summer-format-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+.summer-format-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.42rem 0.85rem;
+  border: 1px solid rgba(16, 15, 16, 0.16);
+  border-radius: 999px;
+  background: white;
+  color: var(--color-ink-stained);
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: border-color 0.12s ease, background 0.12s ease;
+}
+.summer-format-chip:hover:not(:disabled) {
+  border-color: var(--color-bloem);
+  background: rgba(112, 92, 108, 0.06);
+}
+.summer-format-chip:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+.summer-format-chip-emoji {
+  font-size: 0.95rem;
+  line-height: 1;
+}
+.summer-format-chip-name {
+  line-height: 1;
+}
+
+.summer-make-picker-footer {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 0.7rem;
+  margin-top: 0.75rem;
+}
+.summer-make-picker-cancel {
+  background: transparent;
+  border: none;
+  padding: 0.2rem 0.4rem;
+  font-family: var(--font-body);
+  font-size: 0.78rem;
+  color: rgba(16, 15, 16, 0.55);
+  cursor: pointer;
+  border-bottom: 1px solid transparent;
+}
+.summer-make-picker-cancel:hover {
+  color: var(--color-bloem);
+  border-bottom-color: currentColor;
+}
+.summer-make-picker-error {
+  color: #b13a3a;
+  font-family: var(--font-body);
+  font-size: 0.82rem;
+  margin: 0;
+  flex: 1 1 auto;
+}

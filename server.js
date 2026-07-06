@@ -2784,6 +2784,70 @@ app.post('/tending/intro-seen', requireAuth, (req, res) => {
   return res.json({ ok: true });
 });
 
+// ─── Summer — turn Cultivate cuttings into content ────────────────────────
+// The main Summer page: student's Cultivate pile on the left, a menu of
+// content formats they can pick per cutting. Making a cutting inserts a
+// cutting_makes row and reloads so the "Already made as…" chips update.
+// The Grove is the downstream view of everything that's been made.
+
+app.get('/summer', requireAuth, (req, res) => {
+  const userId = req.session.user.id;
+
+  // Cultivate pile — reuse getCuttingsForUser (which already carries the
+  // latest tending_category) and filter in-JS. At pilot scale (≤ ~100
+  // cuttings per user) this is cheap and matches how /greenhouse/cuttings
+  // filters. Renders newest-first, same as the archive.
+  const cuttings = db.getCuttingsForUser(userId)
+    .filter(c => c.tending_category === 'keep_growing');
+
+  const formats = db.getFormatsForUser(userId);
+
+  // Group makes by cutting_id so the view can render existing formats
+  // inline on each Cultivate card without extra DB round-trips.
+  const makes = db.getMakesForUser(userId);
+  const makesByCutting = new Map();
+  for (const m of makes) {
+    if (!makesByCutting.has(m.cutting_id)) makesByCutting.set(m.cutting_id, []);
+    makesByCutting.get(m.cutting_id).push(m);
+  }
+
+  res.render('summer', {
+    title: 'Summer',
+    page: 'summer',
+    user: req.session.user,
+    cuttings,
+    formats,
+    makesByCutting,
+  });
+});
+
+// Record a "made as X" event. Body: { formatId, note }. Only Cultivate
+// cuttings owned by the student can be marked. New row per event —
+// making the same cutting three times inserts three rows.
+app.post('/summer/make/:cuttingId', requireAuth, (req, res) => {
+  const cuttingId = parseInt(req.params.cuttingId, 10);
+  if (!Number.isInteger(cuttingId) || cuttingId <= 0) {
+    return res.status(400).json({ error: 'Invalid cutting id.' });
+  }
+  const { formatId, note } = req.body || {};
+  const fid = parseInt(formatId, 10);
+  if (!Number.isInteger(fid) || fid <= 0) {
+    return res.status(400).json({ error: 'Invalid format id.' });
+  }
+  // Ownership + eligibility checks — only Cultivate cuttings the student
+  // owns can be made. Ineligible cases (Sit-with, Compost, other user's
+  // cutting) return 403 rather than silently succeeding.
+  if (!db.isCuttingCultivateForUser(cuttingId, req.session.user.id)) {
+    return res.status(403).json({ error: 'Cutting is not in your Cultivate pile.' });
+  }
+  const format = db.getFormatById(fid, req.session.user.id);
+  if (!format) {
+    return res.status(400).json({ error: 'Format not found.' });
+  }
+  const makeId = db.recordCuttingMake(cuttingId, req.session.user.id, format.id, note);
+  return res.json({ ok: true, makeId, format: { emoji: format.emoji, name: format.name } });
+});
+
 // ─── The Grove — where Cultivate cuttings that have been "made" live ──────
 // Summer's downstream view: every cutting_makes row rendered as a card
 // showing what the cutting was, what format it became, and when. Fully

@@ -2546,6 +2546,46 @@ module.exports = {
     `).all(userId);
   },
 
+  // All makes for a user, joined with the format they used. Ordered
+  // newest-first. The /summer view groups these by cutting_id in JS so
+  // each Cultivate entry can render "already made as ..." chips inline.
+  getMakesForUser(userId) {
+    return db.prepare(`
+      SELECT m.id, m.cutting_id, m.format_id, m.made_at, m.note, m.published_url,
+             f.slug  AS format_slug,
+             f.name  AS format_name,
+             f.emoji AS format_emoji
+      FROM cutting_makes m
+      JOIN content_formats f ON f.id = m.format_id
+      WHERE m.user_id = ?
+      ORDER BY m.made_at DESC, m.id DESC
+    `).all(userId);
+  },
+
+  // Sanity check used by the /summer/make route: does this cutting exist,
+  // belong to this user, AND have Cultivate as its current category? Only
+  // Cultivate cuttings are eligible to be "made" — Sit-with and Compost
+  // cuttings are ineligible. Returns the cutting id on success, null
+  // otherwise. Uses the same "latest curation wins" rule as everywhere.
+  isCuttingCultivateForUser(cuttingId, userId) {
+    const row = db.prepare(`
+      SELECT c.id
+      FROM cuttings c
+      JOIN (
+        SELECT cc1.cutting_id, cc1.category
+        FROM cutting_curations cc1
+        WHERE cc1.id = (
+          SELECT cc2.id FROM cutting_curations cc2
+          WHERE cc2.cutting_id = cc1.cutting_id
+          ORDER BY cc2.curated_at DESC, cc2.id DESC
+          LIMIT 1
+        )
+      ) latest ON latest.cutting_id = c.id
+      WHERE c.id = ? AND c.user_id = ? AND latest.category = 'keep_growing'
+    `).get(cuttingId, userId);
+    return row ? row.id : null;
+  },
+
   // Insert a fresh "made as X" event. New row every time — history is
   // never overwritten. `note` and `publishedUrl` are optional; they can be
   // filled in later (Fall re-opens Grove entries for URL entry).

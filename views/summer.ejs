@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <%- include('partials/head') %>
+  <link rel="stylesheet" href="/css/dashboard.css">
+  <link rel="stylesheet" href="/css/summer.css">
+</head>
+<body class="app-body">
+  <div class="app-layout">
+    <%- include('partials/sidebar') %>
+    <main class="main-content" id="main">
+
+      <a href="/dashboard" class="lesson-back">← Back to dashboard</a>
+
+      <header class="summer-header">
+        <h1 class="summer-title">Summer</h1>
+        <p class="summer-intro">
+          Pick a cutting from your Cultivate pile and try turning it into
+          content. There are many ways to shape the same thought — a written
+          post, a talk-to-camera video, a quote graphic. You can make the same
+          cutting into more than one thing over time.
+        </p>
+        <p class="summer-links">
+          <a href="/grove" class="summer-link">Visit The Grove →</a>
+        </p>
+      </header>
+
+      <% if (cuttings.length === 0) { %>
+
+        <section class="summer-empty">
+          <p class="summer-empty-headline">Your Cultivate pile is empty.</p>
+          <p class="summer-empty-body">
+            When you head to <a href="/tending">Tending</a> and mark a cutting
+            🪴 <strong>Cultivate</strong>, it'll show up here so you can make
+            something from it.
+          </p>
+        </section>
+
+      <% } else { %>
+
+        <ul class="summer-cuttings">
+          <% cuttings.forEach(function (c) {
+               const dateLabel = c.recorded_date
+                 ? new Date(c.recorded_date + 'T00:00:00').toLocaleDateString('en-US', {
+                     weekday: 'long', month: 'long', day: 'numeric',
+                   })
+                 : '';
+               const existing = makesByCutting.get(c.id) || [];
+          %>
+            <li class="summer-cutting" data-cutting-id="<%= c.id %>">
+              <div class="summer-cutting-date"><%= dateLabel %></div>
+
+              <div class="summer-cutting-body">
+                <% if (c.talked_about) { %>
+                  <p class="summer-cutting-field"><%= c.talked_about %></p>
+                <% } %>
+                <% if (c.takeaway) { %>
+                  <p class="summer-cutting-takeaway"><%= c.takeaway %></p>
+                <% } %>
+              </div>
+
+              <% if (existing.length > 0) { %>
+                <div class="summer-cutting-existing">
+                  <span class="summer-cutting-existing-label">Already made as</span>
+                  <% existing.forEach(function (m) { %>
+                    <a class="summer-existing-chip" href="/summer/format/<%= m.format_slug %>">
+                      <span aria-hidden="true"><%= m.format_emoji || '🌿' %></span>
+                      <%= m.format_name %>
+                    </a>
+                  <% }); %>
+                </div>
+              <% } %>
+
+              <button type="button" class="summer-make-btn"
+                      data-summer-make data-cutting-id="<%= c.id %>">
+                + Make something
+              </button>
+
+              <!-- Inline picker (hidden until "+ Make something" clicked) -->
+              <div class="summer-make-picker" hidden data-summer-make-picker="<%= c.id %>">
+                <label class="summer-make-picker-label" for="summer-note-<%= c.id %>">
+                  Note about this make (optional)
+                </label>
+                <textarea class="summer-make-picker-note"
+                          id="summer-note-<%= c.id %>"
+                          rows="2"
+                          placeholder="Anything to remember about how you shaped this."></textarea>
+
+                <p class="summer-make-picker-help">Pick a format — the click saves it.</p>
+                <div class="summer-format-grid">
+                  <% formats.forEach(function (f) { %>
+                    <button type="button" class="summer-format-chip"
+                            data-summer-format="<%= f.id %>">
+                      <span class="summer-format-chip-emoji" aria-hidden="true"><%= f.emoji || '🌿' %></span>
+                      <span class="summer-format-chip-name"><%= f.name %></span>
+                    </button>
+                  <% }); %>
+                </div>
+
+                <div class="summer-make-picker-footer">
+                  <button type="button" class="summer-make-picker-cancel"
+                          data-summer-make-cancel>Cancel</button>
+                  <p class="summer-make-picker-error" hidden></p>
+                </div>
+              </div>
+            </li>
+          <% }); %>
+        </ul>
+
+      <% } %>
+
+    </main>
+  </div>
+
+  <script>
+    (function () {
+      // Open / close inline pickers. Click "+ Make something" reveals the
+      // format grid; Cancel hides. All handlers are delegated on the main
+      // container so new cuttings show up without re-binding.
+      document.addEventListener('click', function (e) {
+        const openBtn = e.target.closest('[data-summer-make]');
+        if (openBtn) {
+          const id = openBtn.getAttribute('data-cutting-id');
+          const picker = document.querySelector('[data-summer-make-picker="' + id + '"]');
+          if (picker) {
+            picker.hidden = false;
+            const ta = picker.querySelector('.summer-make-picker-note');
+            if (ta) ta.focus();
+          }
+          return;
+        }
+
+        const cancelBtn = e.target.closest('[data-summer-make-cancel]');
+        if (cancelBtn) {
+          const picker = cancelBtn.closest('[data-summer-make-picker]');
+          if (picker) picker.hidden = true;
+          return;
+        }
+
+        const fmtBtn = e.target.closest('[data-summer-format]');
+        if (fmtBtn) {
+          const picker    = fmtBtn.closest('[data-summer-make-picker]');
+          const cuttingId = picker.getAttribute('data-summer-make-picker');
+          const formatId  = fmtBtn.getAttribute('data-summer-format');
+          const ta        = picker.querySelector('.summer-make-picker-note');
+          const note      = ta ? ta.value.trim() : '';
+          const errEl     = picker.querySelector('.summer-make-picker-error');
+          picker.querySelectorAll('.summer-format-chip').forEach(function (b) { b.disabled = true; });
+
+          fetch('/summer/make/' + encodeURIComponent(cuttingId), {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ formatId: formatId, note: note }),
+          }).then(function (r) {
+            if (!r.ok) throw new Error('save failed');
+            window.location.reload();
+          }).catch(function () {
+            if (errEl) { errEl.textContent = 'Could not save. Try again.'; errEl.hidden = false; }
+            picker.querySelectorAll('.summer-format-chip').forEach(function (b) { b.disabled = false; });
+          });
+        }
+      });
+    })();
+  </script>
+</body>
+</html>
