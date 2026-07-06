@@ -83,14 +83,18 @@
       <% if (queue.length === 0) { %>
 
         <% if (reviewWeek === null) { %>
-          <!-- Fully caught up (or nothing to review yet — either way, a soft empty state). -->
           <section class="tending-empty">
-            <p class="tending-empty-headline">Nothing waiting for the Gardener right now.</p>
-            <p class="tending-empty-body">
-              When your earliest un-tended cuttings become old enough
-              (three weeks back), they'll appear here. Any "return to later"
-              cuttings will resurface once their three weeks are up.
-            </p>
+            <p class="tending-empty-headline">You're all caught up.</p>
+            <% if (hasMorePending) { %>
+              <p class="tending-empty-body">
+                You're encouraged to review your cuttings every three weeks.
+                Right now, you're all caught up! If you'd like to continue
+                reviewing your cuttings,
+                <a href="/tending?ahead=<%= ahead + 1 %>" class="tending-empty-link">click here to load another week</a>.
+              </p>
+            <% } else { %>
+              <p class="tending-empty-body">You have tended all of your logged cuttings.</p>
+            <% } %>
           </section>
         <% } else { %>
           <!-- Review week is set but its recording-week had zero cuttings. -->

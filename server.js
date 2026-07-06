@@ -2708,11 +2708,24 @@ app.get('/tending', requireAuth, (req, res) => {
     return res.redirect('/dashboard?tending_locked=1');
   }
 
-  const reviewWeek = db.getTendingReviewWeek(user.id, currentCourseWeek, courseStartDate);
+  // Optional "load another week" — students can opt in to reviewing a
+  // recording-week closer to the present than the default 3-week buffer.
+  // ahead=1 → maxReviewable = week-2; ahead=2 → week-1; ahead=3 → today.
+  // Capped so a stray URL can't push into the future.
+  const ahead = Math.max(0, Math.min(3, parseInt(req.query.ahead, 10) || 0));
+  const effectiveCurrent = currentCourseWeek + ahead;
+
+  const reviewWeek = db.getTendingReviewWeek(user.id, effectiveCurrent, courseStartDate);
   const todayStr   = toLocalDateString(getNow(user));
   const queue      = db.getTendingQueue(user.id, reviewWeek, courseStartDate, todayStr);
   const counts     = db.getTendingDestinationCounts(user.id);
   const showIntro  = !db.hasSeenTendingIntro(user.id);
+
+  // Empty-state discriminator: are there any never-tended cuttings still
+  // waiting behind the 3-week (or ahead-adjusted) buffer? True → "load
+  // another week" is a live option. False → student has tended every
+  // logged cutting; no more surfacing later either.
+  const hasMorePending = db.countUncuratedCuttings(user.id) > 0;
 
   res.render('tending', {
     title: 'Tending',
@@ -2723,6 +2736,8 @@ app.get('/tending', requireAuth, (req, res) => {
     queue,
     counts,
     showIntro,
+    ahead,
+    hasMorePending,
   });
 });
 

@@ -166,6 +166,14 @@
   max-width: 30rem;
   margin: 0 auto;
 }
+.tending-empty-link {
+  color: var(--color-bloem);
+  text-decoration: none;
+  border-bottom: 1px solid currentColor;
+}
+.tending-empty-link:hover {
+  color: var(--color-bloem-mid);
+}
 
 /* ── Queue header + pause button ───────────────────────────────────────── */
 .tending-queue-header {

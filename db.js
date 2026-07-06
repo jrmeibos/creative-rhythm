@@ -2377,6 +2377,22 @@ module.exports = {
     ).run(userId).changes;
   },
 
+  // Count of cuttings that have NEVER been curated (any category, any
+  // week). Used by /tending's empty state to distinguish "you're caught
+  // up but more will surface as they age" from "you have tended every
+  // logged cutting." Cheap — indexed by user_id.
+  countUncuratedCuttings(userId) {
+    const row = db.prepare(`
+      SELECT COUNT(*) AS c
+      FROM cuttings c
+      WHERE c.user_id = ?
+        AND NOT EXISTS (
+          SELECT 1 FROM cutting_curations cc WHERE cc.cutting_id = c.id
+        )
+    `).get(userId);
+    return row ? row.c : 0;
+  },
+
   // Rollup counts for the destination summary displayed on /tending
   // ("since you started: N growing / M returning / K archived"). Uses the
   // latest curation per cutting so cuttings that moved between categories
