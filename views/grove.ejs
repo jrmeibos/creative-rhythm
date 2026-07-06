@@ -105,9 +105,6 @@
                                   data-grove-link-remove data-link-id="<%= l.id %>"
                                   aria-label="Remove this link">×</button>
                         </div>
-                        <% if (l.note) { %>
-                          <p class="grove-entry-link-note"><%= l.note %></p>
-                        <% } %>
                       </li>
                     <% }); %>
                   </ul>
@@ -132,17 +129,48 @@
                       <input type="url" name="url" required placeholder="https://…">
                     </label>
                   </div>
-                  <label class="grove-entry-link-field grove-entry-link-field--note">
-                    <span class="grove-entry-link-field-hint">What was it like to share this? (optional)</span>
-                    <textarea name="note" rows="2"
-                              placeholder="How it felt, what happened, what you noticed."></textarea>
-                  </label>
                   <div class="grove-entry-link-form-actions">
                     <button type="button" class="grove-entry-link-form-cancel"
                             data-grove-link-cancel>Cancel</button>
                     <button type="button" class="grove-entry-link-form-save"
                             data-grove-link-save>Save link</button>
                     <p class="grove-entry-link-form-error" hidden></p>
+                  </div>
+                </form>
+              </div>
+
+              <!-- ── Per-entry share reflection ("what was it like to share this?") ── -->
+              <div class="grove-entry-share-note-row">
+                <% if (e.share_note) { %>
+                  <div class="grove-entry-share-note-view" data-grove-share-view="<%= e.make_id %>">
+                    <p class="grove-entry-share-note-label">What it was like to share this</p>
+                    <p class="grove-entry-share-note-body"><%= e.share_note %></p>
+                    <button type="button" class="grove-entry-share-note-edit-btn"
+                            data-grove-share-open data-make-id="<%= e.make_id %>">Edit</button>
+                  </div>
+                <% } else { %>
+                  <button type="button" class="grove-entry-share-note-add-btn"
+                          data-grove-share-open data-make-id="<%= e.make_id %>">
+                    + Add a note about sharing this
+                  </button>
+                <% } %>
+
+                <form class="grove-entry-share-note-form" hidden
+                      data-grove-share-form="<%= e.make_id %>" onsubmit="return false">
+                  <label class="grove-entry-share-note-field-label" for="grove-share-note-<%= e.make_id %>">
+                    What was it like to share this? (optional)
+                  </label>
+                  <textarea class="grove-entry-share-note-textarea"
+                            id="grove-share-note-<%= e.make_id %>"
+                            data-share-note-input
+                            rows="3"
+                            placeholder="How it felt, what happened, what you noticed."><%= e.share_note || '' %></textarea>
+                  <div class="grove-entry-share-note-actions">
+                    <button type="button" class="grove-entry-share-note-cancel"
+                            data-grove-share-cancel>Cancel</button>
+                    <button type="button" class="grove-entry-share-note-save"
+                            data-grove-share-save data-make-id="<%= e.make_id %>">Save</button>
+                    <p class="grove-entry-share-note-error" hidden></p>
                   </div>
                 </form>
               </div>
@@ -198,15 +226,13 @@
                 const makeId = form.getAttribute('data-grove-link-form');
                 const url    = form.querySelector('input[name="url"]').value.trim();
                 const label  = form.querySelector('input[name="label"]').value.trim();
-                const noteEl = form.querySelector('textarea[name="note"]');
-                const note   = noteEl ? noteEl.value.trim() : '';
                 const errEl  = form.querySelector('.grove-entry-link-form-error');
                 if (!url) { errEl.textContent = 'A URL is required.'; errEl.hidden = false; return; }
                 saveBtn.disabled = true;
                 fetch('/grove/link/' + encodeURIComponent(makeId), {
                   method: 'POST', credentials: 'same-origin',
                   headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ url: url, label: label, note: note }),
+                  body: JSON.stringify({ url: url, label: label }),
                 }).then(function (r) { return r.json().then(function (d) { return { r: r, d: d }; }); })
                   .then(function (o) {
                     if (!o.r.ok || !o.d.ok) throw new Error(o.d && o.d.error);
@@ -233,6 +259,50 @@
                 }).catch(function () {
                   rmBtn.disabled = false;
                   alert('Could not remove. Try again.');
+                });
+                return;
+              }
+
+              // Per-entry share reflection ("what was it like to share this?").
+              const shareOpen = e.target.closest('[data-grove-share-open]');
+              if (shareOpen) {
+                const makeId = shareOpen.getAttribute('data-make-id');
+                const form   = document.querySelector('[data-grove-share-form="' + makeId + '"]');
+                const view   = document.querySelector('[data-grove-share-view="' + makeId + '"]');
+                if (view) view.hidden = true;
+                if (shareOpen.classList.contains('grove-entry-share-note-add-btn')) shareOpen.hidden = true;
+                if (form) {
+                  form.hidden = false;
+                  const ta = form.querySelector('[data-share-note-input]');
+                  if (ta) ta.focus();
+                }
+                return;
+              }
+
+              const shareCancel = e.target.closest('[data-grove-share-cancel]');
+              if (shareCancel) {
+                window.location.reload();
+                return;
+              }
+
+              const shareSave = e.target.closest('[data-grove-share-save]');
+              if (shareSave) {
+                const makeId = shareSave.getAttribute('data-make-id');
+                const form   = shareSave.closest('[data-grove-share-form]');
+                const ta     = form.querySelector('[data-share-note-input]');
+                const errEl  = form.querySelector('.grove-entry-share-note-error');
+                const note   = ta ? ta.value : '';
+                shareSave.disabled = true;
+                fetch('/grove/make/' + encodeURIComponent(makeId) + '/share-note', {
+                  method: 'POST', credentials: 'same-origin',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ note: note }),
+                }).then(function (r) {
+                  if (!r.ok) throw new Error();
+                  window.location.reload();
+                }).catch(function () {
+                  if (errEl) { errEl.textContent = 'Could not save. Try again.'; errEl.hidden = false; }
+                  shareSave.disabled = false;
                 });
               }
             });

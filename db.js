@@ -746,6 +746,13 @@ db.exec(`
     db.exec("ALTER TABLE cutting_makes ADD COLUMN just_for_me INTEGER NOT NULL DEFAULT 0");
     console.log('✓ Migrated: added just_for_me flag to cutting_makes');
   }
+  // share_note: one reflection per created piece about what it was like
+  // to share it — separate from the idea-note on cutting_makes.note
+  // (which is written at Cultivated-Ideas time). Nullable; default null.
+  if (!makesCols.includes('share_note')) {
+    db.exec("ALTER TABLE cutting_makes ADD COLUMN share_note TEXT");
+    console.log('✓ Migrated: added share_note to cutting_makes');
+  }
 
   // Fall: multiple published-URL links per make. Each row is one link,
   // ordered by posted_at ASC so the earliest post reads first. `label`
@@ -2585,6 +2592,7 @@ module.exports = {
       SELECT m.id            AS make_id,
              m.made_at       AS made_at,
              m.note          AS make_note,
+             m.share_note    AS share_note,
              m.just_for_me   AS just_for_me,
              m.created       AS created,
              c.id            AS cutting_id,
@@ -2757,6 +2765,15 @@ module.exports = {
     return db.prepare(
       'UPDATE cutting_makes SET just_for_me = ? WHERE id = ? AND user_id = ?'
     ).run(value ? 1 : 0, makeId, userId).changes;
+  },
+
+  // Write the per-entry share reflection ("what was it like to share
+  // this?"). One note per make. Empty string clears the note.
+  setCuttingMakeShareNote(makeId, userId, note) {
+    const clean = (note || '').trim() || null;
+    return db.prepare(
+      'UPDATE cutting_makes SET share_note = ? WHERE id = ? AND user_id = ?'
+    ).run(clean, makeId, userId).changes;
   },
 
   // ── Published links (Fall) ─────────────────────────────────────────────

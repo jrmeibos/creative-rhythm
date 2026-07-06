@@ -203,16 +203,6 @@
   flex-direction: column;
   gap: 0.35rem;
 }
-.grove-entry-link-note {
-  font-family: var(--font-body);
-  font-size: 0.82rem;
-  font-style: italic;
-  line-height: 1.5;
-  color: rgba(16, 15, 16, 0.7);
-  padding: 0.15rem 0.7rem 0.15rem 1rem;
-  border-left: 2px solid rgba(112, 92, 108, 0.3);
-  margin: 0 0 0 0.4rem;
-}
 .grove-entry-link {
   display: flex;
   align-items: center;
@@ -375,4 +365,145 @@
    as a "private" item without hiding it entirely. */
 .grove-entry.is-just-for-me {
   background: rgba(112, 92, 108, 0.04);
+}
+
+/* ── Per-entry share reflection ─────────────────────────────────────── */
+.grove-entry-share-note-row {
+  margin-top: 0.85rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid rgba(16, 15, 16, 0.08);
+}
+
+/* Rendered view when a note exists */
+.grove-entry-share-note-view {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0.6rem 0.9rem 0.6rem 1rem;
+  border-left: 3px solid var(--color-bloem);
+  background: rgba(112, 92, 108, 0.06);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  position: relative;
+}
+.grove-entry-share-note-label {
+  font-family: var(--font-body);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-bloem);
+}
+.grove-entry-share-note-body {
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  font-style: italic;
+  color: var(--color-ink-stained);
+  line-height: 1.55;
+  white-space: pre-wrap;
+}
+.grove-entry-share-note-edit-btn {
+  align-self: flex-start;
+  background: transparent;
+  border: none;
+  padding: 0.15rem 0.4rem;
+  font-family: var(--font-body);
+  font-size: 0.75rem;
+  color: var(--color-bloem);
+  cursor: pointer;
+  border-bottom: 1px solid transparent;
+}
+.grove-entry-share-note-edit-btn:hover {
+  border-bottom-color: currentColor;
+  color: var(--color-bloem-mid);
+}
+
+/* Empty-state add button */
+.grove-entry-share-note-add-btn {
+  background: transparent;
+  border: 1px dashed rgba(112, 92, 108, 0.4);
+  border-radius: var(--radius-md);
+  color: var(--color-bloem);
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  padding: 0.45rem 0.95rem;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+.grove-entry-share-note-add-btn:hover {
+  background: var(--color-bloem-light);
+  border-color: var(--color-bloem);
+}
+
+/* Editor form */
+.grove-entry-share-note-form {
+  background: var(--color-pearl);
+  border: 1px dashed rgba(112, 92, 108, 0.35);
+  border-radius: var(--radius-md);
+  padding: 0.85rem 1rem;
+}
+.grove-entry-share-note-form[hidden] { display: none !important; }
+.grove-entry-share-note-field-label {
+  font-family: var(--font-body);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-bloem);
+  display: block;
+  margin-bottom: 0.4rem;
+}
+.grove-entry-share-note-textarea {
+  width: 100%;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid rgba(16, 15, 16, 0.16);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  color: var(--color-ink-stained);
+  line-height: 1.55;
+  background: white;
+  resize: vertical;
+}
+.grove-entry-share-note-textarea:focus {
+  outline: none;
+  border-color: var(--color-bloem);
+  box-shadow: 0 0 0 2px rgba(112, 92, 108, 0.15);
+}
+.grove-entry-share-note-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 0.7rem;
+  margin-top: 0.65rem;
+  flex-wrap: wrap;
+}
+.grove-entry-share-note-cancel {
+  background: transparent;
+  border: none;
+  padding: 0.35rem 0.7rem;
+  font-family: var(--font-body);
+  font-size: 0.82rem;
+  color: rgba(16, 15, 16, 0.55);
+  cursor: pointer;
+}
+.grove-entry-share-note-cancel:hover { color: var(--color-bloem); }
+.grove-entry-share-note-save {
+  background: var(--color-bloem);
+  color: var(--color-pearl);
+  border: none;
+  border-radius: var(--radius-md);
+  padding: 0.45rem 1rem;
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.grove-entry-share-note-save:hover:not(:disabled) { background: var(--color-bloem-mid); }
+.grove-entry-share-note-save:disabled { opacity: 0.6; cursor: default; }
+.grove-entry-share-note-error {
+  color: #b13a3a;
+  font-family: var(--font-body);
+  font-size: 0.82rem;
+  margin: 0;
+  flex: 1 1 auto;
 }

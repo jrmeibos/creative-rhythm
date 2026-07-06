@@ -3014,21 +3014,21 @@ app.get('/grove', requireAuth, (req, res) => {
   });
 });
 
-// Add a published link to a created make. Body: { url, label, note }.
-// url is required; label is an optional platform tag ("Instagram", etc.);
-// note is an optional reflection about what it was like to share the
-// post. Ownership check inside the DB helper's WHERE.
+// Add a published link to a created make. Body: { url, label }. url is
+// required; label is an optional platform tag ("Instagram", etc.). The
+// share reflection lives on the make (see /grove/make/:makeId/share-note),
+// not on each link.
 app.post('/grove/link/:makeId', requireAuth, (req, res) => {
   const makeId = parseInt(req.params.makeId, 10);
   if (!Number.isInteger(makeId) || makeId <= 0) {
     return res.status(400).json({ error: 'Invalid make id.' });
   }
-  const { url, label, note } = req.body || {};
+  const { url, label } = req.body || {};
   if (!url || !String(url).trim()) {
     return res.status(400).json({ error: 'URL required.' });
   }
   try {
-    const id = db.createCuttingMakeLink(makeId, req.session.user.id, url, label, note);
+    const id = db.createCuttingMakeLink(makeId, req.session.user.id, url, label);
     return res.json({ ok: true, id });
   } catch (e) {
     return res.status(400).json({ error: e.message || 'Could not save.' });
@@ -3042,6 +3042,19 @@ app.post('/grove/link/:linkId/delete', requireAuth, (req, res) => {
     return res.status(400).json({ error: 'Invalid link id.' });
   }
   db.deleteCuttingMakeLink(linkId, req.session.user.id);
+  return res.json({ ok: true });
+});
+
+// Save the per-entry share reflection ("what was it like to share
+// this?"). Body: { note }. Empty string clears the note.
+app.post('/grove/make/:makeId/share-note', requireAuth, (req, res) => {
+  const makeId = parseInt(req.params.makeId, 10);
+  if (!Number.isInteger(makeId) || makeId <= 0) {
+    return res.status(400).json({ error: 'Invalid make id.' });
+  }
+  const { note } = req.body || {};
+  const changed = db.setCuttingMakeShareNote(makeId, req.session.user.id, note);
+  if (changed === 0) return res.status(404).json({ error: 'Not found.' });
   return res.json({ ok: true });
 });
 
