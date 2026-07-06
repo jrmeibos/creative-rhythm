@@ -1053,11 +1053,7 @@ details[open] .gh-planted-summary::before { content: '▾  '; }
 
 /* A single reflection block inside a day card. No own chrome — sits naturally
    under the date label and any prior entries. */
-.cutting-entry {
-  /* base — no chrome, kept as a hook for spacing modifiers */
-  /* Needed as an anchor for the absolutely-positioned pencil icon. */
-  position: relative;
-}
+.cutting-entry { /* base — no chrome, kept as a hook for spacing modifiers */ }
 
 /* Second and subsequent entries on the same day get a quiet separator + a
    bit more breathing room so they read as distinct sessions. */
@@ -1304,15 +1300,10 @@ details[open] .gh-planted-summary::before { content: '▾  '; }
   color: var(--color-bloem);
 }
 
-/* Change (pencil icon in upper-right) — for entries that already have
-   a Tending rating. Absolutely positioned so it doesn't fight the
-   badge or fields for horizontal space. Quiet at rest, bloem on hover.
-   The empty-state affordance (+ Rate & note) stays as inline text —
-   see .cutting-tending-edit-btn--empty below. */
+/* Change (pencil icon) — sits beside the delete icon at the bottom-right
+   of each entry. Quiet at rest, bloem on hover. The empty-state
+   affordance (+ Rate & note) stays as inline text near the badge slot. */
 .cutting-tending-edit-icon {
-  position: absolute;
-  top: 0.65rem;
-  right: 0.65rem;
   background: transparent;
   border: none;
   padding: 0.35rem;
@@ -1323,7 +1314,6 @@ details[open] .gh-planted-summary::before { content: '▾  '; }
   align-items: center;
   justify-content: center;
   transition: color 0.15s, background 0.15s;
-  z-index: 1;
 }
 .cutting-tending-edit-icon:hover {
   color: var(--color-bloem);
@@ -1332,6 +1322,14 @@ details[open] .gh-planted-summary::before { content: '▾  '; }
 .cutting-tending-edit-icon:focus-visible {
   outline: 2px solid var(--color-bloem);
   outline-offset: 1px;
+}
+
+/* Actions cluster — pencil + trash sit together at the right end of
+   the marks row, snug next to each other with a small gap. */
+.cutting-marks-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15rem;
 }
 
 .cutting-tending-edit-btn {
