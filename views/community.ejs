@@ -196,66 +196,18 @@
         <% } %>
       </nav>
 
-      <!-- ── Recent shares from the cohort ────────────────────────────
-           Each cohort share on /grove appears here newest-first with a
-           deep link to the Discord post (if the student pasted one).
-           Empty when the cohort hasn't shared anything yet. -->
-      <section class="comm-shares">
-        <header class="comm-shares-header">
-          <h2 class="comm-shares-title">Recent shares from the cohort</h2>
-          <% if (locals.communityDiscordUrl) { %>
-            <a href="<%= locals.communityDiscordUrl %>" target="_blank" rel="noopener" class="comm-shares-discord">
-              Open Discord →
-            </a>
-          <% } %>
-        </header>
-        <% if (!recentShares || recentShares.length === 0) { %>
-          <p class="comm-shares-empty">
-            When someone in the cohort shares a creation, it'll show up here.
-          </p>
-        <% } else { %>
-          <ul class="comm-shares-list">
-            <% recentShares.forEach(function (s) {
-                 const whenLabel = s.cohort_shared_at
-                   ? new Date(s.cohort_shared_at.replace(' ', 'T') + 'Z').toLocaleDateString('en-US', {
-                       month: 'short', day: 'numeric', year: 'numeric',
-                     })
-                   : '';
-            %>
-              <li class="comm-share">
-                <div class="comm-share-avatar<%= s.user_current_season ? ' season-avatar--' + s.user_current_season : '' %>">
-                  <% if (s.user_profile_photo) { %>
-                    <img src="<%= s.user_profile_photo %>" alt="">
-                  <% } else { %>
-                    <%= s.user_avatar_initial || s.user_name.charAt(0) %>
-                  <% } %>
-                </div>
-                <div class="comm-share-body">
-                  <p class="comm-share-line">
-                    <strong><%= s.user_name.split(' ')[0] %></strong>
-                    shared a
-                    <span class="comm-share-format">
-                      <span aria-hidden="true"><%= s.format_emoji || '🌿' %></span>
-                      <%= s.format_name.toLowerCase() %>
-                    </span>
-                    <% if (whenLabel) { %>
-                      <span class="comm-share-when">· <%= whenLabel %></span>
-                    <% } %>
-                  </p>
-                  <% if (s.talked_about) { %>
-                    <p class="comm-share-quote">"<%= s.talked_about %>"</p>
-                  <% } %>
-                  <% if (s.discord_url) { %>
-                    <a href="<%= s.discord_url %>" target="_blank" rel="noopener" class="comm-share-link">
-                      View on Discord →
-                    </a>
-                  <% } %>
-                </div>
-              </li>
-            <% }); %>
-          </ul>
-        <% } %>
-      </section>
+      <!-- ── Join the Conversation on Discord ──────────────────────────
+           Simple callout pointing the cohort to the Discord community.
+           Rendered only when COMMUNITY_DISCORD_URL is configured. -->
+      <% if (locals.communityDiscordUrl) { %>
+        <section class="comm-discord-invite">
+          <h2 class="comm-discord-invite-title">Join the Conversation on Discord</h2>
+          <a href="<%= locals.communityDiscordUrl %>" target="_blank" rel="noopener"
+             class="comm-discord-invite-btn">
+            Open Discord →
+          </a>
+        </section>
+      <% } %>
 
     </main>
   </div>

@@ -1265,8 +1265,6 @@ app.get('/community', requireAuth, (req, res) => {
     recordedDayCount:        dayCounts.get(u.id) || 0
   }));
 
-  const recentShares = db.getRecentCohortShares(20);
-
   res.render('community', {
     title: 'Community',
     page:  'community',
@@ -1279,8 +1277,7 @@ app.get('/community', requireAuth, (req, res) => {
     hasPrevWeek,
     hasNextWeek,
     isCurrentWeek: weekStart === currentWeekStart,
-    currentUserId: req.session.user.id,
-    recentShares,
+    currentUserId: req.session.user.id
   });
 });
 
