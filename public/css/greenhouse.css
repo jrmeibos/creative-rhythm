@@ -1300,6 +1300,120 @@ details[open] .gh-planted-summary::before { content: '▾  '; }
   color: var(--color-bloem);
 }
 
+/* Change / Rate button — subtle text-link affordance that reveals the
+   inline editor below the entry. Quiet by design so it doesn't fight
+   the badge or fields for attention. */
+.cutting-tending-edit-btn {
+  background: transparent;
+  border: none;
+  padding: 0.2rem 0.4rem;
+  font-family: var(--font-body);
+  font-size: 0.78rem;
+  color: var(--color-bloem);
+  cursor: pointer;
+  border-bottom: 1px solid transparent;
+  line-height: 1;
+}
+.cutting-tending-edit-btn:hover {
+  border-bottom-color: currentColor;
+  color: var(--color-bloem-mid);
+}
+.cutting-tending-edit-btn--empty {
+  opacity: 0.65;
+}
+.cutting-tending-edit-btn--empty:hover {
+  opacity: 1;
+}
+
+/* Inline editor — appears between the fields and the marks row. Textarea
+   at top (pre-filled with the existing reflection), 3 category buttons
+   below, cancel at the bottom-right. Clicking a category saves + reloads
+   so the badge, filter alignment, and any cross-page state reconcile. */
+.cutting-tending-editor {
+  margin: 0.9rem 0 0.5rem;
+  padding: 0.9rem 1rem 0.8rem;
+  background: var(--color-blank-page);
+  border: 1px dashed rgba(112, 92, 108, 0.35);
+  border-radius: var(--radius-md);
+}
+.cutting-tending-editor[hidden] { display: none !important; }
+.cutting-tending-editor .cutting-field-label {
+  color: var(--color-bloem);
+  margin-bottom: 0.35rem;
+}
+.cutting-tending-editor-textarea {
+  width: 100%;
+  min-height: 3.5rem;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid rgba(16, 15, 16, 0.16);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  color: var(--color-ink-stained);
+  line-height: 1.5;
+  resize: vertical;
+  background: white;
+  margin-bottom: 0.75rem;
+}
+.cutting-tending-editor-textarea:focus {
+  outline: none;
+  border-color: var(--color-bloem);
+  box-shadow: 0 0 0 2px rgba(112, 92, 108, 0.15);
+}
+.cutting-tending-editor-cats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+.cutting-tending-editor-cat {
+  padding: 0.42rem 0.85rem;
+  border: 1px solid rgba(16, 15, 16, 0.16);
+  border-radius: 999px;
+  background: white;
+  color: var(--color-ink-stained);
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: border-color 0.12s ease, background 0.12s ease;
+}
+.cutting-tending-editor-cat:hover:not(:disabled) {
+  border-color: var(--color-bloem);
+  background: rgba(112, 92, 108, 0.06);
+}
+.cutting-tending-editor-cat:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+.cutting-tending-editor-footer {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 0.7rem;
+  margin-top: 0.6rem;
+}
+.cutting-tending-editor-cancel {
+  background: transparent;
+  border: none;
+  padding: 0.2rem 0.4rem;
+  font-family: var(--font-body);
+  font-size: 0.78rem;
+  color: rgba(16, 15, 16, 0.55);
+  cursor: pointer;
+  border-bottom: 1px solid transparent;
+}
+.cutting-tending-editor-cancel:hover {
+  color: var(--color-bloem);
+  border-bottom-color: currentColor;
+}
+.cutting-tending-editor-error {
+  color: #b13a3a;
+  font-family: var(--font-body);
+  font-size: 0.82rem;
+  margin: 0;
+  flex: 1 1 auto;
+}
+
 /* ─── Cuttings: Watched / Edited marks per entry ────────────────────────── */
 
 .cutting-marks {
