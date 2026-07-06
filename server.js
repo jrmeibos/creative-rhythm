@@ -2991,7 +2991,7 @@ app.post('/summer/make/:makeId/delete', requireAuth, (req, res) => {
 app.get('/grove', requireAuth, (req, res) => {
   const entries = db.getGroveEntries(req.session.user.id);
   res.render('grove', {
-    title: 'The Grove',
+    title: 'Share the Fruit From Your Garden',
     page: 'grove',
     user: req.session.user,
     entries,
