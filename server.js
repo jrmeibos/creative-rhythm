@@ -2821,6 +2821,27 @@ app.get('/summer', requireAuth, (req, res) => {
   });
 });
 
+// Per-format "how to repurpose into this format" detail page. Built-ins
+// only for now — URL is /summer/format/:slug. Custom formats surface
+// their name + emoji + one-line "how I use this" note directly on the
+// picker, so a dedicated detail page isn't needed for them yet.
+app.get('/summer/format/:slug', requireAuth, (req, res) => {
+  const format = db.getBuiltinFormatBySlug(req.params.slug);
+  if (!format) return res.redirect('/summer');
+  // Split detail on blank lines into paragraphs. View wraps each in <p>.
+  const paragraphs = (format.detail_content || '')
+    .split(/\n\s*\n/)
+    .map(s => s.trim())
+    .filter(Boolean);
+  res.render('summer-format', {
+    title: format.name,
+    page: 'summer',
+    user: req.session.user,
+    format,
+    paragraphs,
+  });
+});
+
 // Record a "made as X" event. Body: { formatId, note }. Only Cultivate
 // cuttings owned by the student can be marked. New row per event —
 // making the same cutting three times inserts three rows.

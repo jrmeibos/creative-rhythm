@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <%- include('partials/head') %>
+  <link rel="stylesheet" href="/css/dashboard.css">
+  <link rel="stylesheet" href="/css/summer.css">
+</head>
+<body class="app-body">
+  <div class="app-layout">
+    <%- include('partials/sidebar') %>
+    <main class="main-content" id="main">
+
+      <a href="/summer" class="lesson-back">← Back to Summer</a>
+
+      <header class="summer-format-header">
+        <span class="summer-format-emoji" aria-hidden="true"><%= format.emoji || '🌿' %></span>
+        <h1 class="summer-format-name"><%= format.name %></h1>
+        <p class="summer-format-tagline"><%= format.description %></p>
+      </header>
+
+      <section class="summer-format-body">
+        <% paragraphs.forEach(function (p) { %>
+          <p><%= p %></p>
+        <% }); %>
+      </section>
+
+      <p class="summer-format-back">
+        <a href="/summer" class="summer-link">Back to Summer →</a>
+      </p>
+
+    </main>
+  </div>
+</body>
+</html>

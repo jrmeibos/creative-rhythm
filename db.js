@@ -1255,8 +1255,12 @@ function seedContentFormats() {
     VALUES (NULL, ?, ?, ?, ?, ?, ?)
   `);
   BUILTIN_CONTENT_FORMATS.forEach((f, i) => {
-    // Placeholder detail — Julia will replace with real guidance later.
-    const detail = `## ${f.name}\n\n${f.description}\n\n_How to repurpose a cutting into this format — coming soon._`;
+    // Placeholder detail — plain paragraphs, blank line between them. Julia
+    // will replace with real "how to repurpose" guidance later. Keep it
+    // simple: no markdown parser needed, the view splits on \n\n.
+    const detail =
+      `${f.description}\n\n` +
+      `How to repurpose a cutting into this format — coming soon.`;
     ins.run(f.slug, f.name, f.emoji, f.description, detail, i);
   });
   console.log(`✓ Seeded ${BUILTIN_CONTENT_FORMATS.length} built-in content formats`);
