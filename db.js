@@ -2083,13 +2083,32 @@ module.exports = {
   // Read-only: all cuttings for a user. Ordered by recorded_date DESC
   // (newest day first across days) then created_at ASC (within a day,
   // earliest-written first — morning entry above evening entry).
+  //
+  // Joins in the most recent Tending curation per cutting (if any) so
+  // the archive UI can show a rating badge + the Gardener reflection
+  // right on the cutting card. Fields are aliased to tending_* so they
+  // don't collide with the cutting's own reflection_text column.
   getCuttingsForUser(userId) {
     return db.prepare(
-      `SELECT id, created_at, recorded_date, season, prompt,
-              reflection_text, talked_about, how_it_felt, takeaway,
-              watched, edited
-       FROM cuttings WHERE user_id = ?
-       ORDER BY recorded_date DESC, created_at ASC`
+      `SELECT c.id, c.created_at, c.recorded_date, c.season, c.prompt,
+              c.reflection_text, c.talked_about, c.how_it_felt, c.takeaway,
+              c.watched, c.edited,
+              latest.category        AS tending_category,
+              latest.reflection_text AS tending_reflection,
+              latest.curated_at      AS tending_curated_at
+       FROM cuttings c
+       LEFT JOIN (
+         SELECT cc1.cutting_id, cc1.category, cc1.reflection_text, cc1.curated_at
+         FROM cutting_curations cc1
+         WHERE cc1.id = (
+           SELECT cc2.id FROM cutting_curations cc2
+           WHERE cc2.cutting_id = cc1.cutting_id
+           ORDER BY cc2.curated_at DESC, cc2.id DESC
+           LIMIT 1
+         )
+       ) latest ON latest.cutting_id = c.id
+       WHERE c.user_id = ?
+       ORDER BY c.recorded_date DESC, c.created_at ASC`
     ).all(userId);
   },
 

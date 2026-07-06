@@ -1247,6 +1247,59 @@ details[open] .gh-planted-summary::before { content: '▾  '; }
 }
 .gh-facets-extra.is-hidden { display: none; }
 
+/* ─── Cuttings: Tending rating badge + reflection block ─────────────────── */
+/* Rendered at the top of each entry when a curation exists. Clicking the
+   pill re-filters the archive to that rating. The reflection block sits
+   after the original fields so it reads as a post-hoc addition. */
+
+.cutting-tending {
+  display: flex;
+  gap: 0.4rem;
+  margin: 0 0 0.75rem;
+}
+
+.cutting-tending-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.28rem 0.7rem;
+  border-radius: 999px;
+  font-family: var(--font-body);
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--color-ink-stained);
+  border: 1px solid transparent;
+  text-decoration: none;
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+.cutting-tending-badge:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+}
+.cutting-tending-badge--keep_growing {
+  background: rgba(118, 133, 108, 0.14);
+  border-color: rgba(118, 133, 108, 0.35);
+}
+.cutting-tending-badge--return_later {
+  background: rgba(246, 201, 92, 0.20);
+  border-color: rgba(246, 201, 92, 0.55);
+}
+.cutting-tending-badge--archive {
+  background: rgba(112, 92, 108, 0.10);
+  border-color: rgba(112, 92, 108, 0.30);
+}
+
+.cutting-field--tending-reflection {
+  margin-top: 0.9rem;
+  padding: 0.7rem 0.9rem;
+  background: rgba(112, 92, 108, 0.06);
+  border-left: 3px solid var(--color-bloem);
+  border-radius: var(--radius-sm);
+}
+.cutting-field--tending-reflection .cutting-field-label {
+  color: var(--color-bloem);
+}
+
 /* ─── Cuttings: Watched / Edited marks per entry ────────────────────────── */
 
 .cutting-marks {

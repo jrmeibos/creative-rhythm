@@ -2098,7 +2098,13 @@ app.get('/greenhouse/plant', requireAuth, (req, res) => {
 // → Summer → Autumn) — the course's natural reading direction.
 app.get('/greenhouse/cuttings', requireAuth, (req, res) => {
   const allowedSort   = new Set(['newest', 'oldest']);
-  const allowedFilter = new Set(['all', 'watched', 'unwatched', 'edited', 'not-edited']);
+  const allowedFilter = new Set([
+    'all',
+    // Mark-based filters
+    'watched', 'unwatched', 'edited', 'not-edited',
+    // Tending-rating filters (URL uses hyphens; DB stores underscores)
+    'keep-growing', 'return-later', 'compost',
+  ]);
   const sort   = allowedSort.has(req.query.sort)     ? req.query.sort   : 'newest';
   const filter = allowedFilter.has(req.query.filter) ? req.query.filter : 'all';
 
@@ -2110,6 +2116,11 @@ app.get('/greenhouse/cuttings', requireAuth, (req, res) => {
   else if (filter === 'unwatched') cuttings = cuttings.filter(c => !c.watched);
   else if (filter === 'edited')    cuttings = cuttings.filter(c => c.edited);
   else if (filter === 'not-edited') cuttings = cuttings.filter(c => !c.edited);
+  // Filter by Tending rating. Note: the DB category value 'archive' is
+  // still what gets stored — the UI label just renamed to Compost.
+  else if (filter === 'keep-growing') cuttings = cuttings.filter(c => c.tending_category === 'keep_growing');
+  else if (filter === 'return-later') cuttings = cuttings.filter(c => c.tending_category === 'return_later');
+  else if (filter === 'compost')      cuttings = cuttings.filter(c => c.tending_category === 'archive');
 
   // Sort within-day order. getCuttingsForUser already returns rows in
   // recorded_date DESC + created_at ASC, so 'newest' is a no-op. For

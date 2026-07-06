@@ -65,6 +65,14 @@
             <span class="cuttings-control-divider" aria-hidden="true">·</span>
             <a href="<%= controlHref(sort, 'not-edited') %>" class="<%= cls(filter === 'not-edited') %>">Not edited</a>
           </div>
+          <div class="cuttings-control-row">
+            <span class="cuttings-control-label">Rating</span>
+            <a href="<%= controlHref(sort, 'keep-growing') %>" class="<%= cls(filter === 'keep-growing') %>">🪴 Keep growing</a>
+            <span class="cuttings-control-divider" aria-hidden="true">·</span>
+            <a href="<%= controlHref(sort, 'return-later') %>" class="<%= cls(filter === 'return-later') %>">🌱 Return to later</a>
+            <span class="cuttings-control-divider" aria-hidden="true">·</span>
+            <a href="<%= controlHref(sort, 'compost')      %>" class="<%= cls(filter === 'compost')      %>">🗑️ Compost</a>
+          </div>
         </div>
 
         <% if (filteredCount === 0) { %>
@@ -130,13 +138,39 @@
                         return v != null && String(v).trim() !== '';
                       });
                     %>
+                    <%
+                      // Tending-rating pill — mirrors the button labels on
+                      // /tending. DB category 'archive' still maps to the
+                      // Compost UI label; only the visual name is changing.
+                      const tendingLabels = {
+                        keep_growing: { emoji: '🪴', text: 'Keep growing' },
+                        return_later: { emoji: '🌱', text: 'Return to later' },
+                        archive:      { emoji: '🗑️', text: 'Compost' },
+                      };
+                      const tending = c.tending_category ? tendingLabels[c.tending_category] : null;
+                    %>
                     <article class="cutting-entry<%= day.items.length > 1 ? ' cutting-entry--stacked' : '' %>">
+                      <% if (tending) { %>
+                        <div class="cutting-tending">
+                          <a href="<%= controlHref(sort, c.tending_category === 'archive' ? 'compost' : c.tending_category.replace('_','-')) %>"
+                             class="cutting-tending-badge cutting-tending-badge--<%= c.tending_category %>">
+                            <span aria-hidden="true"><%= tending.emoji %></span>
+                            <%= tending.text %>
+                          </a>
+                        </div>
+                      <% } %>
                       <% populatedFields.forEach(function (p) { %>
                         <div class="cutting-field">
                           <p class="cutting-field-label"><%= p.label %></p>
                           <p class="cutting-text"><%= c[p.key] %></p>
                         </div>
                       <% }); %>
+                      <% if (tending && c.tending_reflection) { %>
+                        <div class="cutting-field cutting-field--tending-reflection">
+                          <p class="cutting-field-label">Watched — the Gardener noted</p>
+                          <p class="cutting-text"><%= c.tending_reflection %></p>
+                        </div>
+                      <% } %>
                       <div class="cutting-marks" data-cutting-id="<%= c.id %>">
                         <div class="cutting-marks-group">
                           <button type="button"

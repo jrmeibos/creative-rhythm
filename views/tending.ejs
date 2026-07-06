@@ -47,24 +47,37 @@
         </p>
       </section>
 
-      <!-- ── Destination summary ──────────────────────────────────────────── -->
-      <% const totalSorted = counts.keep_growing + counts.return_later + counts.archive; %>
-      <% if (totalSorted > 0) { %>
-        <section class="tending-counts" aria-label="What you've tended so far">
-          <div class="tending-count">
-            <span class="tending-count-n"><%= counts.keep_growing %></span>
-            <span class="tending-count-label">growing</span>
-          </div>
-          <div class="tending-count">
-            <span class="tending-count-n"><%= counts.return_later %></span>
-            <span class="tending-count-label">returning to</span>
-          </div>
-          <div class="tending-count">
-            <span class="tending-count-n"><%= counts.archive %></span>
-            <span class="tending-count-label">composted</span>
-          </div>
-        </section>
-      <% } %>
+      <!-- ── Destinations — three clickable buckets showing what's inside.
+           Each card links to /greenhouse/cuttings pre-filtered to that
+           rating so students can browse the pile.  Cards render even
+           when their count is 0 — the pile is part of the vocabulary,
+           and the empty state teaches what the bucket is for. -->
+      <section class="tending-destinations" aria-label="Where your cuttings live">
+        <a class="tending-destination tending-destination--grow"
+           href="/greenhouse/cuttings?filter=keep-growing">
+          <span class="tending-destination-emoji" aria-hidden="true">🪴</span>
+          <span class="tending-destination-body">
+            <span class="tending-destination-name">Keep growing</span>
+            <span class="tending-destination-count"><%= counts.keep_growing %> <%= counts.keep_growing === 1 ? 'cutting' : 'cuttings' %></span>
+          </span>
+        </a>
+        <a class="tending-destination tending-destination--return"
+           href="/greenhouse/cuttings?filter=return-later">
+          <span class="tending-destination-emoji" aria-hidden="true">🌱</span>
+          <span class="tending-destination-body">
+            <span class="tending-destination-name">Return to later</span>
+            <span class="tending-destination-count"><%= counts.return_later %> <%= counts.return_later === 1 ? 'cutting' : 'cuttings' %></span>
+          </span>
+        </a>
+        <a class="tending-destination tending-destination--compost"
+           href="/greenhouse/cuttings?filter=compost">
+          <span class="tending-destination-emoji" aria-hidden="true">🗑️</span>
+          <span class="tending-destination-body">
+            <span class="tending-destination-name">Compost</span>
+            <span class="tending-destination-count"><%= counts.archive %> <%= counts.archive === 1 ? 'cutting' : 'cuttings' %></span>
+          </span>
+        </a>
+      </section>
 
       <!-- ── Queue ─────────────────────────────────────────────────────────── -->
       <% if (queue.length === 0) { %>
