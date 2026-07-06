@@ -54,6 +54,21 @@
                   // stems join so they distribute evenly within the fan.
                   const fanRange = 20; // total degrees, split symmetrically
                   const fanStep  = fanRange / Math.max(stemCount - 1, 1);
+                  // Precompute per-stem layout so the flower up top and the
+                  // matching stem-end below the wrap share the same tilt/dx.
+                  var stemLayouts = stemEntries.map(function (e, i) {
+                    var variant = e.stem_variant || (((e.make_id * 7) % 12) + 1);
+                    var baseTilt = (i - (stemCount - 1) / 2) * fanStep;
+                    var tiltJitter = ((e.make_id * 11) % 5) - 2;
+                    return {
+                      entry:   e,
+                      variant: String(variant).padStart(2, '0'),
+                      tilt:    Math.round(baseTilt + tiltJitter),
+                      dx:      ((e.make_id * 7) % 7) - 3,
+                      zi:      stemCount - i,
+                      endLen:  24 + ((e.make_id * 13) % 12),  // 24-35px
+                    };
+                  });
                 %>
                 <!-- Stems wrapped in a masked layer so anything rendered
                      outside the wrap silhouette (e.g. leaves poking past
@@ -61,25 +76,30 @@
                      uses bouquet-full.svg's alpha — stems appear only
                      where paper exists. -->
                 <div class="grove-bouquet-stems-layer">
-                <% stemEntries.forEach(function (e, i) {
-                     const variant = e.stem_variant || (((e.make_id * 7) % 12) + 1);
-                     const paddedVariant = String(variant).padStart(2, '0');
-                     const baseTilt   = (i - (stemCount - 1) / 2) * fanStep;
-                     const tiltJitter = ((e.make_id * 11) % 5) - 2;
-                     const tilt       = Math.round(baseTilt + tiltJitter);
-                     const dx         = ((e.make_id * 7) % 7) - 3;
-                     const zi         = stemCount - i;
-                %>
+                <% stemLayouts.forEach(function (L) { %>
                   <img class="grove-bouquet-stem"
-                       src="/images/grove/stems/stem-<%= paddedVariant %>.svg"
-                       data-make-id="<%= e.make_id %>"
-                       style="--dx: <%= dx %>px; --tilt: <%= tilt %>deg; z-index: <%= zi %>;"
+                       src="/images/grove/stems/stem-<%= L.variant %>.svg"
+                       data-make-id="<%= L.entry.make_id %>"
+                       style="--dx: <%= L.dx %>px; --tilt: <%= L.tilt %>deg; z-index: <%= L.zi %>;"
                        alt="">
                 <% }); %>
                 </div>
                 <img class="grove-bouquet-front" src="/images/grove/bouquet-front.svg" alt="">
               <% } %>
             </div>
+            <% if (stemCount > 0) { %>
+              <!-- Stem ends poking out below the wrap. Each end mirrors
+                   its matching flower stem's tilt/dx so the two visually
+                   line up on the same axis through the tie. The rotation
+                   is inverted so the end continues the flower's line
+                   downward (flower up-right → stem end down-left). -->
+              <div class="grove-bouquet-stem-ends-layer" aria-hidden="true">
+                <% stemLayouts.forEach(function (L) { %>
+                  <span class="grove-bouquet-stem-end"
+                        style="--dx: <%= L.dx %>px; --tilt: <%= L.tilt %>deg; height: <%= L.endLen %>px;"></span>
+                <% }); %>
+              </div>
+            <% } %>
             <p class="grove-bouquet-caption">
               <% if (stemCount === 0) { %>
                 A wrap waiting for your first bloom.

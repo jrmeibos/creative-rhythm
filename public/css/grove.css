@@ -112,6 +112,30 @@
 @media (max-width: 1179px) {
   .grove-bouquet-stem { height: 380px; }
 }
+/* Stem ends poking out below the tied bottom of the wrap. Each end
+   shares the same --dx and --tilt as its matching flower stem above,
+   but the tilt is negated so the line continues in the same axis
+   through the tie point. */
+.grove-bouquet-stem-ends-layer {
+  position: relative;
+  width: 80px;
+  height: 40px;
+  margin: -4px auto 0;
+  pointer-events: none;
+}
+.grove-bouquet-stem-end {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 3px;
+  background: var(--color-understory);
+  border-radius: 2px;
+  transform: translateX(calc(-50% + var(--dx, 0px)))
+             rotate(calc(-1 * var(--tilt, 0deg)));
+  transform-origin: top center;
+  opacity: 0.8;
+}
+
 .grove-bouquet-caption {
   margin-top: 1rem;
   font-family: var(--font-body);
