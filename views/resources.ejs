@@ -35,9 +35,11 @@
           <a href="<%= locals.showTending ? '/watch-yourself' : '/upgrade' %>"
              class="resource-card <%= locals.showTending ? '' : 'resource-card--locked' %>">
             <div class="resource-card-inner">
-              <div class="resource-card-art-placeholder" aria-hidden="true">🌿</div>
+              <img class="resource-card-art resource-card-art--landscape"
+                   src="/images/watch-yourself.svg"
+                   alt="" width="200" height="136">
               <h2 class="resource-card-title">Watch Yourself</h2>
-              <p class="resource-card-desc">A guide to turning your inner critic into a helpful gardener. Watching yourself back is a skill — this resource walks you through how to do it without spiraling, how to tell a boring cutting from a not-yet-ready one, and how to reshape one recording into many kinds of content.</p>
+              <p class="resource-card-desc">Turning your inner critic into a helpful gardener. Watching yourself back is a skill — this resource walks you through how to do it without spiraling, how to tell a boring cutting from a not-yet-ready one, and how to reshape one recording into many kinds of content.</p>
               <span class="resource-card-link">
                 <%= locals.showTending ? 'Open Watch Yourself →' : 'Unlocks in Spring →' %>
               </span>

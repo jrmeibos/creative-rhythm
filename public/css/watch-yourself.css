@@ -34,17 +34,12 @@
   border-bottom: 1px solid rgba(118, 133, 108, 0.2);
   margin-bottom: 3rem;
 }
-.wy-hero-art-placeholder {
-  width: 140px;
-  height: 140px;
+.wy-hero-art {
+  display: block;
+  width: 260px;
+  height: auto;
   margin: 0 auto 1.5rem;
-  background: rgba(118, 133, 108, 0.08);
-  border: 1px dashed rgba(118, 133, 108, 0.35);
-  border-radius: 999px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 2.4rem;
+  max-width: 100%;
 }
 .wy-title {
   font-family: var(--font-display);
@@ -214,19 +209,12 @@
   border-top: 1px solid rgba(118, 133, 108, 0.2);
 }
 
-/* Card-side placeholder (until Julia supplies watercolor art) — same
-   footprint as .resource-card-art so the card height stays consistent. */
-.resource-card-art-placeholder {
-  width: 130px;
-  height: 205px;
-  margin: 0 auto 1.5rem;
-  background: rgba(118, 133, 108, 0.08);
-  border: 1px dashed rgba(118, 133, 108, 0.35);
-  border-radius: var(--radius-md);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 2.6rem;
+/* Landscape variant of .resource-card-art for illustrations that are
+   wider than tall (like watch-yourself.svg). */
+.resource-card-art--landscape {
+  width: 200px;
+  height: auto;
+  max-width: 100%;
 }
 
 /* ── Locked resource card (on /resources when pre-Spring) ─────────── */
