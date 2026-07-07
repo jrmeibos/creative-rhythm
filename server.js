@@ -1479,7 +1479,7 @@ const ASSESSMENT_QUESTIONS = [
     placeholder: 'Describe the feeling, the freedom, the life...'
   },
   { id: 'q10', type: 'text', field: 'q10_text',
-    text: 'What promise are you making to yourself for these 12 weeks?',
+    text: 'What promise are you making to yourself for these 3 weeks?',
     placeholder: 'Write it like you mean it.'
   }
 ];
