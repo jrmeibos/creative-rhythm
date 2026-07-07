@@ -270,21 +270,24 @@ app.get('/avatars/:filename', requireAuth, (req, res) => {
 
 app.get('/', (req, res) => {
   if (req.session.user) return res.redirect('/dashboard');
-  res.render('login', { error: null });
+  const returnTo = sanitizeReturnTo(req.query.returnTo);
+  res.render('login', { error: null, returnTo });
 });
 
 app.post('/login', async (req, res) => {
   const { email, password } = req.body;
+  const returnTo = sanitizeReturnTo(req.body.returnTo);
+  const rerender = (error) => res.render('login', { error, returnTo });
   if (!email || !password) {
-    return res.render('login', { error: 'Please enter your email and password.' });
+    return rerender('Please enter your email and password.');
   }
   const user = db.getUserByEmail(email.trim().toLowerCase());
   if (!user) {
-    return res.render('login', { error: 'Invalid email or password.' });
+    return rerender('Invalid email or password.');
   }
   const valid = await bcrypt.compare(password, user.password_hash);
   if (!valid) {
-    return res.render('login', { error: 'Invalid email or password.' });
+    return rerender('Invalid email or password.');
   }
   req.session.user = {
     id: user.id, name: user.name, email: user.email, role: user.role,
@@ -296,10 +299,13 @@ app.post('/login', async (req, res) => {
     course_length_weeks: user.course_length_weeks || 12,
     enrollment_tier: user.enrollment_tier || null,
   };
+  // Admins never see returnTo, and a non-onboarded student must finish
+  // onboarding first (returnTo will fire on the onboarding-complete side).
   if (user.role !== 'admin' && !user.onboarding_completed) {
+    if (returnTo) req.session.postOnboardingReturnTo = returnTo;
     return res.redirect('/onboarding');
   }
-  res.redirect('/dashboard');
+  res.redirect(returnTo || '/dashboard');
 });
 
 // ─── Self-serve signup ─────────────────────────────────────────────────────
@@ -317,9 +323,21 @@ function isPasswordValid(pw) {
   return /[0-9!@#$%^&*()\-_=+\[\]{};:'",.<>/?\\|`~]/.test(pw);
 }
 
+// Only accept internal, same-site absolute paths as post-signup destinations.
+// Anything else (protocol-relative, external, or containing whitespace) falls
+// back to null so an attacker can't turn /signup into an open redirect.
+function sanitizeReturnTo(raw) {
+  if (typeof raw !== 'string') return null;
+  const s = raw.trim();
+  if (!s || !s.startsWith('/') || s.startsWith('//') || /\s/.test(s)) return null;
+  if (s.length > 200) return null;
+  return s;
+}
+
 app.get('/signup', (req, res) => {
   if (req.session.user) return res.redirect('/dashboard');
-  res.render('signup', { error: null, name: '', email: '' });
+  const returnTo = sanitizeReturnTo(req.query.returnTo);
+  res.render('signup', { error: null, name: '', email: '', returnTo });
 });
 
 app.post('/signup', async (req, res) => {
@@ -327,8 +345,9 @@ app.post('/signup', async (req, res) => {
   const email    = (req.body.email || '').trim().toLowerCase();
   const password = req.body.password || '';
   const timezone = (req.body.timezone || 'America/Denver').trim();
+  const returnTo = sanitizeReturnTo(req.body.returnTo);
 
-  const rerender = (error) => res.render('signup', { error, name, email });
+  const rerender = (error) => res.render('signup', { error, name, email, returnTo });
 
   if (!name || !email || !password) return rerender('Please fill in all fields.');
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return rerender('Please enter a valid email address.');
@@ -366,6 +385,9 @@ app.post('/signup', async (req, res) => {
       course_start_date: user.course_start_date || null,
       course_length_weeks: user.course_length_weeks || 3,
     };
+    // Stash post-onboarding destination (e.g. /upgrade?tier=X when they came
+    // from the pricing page). Consumed by /api/onboarding/complete.
+    if (returnTo) req.session.postOnboardingReturnTo = returnTo;
     req.session.save(() => res.redirect('/onboarding'));
   } catch (err) {
     console.error('[signup] failed:', err);
@@ -696,15 +718,21 @@ app.post('/api/timezone', requireAuth, (req, res) => {
 // Two-step visual flow on one page: pick a tier → Continue → card form
 // (Stripe Elements). JS toggles between the two panels; server hands the
 // tier catalog to the view once so we can't drift between UI and API.
-app.get('/upgrade', requireAuth, (req, res) => {
-  const user = req.session.user;
-  if (user.role === 'admin') return res.redirect('/dashboard');
-  const dbUser = db.getUserById(user.id);
-  if (!dbUser) return res.redirect('/dashboard');
-  if ((dbUser.course_length_weeks || 12) >= 12) {
-    // Already upgraded — no need to see the checkout page. Fall through to
-    // dashboard where they can see everything they have access to.
-    return res.redirect('/dashboard');
+// Public route. Signed-out visitors see the pricing + free-trial callout so
+// the page doubles as a marketing surface; signed-in students see the same
+// tiers with a Stripe checkout attached. Admins and already-upgraded students
+// have no reason to view checkout, so they get bounced to dashboard.
+app.get('/upgrade', (req, res) => {
+  const sessionUser = req.session.user;
+  if (sessionUser) {
+    if (sessionUser.role === 'admin') return res.redirect('/dashboard');
+    const dbUser = db.getUserById(sessionUser.id);
+    if (!dbUser) return res.redirect('/dashboard');
+    if ((dbUser.course_length_weeks || 12) >= 12) {
+      // Already upgraded — no need to see the checkout page. Fall through to
+      // dashboard where they can see everything they have access to.
+      return res.redirect('/dashboard');
+    }
   }
   const features = STRIPE.getFeatures();
   res.render('upgrade', {
@@ -1805,9 +1833,13 @@ app.post('/api/onboarding/complete', requireAuth, (req, res) => {
   db.setOnboardingComplete(userId);
   console.log(`✓ Onboarding complete: user ${userId}`);
   req.session.user.onboarding_completed = true;
+  // Consume any signup-time returnTo (e.g. /upgrade?tier=X) so the client
+  // hops there instead of the default dashboard.
+  const redirectTo = sanitizeReturnTo(req.session.postOnboardingReturnTo);
+  if (req.session.postOnboardingReturnTo) delete req.session.postOnboardingReturnTo;
   req.session.save(err => {
     if (err) return res.status(500).json({ error: 'Session save failed.' });
-    res.json({ ok: true });
+    res.json({ ok: true, redirect: redirectTo || null });
     setImmediate(() => {
       notifyAdminOfMilestone({
         user: req.session.user,

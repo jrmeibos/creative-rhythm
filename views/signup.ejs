@@ -94,6 +94,9 @@
           <!-- Timezone is detected client-side (see script below) and posted as
                a hidden field. Server falls back to America/Denver if empty. -->
           <input type="hidden" id="timezone" name="timezone" value="">
+          <% if (returnTo) { %>
+            <input type="hidden" name="returnTo" value="<%= returnTo %>">
+          <% } %>
 
           <button type="submit" class="btn btn-primary btn-full">
             Create account →
@@ -101,7 +104,7 @@
         </form>
 
         <p class="login-forgot">
-          Already have an account? <a href="/" class="login-forgot-link">Sign in</a>
+          Already have an account? <a href="/<%= returnTo ? '?returnTo=' + encodeURIComponent(returnTo) : '' %>" class="login-forgot-link">Sign in</a>
         </p>
 
         <p class="login-help">

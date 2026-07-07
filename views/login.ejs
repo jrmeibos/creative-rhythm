@@ -74,6 +74,10 @@
               required>
           </div>
 
+          <% if (returnTo) { %>
+            <input type="hidden" name="returnTo" value="<%= returnTo %>">
+          <% } %>
+
           <button type="submit" class="btn btn-primary btn-full">
             Enter the studio
           </button>
@@ -84,7 +88,7 @@
         </p>
 
         <p class="login-forgot">
-          New here? <a href="/signup" class="login-forgot-link">Start your free Winter journey →</a>
+          New here? <a href="/signup<%= returnTo ? '?returnTo=' + encodeURIComponent(returnTo) : '' %>" class="login-forgot-link">Start your free Winter journey →</a>
         </p>
 
         <p class="login-help">

@@ -204,7 +204,11 @@
       btn.disabled = true;
       btn.textContent = 'Starting…';
       const res = await fetch('/api/onboarding/complete', { method: 'POST' });
-      if (res.ok) window.location.href = '/dashboard';
+      if (res.ok) {
+        let dest = '/dashboard';
+        try { const data = await res.json(); if (data && data.redirect) dest = data.redirect; } catch (_) {}
+        window.location.href = dest;
+      }
       else { btn.disabled = false; btn.textContent = 'Enter The Creative\'s Garden →'; }
     }
   </script>
