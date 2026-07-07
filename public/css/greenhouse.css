@@ -1240,6 +1240,27 @@ details[open] .gh-planted-summary::before { content: '▾  '; }
   background: var(--color-blank-page);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-sm);
+  position: relative;
+  cursor: pointer;
+  transition: box-shadow 0.15s, transform 0.15s;
+}
+.gh-cuttings-section:hover {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+}
+/* Stretched-link pattern: the button's ::before pseudo-element covers
+   the whole section so a click anywhere follows the button's href.
+   The anchor itself stays position: static so the ::before uses the
+   section (which is position: relative) as its containing block.
+   Any inline links inside the section body stay clickable via z-index. */
+.gh-cuttings-section-btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+}
+.gh-cuttings-section-body a {
+  position: relative;
+  z-index: 1;
 }
 
 .gh-cuttings-section-title {

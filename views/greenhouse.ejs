@@ -93,17 +93,25 @@
         <p class="gh-beds-caption">You can plant up to three goals here. Plant them one at a time, in whatever order feels right.</p>
       </section>
 
-      <!-- ── Your Cuttings — full section, in beds-empty state ───────────── -->
-      <%- include('partials/greenhouse-cuttings-section') %>
+      <!-- Ordered newest-seasonal first so the current-season assignment
+           sits at the top of the greenhouse:
+             Winter  → Cuttings only
+             Spring  → Tending, Cuttings
+             Summer  → Make, Tending, Cuttings
+             Autumn  → Share, Make, Tending, Cuttings
+           Each partial self-hides if its seasonal flag isn't set. -->
 
-      <!-- ── Tend Your Cuttings — Spring+ only (self-hides pre-Spring) ────── -->
-      <%- include('partials/greenhouse-tending-section') %>
+      <!-- ── Share the Bounty — Autumn only (self-hides otherwise) ─────── -->
+      <%- include('partials/greenhouse-autumn-section') %>
 
       <!-- ── Make Something — Summer+ only (self-hides pre-Summer) ────── -->
       <%- include('partials/greenhouse-summer-section') %>
 
-      <!-- ── Share the Fruit — Autumn only (self-hides otherwise) ─────── -->
-      <%- include('partials/greenhouse-autumn-section') %>
+      <!-- ── Tend Your Cuttings — Spring+ only (self-hides pre-Spring) ────── -->
+      <%- include('partials/greenhouse-tending-section') %>
+
+      <!-- ── Your Cuttings — always visible after welcome ────────────── -->
+      <%- include('partials/greenhouse-cuttings-section') %>
 
       <% } else { %>
       <!-- ══ TENDING STATE ════════════════════════════════════════════════ -->
@@ -410,17 +418,19 @@
         </div>
       </section>
 
-      <!-- ── Your Cuttings — full section, in tending state ──────────────── -->
-      <%- include('partials/greenhouse-cuttings-section') %>
+      <!-- Ordered newest-seasonal first — matches the beds-empty block. -->
 
-      <!-- ── Tend Your Cuttings — Spring+ only (self-hides pre-Spring) ────── -->
-      <%- include('partials/greenhouse-tending-section') %>
+      <!-- ── Share the Bounty — Autumn only (self-hides otherwise) ─────── -->
+      <%- include('partials/greenhouse-autumn-section') %>
 
       <!-- ── Make Something — Summer+ only (self-hides pre-Summer) ────── -->
       <%- include('partials/greenhouse-summer-section') %>
 
-      <!-- ── Share the Fruit — Autumn only (self-hides otherwise) ─────── -->
-      <%- include('partials/greenhouse-autumn-section') %>
+      <!-- ── Tend Your Cuttings — Spring+ only (self-hides pre-Spring) ────── -->
+      <%- include('partials/greenhouse-tending-section') %>
+
+      <!-- ── Your Cuttings — always visible after welcome ────────────── -->
+      <%- include('partials/greenhouse-cuttings-section') %>
 
       <!-- ── Growth Check (locked / form — hidden once completed) ────────── -->
       <% if (!closing) { %>
