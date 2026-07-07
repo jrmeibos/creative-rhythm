@@ -25,7 +25,7 @@
           <div class="week-nav-label">
             <span class="week-nav-date"><%= weekLabel %></span>
             <% if (viewedWeekNumber) { %>
-              <span class="week-nav-week-num">Week <%= viewedWeekNumber %> of 12<% if (curricularSeasonLabel) { %> · <span class="curricular-season-label"><%= curricularSeasonLabel %></span><% } %></span>
+              <span class="week-nav-week-num">Week <%= viewedWeekNumber %> of <%= locals.courseLengthWeeks || 12 %><% if (curricularSeasonLabel) { %> · <span class="curricular-season-label"><%= curricularSeasonLabel %></span><% } %></span>
             <% } %>
             <% if (weekStart === currentWeekStart) { %>
               <span class="week-nav-current">This week</span>

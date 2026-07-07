@@ -1,3 +1,7 @@
+<%# Crash-proofing: `page` drives the active-nav highlight but isn't
+    load-bearing. If a render call forgets to pass it, default to '' rather
+    than letting EJS throw a ReferenceError that 500s the whole page. %>
+<% var page = locals.page || ''; %>
 <!-- Hamburger toggle — hidden on desktop, shown at ≤900px. Kept outside the
      <aside> so it stays fixed even when the drawer is closed. Tapping toggles
      the drawer; Escape / backdrop / nav-link click closes it. -->

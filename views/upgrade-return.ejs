@@ -24,7 +24,10 @@
 
   <script>
     const stripe = Stripe(<%- JSON.stringify(publishableKey) %>);
-    const clientSecret = <%- JSON.stringify(clientSecret) %>;
+    <%# clientSecret comes straight from the query string — escape < so a
+        crafted ?payment_intent_client_secret=</script>… can't break out. %>
+    const clientSecret = <%- JSON.stringify(clientSecret).replace(/</g, '\\u003c') %>;
+    const tierId = <%- JSON.stringify(tierId) %>;
 
     (async () => {
       const errEl    = document.getElementById('up-return-error');
@@ -39,12 +42,14 @@
       // Terminal statuses per Stripe docs
       switch (paymentIntent && paymentIntent.status) {
         case 'succeeded': {
-          const tier = paymentIntent.metadata && paymentIntent.metadata.tier;
+          // metadata isn't exposed to publishable-key retrievals; the tier
+          // comes from our own ?tier= query param instead (server-validated).
+          const tier = tierId || (paymentIntent.metadata && paymentIntent.metadata.tier);
           window.location.href = '/dashboard?upgraded=1' + (tier ? '&tier=' + encodeURIComponent(tier) : '');
           return;
         }
         case 'processing':
-          statusEl.textContent = 'Payment is processing. You can leave this page — we\'ll email you when it clears.';
+          statusEl.textContent = 'Payment is processing. You can leave this page and check back on your dashboard in a few minutes — your access unlocks automatically once it clears.';
           return;
         case 'requires_payment_method':
           statusEl.textContent = 'That payment method didn\'t go through. Try again.';

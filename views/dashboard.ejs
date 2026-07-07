@@ -39,6 +39,8 @@
               <span class="integration-badge">Trial complete</span>
             <% } else if (isIntegrationWeek) { %>
               <span class="integration-badge">Integration Week</span> · <%= weekLabel %>
+            <% } else if (weekNumber > courseLengthWeeks) { %>
+              <span class="integration-badge">Course complete</span> · <%= weekLabel %>
             <% } else if (weekNumber >= 1) { %>
               Week <%= weekNumber %> of <%= courseLengthWeeks %> · <%= weekLabel %>
             <% } else { %>

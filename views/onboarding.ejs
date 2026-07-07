@@ -185,15 +185,22 @@
         }
       }
 
-      const res = await fetch('/api/onboarding/assessment', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(assessmentData)
-      });
-      if (res.ok) {
-        goToStep(3);
-      } else {
-        errEl.textContent = 'Something went wrong. Please try again.';
+      try {
+        const res = await fetch('/api/onboarding/assessment', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(assessmentData)
+        });
+        if (res.ok) {
+          goToStep(3);
+        } else {
+          errEl.textContent = 'Something went wrong. Please try again.';
+          errEl.hidden = false;
+        }
+      } catch (_) {
+        // Network failure — surface it instead of leaving the student stuck
+        // on a silent no-op.
+        errEl.textContent = 'Connection issue. Check your network and try again.';
         errEl.hidden = false;
       }
     }
@@ -203,13 +210,21 @@
       const btn = document.getElementById('enter-btn');
       btn.disabled = true;
       btn.textContent = 'Starting…';
-      const res = await fetch('/api/onboarding/complete', { method: 'POST' });
-      if (res.ok) {
-        let dest = '/dashboard';
-        try { const data = await res.json(); if (data && data.redirect) dest = data.redirect; } catch (_) {}
-        window.location.href = dest;
+      const reset = () => { btn.disabled = false; btn.textContent = 'Enter The Creative\'s Garden →'; };
+      try {
+        const res = await fetch('/api/onboarding/complete', { method: 'POST' });
+        if (res.ok) {
+          let dest = '/dashboard';
+          try { const data = await res.json(); if (data && data.redirect) dest = data.redirect; } catch (_) {}
+          window.location.href = dest;
+        } else {
+          reset();
+        }
+      } catch (_) {
+        // Don't strand the student on a disabled "Starting…" button when the
+        // network hiccups — re-enable so they can retry.
+        reset();
       }
-      else { btn.disabled = false; btn.textContent = 'Enter The Creative\'s Garden →'; }
     }
   </script>
 

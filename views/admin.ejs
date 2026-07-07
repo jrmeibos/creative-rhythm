@@ -148,7 +148,7 @@
               <% } %>
               <div class="admin-row-actions">
                 <button class="admin-btn-icon" type="button" title="Edit"
-                  onclick='openEditStudent(<%- JSON.stringify({ id: u.id, name: u.name, email: u.email, role: u.role, course_length_weeks: u.course_length_weeks || 12 }) %>)'>
+                  onclick="openEditStudent(<%= JSON.stringify({ id: u.id, name: u.name, email: u.email, role: u.role, course_length_weeks: u.course_length_weeks || 12 }) %>)">
                   ✎
                 </button>
                 <% if (u.id !== user.id) { %>
@@ -279,7 +279,7 @@
               <span class="admin-lesson-tag"><%= q.season ? SEASON_LABELS[q.season] : 'Any season' %></span>
               <div class="admin-row-actions">
                 <button class="admin-btn-icon" type="button" title="Edit"
-                  onclick='openEditQuote(<%- JSON.stringify(q) %>)'>✎</button>
+                  onclick="openEditQuote(<%= JSON.stringify(q) %>)">✎</button>
                 <button class="admin-btn-icon admin-btn-icon--danger" type="button" title="Delete"
                   onclick="deleteQuote(<%= q.id %>, <%= JSON.stringify(q.text) %>)">✕</button>
               </div>
@@ -654,7 +654,7 @@
         estimated_read_time: l.estimated_read_time,
         video_url:           l.video_url || '',
         homework:            lessonHomework[l.id] || []
-      }) %>;
+      }).replace(/</g, '\\u003c') %>;<%# escape < so lesson HTML containing </script> can't break out %>
     <% } %>
 
     // ── Resource data for edit dialog ────────────────────────────────────────
@@ -665,7 +665,7 @@
         description:  r.description  || '',
         category_tag: r.category_tag || '',
         url:          r.url          || ''
-      }) %>;
+      }).replace(/</g, '\\u003c') %>;
     <% } %>
 
     // ── Dialog helpers ───────────────────────────────────────────────────────

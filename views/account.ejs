@@ -191,6 +191,7 @@
           <h2 class="dash-section-title">Your Current Season</h2>
         </div>
         <div class="acct-card">
+          <% if (locals.canPickSeason) { %>
           <div class="season-cards">
             <% const seasonMeta = {
               spring: { name: 'Spring',  category: 'Curiosity', desc: 'Feed your artist\'s soul' },
@@ -211,6 +212,12 @@
               </button>
             <% } %>
           </div>
+          <% } else { %>
+            <p class="acct-hint">
+              You're in Winter right now — the season of quiet, daily recording.
+              Your other seasons open up as your journey continues.
+            </p>
+          <% } %>
         </div>
       </section>
 
@@ -446,14 +453,21 @@
       card.addEventListener('click', async () => {
         const season = card.dataset.season;
         const already = card.classList.contains('is-selected');
+        const newSeason = already ? null : season;
+        // Commit to the server FIRST — only paint the UI if it accepted the
+        // change. Optimistic-then-fetch left the UI lying when /api/season
+        // 403'd (which it now does for ineligible students).
+        let res;
+        try {
+          res = await fetch('/api/season', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ season: newSeason })
+          });
+        } catch (_) { return; }
+        if (!res.ok) return;
         document.querySelectorAll('.season-card').forEach(c => c.classList.remove('is-selected'));
         if (!already) card.classList.add('is-selected');
-        const newSeason = already ? null : season;
-        await fetch('/api/season', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ season: newSeason })
-        });
         const seasonClasses = ['season-avatar--spring','season-avatar--summer','season-avatar--autumn','season-avatar--winter'];
         document.querySelectorAll('.sidebar-avatar, .sidebar-avatar-link .sidebar-avatar').forEach(el => {
           el.classList.remove(...seasonClasses);

@@ -296,10 +296,13 @@
         // Stripe handles the redirect and comes back to return_url. On
         // immediate success/failure with no redirect needed, we get { error }
         // or { paymentIntent } here directly.
+        // Tier rides along in the return_url — client-side PaymentIntent
+        // retrieval (publishable key) doesn't expose metadata, so the
+        // return page can't recover it from Stripe.
         const { error, paymentIntent } = await stripe.confirmPayment({
           elements,
           confirmParams: {
-            return_url: window.location.origin + '/upgrade/return',
+            return_url: window.location.origin + '/upgrade/return?tier=' + encodeURIComponent(selectedTierId),
           },
           redirect: 'if_required',
         });
@@ -319,8 +322,11 @@
           window.location.href = '/dashboard?upgraded=1&tier=' + encodeURIComponent(selectedTierId);
         } else {
           // Rare — status like 'processing' or 'requires_action'. Land them on
-          // the return page which polls / renders their final state.
-          window.location.href = '/upgrade/return';
+          // the return page which polls / renders their final state. The
+          // client secret must ride along or the return route bounces
+          // straight back to the pricing page with no status shown.
+          window.location.href = '/upgrade/return?tier=' + encodeURIComponent(selectedTierId)
+            + '&payment_intent_client_secret=' + encodeURIComponent(currentClientSecret);
         }
       });
     }

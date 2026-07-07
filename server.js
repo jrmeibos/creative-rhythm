@@ -92,6 +92,12 @@ app.set('trust proxy', 1);
 const SESSION_DIR = process.env.DB_PATH
   ? path.dirname(process.env.DB_PATH)
   : path.join(__dirname, 'data');
+// Refuse to boot in production without a real session secret. The dev
+// fallback below is public knowledge (it's in the repo) — silently using
+// it in production would let anyone forge an admin session cookie.
+if (process.env.NODE_ENV === 'production' && !process.env.SESSION_SECRET) {
+  throw new Error('SESSION_SECRET must be set in production — refusing to start.');
+}
 app.use(session({
   store: new SQLiteStore({ db: 'sessions.db', dir: SESSION_DIR, table: 'sessions' }),
   secret: process.env.SESSION_SECRET || 'dev-secret-please-change-in-production',
@@ -179,7 +185,13 @@ app.use((req, res, next) => {
     try { weekNumber = getCurrentCourseWeek(u).weekNumber; } catch (_) {}
     const courseLen  = u.course_length_weeks || 12;
     const isPaid     = courseLen >= 12;
-    const isEligible = isPaid || (typeof weekNumber === 'number' && weekNumber >= 4);
+    // Spring unlocks for PAID students at week 4 (Winter = weeks 1-3).
+    // Trial students stay Winter no matter how many weeks pass — the old
+    // `isPaid || week >= 4` shape quietly unlocked every Spring+ feature
+    // for expired trials at week 4, gutting the upgrade funnel. Admins
+    // stay always-eligible so they can preview any season state.
+    const pastWinter = typeof weekNumber === 'number' && weekNumber >= 4;
+    const isEligible = u.role === 'admin' ? isPaid : (isPaid && pastWinter);
 
     res.locals.canPickSeason = isEligible;
 
@@ -269,8 +281,10 @@ app.get('/avatars/:filename', requireAuth, (req, res) => {
 // ─── Auth ──────────────────────────────────────────────────────────────────
 
 app.get('/', (req, res) => {
-  if (req.session.user) return res.redirect('/dashboard');
   const returnTo = sanitizeReturnTo(req.query.returnTo);
+  // Already signed in: honor a pending returnTo (e.g. the anon /upgrade
+  // nav's "Sign in" link) instead of always bouncing to the dashboard.
+  if (req.session.user) return res.redirect(returnTo || '/dashboard');
   res.render('login', { error: null, returnTo });
 });
 
@@ -335,8 +349,8 @@ function sanitizeReturnTo(raw) {
 }
 
 app.get('/signup', (req, res) => {
-  if (req.session.user) return res.redirect('/dashboard');
   const returnTo = sanitizeReturnTo(req.query.returnTo);
+  if (req.session.user) return res.redirect(returnTo || '/dashboard');
   res.render('signup', { error: null, name: '', email: '', returnTo });
 });
 
@@ -344,8 +358,18 @@ app.post('/signup', async (req, res) => {
   const name     = (req.body.name  || '').trim();
   const email    = (req.body.email || '').trim().toLowerCase();
   const password = req.body.password || '';
-  const timezone = (req.body.timezone || 'America/Denver').trim();
   const returnTo = sanitizeReturnTo(req.body.returnTo);
+
+  // Validate the client-supplied IANA timezone BEFORE any DB write. An
+  // invalid value used to throw mid-flow (after createUser) and strand a
+  // half-configured account with no course_start_date — which falls back
+  // to the pilot's global start date and looks instantly expired.
+  let timezone = (req.body.timezone || 'America/Denver').trim();
+  try {
+    new Intl.DateTimeFormat('en-US', { timeZone: timezone });
+  } catch (_) {
+    timezone = 'America/Denver';
+  }
 
   const rerender = (error) => res.render('signup', { error, name, email, returnTo });
 
@@ -359,21 +383,16 @@ app.post('/signup', async (req, res) => {
     const userId = result.lastInsertRowid;
 
     // Every new self-serve signup starts on the free Winter (3-week) tier.
-    // Course starts today so week 1 is today; timezone comes from the form's
-    // JS-detected value (or the default fallback).
+    // Course starts today so week 1 is today; timezone is the validated
+    // form value (or the Denver fallback).
     db.setUserCourseLengthWeeks(userId, 3);
     const todayLocal = new Intl.DateTimeFormat('en-CA', {
       timeZone: timezone, year: 'numeric', month: '2-digit', day: '2-digit'
     }).format(new Date());
     db.setUserCourseStartDate(userId, todayLocal);
-    // Trust any IANA timezone that Intl.DateTimeFormat accepts. Anything
-    // invalid stays on the users.timezone default (America/Denver).
-    try {
-      if (timezone && timezone !== 'America/Denver') {
-        new Intl.DateTimeFormat('en-US', { timeZone: timezone });
-        db.setUserTimezone(userId, timezone);
-      }
-    } catch (_) { /* invalid TZ — leave default */ }
+    if (timezone !== 'America/Denver') {
+      db.setUserTimezone(userId, timezone);
+    }
 
     const user = db.getUserById(userId);
     req.session.user = {
@@ -381,7 +400,10 @@ app.post('/signup', async (req, res) => {
       avatar_initial: user.avatar_initial, current_season: null,
       onboarding_completed: false,
       profile_photo: null,
-      timezone: user.timezone || 'America/Denver',
+      // Session carries the validated form timezone directly — getUserById
+      // doesn't SELECT timezone, and waiting for the sidebar beacon meant
+      // the first dashboard render used Denver for everyone.
+      timezone,
       course_start_date: user.course_start_date || null,
       course_length_weeks: user.course_length_weeks || 3,
     };
@@ -460,7 +482,7 @@ app.post('/reset-password', async (req, res) => {
 
   if (!new_password || !confirm_password) return withError('All fields are required.');
   if (new_password !== confirm_password) return withError('Passwords do not match.');
-  if (new_password.length < 8) return withError('Password must be at least 8 characters.');
+  if (!isPasswordValid(new_password)) return withError('Password must be at least 8 characters and include a number or symbol.');
 
   db.updateUserPassword(row.user_id, new_password);
   db.markPasswordResetTokenUsed(row.id);
@@ -770,11 +792,15 @@ app.get('/upgrade/return', requireAuth, async (req, res) => {
   // a small client-side script that polls the PaymentIntent status via
   // stripe.retrievePaymentIntent and forwards to /dashboard?upgraded=1 on
   // success. Simpler than round-tripping status via a server endpoint.
+  // The tier comes from our own ?tier= param (validated against the
+  // catalog) — client-side PaymentIntent retrieval doesn't expose metadata.
+  const tier = STRIPE.findTier(String(req.query.tier || ''));
   res.render('upgrade-return', {
     title: 'Confirming your payment',
     page: 'upgrade',
     publishableKey: STRIPE.getPublishableKey(),
     clientSecret,
+    tierId: tier ? tier.id : null,
   });
 });
 
@@ -845,15 +871,21 @@ app.post('/webhooks/stripe', async (req, res) => {
     return res.status(400).send(`Signature failed: ${err.message}`);
   }
 
-  // Idempotency: reject the second delivery of the same event.id so a Stripe
-  // retry (or an accidental replay) doesn't upgrade someone twice.
-  const claimed = db.tryClaimStripeEvent(event.id, event.type);
-  if (!claimed) {
-    console.log('[stripe] webhook already processed:', event.id, event.type);
-    return res.json({ ok: true, alreadyProcessed: true });
-  }
-
+  // Idempotency + atomicity in one transaction: the event claim and the
+  // upgrade writes either both land or neither does. A crash between them
+  // used to leave the event marked processed with no upgrade — customer
+  // paid, still on trial, and Stripe's retry hit "already processed". Every
+  // DB call below is synchronous (node:sqlite), so no await splits the
+  // BEGIN/COMMIT window.
+  db.exec('BEGIN');
   try {
+    const claimed = db.tryClaimStripeEvent(event.id, event.type);
+    if (!claimed) {
+      db.exec('COMMIT');
+      console.log('[stripe] webhook already processed:', event.id, event.type);
+      return res.json({ ok: true, alreadyProcessed: true });
+    }
+
     if (event.type === 'payment_intent.succeeded') {
       const pi = event.data.object;
       const userIdStr = pi.metadata && pi.metadata.user_id;
@@ -884,14 +916,14 @@ app.post('/webhooks/stripe', async (req, res) => {
       // a stray event again.
       console.log('[stripe] ignoring event type:', event.type);
     }
+    db.exec('COMMIT');
     res.json({ ok: true });
   } catch (err) {
-    // If handler throws AFTER claim, we've already recorded the event as
-    // processed — but the upgrade may not have happened. Log loudly so we
-    // can reconcile manually. Do NOT 500 — Stripe would retry, and the
-    // retry hits the "already claimed" branch above.
+    // Roll back the claim too, so this delivery didn't "count" — then 500 so
+    // Stripe retries and the upgrade gets another chance. Loud log either way.
+    try { db.exec('ROLLBACK'); } catch (_) {}
     console.error('[stripe] webhook handler failed for', event.id, event.type, ':', err);
-    res.json({ ok: true, handlerError: true });
+    res.status(500).send('handler error — will retry');
   }
 });
 
@@ -1003,6 +1035,7 @@ app.get('/goals', requireAuth, (req, res) => {
     weekLabel: formatWeekLabel(weekStart),
     currentWeekStart,
     viewedWeekNumber,
+    courseLengthWeeks: getCourseLengthWeeks(req.session.user),
     curricularSeason,
     curricularSeasonLabel,
     goals: goalsMap,
@@ -1100,8 +1133,13 @@ app.post('/api/season', requireAuth, (req, res) => {
       error: 'Your season unlocks after Week 3 or with the full course.',
     });
   }
-  db.updateUserSeason(req.session.user.id, season || null);
-  req.session.user.current_season = season || null;
+  // A student deselecting their season means "step back into Winter" (the
+  // dashboard copy promises exactly that). Storing NULL instead would get
+  // silently rewritten to 'spring' by the auto-advance middleware on the
+  // very next request. Admins may still clear to NULL for preview resets.
+  const toStore = season || (req.session.user.role === 'admin' ? null : 'winter');
+  db.updateUserSeason(req.session.user.id, toStore);
+  req.session.user.current_season = toStore;
   res.json({ ok: true });
 });
 
@@ -1158,7 +1196,7 @@ app.get('/lessons', requireAuth, (req, res) => {
 
 app.get('/lessons/:slug', requireAuth, (req, res) => {
   const lesson = db.getLessonBySlug(req.params.slug);
-  if (!lesson) return res.status(404).render('error', { title: '404', message: 'Lesson not found.', user: req.session.user });
+  if (!lesson) return res.status(404).render('error', { title: '404', message: 'Lesson not found.', user: req.session.user, page: 'lessons' });
   // Block trial students from URL-hacking into a lesson past their length.
   // Admins always pass; intro is always allowed; numbered lessons N > length
   // 404 with a friendly message instead of silently rendering.
@@ -1172,6 +1210,7 @@ app.get('/lessons/:slug', requireAuth, (req, res) => {
           title: 'Not yet',
           message: `This lesson is part of the full course. Your trial covers lessons 1–${courseLengthWeeks}.`,
           user: req.session.user,
+          page: 'lessons',
         });
       }
     }
@@ -1482,7 +1521,7 @@ const ASSESSMENT_QUESTIONS = [
     low: "1 = I'm holding almost everything back", high: '10 = what I share feels truly like me'
   },
   { id: 'q7', type: 'multi', field: 'q7_choices', max: 2,
-    text: 'What would feel most meaningful to see by the end of these next 12 weeks?',
+    text: 'What would feel most meaningful to see by the end of this course?',
     choices: [
       { val: 'A', label: 'Engagement that feels like real connection' },
       { val: 'B', label: 'Showing up more consistently without burning out' },
@@ -1642,7 +1681,9 @@ function isMidcourseUnlockedFor(user) {
   if (getCourseLengthWeeks(user) < 12) return false;
   const courseStart = db.getUserCourseStartDate(user);
   if (!courseStart) return false;
-  const daysDiff = Math.floor((Date.now() - new Date(courseStart + 'T00:00:00').getTime()) / 86400000);
+  // getNow (not Date.now) so time travel can QA this unlock and the day-35
+  // boundary lands on the student's wall clock, not the server's.
+  const daysDiff = Math.floor((getNow(user).getTime() - new Date(courseStart + 'T00:00:00').getTime()) / 86400000);
   return daysDiff >= 35;
 }
 
@@ -1717,7 +1758,9 @@ function isTrialClosingUnlockedFor(user) {
   if (getCourseLengthWeeks(user) >= 12) return false;
   const courseStart = db.getUserCourseStartDate(user);
   if (!courseStart) return false;
-  const daysDiff = Math.floor((Date.now() - new Date(courseStart + 'T00:00:00').getTime()) / 86400000);
+  // getNow (not Date.now) so time travel can QA this unlock and the day-14
+  // boundary lands on the student's wall clock, not the server's.
+  const daysDiff = Math.floor((getNow(user).getTime() - new Date(courseStart + 'T00:00:00').getTime()) / 86400000);
   return daysDiff >= (getCourseLengthWeeks(user) - 1) * 7;
 }
 
@@ -1931,9 +1974,15 @@ function getNow(user) {
   let now;
   if (isTimeTravelUser(user)) {
     const simulated = db.getSetting('simulated_today');
-    now = (simulated && simulated.trim())
-      ? new Date(simulated + 'T00:00:00')
-      : new Date();
+    if (simulated && simulated.trim()) {
+      // The simulated value IS the intended wall-clock date. Return it
+      // directly without the TZ re-projection below — projecting a
+      // server-local midnight into the user's timezone shifts the date
+      // back a day for any user west of the server (e.g. Denver accounts
+      // on the UTC Railway box saw "the day before" the banner date).
+      return new Date(simulated.trim() + 'T00:00:00');
+    }
+    now = new Date();
   } else {
     now = new Date();
   }
@@ -2769,6 +2818,9 @@ app.post('/tending/curate/:cuttingId', requireAuth, (req, res) => {
     );
     return res.json({ ok: true, category, resurfaceAfter });
   } catch (e) {
+    if (e.code === 'NOT_OWNED') {
+      return res.status(404).json({ error: 'Cutting not found.' });
+    }
     console.error('setCuttingCuration failed:', e);
     return res.status(500).json({ error: 'Could not save.' });
   }
@@ -2795,6 +2847,19 @@ app.post('/tending/intro-seen', requireAuth, (req, res) => {
 // content formats they can pick per cutting. Making a cutting inserts a
 // cutting_makes row and reloads so the "Already made as…" chips update.
 // The Grove is the downstream view of everything that's been made.
+
+// Summer + Grove are paid-course features (a trial never leaves Winter).
+// Pages redirect to /upgrade — same interception point as /watch-yourself —
+// and JSON POSTs get a 403 so a hand-crafted request can't slip through.
+// Paid students keep always-by-URL access across seasons (see the
+// effective-season docblock); admins always pass.
+function requireFullCourse(req, res, next) {
+  const u = req.session.user;
+  if (u.role === 'admin' || (u.course_length_weeks || 12) >= 12) return next();
+  if (req.method === 'GET') return res.redirect('/upgrade');
+  return res.status(403).json({ error: 'This is part of the full course. Upgrade to unlock it.' });
+}
+app.use(['/summer', '/grove'], requireAuth, requireFullCourse);
 
 app.get('/summer', requireAuth, (req, res) => {
   const userId = req.session.user.id;
@@ -3661,6 +3726,11 @@ app.post('/api/admin/users', requireAdmin, (req, res) => {
     // clamps to [1, 52].
     if (course_length_weeks !== undefined && parseInt(course_length_weeks, 10) !== 12) {
       db.setUserCourseLengthWeeks(result.lastInsertRowid, course_length_weeks);
+      // Short-course students need their own start date. Without one, the
+      // fallback is the pilot cohort's global start date — months in the
+      // past — so a fresh trial account would look instantly expired.
+      // Default to today; adjustable afterward via the users table.
+      db.setUserCourseStartDate(result.lastInsertRowid, toLocalDateString(new Date()));
     }
     const newUser = db.getUserById(result.lastInsertRowid);
     res.json({ ok: true, user: newUser });
@@ -4077,6 +4147,39 @@ function getRotatingQuote(user) {
   const idx = (today.getFullYear() * 365 + today.getMonth() * 31 + today.getDate()) % pool.length;
   return pool[idx];
 }
+
+// Catch-all 404 — a branded page instead of Express's bare "Cannot GET /x".
+// Must sit after every route. res.locals.user is set by the middleware above,
+// so the sidebar renders for signed-in visitors and is omitted otherwise.
+app.use((req, res) => {
+  res.status(404).render('error', {
+    title: 'Not found',
+    message: "We couldn't find that page. It may have moved, or the link was mistyped.",
+    user: req.session.user || null,
+    page: '',
+  });
+});
+
+// Last-resort error handler. A thrown/rejected route lands here as a branded
+// 500 instead of a raw stack trace. Keeps one bad row or template from
+// leaking internals to a student.
+app.use((err, req, res, next) => {
+  console.error('[unhandled route error]', err);
+  if (res.headersSent) return next(err);
+  res.status(500).render('error', {
+    title: 'Something went wrong',
+    message: 'Something went wrong on our end. Please try again in a moment.',
+    user: (req.session && req.session.user) || null,
+    page: '',
+  });
+});
+
+// Process-level safety net: an unhandled promise rejection (e.g. a throw in
+// an async handler before its own try/catch) would otherwise crash the whole
+// server for every student. Log loudly and stay up; Railway keeps serving.
+process.on('unhandledRejection', (reason) => {
+  console.error('[unhandledRejection]', reason);
+});
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {

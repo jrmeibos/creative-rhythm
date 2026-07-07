@@ -58,7 +58,9 @@
   </div>
 
   <script>
-    const highlights = <%- JSON.stringify(highlights) %>;
+    <%# Escape < so user-authored highlight text can't break out of this
+        script tag with a literal </script> sequence. %>
+    const highlights = <%- JSON.stringify(highlights).replace(/</g, '\\u003c') %>;
     const floatBtn = document.getElementById('cm-float-btn');
 
     // ── Restore highlights on page load ───────────────────────────────────

@@ -23,6 +23,20 @@ const db = new DatabaseSync(DB_PATH);
 db.exec('PRAGMA journal_mode = WAL');
 db.exec('PRAGMA foreign_keys = ON');
 
+// Parse a JSON column defensively. A single corrupted row (bad JSON in a
+// bullets/checklist field) must not throw and 500 every page that lists
+// that user's data — fall back to an empty array and log once.
+function safeParseArray(raw) {
+  if (!raw) return [];
+  try {
+    const v = JSON.parse(raw);
+    return Array.isArray(v) ? v : [];
+  } catch (e) {
+    console.error('[db] corrupt JSON array column, defaulting to []:', String(raw).slice(0, 80));
+    return [];
+  }
+}
+
 db.exec(`
   CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -779,17 +793,30 @@ db.exec(`
   // random 1-12 so existing bouquets aren't blank on first load.
   if (!makesCols.includes('stem_variant')) {
     db.exec("ALTER TABLE cutting_makes ADD COLUMN stem_variant INTEGER");
-    const backfillRows = db.prepare(`
-      SELECT DISTINCT m.id
-      FROM cutting_makes m
-      JOIN cutting_make_links l ON l.make_id = m.id
-      WHERE m.stem_variant IS NULL
-    `).all();
-    const upd = db.prepare('UPDATE cutting_makes SET stem_variant = ? WHERE id = ?');
-    for (const row of backfillRows) {
-      upd.run(Math.floor(Math.random() * 12) + 1, row.id);
+    // The backfill JOINs cutting_make_links, which is CREATEd ~20 lines
+    // below. On a brand-new database that table doesn't exist yet, so the
+    // JOIN would throw "no such table" and abort the whole migration
+    // (the outer catch swallows it, booting a half-built DB). Skip the
+    // backfill when the table isn't there — a fresh DB has no rows to
+    // backfill anyway.
+    const linksTableExists = db.prepare(
+      "SELECT name FROM sqlite_master WHERE type='table' AND name='cutting_make_links'"
+    ).get();
+    let backfilled = 0;
+    if (linksTableExists) {
+      const backfillRows = db.prepare(`
+        SELECT DISTINCT m.id
+        FROM cutting_makes m
+        JOIN cutting_make_links l ON l.make_id = m.id
+        WHERE m.stem_variant IS NULL
+      `).all();
+      const upd = db.prepare('UPDATE cutting_makes SET stem_variant = ? WHERE id = ?');
+      for (const row of backfillRows) {
+        upd.run(Math.floor(Math.random() * 12) + 1, row.id);
+      }
+      backfilled = backfillRows.length;
     }
-    console.log(`✓ Migrated: added stem_variant to cutting_makes (backfilled ${backfillRows.length} rows)`);
+    console.log(`✓ Migrated: added stem_variant to cutting_makes (backfilled ${backfilled} rows)`);
   }
 
   // Fall: multiple published-URL links per make. Each row is one link,
@@ -1747,13 +1774,58 @@ module.exports = {
   },
 
   deleteUser(id) {
-    db.prepare('DELETE FROM community_reactions WHERE user_id=?').run(id);
-    db.prepare('DELETE FROM community_posts WHERE user_id=?').run(id);
-    db.prepare('DELETE FROM lesson_completions WHERE user_id=?').run(id);
-    db.prepare('DELETE FROM weekly_goals WHERE user_id=?').run(id);
-    db.prepare('DELETE FROM goals WHERE user_id=?').run(id);
-    db.prepare('DELETE FROM self_assessments WHERE user_id=?').run(id);
-    return db.prepare('DELETE FROM users WHERE id=?').run(id);
+    // Foreign keys are enforced (PRAGMA foreign_keys=ON), so every table
+    // that references users(id) must be cleared before the user row — and
+    // in child-before-parent order for the tables that also reference each
+    // other (make_links → makes → cuttings; reactions → posts). Doing this
+    // in a single transaction means a partial failure rolls back rather
+    // than leaving the account half-deleted. Missing any one of these was
+    // making every real student undeletable (FK constraint failed).
+    db.exec('BEGIN');
+    try {
+      // Other students' reactions ON this user's posts, then this user's
+      // own reactions, then their posts.
+      db.prepare(
+        'DELETE FROM community_reactions WHERE post_id IN (SELECT id FROM community_posts WHERE user_id=?)'
+      ).run(id);
+      db.prepare('DELETE FROM community_reactions WHERE user_id=?').run(id);
+      db.prepare('DELETE FROM community_posts WHERE user_id=?').run(id);
+
+      // Cutting graph: links → makes → curations → cuttings, then the
+      // content_formats that makes referenced.
+      db.prepare('DELETE FROM cutting_make_links WHERE user_id=?').run(id);
+      db.prepare('DELETE FROM cutting_makes WHERE user_id=?').run(id);
+      db.prepare('DELETE FROM cutting_curations WHERE user_id=?').run(id);
+      db.prepare('DELETE FROM cuttings WHERE user_id=?').run(id);
+      db.prepare('DELETE FROM content_formats WHERE user_id=?').run(id);
+      db.prepare('DELETE FROM tending_pauses WHERE user_id=?').run(id);
+      db.prepare('DELETE FROM fallow_beds WHERE user_id=?').run(id);
+
+      // Seed packets (independent per-user tables).
+      db.prepare('DELETE FROM seed_packet_highlights WHERE user_id=?').run(id);
+      db.prepare('DELETE FROM seed_packet_threads WHERE user_id=?').run(id);
+      db.prepare('DELETE FROM seed_packet_seeds WHERE user_id=?').run(id);
+      db.prepare('DELETE FROM seed_packet_synthesis_state WHERE user_id=?').run(id);
+      db.prepare('DELETE FROM seed_packet_answers WHERE user_id=?').run(id);
+
+      // Everything else keyed by user_id.
+      db.prepare('DELETE FROM lesson_completions WHERE user_id=?').run(id);
+      db.prepare('DELETE FROM homework_completions WHERE user_id=?').run(id);
+      db.prepare('DELETE FROM weekly_goals WHERE user_id=?').run(id);
+      db.prepare('DELETE FROM goals WHERE user_id=?').run(id);
+      db.prepare('DELETE FROM weekly_reflections WHERE user_id=?').run(id);
+      db.prepare('DELETE FROM self_assessments WHERE user_id=?').run(id);
+      db.prepare('DELETE FROM notification_log WHERE user_id=?').run(id);
+      db.prepare('DELETE FROM password_reset_tokens WHERE user_id=?').run(id);
+      db.prepare('DELETE FROM push_subscriptions WHERE user_id=?').run(id);
+
+      const result = db.prepare('DELETE FROM users WHERE id=?').run(id);
+      db.exec('COMMIT');
+      return result;
+    } catch (e) {
+      try { db.exec('ROLLBACK'); } catch (_) {}
+      throw e;
+    }
   },
 
   // ─── Admin: lessons ────────────────────────────────────────────────────────
@@ -2003,6 +2075,15 @@ module.exports = {
     return !!db.prepare(
       'SELECT 1 FROM notification_log WHERE user_id=? AND milestone=?'
     ).get(userId, milestone);
+  },
+
+  // Undo a claim — used when a send fails after tryClaimMilestone succeeded,
+  // so the next run re-attempts it instead of the claim silently swallowing
+  // the notification forever.
+  releaseMilestone(userId, milestone) {
+    return db.prepare(
+      'DELETE FROM notification_log WHERE user_id=? AND milestone=?'
+    ).run(userId, milestone).changes;
   },
 
   replaceGoalsFacets(userId, seedNumber, facets, createdAt) {
@@ -2499,6 +2580,17 @@ module.exports = {
     if (!['keep_growing', 'return_later', 'archive'].includes(category)) {
       throw new Error('Invalid curation category: ' + category);
     }
+    // Ownership gate: a curation row silently becomes the cutting's "latest"
+    // state everywhere, so writing one against someone else's cutting would
+    // let any student rewrite another student's Tending decisions.
+    const owned = db.prepare(
+      'SELECT 1 FROM cuttings WHERE id = ? AND user_id = ?'
+    ).get(cuttingId, userId);
+    if (!owned) {
+      const err = new Error('Cutting not found for this user');
+      err.code = 'NOT_OWNED';
+      throw err;
+    }
     let resurfaceAfter = null;
     if (category === 'return_later') {
       const d = new Date(todayStr + 'T00:00:00');
@@ -2858,6 +2950,16 @@ module.exports = {
   createCuttingMakeLink(makeId, userId, url, label, note) {
     const clean = String(url || '').trim();
     if (!clean) throw new Error('URL required');
+    // Ownership gate — an INSERT has no WHERE clause to scope, so verify
+    // the make belongs to this user before writing.
+    const owned = db.prepare(
+      'SELECT 1 FROM cutting_makes WHERE id = ? AND user_id = ?'
+    ).get(makeId, userId);
+    if (!owned) {
+      const err = new Error('Make not found for this user');
+      err.code = 'NOT_OWNED';
+      throw err;
+    }
     return db.prepare(`
       INSERT INTO cutting_make_links (make_id, user_id, url, label, note)
       VALUES (?, ?, ?, ?, ?)
@@ -3079,7 +3181,7 @@ module.exports = {
     const rows = db.prepare(
       'SELECT * FROM seed_packet_threads WHERE user_id = ? ORDER BY sort_order ASC'
     ).all(userId);
-    return rows.map(r => ({ ...r, bullets: JSON.parse(r.bullets || '[]') }));
+    return rows.map(r => ({ ...r, bullets: safeParseArray(r.bullets) }));
   },
 
   createSeedPacketThread(userId, name, description, bullets, sortOrder) {
@@ -3088,7 +3190,7 @@ module.exports = {
       'INSERT INTO seed_packet_threads (user_id, name, description, bullets, sort_order) VALUES (?, ?, ?, ?, ?)'
     ).run(userId, name, description || '', bulletsJson, sortOrder || 0);
     const row = db.prepare('SELECT * FROM seed_packet_threads WHERE id = ?').get(result.lastInsertRowid);
-    return { ...row, bullets: JSON.parse(row.bullets || '[]') };
+    return { ...row, bullets: safeParseArray(row.bullets) };
   },
 
   updateSeedPacketThread(threadId, userId, name, description, bullets, sortOrder) {
@@ -3112,7 +3214,7 @@ module.exports = {
     const rows = db.prepare(
       'SELECT * FROM seed_packet_seeds WHERE user_id = ? ORDER BY sort_order ASC, id ASC'
     ).all(userId);
-    return rows.map(r => ({ ...r, bullets: JSON.parse(r.bullets || '[]') }));
+    return rows.map(r => ({ ...r, bullets: safeParseArray(r.bullets) }));
   },
 
   getSeedPacketSeedsCount(userId) {
@@ -3127,7 +3229,7 @@ module.exports = {
       'INSERT INTO seed_packet_seeds (user_id, name, description, bullets, sort_order, application) VALUES (?, ?, ?, ?, ?, ?)'
     ).run(userId, name, description || '', bulletsJson, sortOrder || 0, application || '');
     const row = db.prepare('SELECT * FROM seed_packet_seeds WHERE id = ?').get(result.lastInsertRowid);
-    return { ...row, bullets: JSON.parse(row.bullets || '[]') };
+    return { ...row, bullets: safeParseArray(row.bullets) };
   },
 
   updateSeedPacketSeed(seedId, userId, name, description, bullets, sortOrder, application) {
