@@ -1,4 +1,15 @@
-<aside class="sidebar">
+<!-- Hamburger toggle — hidden on desktop, shown at ≤900px. Kept outside the
+     <aside> so it stays fixed even when the drawer is closed. Tapping toggles
+     the drawer; Escape / backdrop / nav-link click closes it. -->
+<button type="button" class="sidebar-toggle" aria-label="Open menu" aria-expanded="false" aria-controls="app-sidebar">
+  <svg class="sidebar-toggle-icon" width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden="true">
+    <path class="sidebar-toggle-line sidebar-toggle-line--top"    d="M3 6h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+    <path class="sidebar-toggle-line sidebar-toggle-line--mid"    d="M3 11h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+    <path class="sidebar-toggle-line sidebar-toggle-line--bottom" d="M3 16h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+  </svg>
+</button>
+<div class="sidebar-backdrop" hidden></div>
+<aside class="sidebar" id="app-sidebar">
   <div class="sidebar-inner">
 
     <div class="sidebar-logo-wrap">
@@ -164,5 +175,41 @@
         credentials: 'same-origin'
       }).catch(function () {});
     } catch (e) {}
+  })();
+
+  // Mobile / tablet-portrait hamburger drawer. CSS decides when to show the
+  // toggle button; this JS only wires open/close semantics. Nothing here is
+  // desktop-visible so we don't need a media-query guard for the listeners.
+  (function () {
+    var toggle   = document.querySelector('.sidebar-toggle');
+    var sidebar  = document.getElementById('app-sidebar');
+    var backdrop = document.querySelector('.sidebar-backdrop');
+    if (!toggle || !sidebar || !backdrop) return;
+
+    function isOpen() { return document.body.classList.contains('sidebar-open'); }
+
+    function open() {
+      document.body.classList.add('sidebar-open');
+      toggle.setAttribute('aria-expanded', 'true');
+      toggle.setAttribute('aria-label', 'Close menu');
+      backdrop.hidden = false;
+    }
+    function close() {
+      document.body.classList.remove('sidebar-open');
+      toggle.setAttribute('aria-expanded', 'false');
+      toggle.setAttribute('aria-label', 'Open menu');
+      backdrop.hidden = true;
+    }
+
+    toggle.addEventListener('click', function () { isOpen() ? close() : open(); });
+    backdrop.addEventListener('click', close);
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && isOpen()) close(); });
+
+    // Auto-close after a nav link tap, but only if we're actually in the
+    // mobile drawer state — on desktop the links stay visible and the
+    // "open" body class is never set anyway.
+    sidebar.querySelectorAll('a').forEach(function (a) {
+      a.addEventListener('click', function () { if (isOpen()) close(); });
+    });
   })();
 </script>
