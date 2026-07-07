@@ -122,12 +122,14 @@
         <p class="gh-subtitle">Tend what you planted. Watch what grows.</p>
       </header>
 
-      <% if (gardenStage) { %>
+      <!-- Static watercolor greenhouse roof — sets the scene for the goal
+           cards below. The growth story is now told per-goal (see the
+           watercolor pots that morph pot → bud → plant → flowering as
+           each goal ages), so this header no longer needs to change with
+           the earliest goal's age. -->
       <section class="garden-visual">
         <div class="garden-visual-illustration">
-          <img src="/images/greenhouse/stage-<%= gardenStage %>-<%= stageSlug %>.svg"
-               alt="Your garden — <%= stageLabel %>"
-               class="plant-svg" />
+          <img src="/images/greenhouse/greenhouse-roof-3.svg" alt="" class="plant-svg" />
         </div>
         <% if (weekNumber) { %>
         <p class="garden-visual-caption">
@@ -135,7 +137,6 @@
         </p>
         <% } %>
       </section>
-      <% } %>
 
       <% if (closing) { %>
       <!-- ── Growth Check: Then & Now (above goals) ────────────────────────── -->

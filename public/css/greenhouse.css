@@ -514,13 +514,12 @@ details[open] .gh-planted-summary::before { content: '▾  '; }
   display: flex;
   flex-direction: column;
   align-items: center;
-  margin: 2rem auto 3rem;
-  padding: 1.5rem 0;
+  margin: 1rem auto 2rem;
 }
 
 .garden-visual-illustration {
-  width: 240px;
-  height: 380px;
+  width: 100%;
+  max-width: 640px;
   display: flex;
   align-items: flex-end;
   justify-content: center;
@@ -529,13 +528,7 @@ details[open] .gh-planted-summary::before { content: '▾  '; }
 .plant-svg {
   width: 100%;
   height: auto;
-  transform-origin: 50% 90%;
-  animation: gentle-sway 6s ease-in-out infinite;
-}
-
-@keyframes gentle-sway {
-  0%, 100% { transform: rotate(-0.6deg); }
-  50%       { transform: rotate(0.6deg); }
+  display: block;
 }
 
 .garden-visual-caption {
