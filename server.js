@@ -3244,6 +3244,16 @@ app.get('/resources', requireAuth, (req, res) => {
   res.render('resources', { title: 'Resources', page: 'resources' });
 });
 
+// ─── Watch Yourself — Spring+ only ─────────────────────────────────────────
+// A guide to turning your inner critic into a helpful gardener. Available
+// once the student reaches Spring (Week 4+). Pre-Spring / trial users are
+// redirected to /upgrade so the paywall is the interception point, not a
+// silent 404. The card on /resources shows a locked preview for them.
+app.get('/watch-yourself', requireAuth, (req, res) => {
+  if (!res.locals.showTending) return res.redirect('/upgrade');
+  res.render('watch-yourself', { title: 'Watch Yourself', page: 'resources' });
+});
+
 // ─── Seed Packets ───────────────────────────────────────────────────────────
 
 app.get('/seed-packets', requireAuth, (req, res) => {

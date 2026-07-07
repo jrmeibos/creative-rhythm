@@ -4,6 +4,7 @@
   <%- include('partials/head') %>
   <link rel="stylesheet" href="/css/dashboard.css">
   <link rel="stylesheet" href="/css/seed-packets.css">
+  <link rel="stylesheet" href="/css/watch-yourself.css">
 </head>
 <body class="app-body">
   <div class="app-layout">
@@ -26,6 +27,20 @@
               <h2 class="resource-card-title">Seed Packets</h2>
               <p class="resource-card-desc">These Seed Packets are like a map for your curiosity. Before we plant our goals and intentions for this course, let's figure out what makes you tick. This resource serves as a mirror, helping you see yourself more clearly. From this resource, we'll start to identify topics and side quests that would be cup-filling to explore in your creation practice.</p>
               <span class="resource-card-link">Open Seed Packets →</span>
+            </div>
+          </a>
+
+          <!-- Watch Yourself — unlocks in Spring. Pre-Spring students see a
+               locked preview linking to /upgrade so they know it's coming. -->
+          <a href="<%= locals.showTending ? '/watch-yourself' : '/upgrade' %>"
+             class="resource-card <%= locals.showTending ? '' : 'resource-card--locked' %>">
+            <div class="resource-card-inner">
+              <div class="resource-card-art-placeholder" aria-hidden="true">🌿</div>
+              <h2 class="resource-card-title">Watch Yourself</h2>
+              <p class="resource-card-desc">A guide to turning your inner critic into a helpful gardener. Watching yourself back is a skill — this resource walks you through how to do it without spiraling, how to tell a boring cutting from a not-yet-ready one, and how to reshape one recording into many kinds of content.</p>
+              <span class="resource-card-link">
+                <%= locals.showTending ? 'Open Watch Yourself →' : 'Unlocks in Spring →' %>
+              </span>
             </div>
           </a>
 

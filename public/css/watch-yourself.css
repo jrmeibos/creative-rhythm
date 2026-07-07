@@ -1,0 +1,248 @@
+/* ─── Watch Yourself — reading-first article page ────────────────────────
+   Long-form guide. Warm background, generous line-height, comfortable
+   reading measure. Sections separated by a lot of breathing room. */
+
+.wy-back {
+  display: inline-block;
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  color: var(--color-bloem);
+  text-decoration: none;
+  border-bottom: 1px solid currentColor;
+  margin-bottom: 1.5rem;
+}
+.wy-back:hover { color: var(--color-bloem-mid); }
+
+.wy-article {
+  max-width: 42rem;
+  margin: 0 auto;
+  padding: 0 0 4rem;
+  color: var(--color-ink-stained);
+  font-family: var(--font-body);
+  font-weight: 300;
+  line-height: 1.7;
+  font-size: 1.03rem;
+}
+.wy-article p { margin: 0 0 1.1rem; }
+.wy-article p:last-child { margin-bottom: 0; }
+.wy-article em { color: var(--color-bloem); font-style: italic; }
+
+/* ── Hero ─────────────────────────────────────────────────────────── */
+.wy-hero {
+  text-align: center;
+  padding: 1.5rem 0 3rem;
+  border-bottom: 1px solid rgba(118, 133, 108, 0.2);
+  margin-bottom: 3rem;
+}
+.wy-hero-art-placeholder {
+  width: 140px;
+  height: 140px;
+  margin: 0 auto 1.5rem;
+  background: rgba(118, 133, 108, 0.08);
+  border: 1px dashed rgba(118, 133, 108, 0.35);
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.4rem;
+}
+.wy-title {
+  font-family: var(--font-display);
+  font-size: 2.4rem;
+  font-weight: 400;
+  color: var(--color-ink-stained);
+  margin: 0 0 0.6rem;
+}
+.wy-subtitle {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 1.05rem;
+  color: var(--color-bloem);
+  margin: 0 0 1.5rem;
+}
+.wy-frame {
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  font-style: italic;
+  color: var(--color-understory);
+  max-width: 32rem;
+  margin: 0 auto;
+  line-height: 1.55;
+}
+
+/* ── Sections ─────────────────────────────────────────────────────── */
+.wy-section {
+  padding: 2rem 0 2.5rem;
+  border-top: 1px solid rgba(118, 133, 108, 0.15);
+}
+.wy-section:first-of-type { border-top: none; padding-top: 0; }
+.wy-section-title {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 400;
+  color: var(--color-bloem);
+  margin: 0 0 1.25rem;
+  line-height: 1.35;
+}
+
+/* Callout — a soft italic pull-quote for the "same voice, different job"
+   moments. Left border in bloem to echo the "Notes to self" pattern on
+   /grove. */
+.wy-callout {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 1.05rem;
+  color: var(--color-bloem-mid);
+  padding: 0.6rem 1rem;
+  margin: 1.25rem 0;
+  border-left: 3px solid var(--color-bloem);
+  background: rgba(112, 92, 108, 0.04);
+  line-height: 1.6;
+}
+
+/* Critic-voice quotes as italic soft grayish list */
+.wy-quotes {
+  list-style: none;
+  padding: 0.5rem 0 0.5rem 1.25rem;
+  margin: 1rem 0 1.25rem;
+  border-left: 3px solid rgba(118, 133, 108, 0.35);
+  font-style: italic;
+  color: rgba(16, 15, 16, 0.55);
+}
+.wy-quotes li { margin: 0.15rem 0; }
+
+/* Reframe list — critic vs. gardener paired */
+.wy-reframe-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+  margin: 1.5rem 0;
+}
+.wy-reframe {
+  padding: 0.85rem 1rem;
+  background: rgba(118, 133, 108, 0.06);
+  border-radius: var(--radius-sm);
+}
+.wy-reframe-critic {
+  margin: 0 0 0.35rem !important;
+  font-style: italic;
+  color: rgba(16, 15, 16, 0.55);
+  font-size: 0.95rem;
+}
+.wy-reframe-gardener {
+  margin: 0 !important;
+  color: var(--color-understory);
+  font-weight: 400;
+}
+
+/* Tips grid */
+.wy-tips {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.25rem;
+  margin: 1.5rem 0 0.5rem;
+}
+@media (min-width: 720px) {
+  .wy-tips { grid-template-columns: 1fr 1fr; }
+}
+.wy-tip {
+  padding: 1rem 1.1rem;
+  background: var(--color-blank-page);
+  border: 1px solid rgba(112, 92, 108, 0.08);
+  border-radius: var(--radius-md);
+}
+.wy-tip-title {
+  font-family: var(--font-display);
+  font-size: 1rem;
+  font-weight: 400;
+  color: var(--color-bloem);
+  margin: 0 0 0.4rem;
+}
+.wy-tip p {
+  margin: 0 !important;
+  font-size: 0.93rem;
+  line-height: 1.6;
+}
+
+/* Formats list */
+.wy-formats {
+  list-style: none;
+  padding: 0;
+  margin: 1.25rem 0 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+.wy-formats li {
+  padding-left: 1.1rem;
+  border-left: 2px solid var(--color-understory);
+}
+.wy-formats strong {
+  display: block;
+  font-family: var(--font-display);
+  font-weight: 400;
+  color: var(--color-bloem);
+  margin-bottom: 0.15rem;
+}
+
+/* FAQ */
+.wy-faq {
+  padding: 1.25rem 0;
+  border-top: 1px dashed rgba(118, 133, 108, 0.25);
+}
+.wy-faq:first-of-type { border-top: none; padding-top: 0.5rem; }
+.wy-faq-q {
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  font-weight: 400;
+  color: var(--color-bloem);
+  margin: 0 0 0.65rem;
+  line-height: 1.4;
+}
+.wy-faq p { margin: 0 !important; }
+
+/* Sign-off */
+.wy-signoff {
+  text-align: center;
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 1.15rem;
+  color: var(--color-understory);
+  line-height: 1.6;
+  margin: 3.5rem 0 0;
+  padding-top: 2.5rem;
+  border-top: 1px solid rgba(118, 133, 108, 0.2);
+}
+
+/* Card-side placeholder (until Julia supplies watercolor art) — same
+   footprint as .resource-card-art so the card height stays consistent. */
+.resource-card-art-placeholder {
+  width: 130px;
+  height: 205px;
+  margin: 0 auto 1.5rem;
+  background: rgba(118, 133, 108, 0.08);
+  border: 1px dashed rgba(118, 133, 108, 0.35);
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.6rem;
+}
+
+/* ── Locked resource card (on /resources when pre-Spring) ─────────── */
+.resource-card--locked {
+  opacity: 0.55;
+  pointer-events: auto;
+  cursor: default;
+}
+.resource-card--locked:hover {
+  transform: none;
+  box-shadow: var(--shadow-sm);
+}
+.resource-card--locked .resource-card-link {
+  background: rgba(118, 133, 108, 0.35);
+  color: var(--color-pearl);
+}
+.resource-card--locked:hover .resource-card-link {
+  background: rgba(118, 133, 108, 0.35);
+}
