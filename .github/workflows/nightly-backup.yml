@@ -1,0 +1,66 @@
+# Nightly database backup — pulls a full SQLite snapshot from the live app
+# and stores it as a GitHub Actions artifact, so a copy of every student's
+# data lives OFF the Railway volume. The server route (/admin/run-backup)
+# takes a VACUUM INTO snapshot (safe on a live WAL database) and streams
+# the file back; it also rotates a local copy in /data/backups (last 7).
+#
+# Restore procedure (if the Railway volume is ever lost):
+#   1. Actions tab → this workflow → latest run → download the artifact
+#   2. Unzip it; you have creative-rhythm-<timestamp>.db
+#   3. Upload it to the new volume as /data/creative-rhythm.db and redeploy
+#
+# Setup: reuses the existing CRON_SECRET repository secret (same one the
+# digest + reminder workflows use). No extra configuration needed.
+#
+# Manual trigger: Actions tab → "Nightly database backup" → "Run workflow"
+# (useful right before a risky change).
+
+name: Nightly database backup
+
+on:
+  schedule:
+    # 09:00 UTC daily = 3am MDT — quiet hours for the cohort, and offset
+    # from the 13:00 UTC digest so the two jobs never overlap.
+    - cron: '0 9 * * *'
+  workflow_dispatch:
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Pull snapshot from production
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          BACKUP_URL:  https://www.creativesgarden.com/admin/run-backup
+        run: |
+          if [ -z "$CRON_SECRET" ]; then
+            echo "::error::CRON_SECRET repository secret is not set."
+            exit 1
+          fi
+          status=$(curl -sS -X POST "$BACKUP_URL" \
+            -H "X-Cron-Secret: $CRON_SECRET" \
+            --max-time 300 \
+            -o backup.db \
+            -w "%{http_code}")
+          if [ "$status" -lt 200 ] || [ "$status" -ge 300 ]; then
+            echo "::error::Backup endpoint returned HTTP $status"
+            cat backup.db || true
+            exit 1
+          fi
+          size=$(wc -c < backup.db)
+          echo "Downloaded snapshot: ${size} bytes"
+          # A real SQLite file starts with this exact 16-byte header. If we
+          # got JSON (an error body) instead, fail loudly rather than
+          # archiving garbage as a "backup".
+          if ! head -c 15 backup.db | grep -q "SQLite format 3"; then
+            echo "::error::Response is not a SQLite database — check server logs."
+            head -c 200 backup.db || true
+            exit 1
+          fi
+
+      - name: Store as artifact (90-day retention)
+        uses: actions/upload-artifact@v4
+        with:
+          name: db-backup-${{ github.run_id }}
+          path: backup.db
+          retention-days: 90
