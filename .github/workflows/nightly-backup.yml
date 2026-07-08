@@ -59,7 +59,7 @@ jobs:
           fi
 
       - name: Store as artifact (90-day retention)
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: db-backup-${{ github.run_id }}
           path: backup.db
