@@ -1414,7 +1414,7 @@ module.exports = {
   },
 
   getUserById(id) {
-    return db.prepare('SELECT id, name, email, role, avatar_initial, current_season, profile_photo, course_start_date, course_length_weeks, enrollment_tier FROM users WHERE id = ?').get(id);
+    return db.prepare('SELECT id, name, email, role, avatar_initial, current_season, profile_photo, course_start_date, course_length_weeks, enrollment_tier, community_goals_public FROM users WHERE id = ?').get(id);
   },
 
   // ─── Per-user course start date (multi-cohort support) ────────────────────

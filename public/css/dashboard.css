@@ -2805,3 +2805,81 @@ button.mid-card-cta {
   font-size: 0.78rem;
   color: rgba(16, 15, 16, 0.45);
 }
+
+/* ─── Share-intentions toggle (near intention cards on dashboard + /goals) ── */
+.share-intentions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin: 0 0 1.5rem;
+  padding: 0.85rem 1.1rem;
+  background: var(--color-new-growth);
+  border: 1px solid rgba(118, 133, 108, 0.25);
+  border-radius: 14px;
+}
+.share-intentions-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+.share-intentions-title {
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--color-ink-stained);
+}
+.share-intentions-sub {
+  font-family: var(--font-body);
+  font-size: 0.78rem;
+  font-weight: 300;
+  line-height: 1.45;
+  color: rgba(16, 15, 16, 0.6);
+}
+.share-intentions-right {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-shrink: 0;
+}
+.share-intentions-saved {
+  font-family: var(--font-body);
+  font-size: 0.75rem;
+  color: var(--color-understory);
+  white-space: nowrap;
+}
+.share-intentions-toggle {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+}
+.share-intentions-track {
+  width: 42px;
+  height: 24px;
+  background: rgba(16, 15, 16, 0.18);
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  padding: 2px;
+  transition: background var(--transition, 0.15s ease);
+}
+.share-intentions-toggle.is-on .share-intentions-track { background: var(--color-understory); }
+.share-intentions-thumb {
+  width: 20px;
+  height: 20px;
+  background: #fff;
+  border-radius: 50%;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+  transition: transform var(--transition, 0.15s ease);
+}
+.share-intentions-toggle.is-on .share-intentions-thumb { transform: translateX(18px); }
+.share-intentions-toggle:focus-visible { outline: 2px solid var(--color-bloem); outline-offset: 3px; border-radius: 999px; }
+
+@media (max-width: 560px) {
+  .share-intentions { flex-direction: row; align-items: flex-start; }
+  .share-intentions-right { padding-top: 0.15rem; }
+}

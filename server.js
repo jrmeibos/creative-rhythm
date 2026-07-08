@@ -167,6 +167,9 @@ app.use((req, res, next) => {
       s.current_season      = fresh.current_season || null;
       s.profile_photo       = fresh.profile_photo || null;
       s.course_start_date   = fresh.course_start_date || null;
+      // Exposed for the "share my intentions" toggle rendered near the
+      // intention cards on the dashboard + /goals. Default on (1).
+      res.locals.communityGoalsPublic = fresh.community_goals_public !== 0;
     }
   }
   next();

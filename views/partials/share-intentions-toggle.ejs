@@ -1,0 +1,51 @@
+<%
+  // Per-student privacy control for weekly intentions, shown near the
+  // intention cards on the dashboard + /goals. Backed by
+  // users.community_goals_public via POST /api/account/preference. The
+  // current value comes from res.locals.communityGoalsPublic (set in the
+  // session-freshen middleware); default on if somehow absent.
+  var sharing = (typeof communityGoalsPublic === 'undefined') ? true : communityGoalsPublic;
+%>
+<div class="share-intentions">
+  <div class="share-intentions-text">
+    <strong class="share-intentions-title">Share my intentions with the community</strong>
+    <span class="share-intentions-sub">When on, your goal progress shows on the community page. Turn it off to keep this week private.</span>
+  </div>
+  <div class="share-intentions-right">
+    <span class="share-intentions-saved" hidden>Saved ✓</span>
+    <button type="button"
+            class="share-intentions-toggle<%= sharing ? ' is-on' : '' %>"
+            aria-pressed="<%= sharing ? 'true' : 'false' %>"
+            aria-label="Share my intentions with the community">
+      <span class="share-intentions-track"><span class="share-intentions-thumb"></span></span>
+    </button>
+  </div>
+</div>
+<script>
+  // Wire every share-intentions toggle on the page exactly once. Reverts
+  // the switch on a failed/ errored save so the UI never lies about state.
+  document.querySelectorAll('.share-intentions').forEach(function (root) {
+    if (root.dataset.wired) return;
+    root.dataset.wired = '1';
+    var btn   = root.querySelector('.share-intentions-toggle');
+    var saved = root.querySelector('.share-intentions-saved');
+    btn.addEventListener('click', async function () {
+      var wasOn = btn.getAttribute('aria-pressed') === 'true';
+      var nowOn = !wasOn;
+      btn.setAttribute('aria-pressed', String(nowOn));
+      btn.classList.toggle('is-on', nowOn);
+      try {
+        var res = await fetch('/api/account/preference', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ key: 'community_goals_public', value: nowOn })
+        });
+        if (!res.ok) throw new Error('save failed');
+        if (saved) { saved.hidden = false; setTimeout(function () { saved.hidden = true; }, 2000); }
+      } catch (e) {
+        btn.setAttribute('aria-pressed', String(wasOn));
+        btn.classList.toggle('is-on', wasOn);
+      }
+    });
+  });
+</script>
