@@ -120,7 +120,19 @@
 
           <% for (const member of members) { %>
             <div class="comm-panel" data-user-id="<%= member.id %>" hidden>
-              <% if (!member.community_goals_public) { %>
+              <% if (member.role === 'admin') { %>
+                <!-- Curator card — the admin doesn't set weekly intentions;
+                     their panel is a short intro + ways to reach Julia. -->
+                <div class="comm-curator">
+                  <p class="comm-curator-intro">Your guide through The Creative's Garden.</p>
+                  <div class="comm-curator-actions">
+                    <a href="https://www.meibostouch.com/about" target="_blank" rel="noopener"
+                       class="comm-curator-btn comm-curator-btn--primary">Meet Your Curator →</a>
+                    <a href="mailto:julia@meibostouch.com"
+                       class="comm-curator-btn comm-curator-btn--secondary">Contact Julia</a>
+                  </div>
+                </div>
+              <% } else if (!member.community_goals_public) { %>
                 <p class="comm-private-msg">This gardener has chosen to keep their intentions private. 🌿</p>
               <% } else { %>
               <% const hasAnyGoals = cats.some(cat => member.goals[cat] && member.goals[cat].hasGoal); %>

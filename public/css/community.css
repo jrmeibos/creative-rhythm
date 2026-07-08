@@ -536,3 +536,44 @@
   transition: background 0.15s;
 }
 .comm-join-btn:hover { background: var(--color-bloem-mid); }
+
+/* ─── Curator card (admin panel in the community drawer) ─────────────────── */
+.comm-curator {
+  padding: 0.5rem 0 0.25rem;
+}
+.comm-curator-intro {
+  font-family: var(--font-body);
+  font-size: 1rem;
+  font-weight: 300;
+  line-height: 1.6;
+  color: rgba(16, 15, 16, 0.75);
+  margin: 0 0 1.25rem;
+}
+.comm-curator-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+.comm-curator-btn {
+  display: inline-block;
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+  text-decoration: none;
+  padding: 0.65rem 1.5rem;
+  border-radius: 999px;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+.comm-curator-btn--primary {
+  color: var(--color-pearl);
+  background: var(--color-bloem);
+}
+.comm-curator-btn--primary:hover { background: var(--color-bloem-mid); }
+.comm-curator-btn--secondary {
+  color: var(--color-bloem);
+  background: transparent;
+  border: 1px solid var(--color-bloem);
+}
+.comm-curator-btn--secondary:hover {
+  background: var(--color-bloem);
+  color: var(--color-pearl);
+}

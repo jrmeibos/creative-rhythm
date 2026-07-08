@@ -1385,6 +1385,7 @@ app.get('/community', requireAuth, (req, res) => {
   const members = allUsers.map(u => ({
     id:                      u.id,
     name:                    u.name,
+    role:                    u.role,
     avatar_initial:          u.avatar_initial || u.name.charAt(0),
     current_season:          u.current_season || null,
     profile_photo:           u.profile_photo || null,
