@@ -2935,3 +2935,62 @@ button.mid-card-cta {
   .share-intentions { flex-direction: row; align-items: flex-start; }
   .share-intentions-right { padding-top: 0.15rem; }
 }
+
+/* ─── Admin: Course Settings blocks ───────────────────────────────────────── */
+.admin-settings { display: flex; flex-direction: column; gap: 1.5rem; }
+.admin-settings-block { display: flex; flex-direction: column; gap: 0.4rem; }
+.admin-settings-block + .admin-settings-block {
+  padding-top: 1.25rem;
+  border-top: 1px solid rgba(112, 92, 108, 0.12);
+}
+.admin-settings-block-label {
+  font-family: var(--font-body);
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--color-ink-stained);
+}
+
+/* ─── Admin: collapsible section (quotes) ─────────────────────────────────── */
+.admin-collapse { margin-top: 0.75rem; }
+.admin-collapse-summary {
+  cursor: pointer;
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--color-bloem);
+  padding: 0.5rem 0.75rem;
+  border: 1px solid rgba(112, 92, 108, 0.25);
+  border-radius: 8px;
+  list-style: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  transition: background 0.15s;
+}
+.admin-collapse-summary:hover { background: rgba(112, 92, 108, 0.06); }
+.admin-collapse-summary::-webkit-details-marker { display: none; }
+.admin-collapse-summary::before { content: '▸'; font-size: 0.75rem; transition: transform 0.15s; }
+.admin-collapse[open] > .admin-collapse-summary::before { transform: rotate(90deg); }
+
+/* ─── Admin: assessment question + answer pairs (View dialog) ─────────────── */
+.admin-assess-qa {
+  margin: 0 0 0.85rem;
+  padding-bottom: 0.85rem;
+  border-bottom: 1px solid rgba(112, 92, 108, 0.1);
+}
+.admin-assess-qa:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+.admin-assess-q {
+  font-family: var(--font-body);
+  font-size: 0.82rem;
+  font-weight: 400;
+  color: rgba(16, 15, 16, 0.6);
+  margin-bottom: 0.25rem;
+}
+.admin-assess-a {
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  font-weight: 400;
+  color: var(--color-ink-stained);
+  line-height: 1.5;
+  white-space: pre-wrap;
+}

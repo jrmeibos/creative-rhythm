@@ -18,120 +18,6 @@
         </div>
       </header>
 
-      <!-- ── Course Settings ──────────────────────────────────────────────── -->
-      <section class="dash-section">
-        <div class="dash-section-header">
-          <h2 class="dash-section-title">Course Settings</h2>
-        </div>
-        <div class="admin-card">
-          <div class="admin-card-row">
-            <div class="admin-field-group">
-              <label class="admin-field-label" for="course-start-date">Course Start Date</label>
-              <p class="admin-field-hint">The Monday that Week 1 begins. Auto-unlock dates calculate from this.</p>
-              <div class="admin-field-input-row">
-                <input type="date" id="course-start-date" class="admin-date-input"
-                       value="<%= courseStartDate %>" aria-label="Course start date">
-                <button class="admin-save-btn" id="save-start-date" type="button">Save</button>
-                <span class="admin-save-status" id="start-date-status"></span>
-              </div>
-            </div>
-          </div>
-
-          <div class="admin-unlock-status-grid">
-            <div class="admin-unlock-row">
-              <div>
-                <strong>Mid-course check-in</strong>
-                <span class="admin-unlock-hint">Unlocks Week 6<% if (midcourseUnlockDate) { %> · <%= midcourseUnlockDate %><% } %></span>
-                <span class="admin-unlock-hint"><%= midcourseSubmittedCount.done %> / <%= midcourseSubmittedCount.total %> students submitted</span>
-              </div>
-              <div style="display:flex;align-items:center;gap:0.6rem">
-                <span class="admin-unlock-badge <%= midcourseUnlocked ? 'admin-unlock-badge--on' : 'admin-unlock-badge--off' %>">
-                  <%= midcourseUnlocked ? '✓ Unlocked' : 'Locked' %>
-                </span>
-                <% if (midcourseSubmittedCount.done > 0) { %>
-                  <button type="button" class="admin-btn-sm" onclick="viewAllMidcourseResponses()">View all responses</button>
-                <% } %>
-              </div>
-            </div>
-            <div class="admin-unlock-row">
-              <div>
-                <strong>Harvest (closing assessment)</strong>
-                <span class="admin-unlock-hint">Unlocks Week 12<% if (closingUnlockDate) { %> · <%= closingUnlockDate %><% } %></span>
-              </div>
-              <span class="admin-unlock-badge <%= harvestUnlocked ? 'admin-unlock-badge--on' : 'admin-unlock-badge--off' %>">
-                <%= harvestUnlocked ? '✓ Unlocked' : 'Locked' %>
-              </span>
-            </div>
-          </div>
-          <p class="admin-unlock-note">Both unlock automatically based on course start date. No manual action needed.</p>
-
-          <div class="admin-card-row" style="margin-top:1rem; padding-top:1rem; border-top:1px solid rgba(112,92,108,0.12)">
-            <div class="admin-field-group">
-              <label class="admin-field-label">Database Backup</label>
-              <p class="admin-field-hint">
-                Downloads a complete snapshot of everything — students, cuttings,
-                reflections, goals, assessments. A nightly copy is also saved
-                automatically. Grab one manually before any big change.
-              </p>
-              <a href="/admin/download-backup" class="admin-save-btn" style="display:inline-block; text-decoration:none">
-                Download full backup
-              </a>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- ── Time Travel ──────────────────────────────────────────────────── -->
-      <section class="dash-section" id="section-timetravel">
-        <div class="dash-section-header">
-          <h2 class="dash-section-title">Time Travel</h2>
-          <span class="admin-tt-badge">Testing only · students always see real time</span>
-        </div>
-
-        <div class="admin-card admin-tt">
-
-          <!-- Current state -->
-          <div class="admin-tt-status <%= simulatedToday ? 'is-active' : 'is-off' %>">
-            <span class="admin-tt-status-dot" aria-hidden="true"></span>
-            <div class="admin-tt-status-text">
-              <% if (simulatedToday) { %>
-                <strong>Time travel is on</strong>
-                <span>Every date + unlock is calculated as if today were
-                  <b><%= simulatedToday %></b>.</span>
-              <% } else { %>
-                <strong>Off — using real time</strong>
-                <span id="admin-tt-realdate">Today is the real date.</span>
-              <% } %>
-            </div>
-            <% if (simulatedToday) { %>
-              <button class="admin-tt-reset" type="button" onclick="clearTimeTravel()">Return to real time</button>
-            <% } %>
-          </div>
-
-          <!-- Jump to a specific date -->
-          <div class="admin-tt-field">
-            <label class="admin-field-label" for="tt-date-input">Jump to a date</label>
-            <div class="admin-field-input-row">
-              <input type="date" id="tt-date-input" class="admin-date-input" value="<%= simulatedToday || '' %>">
-              <button class="admin-save-btn" type="button" onclick="setSimulatedDate()">Go →</button>
-              <span class="admin-save-status" id="tt-status"></span>
-            </div>
-          </div>
-
-          <!-- Quick jumps to the moments worth testing (offsets are days from
-               the course start date; labels name what unlocks there). -->
-          <div class="admin-tt-jumps">
-            <span class="admin-tt-jumps-label">Or jump to a milestone</span>
-            <div class="admin-tt-jumps-btns">
-              <button class="admin-btn-sm" type="button" onclick="jumpToWeek(14)">Trial close · wk 3</button>
-              <button class="admin-btn-sm" type="button" onclick="jumpToWeek(35)">Mid-course · wk 6</button>
-              <button class="admin-btn-sm" type="button" onclick="jumpToWeek(56)">Week 9</button>
-              <button class="admin-btn-sm" type="button" onclick="jumpToWeek(77)">Harvest · wk 12</button>
-            </div>
-          </div>
-        </div>
-      </section>
-
       <!-- ── Students ─────────────────────────────────────────────────────── -->
       <section class="dash-section" id="section-students">
         <div class="dash-section-header">
@@ -284,44 +170,6 @@
         </div>
       </section>
 
-      <!-- ── Quotes ───────────────────────────────────────────────────────── -->
-      <%
-        const SEASON_LABELS = { spring: 'Spring · Curiosity', summer: 'Summer · Create', autumn: 'Autumn · Share', winter: 'Winter · Connect' };
-      %>
-      <section class="dash-section" id="section-quotes">
-        <div class="dash-section-header">
-          <h2 class="dash-section-title">Dashboard Quotes</h2>
-          <div class="admin-section-actions">
-            <span class="admin-count"><%= quotes.length %> quote<%= quotes.length !== 1 ? 's' : '' %></span>
-            <button class="admin-add-btn" type="button" onclick="openAddQuote()">+ Add Quote</button>
-          </div>
-        </div>
-        <div class="admin-card" id="quote-list">
-          <p class="acct-section-subtitle" style="margin-bottom:1rem">
-            Shown in the purple box on each student's dashboard. Each day, one quote is picked from the pool of
-            <em>any-season</em> quotes plus the ones tagged with the student's current season.
-          </p>
-          <% for (const q of quotes) { %>
-            <div class="admin-resource-row" id="quote-row-<%= q.id %>">
-              <div class="admin-resource-info">
-                <span class="admin-resource-title">"<%= q.text %>"</span>
-                <% if (q.source) { %><span class="admin-resource-desc">— <%= q.source %></span><% } %>
-              </div>
-              <span class="admin-lesson-tag"><%= q.season ? SEASON_LABELS[q.season] : 'Any season' %></span>
-              <div class="admin-row-actions">
-                <button class="admin-btn-icon" type="button" title="Edit"
-                  onclick="openEditQuote(<%= JSON.stringify(q) %>)">✎</button>
-                <button class="admin-btn-icon admin-btn-icon--danger" type="button" title="Delete"
-                  onclick="deleteQuote(<%= q.id %>, <%= JSON.stringify(q.text) %>)">✕</button>
-              </div>
-            </div>
-          <% } %>
-          <% if (!quotes.length) { %>
-            <p class="admin-empty">No quotes yet. Add the first one above.</p>
-          <% } %>
-        </div>
-      </section>
-
       <!-- ── Student Assessments ──────────────────────────────────────────── -->
       <section class="dash-section" id="section-assessments">
         <div class="dash-section-header">
@@ -409,6 +257,168 @@
           <% if (!lessonStats.length) { %>
             <p class="admin-empty">No lessons found.</p>
           <% } %>
+        </div>
+      </section>
+
+      <!-- ══ Settings & tools (kept at the bottom — used rarely) ═══════════════ -->
+
+      <!-- ── Course Settings ──────────────────────────────────────────────── -->
+      <section class="dash-section">
+        <div class="dash-section-header">
+          <h2 class="dash-section-title">Course Settings</h2>
+        </div>
+        <div class="admin-card admin-settings">
+
+          <!-- Course start date -->
+          <div class="admin-settings-block">
+            <label class="admin-field-label" for="course-start-date">Course start date</label>
+            <p class="admin-field-hint">The Monday Week 1 begins. This is the global default; a gardener with their own start date (set on their row above) overrides it.</p>
+            <div class="admin-field-input-row">
+              <input type="date" id="course-start-date" class="admin-date-input"
+                     value="<%= courseStartDate %>" aria-label="Course start date">
+              <button class="admin-save-btn" id="save-start-date" type="button">Save</button>
+              <span class="admin-save-status" id="start-date-status"></span>
+            </div>
+          </div>
+
+          <!-- Automatic unlocks -->
+          <div class="admin-settings-block">
+            <span class="admin-settings-block-label">Automatic unlocks</span>
+            <p class="admin-field-hint">These open on their own, based on each gardener's start date. No action needed.</p>
+            <div class="admin-unlock-status-grid">
+              <div class="admin-unlock-row">
+                <div>
+                  <strong>Mid-course check-in</strong>
+                  <span class="admin-unlock-hint">Week 6<% if (midcourseUnlockDate) { %> · <%= midcourseUnlockDate %><% } %></span>
+                  <span class="admin-unlock-hint"><%= midcourseSubmittedCount.done %> / <%= midcourseSubmittedCount.total %> submitted</span>
+                </div>
+                <div style="display:flex;align-items:center;gap:0.6rem">
+                  <span class="admin-unlock-badge <%= midcourseUnlocked ? 'admin-unlock-badge--on' : 'admin-unlock-badge--off' %>">
+                    <%= midcourseUnlocked ? '✓ Unlocked' : 'Locked' %>
+                  </span>
+                  <% if (midcourseSubmittedCount.done > 0) { %>
+                    <button type="button" class="admin-btn-sm" onclick="viewAllMidcourseResponses()">View responses</button>
+                  <% } %>
+                </div>
+              </div>
+              <div class="admin-unlock-row">
+                <div>
+                  <strong>Harvest (closing assessment)</strong>
+                  <span class="admin-unlock-hint">Week 12<% if (closingUnlockDate) { %> · <%= closingUnlockDate %><% } %></span>
+                </div>
+                <span class="admin-unlock-badge <%= harvestUnlocked ? 'admin-unlock-badge--on' : 'admin-unlock-badge--off' %>">
+                  <%= harvestUnlocked ? '✓ Unlocked' : 'Locked' %>
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Backup -->
+          <div class="admin-settings-block">
+            <span class="admin-settings-block-label">Database backup</span>
+            <p class="admin-field-hint">
+              A complete snapshot — students, cuttings, reflections, goals, assessments.
+              A copy is saved automatically each night; grab one manually before any big change.
+            </p>
+            <a href="/admin/download-backup" class="admin-save-btn" style="display:inline-block; text-decoration:none">
+              Download full backup
+            </a>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── Quotes (collapsed — the list can get long) ───────────────────── -->
+      <%
+        const SEASON_LABELS = { spring: 'Spring · Curiosity', summer: 'Summer · Create', autumn: 'Autumn · Share', winter: 'Winter · Connect' };
+      %>
+      <section class="dash-section" id="section-quotes">
+        <div class="dash-section-header">
+          <h2 class="dash-section-title">Dashboard Quotes</h2>
+          <div class="admin-section-actions">
+            <span class="admin-count"><%= quotes.length %> quote<%= quotes.length !== 1 ? 's' : '' %></span>
+            <button class="admin-add-btn" type="button" onclick="openAddQuote()">+ Add Quote</button>
+          </div>
+        </div>
+        <div class="admin-card">
+          <p class="acct-section-subtitle" style="margin:0">
+            Shown in the purple box on each student's dashboard. Each day, one quote is picked from the pool of
+            <em>any-season</em> quotes plus the ones tagged with the student's current season.
+          </p>
+          <% if (quotes.length) { %>
+            <details class="admin-collapse">
+              <summary class="admin-collapse-summary">View all <%= quotes.length %> quote<%= quotes.length !== 1 ? 's' : '' %></summary>
+              <div id="quote-list" style="margin-top:0.75rem">
+                <% for (const q of quotes) { %>
+                  <div class="admin-resource-row" id="quote-row-<%= q.id %>">
+                    <div class="admin-resource-info">
+                      <span class="admin-resource-title">"<%= q.text %>"</span>
+                      <% if (q.source) { %><span class="admin-resource-desc">— <%= q.source %></span><% } %>
+                    </div>
+                    <span class="admin-lesson-tag"><%= q.season ? SEASON_LABELS[q.season] : 'Any season' %></span>
+                    <div class="admin-row-actions">
+                      <button class="admin-btn-icon" type="button" title="Edit"
+                        onclick="openEditQuote(<%= JSON.stringify(q) %>)">✎</button>
+                      <button class="admin-btn-icon admin-btn-icon--danger" type="button" title="Delete"
+                        onclick="deleteQuote(<%= q.id %>, <%= JSON.stringify(q.text) %>)">✕</button>
+                    </div>
+                  </div>
+                <% } %>
+              </div>
+            </details>
+          <% } else { %>
+            <p class="admin-empty" style="margin-top:0.75rem">No quotes yet. Add the first one above.</p>
+          <% } %>
+        </div>
+      </section>
+
+      <!-- ── Time Travel ──────────────────────────────────────────────────── -->
+      <section class="dash-section" id="section-timetravel">
+        <div class="dash-section-header">
+          <h2 class="dash-section-title">Time Travel</h2>
+          <span class="admin-tt-badge">Testing only · students always see real time</span>
+        </div>
+
+        <div class="admin-card admin-tt">
+
+          <!-- Current state -->
+          <div class="admin-tt-status <%= simulatedToday ? 'is-active' : 'is-off' %>">
+            <span class="admin-tt-status-dot" aria-hidden="true"></span>
+            <div class="admin-tt-status-text">
+              <% if (simulatedToday) { %>
+                <strong>Time travel is on</strong>
+                <span>Every date + unlock is calculated as if today were
+                  <b><%= simulatedToday %></b>.</span>
+              <% } else { %>
+                <strong>Off — using real time</strong>
+                <span id="admin-tt-realdate">Today is the real date.</span>
+              <% } %>
+            </div>
+            <% if (simulatedToday) { %>
+              <button class="admin-tt-reset" type="button" onclick="clearTimeTravel()">Return to real time</button>
+            <% } %>
+          </div>
+
+          <!-- Jump to a specific date -->
+          <div class="admin-tt-field">
+            <label class="admin-field-label" for="tt-date-input">Jump to a date</label>
+            <div class="admin-field-input-row">
+              <input type="date" id="tt-date-input" class="admin-date-input" value="<%= simulatedToday || '' %>">
+              <button class="admin-save-btn" type="button" onclick="setSimulatedDate()">Go →</button>
+              <span class="admin-save-status" id="tt-status"></span>
+            </div>
+          </div>
+
+          <!-- Quick jumps to the moments worth testing (offsets are days from
+               the course start date; labels name what unlocks there). -->
+          <div class="admin-tt-jumps">
+            <span class="admin-tt-jumps-label">Or jump to a milestone</span>
+            <div class="admin-tt-jumps-btns">
+              <button class="admin-btn-sm" type="button" onclick="jumpToWeek(14)">Trial close · wk 3</button>
+              <button class="admin-btn-sm" type="button" onclick="jumpToWeek(35)">Mid-course · wk 6</button>
+              <button class="admin-btn-sm" type="button" onclick="jumpToWeek(56)">Week 9</button>
+              <button class="admin-btn-sm" type="button" onclick="jumpToWeek(77)">Harvest · wk 12</button>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -721,6 +731,43 @@
     // the View dialog can join answers ↔ questions without a second fetch.
     const SEED_PACKET_ANGLES = <%- JSON.stringify(seedPacketAngles) %>;
     const TRIAL_CLOSING_QS   = <%- JSON.stringify(trialClosingQuestions) %>;
+    const OPENING_QS         = <%- JSON.stringify(questions) %>;
+    const CLOSING_QS         = <%- JSON.stringify(closingQuestions) %>;
+
+    // Render one assessment (opening/closing) as full question + answer pairs.
+    // Converts raw stored values to human-readable form: ratings → "N/10"
+    // (with a diff vs the opening when compareRow is passed), choices → their
+    // label, multi → labels joined. Text answers show in full.
+    function renderAssessment(defs, row, compareRow) {
+      let out = '';
+      for (const def of defs) {
+        const raw = row[def.field];
+        if (raw == null || raw === '') continue;
+        let answerHtml;
+        if (def.type === 'rating') {
+          answerHtml = esc(raw) + '/10';
+          if (compareRow && compareRow[def.field] != null && compareRow[def.field] !== '') {
+            const diff = (Number(raw) || 0) - (Number(compareRow[def.field]) || 0);
+            if (diff > 0)      answerHtml += ` <span style="color:var(--color-understory)">(↑${diff} from opening)</span>`;
+            else if (diff < 0) answerHtml += ` <span style="color:#D4956A">(↓${Math.abs(diff)} from opening)</span>`;
+            else               answerHtml += ` <span style="color:rgba(16,15,16,0.4)">(no change)</span>`;
+          }
+        } else if (def.type === 'choice') {
+          const c = (def.choices || []).find(c => c.val === raw);
+          answerHtml = esc(c ? c.label : raw);
+        } else if (def.type === 'multi') {
+          const vals = Array.isArray(raw) ? raw : String(raw).split(',').filter(Boolean);
+          answerHtml = vals.map(v => {
+            const c = (def.choices || []).find(c => c.val === v);
+            return esc(c ? c.label : v);
+          }).join(' &bull; ') || '—';
+        } else {
+          answerHtml = esc(raw);
+        }
+        out += `<div class="admin-assess-qa"><div class="admin-assess-q">${esc(def.text)}</div><div class="admin-assess-a">${answerHtml}</div></div>`;
+      }
+      return out || '<p class="admin-empty">No answers recorded.</p>';
+    }
 
     const esc = v => String(v == null ? '' : v)
       .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
@@ -813,11 +860,7 @@
       // ─── Opening assessment ───────────────────────────────────────────────
       if (data.opening) {
         html += '<h4 style="font-weight:700;margin:1rem 0 0.5rem;color:var(--color-bloem)">Opening Assessment</h4>';
-        const q = data.opening;
-        html += `<p>Q1: ${esc(q.q1_choice)} | Q2: ${q.q2_rating}/10 | Q3: ${esc(q.q3_choice)} | Q4: ${q.q4_rating}/10</p>`;
-        html += `<p>Q5: ${esc(q.q5_choice)} | Q6: ${q.q6_rating}/10</p>`;
-        if (q.q9_text)  html += `<p><em>Vision:</em> ${esc(q.q9_text)}</p>`;
-        if (q.q10_text) html += `<p><em>Promise:</em> ${esc(q.q10_text)}</p>`;
+        html += renderAssessment(OPENING_QS, data.opening);
       }
 
       // ─── Mid-course check-in (per-student: only the submission flag) ──────
@@ -828,24 +871,10 @@
       }
 
       // ─── Closing assessment ───────────────────────────────────────────────
+      // Compared against the opening so rating shifts show inline.
       if (data.closing) {
         html += '<h4 style="font-weight:700;margin:1rem 0 0.5rem;color:var(--color-understory)">Closing Assessment</h4>';
-        const q = data.closing;
-        const ratingDiff = (field) => {
-          if (!data.opening) return '';
-          const diff = (q[field] || 0) - (data.opening[field] || 0);
-          if (diff > 0) return ` <span style="color:var(--color-understory)">↑${diff}</span>`;
-          if (diff < 0) return ` <span style="color:#D4956A">↓${Math.abs(diff)}</span>`;
-          return ' →';
-        };
-        html += `<p>Q1: ${esc(q.q1_choice)} | Q2: ${q.q2_rating}/10${ratingDiff('q2_rating')} | Q3: ${esc(q.q3_choice)} | Q4: ${q.q4_rating}/10${ratingDiff('q4_rating')}</p>`;
-        html += `<p>Q5: ${esc(q.q5_choice)} | Q6: ${q.q6_rating}/10${ratingDiff('q6_rating')}</p>`;
-        if (q.q7_choices) html += `<p><em>What surprised them:</em> ${esc(q.q7_choices)}</p>`;
-        if (q.q8_choice)  html += `<p><em>Season they spent most time in:</em> ${esc(q.q8_choice)}</p>`;
-        if (q.q9_text)    html += `<p><em>Showing up feels like:</em> ${esc(q.q9_text)}</p>`;
-        if (q.q10_text)   html += `<p><em>Will keep doing:</em> ${esc(q.q10_text)}</p>`;
-        if (q.q11_text)   html += `<p><em>To someone starting out:</em> ${esc(q.q11_text)}</p>`;
-        if (q.q12_text)   html += `<p><em>Feedback:</em> ${esc(q.q12_text)}</p>`;
+        html += renderAssessment(CLOSING_QS, data.closing, data.opening);
       }
 
       // ─── Trial closing reflection ─────────────────────────────────────────
