@@ -614,7 +614,6 @@ app.get('/dashboard', requireAuth, (req, res) => {
   const allLessons = db.getAllLessons();
   const completedIds = new Set(db.completedLessonIds(userId));
   const completedCount = completedIds.size;
-  const isIntegrationWeek = goals.some(g => g.is_integration_week);
 
   const goalsDataDash = {};
   for (const cat of ['curiosity','create','share','connect']) {
@@ -683,7 +682,6 @@ app.get('/dashboard', requireAuth, (req, res) => {
     allLessons,
     completedCount,
     totalLessons: allLessons.length,
-    isIntegrationWeek,
     dayview,
     today,
     quote: getRotatingQuote(req.session.user),
@@ -1039,7 +1037,6 @@ app.get('/goals', requireAuth, (req, res) => {
   const goalsMap = {};
   for (const g of goals) goalsMap[g.category] = g;
 
-  const isIntegrationWeek = goals.some(g => g.is_integration_week);
   const history = db.getWeekHistory(userId, 12);
 
   // Pre-build weekStart → "Week One" label for history pills
@@ -1089,7 +1086,6 @@ app.get('/goals', requireAuth, (req, res) => {
     curricularSeasonLabel,
     goals: goalsMap,
     goalsData: goalsDataPage,
-    isIntegrationWeek,
     isPastWeek,
     isFutureWeek,
     prevWeek: prevWeek.toISOString().split('T')[0],
@@ -1130,12 +1126,6 @@ app.post('/api/goals/complete', requireAuth, (req, res) => {
   const validCategories = ['curiosity', 'create', 'share', 'connect'];
   if (!validCategories.includes(category)) return res.status(400).json({ error: 'Invalid category' });
   db.setGoalComplete(req.session.user.id, weekStart, category, completed);
-  res.json({ ok: true });
-});
-
-app.post('/api/goals/integration', requireAuth, (req, res) => {
-  const { weekStart, isIntegration } = req.body;
-  db.setIntegrationWeek(req.session.user.id, weekStart, isIntegration);
   res.json({ ok: true });
 });
 
@@ -1478,7 +1468,6 @@ app.get('/calendar', requireAuth, (req, res) => {
         isPastWeek:        false,
         isFutureWeek:      true,
         isPastCourseWeek:  false,
-        isIntegration:     false,
         curricularSeason:  getCurricularSeason(weekNum),
         curricularSeasonLabel: getCurricularSeasonLabel(getCurricularSeason(weekNum)),
         meeting:           null,
@@ -1499,7 +1488,6 @@ app.get('/calendar', requireAuth, (req, res) => {
       goalsExist[cat] = !!(gd.items && gd.items.length > 0);
     }
     const allGoalsSet   = cats.every(cat => goalsExist[cat]);
-    const isIntegration = cats.some(cat => goalsMap[cat]?.is_integration_week);
     const curricularSeason = getCurricularSeason(weekNum);
     const curricularSeasonLabel = getCurricularSeasonLabel(curricularSeason);
     const meetingDef = WEEKLY_MEETINGS[weekNum] || null;
@@ -1517,7 +1505,6 @@ app.get('/calendar', requireAuth, (req, res) => {
       isPastWeek:         weekStart < currentWeekStart,
       isFutureWeek:       weekStart > currentWeekStart,
       isPastCourseWeek:   weekStart < courseCurrentWeekStart,
-      isIntegration,
       curricularSeason,
       curricularSeasonLabel,
       meeting,

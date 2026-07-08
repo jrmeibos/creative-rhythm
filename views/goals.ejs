@@ -42,42 +42,9 @@
         </nav>
       </header>
 
-      <!-- Integration week toggle -->
-      <div class="integration-toggle-row">
-        <label class="integration-toggle-label">
-          <span class="integration-toggle-text">
-            <strong>Integration Week</strong>
-            <span>A week to rest, reflect, and let things settle — no goals required</span>
-          </span>
-          <button
-            class="integration-toggle-btn <%= isIntegrationWeek ? 'is-active' : '' %>"
-            id="integration-toggle"
-            data-week="<%= weekStart %>"
-            data-active="<%= isIntegrationWeek ? 'true' : 'false' %>"
-            aria-pressed="<%= isIntegrationWeek ? 'true' : 'false' %>">
-            <span class="integration-toggle-track">
-              <span class="integration-toggle-thumb"></span>
-            </span>
-            <%= isIntegrationWeek ? 'On' : 'Off' %>
-          </button>
-        </label>
-      </div>
-
       <%- include('partials/share-intentions-toggle') %>
 
       <!-- Goals cards -->
-      <% if (isIntegrationWeek) { %>
-        <div class="integration-week-card">
-          <div class="integration-week-icon">○</div>
-          <div>
-            <h2 class="integration-week-title">Integration Week</h2>
-            <p class="integration-week-text">
-              No goals this week — just noticing. What shifted in the past few weeks? What wants to deepen? What are you still thinking about?
-            </p>
-          </div>
-        </div>
-      <% } else { %>
-
       <%
         const categories = [
           { key: 'curiosity', label: 'Curiosity', description: 'Feed your artist\'s soul', prompt: 'This week I intend to...', checkinPrompt: 'How did it go? What happened, what did you notice?' },
@@ -166,8 +133,6 @@
         <p class="reflection-helper">When shared, your reflection appears on your community card for this week.</p>
         <p class="reflection-saved-msg" hidden>Saved 🌿</p>
       </section>
-      <% } %>
-
       <% } %>
 
       <!-- Week history links -->

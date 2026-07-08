@@ -138,20 +138,6 @@ document.querySelectorAll('.header-complete-checkbox').forEach(checkbox => {
   });
 });
 
-/* ── Integration week toggle ──────────────────────────────────────────────── */
-
-const integrationBtn = document.getElementById('integration-toggle');
-if (integrationBtn) {
-  integrationBtn.addEventListener('click', async () => {
-    const isActive = integrationBtn.dataset.active === 'true';
-    const ok = await post('/api/goals/integration', {
-      weekStart:     integrationBtn.dataset.week,
-      isIntegration: !isActive
-    });
-    if (ok) location.reload();
-  });
-}
-
 /* ── Weekly reflection save ───────────────────────────────────────────────── */
 
 const reflSection = document.querySelector('.weekly-reflection');

@@ -37,8 +37,6 @@
           <p class="dash-week-label">
             <% if (trialComplete) { %>
               <span class="integration-badge">Trial complete</span>
-            <% } else if (isIntegrationWeek) { %>
-              <span class="integration-badge">Integration Week</span> · <%= weekLabel %>
             <% } else if (weekNumber > courseLengthWeeks) { %>
               <span class="integration-badge">Course complete</span> · <%= weekLabel %>
             <% } else if (weekNumber >= 1) { %>
@@ -436,17 +434,6 @@
 
         <%- include('partials/share-intentions-toggle') %>
 
-        <% if (isIntegrationWeek) { %>
-          <div class="integration-week-card">
-            <div class="integration-week-icon">○</div>
-            <div>
-              <h3 class="integration-week-title">Integration Week</h3>
-              <p class="integration-week-text">
-                This is a week for letting things settle. No goals — just noticing what's alive in you from the past few weeks. What shifted? What wants to deepen?
-              </p>
-            </div>
-          </div>
-        <% } else { %>
           <div class="goals-grid">
             <%
               const categories = [
@@ -509,7 +496,6 @@
               </div>
             <% } %>
           </div>
-        <% } %>
       </section>
 
       <!-- Current Season — hidden entirely for pre-Week-4 trial students.

@@ -1619,19 +1619,6 @@ module.exports = {
       .run(goal.completed ? 0 : 1, goalId);
   },
 
-  setIntegrationWeek(userId, weekStart, isIntegration) {
-    const categories = ['curiosity', 'create', 'share', 'connect'];
-    for (const cat of categories) {
-      db.prepare(`
-        INSERT INTO weekly_goals (user_id, week_start, category, is_integration_week)
-        VALUES (?, ?, ?, ?)
-        ON CONFLICT(user_id, week_start, category) DO UPDATE SET
-          is_integration_week = excluded.is_integration_week,
-          updated_at = CURRENT_TIMESTAMP
-      `).run(userId, weekStart, cat, isIntegration ? 1 : 0);
-    }
-  },
-
   getWeekHistory(userId, limit = 10) {
     return db.prepare(`
       SELECT DISTINCT week_start FROM weekly_goals

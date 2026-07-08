@@ -77,10 +77,6 @@
               <% if (w.curricularSeasonLabel) { %>
                 <span class="cal-tile-season"><%= w.curricularSeasonLabel %></span>
               <% } %>
-
-              <% if (w.isIntegration) { %>
-                <span class="cal-tile-intg">Integration Week</span>
-              <% } %>
             </button>
           <% } %>
         <% } %>
@@ -198,46 +194,6 @@
             </section>
             <% } %>
 
-            <!-- Integration toggle -->
-            <div class="cal-integration-row">
-              <label class="integration-toggle-label" style="background:transparent; border:none; padding:0 0 1rem;">
-                <span class="integration-toggle-text">
-                  <strong>Integration Week</strong>
-                  <span>Rest, reflect, and let things settle</span>
-                </span>
-                <button
-                  class="integration-toggle-btn cal-integration-btn <%= w.isIntegration ? 'is-active' : '' %>"
-                  data-week="<%= w.weekStart %>"
-                  data-active="<%= w.isIntegration ? 'true' : 'false' %>"
-                  type="button"
-                  aria-pressed="<%= w.isIntegration ? 'true' : 'false' %>">
-                  <span class="integration-toggle-track">
-                    <span class="integration-toggle-thumb"></span>
-                  </span>
-                  <%= w.isIntegration ? 'On' : 'Off' %>
-                </button>
-              </label>
-            </div>
-
-            <% if (w.isIntegration) { %>
-              <!-- Integration week view -->
-              <div class="integration-week-card">
-                <div class="integration-week-icon">○</div>
-                <div style="flex:1">
-                  <h3 class="integration-week-title">Integration Week</h3>
-                  <p class="integration-week-text" style="margin-bottom:1rem">
-                    This is your integration week. What are you noticing? What do you want to carry into next week?
-                  </p>
-                  <% const intgRefl = w.goalsMap.curiosity?.reflection || ''; %>
-                  <textarea class="cal-integration-textarea goal-full-textarea checkin-textarea"
-                            data-week="<%= w.weekStart %>"
-                            data-category="curiosity"
-                            placeholder="Write your reflections here..."
-                            rows="4"><%= intgRefl %></textarea>
-                </div>
-              </div>
-
-            <% } else { %>
               <!-- Goal cards for this week -->
               <%
                 const calCats = [
@@ -298,7 +254,6 @@
                   </div>
                 <% } %>
               </div>
-            <% } %>
 
             <% if (w.isPastCourseWeek) { %>
             <section class="weekly-reflection" data-week="<%= w.weekStart %>">
