@@ -21,7 +21,7 @@
 
         <!-- Week navigation -->
         <nav class="week-nav" aria-label="Week navigation">
-          <a href="/goals?week=<%= prevWeek %>" class="week-nav-arrow" aria-label="Previous week">←</a>
+          <a href="/weekly-intentions?week=<%= prevWeek %>" class="week-nav-arrow" aria-label="Previous week">←</a>
           <div class="week-nav-label">
             <span class="week-nav-date"><%= weekLabel %></span>
             <% if (viewedWeekNumber) { %>
@@ -35,7 +35,7 @@
               <span class="week-nav-future">Future week</span>
             <% } %>
           </div>
-          <a href="/goals?week=<%= nextWeek %>"
+          <a href="/weekly-intentions?week=<%= nextWeek %>"
              class="week-nav-arrow <%= isFutureWeek ? 'week-nav-arrow--disabled' : '' %>"
              aria-label="Next week"
              <%= isFutureWeek ? 'aria-disabled="true"' : '' %>>→</a>
@@ -142,7 +142,7 @@
         <div class="goals-history-list">
           <% for (const w of history) { %>
             <% if (w !== weekStart) { %>
-              <a href="/goals?week=<%= w %>" class="goals-history-item">
+              <a href="/weekly-intentions?week=<%= w %>" class="goals-history-item">
                 <%= weekNames[w] || 'Week of ' + formatWeekLabel(w) %>
               </a>
             <% } %>

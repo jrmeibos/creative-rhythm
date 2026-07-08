@@ -1020,9 +1020,16 @@ app.post('/api/push/unsubscribe', requireAuth, (req, res) => {
   res.json({ ok: true });
 });
 
-// ─── Goals ─────────────────────────────────────────────────────────────────
+// ─── Weekly Intentions ──────────────────────────────────────────────────────
 
+// Old /goals URL → permanent redirect to /weekly-intentions, preserving the
+// ?week= param so any existing bookmarks/links keep working.
 app.get('/goals', requireAuth, (req, res) => {
+  const qs = req.query.week ? '?week=' + encodeURIComponent(req.query.week) : '';
+  res.redirect(301, '/weekly-intentions' + qs);
+});
+
+app.get('/weekly-intentions', requireAuth, (req, res) => {
   const userId = req.session.user.id;
   const courseWeek = getCurrentCourseWeek(req.session.user);
   const currentWeekStart = courseWeek.weekStart;
