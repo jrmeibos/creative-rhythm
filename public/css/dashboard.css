@@ -2171,24 +2171,76 @@
   white-space: nowrap;
 }
 
-.admin-tt-label {
+/* Header badge — quiet reminder that this only affects admin/test views. */
+.admin-tt-badge {
+  font-family: var(--font-body);
   font-size: 0.72rem;
   font-weight: 400;
   color: #b45309;
-  margin-left: 0.4rem;
-  letter-spacing: 0.02em;
+  background: #fef3c7;
+  border: 1px solid #f6d78a;
+  border-radius: 999px;
+  padding: 0.25rem 0.7rem;
+  letter-spacing: 0.01em;
 }
 
-.admin-tt-row {
-  margin-bottom: 0.75rem;
-}
+/* Time-travel card = stacked sections with breathing room. */
+.admin-tt { display: flex; flex-direction: column; gap: 1.25rem; }
 
-.admin-tt-quick-btns {
+/* Status row — calm when off, amber when actively time-traveling. */
+.admin-tt-status {
   display: flex;
   align-items: center;
+  gap: 0.75rem;
+  padding: 0.85rem 1rem;
+  border-radius: 12px;
+  border: 1px solid transparent;
+}
+.admin-tt-status.is-off {
+  background: var(--color-new-growth);
+  border-color: rgba(118, 133, 108, 0.25);
+}
+.admin-tt-status.is-active {
+  background: #fef3c7;
+  border-color: #f59e0b;
+}
+.admin-tt-status-dot {
+  width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0;
+}
+.admin-tt-status.is-off .admin-tt-status-dot    { background: var(--color-understory); }
+.admin-tt-status.is-active .admin-tt-status-dot {
+  background: #f59e0b;
+  box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.25);
+}
+.admin-tt-status-text { display: flex; flex-direction: column; gap: 0.1rem; min-width: 0; flex: 1; }
+.admin-tt-status-text strong { font-size: 0.9rem; color: var(--color-ink-stained); }
+.admin-tt-status-text span   { font-size: 0.8rem; font-weight: 300; color: rgba(16,15,16,0.65); }
+.admin-tt-status-text b      { font-weight: 700; color: var(--color-ink-stained); }
+.admin-tt-reset {
+  flex-shrink: 0;
+  font-family: var(--font-body);
+  font-size: 0.8rem;
+  color: #92400e;
+  background: transparent;
+  border: 1px solid #d9a441;
+  border-radius: 999px;
+  padding: 0.4rem 0.9rem;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.admin-tt-reset:hover { background: #92400e; color: #fff; border-color: #92400e; }
+
+.admin-tt-jumps { display: flex; flex-direction: column; gap: 0.5rem; }
+.admin-tt-jumps-label {
+  font-family: var(--font-body);
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: rgba(16, 15, 16, 0.55);
+}
+.admin-tt-jumps-btns {
+  display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
-  margin-top: 0.25rem;
 }
 
 .admin-btn-sm {

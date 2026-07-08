@@ -84,33 +84,50 @@
       <!-- ── Time Travel ──────────────────────────────────────────────────── -->
       <section class="dash-section" id="section-timetravel">
         <div class="dash-section-header">
-          <h2 class="dash-section-title">Time Travel <span class="admin-tt-label">⚠️ Testing Only</span></h2>
+          <h2 class="dash-section-title">Time Travel</h2>
+          <span class="admin-tt-badge">Testing only · students always see real time</span>
         </div>
 
-        <div class="admin-card">
-          <div class="admin-field-group">
-            <label class="admin-field-label">Simulated date</label>
-            <p class="admin-field-hint">
+        <div class="admin-card admin-tt">
+
+          <!-- Current state -->
+          <div class="admin-tt-status <%= simulatedToday ? 'is-active' : 'is-off' %>">
+            <span class="admin-tt-status-dot" aria-hidden="true"></span>
+            <div class="admin-tt-status-text">
               <% if (simulatedToday) { %>
-                Active — admin sees <strong><%= simulatedToday %></strong> for all unlock calculations. Students always see real time.
+                <strong>Time travel is on</strong>
+                <span>Every date + unlock is calculated as if today were
+                  <b><%= simulatedToday %></b>.</span>
               <% } else { %>
-                Not active — using real time.
+                <strong>Off — using real time</strong>
+                <span id="admin-tt-realdate">Today is the real date.</span>
               <% } %>
-            </p>
+            </div>
+            <% if (simulatedToday) { %>
+              <button class="admin-tt-reset" type="button" onclick="clearTimeTravel()">Return to real time</button>
+            <% } %>
           </div>
-          <div class="admin-tt-row">
+
+          <!-- Jump to a specific date -->
+          <div class="admin-tt-field">
+            <label class="admin-field-label" for="tt-date-input">Jump to a date</label>
             <div class="admin-field-input-row">
               <input type="date" id="tt-date-input" class="admin-date-input" value="<%= simulatedToday || '' %>">
-              <button class="admin-save-btn" type="button" onclick="setSimulatedDate()">Set date</button>
+              <button class="admin-save-btn" type="button" onclick="setSimulatedDate()">Go →</button>
               <span class="admin-save-status" id="tt-status"></span>
             </div>
           </div>
-          <div class="admin-tt-quick-btns">
-            <span class="admin-field-hint" style="flex-shrink:0">Quick jumps:</span>
-            <button class="admin-btn-sm" type="button" onclick="jumpToWeek(36)">Jump to Week 6</button>
-            <button class="admin-btn-sm" type="button" onclick="jumpToWeek(50)">Jump to Week 8</button>
-            <button class="admin-btn-sm" type="button" onclick="jumpToWeek(78)">Jump to Week 12</button>
-            <button class="admin-btn-sm admin-btn-sm--danger" type="button" onclick="clearTimeTravel()">Return to real time</button>
+
+          <!-- Quick jumps to the moments worth testing (offsets are days from
+               the course start date; labels name what unlocks there). -->
+          <div class="admin-tt-jumps">
+            <span class="admin-tt-jumps-label">Or jump to a milestone</span>
+            <div class="admin-tt-jumps-btns">
+              <button class="admin-btn-sm" type="button" onclick="jumpToWeek(14)">Trial close · wk 3</button>
+              <button class="admin-btn-sm" type="button" onclick="jumpToWeek(35)">Mid-course · wk 6</button>
+              <button class="admin-btn-sm" type="button" onclick="jumpToWeek(56)">Week 9</button>
+              <button class="admin-btn-sm" type="button" onclick="jumpToWeek(77)">Harvest · wk 12</button>
+            </div>
           </div>
         </div>
       </section>
@@ -944,6 +961,15 @@
         status.style.color = '#c0392b';
       }
     }
+
+    // Show the admin's real local date in the "off" status line.
+    (function () {
+      const el = document.getElementById('admin-tt-realdate');
+      if (el) {
+        const today = new Date().toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+        el.textContent = 'Today is ' + today + '.';
+      }
+    })();
 
     function jumpToWeek(offsetDays) {
       if (!TT_COURSE_START) {

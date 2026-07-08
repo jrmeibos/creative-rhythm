@@ -49,7 +49,6 @@
           <% for (const member of members) { %>
             <%
               const showSeason = member.community_season_public && member.current_season;
-              const goalsPublic = member.community_goals_public;
             %>
             <button class="comm-card <%= member.id === currentUserId ? 'comm-card--self' : '' %>"
                     data-user-id="<%= member.id %>"
@@ -74,7 +73,13 @@
               <div class="comm-circles">
                 <% for (const cat of cats) { %>
                   <% const g = member.goals[cat] || {}; %>
-                  <% const state = goalsPublic ? (g.completed ? 'filled' : g.hasGoal ? 'set' : 'empty') : 'empty'; %>
+                  <%
+                    // Circles always show set/completed status — they carry no
+                    // written text (just the generic category label), so a
+                    // private member's progress is still visible while their
+                    // actual intentions stay hidden in the drawer.
+                    const state = g.completed ? 'filled' : g.hasGoal ? 'set' : 'empty';
+                  %>
                   <div class="comm-circle-wrap">
                     <div class="comm-circle comm-circle--<%= cat %> comm-circle--<%= state %>"></div>
                     <span class="comm-circle-label"><%= catMeta[cat].label %></span>
