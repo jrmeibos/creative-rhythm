@@ -280,6 +280,52 @@ app.get('/avatars/:filename', requireAuth, (req, res) => {
 
 // ─── Auth ──────────────────────────────────────────────────────────────────
 
+// Rate limiting for the three public credential endpoints. In-memory
+// sliding window per IP — enough to stop password-guessing bots and
+// reset-email spam. Resets on redeploy (fine: an attacker just gets a
+// fresh window, a normal user never notices) and is single-instance by
+// design, matching the one-box Railway deploy. `trust proxy` is set above,
+// so req.ip is the real client IP behind Railway's proxy, not the proxy.
+const RATE_BUCKETS = new Map(); // key → [timestamps]
+function rateLimit(name, maxAttempts, windowMs, message) {
+  return (req, res, next) => {
+    const key = `${name}:${req.ip}`;
+    const now = Date.now();
+    const hits = (RATE_BUCKETS.get(key) || []).filter(t => now - t < windowMs);
+    if (hits.length >= maxAttempts) {
+      RATE_BUCKETS.set(key, hits);
+      // HTML form posts get a friendly re-render; anything else gets 429 JSON.
+      if (req.accepts('html')) {
+        if (name === 'signup') {
+          return res.status(429).render('signup', { error: message, name: '', email: '', returnTo: null });
+        }
+        if (name === 'forgot') {
+          return res.status(429).render('forgot-password', { sent: false, error: message });
+        }
+        return res.status(429).render('login', { error: message, returnTo: null });
+      }
+      return res.status(429).json({ error: message });
+    }
+    hits.push(now);
+    RATE_BUCKETS.set(key, hits);
+    next();
+  };
+}
+// Sweep stale buckets hourly so the Map can't grow unbounded.
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, hits] of RATE_BUCKETS) {
+    if (!hits.length || now - hits[hits.length - 1] > 60 * 60 * 1000) RATE_BUCKETS.delete(key);
+  }
+}, 60 * 60 * 1000).unref();
+
+const loginLimiter = rateLimit('login', 10, 15 * 60 * 1000,
+  'Too many sign-in attempts. Take a breath and try again in about 15 minutes.');
+const signupLimiter = rateLimit('signup', 5, 60 * 60 * 1000,
+  'Too many sign-up attempts from this connection. Try again in an hour.');
+const forgotLimiter = rateLimit('forgot', 5, 60 * 60 * 1000,
+  'Too many reset requests. Try again in an hour, or reach out to Julia directly.');
+
 app.get('/', (req, res) => {
   const returnTo = sanitizeReturnTo(req.query.returnTo);
   // Already signed in: honor a pending returnTo (e.g. the anon /upgrade
@@ -288,7 +334,7 @@ app.get('/', (req, res) => {
   res.render('login', { error: null, returnTo });
 });
 
-app.post('/login', async (req, res) => {
+app.post('/login', loginLimiter, async (req, res) => {
   const { email, password } = req.body;
   const returnTo = sanitizeReturnTo(req.body.returnTo);
   const rerender = (error) => res.render('login', { error, returnTo });
@@ -354,7 +400,7 @@ app.get('/signup', (req, res) => {
   res.render('signup', { error: null, name: '', email: '', returnTo });
 });
 
-app.post('/signup', async (req, res) => {
+app.post('/signup', signupLimiter, async (req, res) => {
   const name     = (req.body.name  || '').trim();
   const email    = (req.body.email || '').trim().toLowerCase();
   const password = req.body.password || '';
@@ -428,7 +474,7 @@ app.get('/forgot-password', (req, res) => {
   res.render('forgot-password', { sent: false, error: null });
 });
 
-app.post('/forgot-password', async (req, res) => {
+app.post('/forgot-password', forgotLimiter, async (req, res) => {
   const email = (req.body.email || '').trim().toLowerCase();
   const renderSent = () => res.render('forgot-password', { sent: true, error: null });
 
@@ -1295,7 +1341,19 @@ app.get('/community', requireAuth, (req, res) => {
   const hasNextWeek = !!(nextCandidate && nextCandidate <= accessibleUpTo);
   const nextWeek    = hasNextWeek ? nextCandidate : null;
 
-  const allUsers = db.getAllUsers();
+  // Cohort partition: full-course students see the full-course cohort;
+  // trial students see fellow trial students. Neither sees the other — a
+  // $0 public signup shouldn't get the pilot roster (names, photos,
+  // reflections), and pilot students shouldn't see strangers. Admins are
+  // visible to every cohort (Julia is the guide for both) and see everyone
+  // themselves.
+  const viewer      = req.session.user;
+  const viewerPaid  = (viewer.course_length_weeks || 12) >= 12;
+  const allUsers = db.getAllUsers().filter(u => {
+    if (viewer.role === 'admin') return true;
+    if (u.role === 'admin') return true;
+    return ((u.course_length_weeks || 12) >= 12) === viewerPaid;
+  });
   const rows     = db.getAllUsersGoalsForWeek(weekStart);
 
   const goalsMap = {};
@@ -3889,6 +3947,55 @@ app.post('/admin/run-daily-digest', async (req, res) => {
   } catch (err) {
     console.error('[digest route] fatal:', err);
     res.status(500).json({ ok: false, error: err.message, log });
+  }
+});
+
+// ─── Nightly backup ────────────────────────────────────────────────────────
+// Triggered daily by GitHub Actions (nightly-backup.yml). Takes a VACUUM
+// INTO snapshot of the live database and streams it back as the response
+// body; the workflow saves it as a repo artifact, giving an off-platform
+// copy that survives a Railway volume loss. Snapshots also rotate locally
+// in /data/backups (last 7) as a second layer. CRON_SECRET-authed like the
+// other cron routes.
+app.post('/admin/run-backup', (req, res) => {
+  const expected = process.env.CRON_SECRET;
+  if (!expected) {
+    return res.status(503).json({ error: 'CRON_SECRET not configured on this server.' });
+  }
+  const provided = req.get('X-Cron-Secret') || '';
+  if (!safeEqual(provided, expected)) {
+    return res.status(401).json({ error: 'Invalid or missing X-Cron-Secret.' });
+  }
+  try {
+    const snap = db.createBackupSnapshot();
+    console.log(`[backup] snapshot ${snap.filename} (${snap.bytes} bytes)`);
+    res.setHeader('Content-Type', 'application/octet-stream');
+    res.setHeader('Content-Disposition', `attachment; filename="${snap.filename}"`);
+    res.setHeader('Content-Length', snap.bytes);
+    fs.createReadStream(snap.path).pipe(res);
+  } catch (err) {
+    console.error('[backup] failed:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Same snapshot, but session-authed so Julia can pull a full copy from the
+// admin page whenever she wants one (e.g. before a risky change).
+app.get('/admin/download-backup', requireAdmin, (req, res) => {
+  try {
+    const snap = db.createBackupSnapshot();
+    res.setHeader('Content-Type', 'application/octet-stream');
+    res.setHeader('Content-Disposition', `attachment; filename="${snap.filename}"`);
+    res.setHeader('Content-Length', snap.bytes);
+    fs.createReadStream(snap.path).pipe(res);
+  } catch (err) {
+    console.error('[backup] failed:', err);
+    res.status(500).render('error', {
+      title: 'Backup failed',
+      message: 'Could not create the backup snapshot. Check the server logs.',
+      user: req.session.user,
+      page: 'admin',
+    });
   }
 });
 

@@ -3392,4 +3392,40 @@ module.exports = {
     ).run(eventId, eventType);
     return r.changes > 0;
   },
+
+  // ─── Backups ───────────────────────────────────────────────────────────────
+
+  // Full-database snapshot via VACUUM INTO — safe to run on a live WAL-mode
+  // database (SQLite takes a consistent read snapshot; no lock on writers)
+  // and the output is a compact, self-contained .db file. Snapshots land in
+  // <data-dir>/backups (on Railway: /data/backups, on the persistent
+  // volume); the newest `keep` are retained, older ones pruned. Returns
+  // { path, filename, bytes } for the caller to stream or report.
+  createBackupSnapshot(keep = 7) {
+    const backupDir = path.join(dataDir, 'backups');
+    if (!fs.existsSync(backupDir)) fs.mkdirSync(backupDir, { recursive: true });
+
+    const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+    const filename = `creative-rhythm-${stamp}.db`;
+    const target = path.join(backupDir, filename);
+    // VACUUM INTO refuses to overwrite; the second-resolution stamp is
+    // unique enough, but clear a collision just in case (manual + cron
+    // firing in the same second).
+    if (fs.existsSync(target)) fs.unlinkSync(target);
+
+    // Path is server-built (timestamp only), but single-quote-escape anyway
+    // since VACUUM INTO can't take a bound parameter.
+    db.exec(`VACUUM INTO '${target.replace(/'/g, "''")}'`);
+
+    // Prune: newest `keep` stay, the rest go.
+    const existing = fs.readdirSync(backupDir)
+      .filter(f => f.startsWith('creative-rhythm-') && f.endsWith('.db'))
+      .sort()
+      .reverse();
+    for (const old of existing.slice(keep)) {
+      try { fs.unlinkSync(path.join(backupDir, old)); } catch (_) {}
+    }
+
+    return { path: target, filename, bytes: fs.statSync(target).size };
+  },
 };

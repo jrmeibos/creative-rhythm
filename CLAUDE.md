@@ -158,6 +158,9 @@ Admins bypass onboarding entirely.
 - **EJS unescaped (`<%-`) vs escaped (`<%=`) in onclick attributes.** Always use `<%= JSON.stringify(value) %>` (escaped) when injecting strings into HTML `onclick="..."` attributes. Using `<%-` breaks the attribute because raw `"` chars terminate it early. This was the cause of admin Edit/Delete buttons not working.
 - **Session save before responding.** Any route that modifies `req.session.user` and then sends a response that triggers a client redirect must call `req.session.save(cb)` before `res.json()`. Otherwise session-file-store may not flush before the next request arrives (race condition with `resave: false`).
 - **Onboarding guard must allow `/api/onboarding/*`.** The guard checks `req.path.startsWith('/onboarding')` — this does NOT match `/api/onboarding/...`. Both prefixes must be explicitly allowed.
+- **Greenhouse (goal beds/planting) stays OPEN to trial + expired-trial users.** Julia's call (July 2026): goals are part of the free Winter experience, and expired trials keep it. Do not gate `/greenhouse` planting behind the paid course without asking her — it is intentionally ungated, unlike `/tending`, `/watch-yourself`, `/summer`, and `/grove` (all paid-gated).
+- **Community is partitioned by cohort.** Full-course students (`course_length_weeks >= 12`) see only the full-course cohort; trial students see only fellow trial students. Admins are visible to both and see everyone. A $0 public signup must never see the pilot roster.
+- **"Limited-time demo pricing" on the coaching tier is intentional for now** (Julia, July 2026) — do not reword without asking.
 
 ---
 
