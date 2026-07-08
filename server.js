@@ -167,9 +167,6 @@ app.use((req, res, next) => {
       s.current_season      = fresh.current_season || null;
       s.profile_photo       = fresh.profile_photo || null;
       s.course_start_date   = fresh.course_start_date || null;
-      // Exposed for the "share my intentions" toggle rendered near the
-      // intention cards on the dashboard + /goals. Default on (1).
-      res.locals.communityGoalsPublic = fresh.community_goals_public !== 0;
     }
   }
   next();
@@ -678,6 +675,7 @@ app.get('/dashboard', requireAuth, (req, res) => {
     curricularSeasonLabel,
     goals: goalsMap,
     goalsData: goalsDataDash,
+    shareThisWeek: db.getWeekShareEffective(userId, weekStart),
     currentLesson,
     allLessons,
     completedCount,
@@ -1086,6 +1084,7 @@ app.get('/goals', requireAuth, (req, res) => {
     curricularSeasonLabel,
     goals: goalsMap,
     goalsData: goalsDataPage,
+    shareThisWeek: db.getWeekShareEffective(userId, weekStart),
     isPastWeek,
     isFutureWeek,
     prevWeek: prevWeek.toISOString().split('T')[0],
@@ -1126,6 +1125,18 @@ app.post('/api/goals/complete', requireAuth, (req, res) => {
   const validCategories = ['curiosity', 'create', 'share', 'connect'];
   if (!validCategories.includes(category)) return res.status(400).json({ error: 'Invalid category' });
   db.setGoalComplete(req.session.user.id, weekStart, category, completed);
+  res.json({ ok: true });
+});
+
+// Per-week "share my intentions with the community" toggle. Writes an
+// override row for this (user, week); the community page reads it, falling
+// back to the user's default when a week hasn't been explicitly set.
+app.post('/api/goals/share', requireAuth, (req, res) => {
+  const { weekStart, shared } = req.body || {};
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(weekStart || '')) {
+    return res.status(400).json({ error: 'Invalid week_start format.' });
+  }
+  db.setWeekShare(req.session.user.id, weekStart, !!shared);
   res.json({ ok: true });
 });
 
@@ -1375,6 +1386,10 @@ app.get('/community', requireAuth, (req, res) => {
   const weekEnd = toLocalDateString(weekEndDate);
   const dayCounts = db.getCuttingDayCountsByUser(weekStart, weekEnd);
 
+  // Per-week sharing: an explicit override for this week wins; otherwise
+  // fall back to the member's default (community_goals_public).
+  const weekShareOverrides = db.getWeekSharesForWeek(weekStart);
+
   const members = allUsers.map(u => ({
     id:                      u.id,
     name:                    u.name,
@@ -1382,7 +1397,9 @@ app.get('/community', requireAuth, (req, res) => {
     avatar_initial:          u.avatar_initial || u.name.charAt(0),
     current_season:          u.current_season || null,
     profile_photo:           u.profile_photo || null,
-    community_goals_public:  u.community_goals_public !== 0,
+    community_goals_public:  weekShareOverrides.has(u.id)
+                               ? weekShareOverrides.get(u.id)
+                               : (u.community_goals_public !== 0),
     community_season_public: u.community_season_public !== 0,
     goals:                   goalsMap[u.id] || {},
     recordedDayCount:        dayCounts.get(u.id) || 0

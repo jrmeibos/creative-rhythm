@@ -64,6 +64,19 @@ db.exec(`
     UNIQUE(user_id, week_start, category)
   );
 
+  -- Per-week override for "share my intentions with the community". One row
+  -- per (user, week) that the student has explicitly set. When no row exists
+  -- for a week, the effective value falls back to users.community_goals_public
+  -- (the per-user default, still editable in Account settings).
+  CREATE TABLE IF NOT EXISTS weekly_goal_shares (
+    user_id INTEGER NOT NULL,
+    week_start TEXT NOT NULL,
+    shared INTEGER NOT NULL DEFAULT 1,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (user_id, week_start),
+    FOREIGN KEY (user_id) REFERENCES users(id)
+  );
+
   CREATE TABLE IF NOT EXISTS lessons (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     slug TEXT UNIQUE NOT NULL,
@@ -1628,6 +1641,42 @@ module.exports = {
     `).all(userId, limit).map(r => r.week_start);
   },
 
+  // ── Per-week community sharing ──────────────────────────────────────────
+  // Effective "is this week's intentions shared" for one user+week: an
+  // explicit per-week row wins; otherwise fall back to the user's default
+  // (community_goals_public, itself defaulting to on). Returns a boolean.
+  getWeekShareEffective(userId, weekStart) {
+    const row = db.prepare(
+      'SELECT shared FROM weekly_goal_shares WHERE user_id = ? AND week_start = ?'
+    ).get(userId, weekStart);
+    if (row) return row.shared !== 0;
+    const u = db.prepare('SELECT community_goals_public FROM users WHERE id = ?').get(userId);
+    return u ? u.community_goals_public !== 0 : true;
+  },
+
+  setWeekShare(userId, weekStart, shared) {
+    return db.prepare(`
+      INSERT INTO weekly_goal_shares (user_id, week_start, shared)
+      VALUES (?, ?, ?)
+      ON CONFLICT(user_id, week_start) DO UPDATE SET
+        shared = excluded.shared,
+        updated_at = CURRENT_TIMESTAMP
+    `).run(userId, weekStart, shared ? 1 : 0);
+  },
+
+  // All explicit per-week overrides for one week, as a Map(user_id → bool).
+  // The community page uses this + each member's default to resolve who's
+  // sharing that week without a query per member.
+  getWeekSharesForWeek(weekStart) {
+    const m = new Map();
+    for (const r of db.prepare(
+      'SELECT user_id, shared FROM weekly_goal_shares WHERE week_start = ?'
+    ).all(weekStart)) {
+      m.set(r.user_id, r.shared !== 0);
+    }
+    return m;
+  },
+
   getAllUsersGoalsForWeek(weekStart) {
     return db.prepare(`
       SELECT wg.*, u.name, u.avatar_initial FROM weekly_goals wg
@@ -1798,6 +1847,7 @@ module.exports = {
       // Everything else keyed by user_id.
       db.prepare('DELETE FROM lesson_completions WHERE user_id=?').run(id);
       db.prepare('DELETE FROM homework_completions WHERE user_id=?').run(id);
+      db.prepare('DELETE FROM weekly_goal_shares WHERE user_id=?').run(id);
       db.prepare('DELETE FROM weekly_goals WHERE user_id=?').run(id);
       db.prepare('DELETE FROM goals WHERE user_id=?').run(id);
       db.prepare('DELETE FROM weekly_reflections WHERE user_id=?').run(id);
