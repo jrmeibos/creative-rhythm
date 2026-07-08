@@ -14,12 +14,14 @@
 
       <header class="comm-header">
         <div>
-          <h1 class="comm-title">Our Community</h1>
-          <p class="comm-week-heading">
-            <span class="comm-week-name"><%= weekName %></span>
-            <span class="comm-week-sep">·</span>
-            <span class="comm-week-date"><%= dateRange %></span>
-          </p>
+          <h1 class="comm-title"><%= locals.communityLocked ? 'Your Space' : 'Our Community' %></h1>
+          <% if (!locals.communityLocked) { %>
+            <p class="comm-week-heading">
+              <span class="comm-week-name"><%= weekName %></span>
+              <span class="comm-week-sep">·</span>
+              <span class="comm-week-date"><%= dateRange %></span>
+            </p>
+          <% } %>
         </div>
       </header>
 
@@ -177,36 +179,53 @@
 
       <% } %>
 
-      <!-- Week navigation -->
-      <nav class="comm-week-nav" aria-label="Week navigation">
-        <% if (hasPrevWeek) { %>
-          <a href="/community?week=<%= prevWeek %>" class="comm-nav-btn">← Previous Week</a>
-        <% } else { %>
-          <span class="comm-nav-btn comm-nav-btn--disabled">← Previous Week</span>
-        <% } %>
-        <span class="comm-nav-center">
-          <span class="comm-nav-week-name"><%= weekName %></span>
-          <span class="comm-week-sep">·</span>
-          <span class="comm-week-date"><%= dateRange %></span>
-        </span>
-        <% if (hasNextWeek) { %>
-          <a href="/community?week=<%= nextWeek %>" class="comm-nav-btn">Next Week →</a>
-        <% } else { %>
-          <span class="comm-nav-btn comm-nav-btn--disabled">Next Week →</span>
-        <% } %>
-      </nav>
-
-      <!-- ── Join the Conversation on Discord ──────────────────────────
-           Simple callout pointing the cohort to the Discord community.
-           Rendered only when COMMUNITY_DISCORD_URL is configured. -->
-      <% if (locals.communityDiscordUrl) { %>
-        <section class="comm-discord-invite">
-          <h2 class="comm-discord-invite-title">Join the Conversation on Discord</h2>
-          <a href="<%= locals.communityDiscordUrl %>" target="_blank" rel="noopener"
-             class="comm-discord-invite-btn">
-            Open Discord →
-          </a>
+      <% if (locals.communityLocked) { %>
+        <!-- Trial users don't get a shared cohort — this is the invitation
+             to join the real one, which unlocks with the full course. -->
+        <section class="comm-join">
+          <h2 class="comm-join-title">The garden is better with company</h2>
+          <p class="comm-join-text">
+            The full Creative's Garden is a shared space — everyone's weekly
+            intentions side by side, growing alongside each other. It opens up
+            when you continue into the full course.
+          </p>
+          <a href="/upgrade" class="comm-join-btn">Join the community →</a>
         </section>
+      <% } else { %>
+
+        <!-- Week navigation -->
+        <nav class="comm-week-nav" aria-label="Week navigation">
+          <% if (hasPrevWeek) { %>
+            <a href="/community?week=<%= prevWeek %>" class="comm-nav-btn">← Previous Week</a>
+          <% } else { %>
+            <span class="comm-nav-btn comm-nav-btn--disabled">← Previous Week</span>
+          <% } %>
+          <span class="comm-nav-center">
+            <span class="comm-nav-week-name"><%= weekName %></span>
+            <span class="comm-week-sep">·</span>
+            <span class="comm-week-date"><%= dateRange %></span>
+          </span>
+          <% if (hasNextWeek) { %>
+            <a href="/community?week=<%= nextWeek %>" class="comm-nav-btn">Next Week →</a>
+          <% } else { %>
+            <span class="comm-nav-btn comm-nav-btn--disabled">Next Week →</span>
+          <% } %>
+        </nav>
+
+        <!-- ── Join the Conversation on Discord ──────────────────────────
+             Simple callout pointing the cohort to the Discord community.
+             Rendered only when COMMUNITY_DISCORD_URL is configured. Trial
+             users don't see this — the Discord is part of the paid cohort. -->
+        <% if (locals.communityDiscordUrl) { %>
+          <section class="comm-discord-invite">
+            <h2 class="comm-discord-invite-title">Join the Conversation on Discord</h2>
+            <a href="<%= locals.communityDiscordUrl %>" target="_blank" rel="noopener"
+               class="comm-discord-invite-btn">
+              Open Discord →
+            </a>
+          </section>
+        <% } %>
+
       <% } %>
 
     </main>

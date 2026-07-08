@@ -1341,18 +1341,22 @@ app.get('/community', requireAuth, (req, res) => {
   const hasNextWeek = !!(nextCandidate && nextCandidate <= accessibleUpTo);
   const nextWeek    = hasNextWeek ? nextCandidate : null;
 
-  // Cohort partition: full-course students see the full-course cohort;
-  // trial students see fellow trial students. Neither sees the other — a
-  // $0 public signup shouldn't get the pilot roster (names, photos,
-  // reflections), and pilot students shouldn't see strangers. Admins are
-  // visible to every cohort (Julia is the guide for both) and see everyone
-  // themselves.
-  const viewer      = req.session.user;
-  const viewerPaid  = (viewer.course_length_weeks || 12) >= 12;
+  // Community access by tier:
+  //   • Admin  → sees everyone.
+  //   • Paid   → sees the full-course cohort (fellow paid students + admin).
+  //   • Trial  → NOT a shared cohort. Other free signups are strangers, not
+  //              their people, so a trial student sees only themselves plus
+  //              the admin (their guide), with an upsell to unlock the real
+  //              community. communityLocked drives that view state.
+  const viewer        = req.session.user;
+  const viewerIsAdmin = viewer.role === 'admin';
+  const viewerPaid    = (viewer.course_length_weeks || 12) >= 12;
+  const communityLocked = !viewerIsAdmin && !viewerPaid;
   const allUsers = db.getAllUsers().filter(u => {
-    if (viewer.role === 'admin') return true;
-    if (u.role === 'admin') return true;
-    return ((u.course_length_weeks || 12) >= 12) === viewerPaid;
+    if (viewerIsAdmin) return true;         // admin sees everyone
+    if (u.role === 'admin') return true;    // everyone sees the admin/guide
+    if (viewerPaid) return (u.course_length_weeks || 12) >= 12;
+    return u.id === viewer.id;              // trial: only themselves
   });
   const rows     = db.getAllUsersGoalsForWeek(weekStart);
 
@@ -1402,7 +1406,8 @@ app.get('/community', requireAuth, (req, res) => {
     hasPrevWeek,
     hasNextWeek,
     isCurrentWeek: weekStart === currentWeekStart,
-    currentUserId: req.session.user.id
+    currentUserId: req.session.user.id,
+    communityLocked
   });
 });
 

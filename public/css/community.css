@@ -497,3 +497,42 @@
   transition: background 0.15s;
 }
 .comm-discord-invite-btn:hover { background: var(--color-bloem-mid); }
+
+/* ─── Trial upsell: "join the community" ─────────────────────────────────── */
+.comm-join {
+  margin: 2.5rem auto 0;
+  max-width: 44rem;
+  text-align: center;
+  padding: 2.5rem 1.75rem;
+  background: var(--color-new-growth);
+  border: 1px solid rgba(118, 133, 108, 0.25);
+  border-radius: var(--radius-lg);
+}
+.comm-join-title {
+  font-family: var(--font-display);
+  font-size: 1.6rem;
+  font-weight: normal;
+  color: var(--color-ink-stained);
+  margin: 0 0 0.75rem;
+}
+.comm-join-text {
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+  font-weight: 300;
+  line-height: 1.6;
+  color: rgba(16, 15, 16, 0.75);
+  margin: 0 auto 1.5rem;
+  max-width: 34rem;
+}
+.comm-join-btn {
+  display: inline-block;
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+  color: var(--color-pearl);
+  background: var(--color-bloem);
+  text-decoration: none;
+  padding: 0.7rem 1.8rem;
+  border-radius: 999px;
+  transition: background 0.15s;
+}
+.comm-join-btn:hover { background: var(--color-bloem-mid); }
