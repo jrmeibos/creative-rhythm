@@ -3879,6 +3879,41 @@ app.delete('/api/admin/users/:id', requireAdmin, (req, res) => {
   res.json({ ok: true });
 });
 
+// Admin-initiated password help. Generates a fresh temporary password, sets it
+// on the account, and hands it back to the admin to relay however they like
+// (text, call, in person). Chosen over "email a reset link" because email
+// depends on RESEND_API_KEY being configured — a set-temp-password flow works
+// unconditionally, which is what a locked-out student needs. The temp password
+// always satisfies isPasswordValid so the student can immediately sign in and
+// change it. Any outstanding reset tokens are invalidated so a stale link
+// can't be used after the admin has intervened.
+function generateTempPassword() {
+  // 9 random bytes → ~12 url-safe chars; strip separators, take 8, then append
+  // two digits so the result is ≥8 chars AND contains a number (isPasswordValid).
+  const base = crypto.randomBytes(9).toString('base64')
+    .replace(/[^a-zA-Z0-9]/g, '').slice(0, 8);
+  const digits = String(crypto.randomInt(10, 100)); // 10–99
+  return base + digits;
+}
+
+app.post('/api/admin/users/:id/reset-password', requireAdmin, (req, res) => {
+  const id = parseInt(req.params.id);
+  if (!id) return res.status(400).json({ error: 'Invalid user id.' });
+  const target = db.getUserById(id);
+  if (!target) return res.status(404).json({ error: 'Gardener not found.' });
+
+  let tempPassword;
+  do { tempPassword = generateTempPassword(); } while (!isPasswordValid(tempPassword));
+
+  db.updateUserPassword(id, tempPassword);
+  // Kill any live reset links for this account — the admin just took over.
+  if (typeof db.deletePasswordResetTokensForUser === 'function') {
+    db.deletePasswordResetTokensForUser(id);
+  }
+
+  res.json({ ok: true, name: target.name, email: target.email, tempPassword });
+});
+
 // Per-user course start date — the multi-cohort lever. Pass {date: 'YYYY-MM-DD'}
 // to override; pass {date: null} to clear and fall back to the global default.
 app.post('/api/admin/users/:id/course-start-date', requireAdmin, (req, res) => {

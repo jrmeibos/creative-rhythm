@@ -2895,6 +2895,27 @@ button.mid-card-cta {
   color: #8a4a34;
 }
 
+/* ─── Admin temp-password reveal box ─────────────────────────────────────── */
+.admin-temp-pw-box {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  background: var(--color-new-growth);
+  border: 1px solid rgba(112, 92, 108, 0.25);
+  border-radius: 8px;
+  margin-bottom: 0.5rem;
+}
+.admin-temp-pw-box code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 1.05rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--color-ink-stained);
+  user-select: all;
+}
+
 /* ─── Share-intentions toggle (near intention cards on dashboard + /goals) ── */
 .share-intentions {
   display: flex;

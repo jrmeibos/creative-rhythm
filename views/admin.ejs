@@ -84,6 +84,10 @@
                   onclick="openEditStudent(<%= JSON.stringify({ id: u.id, name: u.name, email: u.email, role: u.role, course_length_weeks: u.course_length_weeks || 12 }) %>)">
                   ✎
                 </button>
+                <button class="admin-btn-icon" type="button" title="Reset password"
+                  onclick="resetStudentPassword(<%= u.id %>, <%= JSON.stringify(u.name) %>)">
+                  ⚿
+                </button>
                 <% if (u.id !== user.id) { %>
                   <button class="admin-btn-icon admin-btn-icon--danger" type="button" title="Delete"
                     onclick="deleteUser(<%= u.id %>, <%= JSON.stringify(u.name) %>)">
@@ -504,6 +508,23 @@
     <div class="admin-dialog-footer">
       <button class="admin-dialog-cancel" type="button" onclick="closeDialog('dialog-edit-student')">Cancel</button>
       <button class="admin-save-btn" type="button" onclick="submitEditStudent()">Save Changes</button>
+    </div>
+  </dialog>
+
+  <!-- Temporary password (result of admin password reset) -->
+  <dialog class="admin-dialog" id="dialog-temp-password">
+    <h3 class="admin-dialog-title">Temporary password set</h3>
+    <p class="admin-form-hint" style="margin:0 0 0.75rem">
+      A new temporary password has been set for <strong id="temp-pw-name"></strong>.
+      Share it with them directly — they can sign in and change it from their profile.
+      This is the only time it will be shown.
+    </p>
+    <div class="admin-temp-pw-box">
+      <code id="temp-pw-value"></code>
+      <button class="admin-btn-sm" type="button" onclick="copyTempPassword()">Copy</button>
+    </div>
+    <div class="admin-dialog-footer">
+      <button class="admin-save-btn" type="button" onclick="closeDialog('dialog-temp-password')">Done</button>
     </div>
   </dialog>
 
@@ -1092,6 +1113,28 @@
       if (!res.ok) return alert(data.error);
       document.getElementById(`user-row-${id}`)?.remove();
       updateStudentCount(-1);
+    }
+
+    // Admin password help: set a fresh temporary password and show it once so
+    // the admin can relay it to a locked-out gardener.
+    async function resetStudentPassword(id, name) {
+      if (!confirm(`Set a new temporary password for ${name}?\n\nTheir current password will stop working immediately.`)) return;
+      const res = await fetch(`/api/admin/users/${id}/reset-password`, { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok) return alert(data.error || 'Could not reset password.');
+      document.getElementById('temp-pw-name').textContent = data.name;
+      document.getElementById('temp-pw-value').textContent = data.tempPassword;
+      openDialog('dialog-temp-password');
+    }
+
+    function copyTempPassword() {
+      const val = document.getElementById('temp-pw-value').textContent;
+      navigator.clipboard?.writeText(val).then(() => {
+        const btn = event.target;
+        const prev = btn.textContent;
+        btn.textContent = 'Copied';
+        setTimeout(() => { btn.textContent = prev; }, 1500);
+      });
     }
 
     // Auto-save course start date on change. Empty value clears the override

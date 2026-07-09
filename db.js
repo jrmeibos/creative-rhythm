@@ -3237,6 +3237,15 @@ module.exports = {
     ).run();
   },
 
+  // Invalidate every outstanding reset link for one user — called when an admin
+  // sets a temporary password, so a previously-emailed link can't be replayed
+  // after the intervention.
+  deletePasswordResetTokensForUser(userId) {
+    return db.prepare(
+      'DELETE FROM password_reset_tokens WHERE user_id = ?'
+    ).run(userId);
+  },
+
   // ─── Seed Packet highlights ─────────────────────────────────────────────────
 
   getSeedPacketHighlights(userId) {
