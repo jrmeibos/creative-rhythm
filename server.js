@@ -782,6 +782,27 @@ app.post('/api/timezone', requireAuth, (req, res) => {
 });
 
 // ─── Upgrade page ──────────────────────────────────────────────────────────
+// TEMPORARY "coming soon" mode (July 2026): the full course isn't built yet,
+// but /upgrade is already advertised on meibostouch.com + in ads. While the
+// `upgrade_mode` setting is 'coming_soon' (the default), the SAME URL serves a
+// temporary page: free-Winter-trial CTA + a "full course coming soon, get
+// notified" Mailchimp signup. The real pricing page below is untouched and
+// returns the instant the admin flips the toggle to 'live' (or an admin loads
+// /upgrade?preview=full to preview it). Flip it in Admin → Course Settings.
+//
+// Mailchimp embedded-form config for the notify-me box. Populate from your
+// audience's embedded-form code (Mailchimp → Audience → Signup forms →
+// Embedded forms): the form `action` looks like
+//   https://<DC>.list-manage.com/subscribe/post?u=<U>&id=<ID>
+// Fill dc/u/id below. Until all three are set, the box shows a friendly
+// "signups opening soon" placeholder instead of posting anywhere. The signup
+// posts client-side straight to Mailchimp (JSONP) — no API key, no secret.
+const MAILCHIMP_SIGNUP = {
+  dc: '',   // e.g. 'us21'  (the subdomain before .list-manage.com)
+  u:  '',   // the u= value from the form action
+  id: '',   // the id= value from the form action
+};
+
 // Two-step visual flow on one page: pick a tier → Continue → card form
 // (Stripe Elements). JS toggles between the two panels; server hands the
 // tier catalog to the view once so we can't drift between UI and API.
@@ -791,7 +812,27 @@ app.post('/api/timezone', requireAuth, (req, res) => {
 // have no reason to view checkout, so they get bounced to dashboard.
 app.get('/upgrade', (req, res) => {
   const sessionUser = req.session.user;
-  if (sessionUser) {
+
+  // Temporary coming-soon page. Default to 'coming_soon' when unset so a fresh
+  // deploy is safe (never accidentally exposes unfinished pricing). Admins can
+  // bypass with ?preview=full to sanity-check the real page before going live.
+  const upgradeMode = db.getSetting('upgrade_mode') || 'coming_soon';
+  const adminPreviewFull = !!(sessionUser && sessionUser.role === 'admin' && req.query.preview === 'full');
+  if (upgradeMode === 'coming_soon' && !adminPreviewFull) {
+    const mailchimpConfigured = !!(MAILCHIMP_SIGNUP.dc && MAILCHIMP_SIGNUP.u && MAILCHIMP_SIGNUP.id);
+    return res.render('upgrade-coming-soon', {
+      title: 'The full course is coming soon',
+      page: 'upgrade',
+      user: sessionUser || null,
+      mailchimp: MAILCHIMP_SIGNUP,
+      mailchimpConfigured,
+    });
+  }
+
+  // adminPreviewFull lets an admin load the real pricing page to sanity-check
+  // it before flipping the toggle live — so skip the usual admin/upgraded
+  // redirects in that case and render the page as a visitor would see it.
+  if (sessionUser && !adminPreviewFull) {
     if (sessionUser.role === 'admin') return res.redirect('/dashboard');
     const dbUser = db.getUserById(sessionUser.id);
     if (!dbUser) return res.redirect('/dashboard');
@@ -3607,6 +3648,7 @@ app.get('/admin', requireAdmin, (req, res) => {
     .sort()[0] || '';
   const harvestUnlocked    = db.getSetting('harvest_unlocked') === 'true';
   const midcourseUnlocked  = db.getSetting('midcourse_unlocked') === 'true';
+  const upgradeMode        = db.getSetting('upgrade_mode') || 'coming_soon';
   const simulatedToday     = db.getSetting('simulated_today') || null;
   const studentAssessments = db.getAllStudentAssessmentStatus();
 
@@ -3690,7 +3732,7 @@ app.get('/admin', requireAdmin, (req, res) => {
     title: 'Admin', page: 'admin',
     users, lessons, resources, lessonStats, lessonHomework, courseStartDate,
     recordingSummary, enrollments,
-    harvestUnlocked, midcourseUnlocked,
+    harvestUnlocked, midcourseUnlocked, upgradeMode,
     midcourseUnlockDate, closingUnlockDate,
     simulatedToday,
     studentAssessments,
@@ -3845,9 +3887,14 @@ app.get('/admin/seed-packets-export/:userId', requireAdmin, (req, res) => {
 
 app.post('/api/admin/settings', requireAdmin, (req, res) => {
   const { key, value } = req.body;
-  const allowed = ['harvest_unlocked', 'midcourse_unlocked', 'simulated_today'];
+  const allowed = ['harvest_unlocked', 'midcourse_unlocked', 'simulated_today', 'upgrade_mode'];
   if (!allowed.includes(key)) return res.status(400).json({ error: 'Invalid key' });
-  db.setSetting(key, value);
+  // upgrade_mode is a two-state switch — normalize anything unexpected to the
+  // safe 'coming_soon' state so the unfinished pricing page can't leak.
+  const finalValue = key === 'upgrade_mode'
+    ? (value === 'live' ? 'live' : 'coming_soon')
+    : value;
+  db.setSetting(key, finalValue);
   res.json({ ok: true });
 });
 

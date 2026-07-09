@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <%- include('partials/head') %>
+  <link rel="stylesheet" href="/css/dashboard.css">
+  <link rel="stylesheet" href="/css/upgrade.css">
+</head>
+<body class="app-body<%= locals.user ? '' : ' up-body--anon' %>">
+  <div class="app-layout">
+    <% if (locals.user) { %>
+      <%- include('partials/sidebar') %>
+    <% } else { %>
+      <!-- Anonymous top bar — most visitors here arrive from an ad or the
+           meibostouch.com course page, signed out. -->
+      <nav class="up-anon-nav" aria-label="Sign in or sign up">
+        <a href="https://www.meibostouch.com/the-creatives-garden"
+           target="_blank" rel="noopener" class="up-anon-brand"
+           aria-label="The Creative's Garden — course page">
+          <img src="/images/brand/The Creative's Garden Icon with Text_1.svg"
+               alt="The Creative's Garden" class="up-anon-brand-logo">
+        </a>
+        <div class="up-anon-nav-actions">
+          <a href="/?returnTo=%2Fupgrade" class="up-anon-nav-link">Sign in</a>
+          <a href="/signup" class="up-anon-nav-cta">Start free →</a>
+        </div>
+      </nav>
+    <% } %>
+
+    <main class="main-content<%= locals.user ? '' : ' main-content--anon' %>">
+
+      <% if (locals.user) { %>
+        <a href="/dashboard" class="cm-back-link" style="display:inline-block; margin: 1.5rem 0 1rem;">← Back to dashboard</a>
+      <% } %>
+
+      <header class="up-header">
+        <h1 class="up-title">The Creative's Garden</h1>
+        <p class="up-subtitle">
+          Soul-led visibility for creative entrepreneurs — showing up online
+          as yourself, without burning out.
+        </p>
+      </header>
+
+      <!-- ─── Free Winter season ─────────────────────────────────────────── -->
+      <section class="up-trial-banner" aria-labelledby="cs-trial-title">
+        <div class="up-trial-copy">
+          <p class="up-trial-eyebrow">Available now — free</p>
+          <h2 class="up-trial-title" id="cs-trial-title">Start the free Winter season</h2>
+          <p class="up-trial-body">
+            Three weeks of daily recording to see what unblocks when you show
+            up for yourself first. No card required, no pressure — a real taste
+            of the practice at the heart of the course.
+          </p>
+        </div>
+        <div class="up-trial-cta-wrap">
+          <% if (!locals.user) { %>
+            <a href="/signup" class="up-btn up-btn--primary up-btn--trial">Start the free 3 weeks →</a>
+          <% } else { %>
+            <span class="up-trial-chip">You're on the free Winter season</span>
+            <a href="/dashboard" class="up-trial-fineprint" style="text-decoration:underline">Go to your dashboard →</a>
+          <% } %>
+        </div>
+      </section>
+
+      <!-- ─── Full course — coming soon ──────────────────────────────────── -->
+      <section class="cs-soon" aria-labelledby="cs-soon-title">
+        <p class="up-trial-eyebrow">Coming soon</p>
+        <h2 class="cs-soon-title" id="cs-soon-title">The full 12-week course</h2>
+        <p class="cs-soon-body">
+          The complete Creative's Garden — all four seasons, deeper lessons,
+          and the paths for growing solo, in community, or with one-on-one
+          support — is being built right now. Want to know the moment the
+          doors open? Leave your email and I'll be in touch.
+        </p>
+
+        <form class="cs-form" id="cs-notify-form" novalidate>
+          <label class="cs-form-label" for="cs-email">Email address</label>
+          <div class="cs-form-row">
+            <input class="cs-form-input" type="email" id="cs-email" name="EMAIL"
+                   placeholder="you@example.com" autocomplete="email" required>
+            <button class="up-btn up-btn--primary" type="submit" id="cs-notify-btn">Notify me →</button>
+          </div>
+          <p class="cs-form-msg" id="cs-notify-msg" hidden></p>
+          <p class="cs-form-fineprint">
+            Just course updates — no spam, unsubscribe anytime.
+          </p>
+        </form>
+      </section>
+
+      <footer class="cs-footer">
+        <p>
+          Questions? <a href="https://www.meibostouch.com/the-creatives-garden" target="_blank" rel="noopener">Visit the course page</a>
+          or reach out to Julia directly.
+        </p>
+      </footer>
+    </main>
+  </div>
+
+  <script>
+    // Mailchimp embedded-form signup via JSONP — posts straight to Mailchimp
+    // from the browser (no API key, no server round-trip). Config comes from
+    // the /upgrade route's MAILCHIMP_SIGNUP constant.
+    (function () {
+      const MC    = <%- JSON.stringify(mailchimp) %>;
+      const MC_OK = <%= mailchimpConfigured ? 'true' : 'false' %>;
+      const form  = document.getElementById('cs-notify-form');
+      const email = document.getElementById('cs-email');
+      const btn   = document.getElementById('cs-notify-btn');
+      const msg   = document.getElementById('cs-notify-msg');
+      let cbSeq   = 0; // unique-ifies each JSONP callback name
+
+      function showMsg(text, kind) {
+        msg.textContent = text;
+        msg.hidden = false;
+        msg.className = 'cs-form-msg cs-form-msg--' + (kind || 'note');
+      }
+
+      form.addEventListener('submit', function (e) {
+        e.preventDefault();
+        const value = (email.value || '').trim();
+        if (!value || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+          showMsg('Please enter a valid email address.', 'error');
+          return;
+        }
+        if (!MC_OK) {
+          // Mailchimp not wired up yet — fail gracefully instead of posting nowhere.
+          showMsg("Signups are opening soon — check back shortly!", 'note');
+          return;
+        }
+
+        btn.disabled = true;
+        const cbName = 'mcCallback_' + (++cbSeq);
+
+        window[cbName] = function (data) {
+          btn.disabled = false;
+          const ok = data && data.result === 'success';
+          if (ok) {
+            showMsg("You're on the list — I'll email you the moment the doors open. 🌱", 'success');
+            form.reset();
+          } else {
+            // Mailchimp returns a helpful message (e.g. already subscribed).
+            let m = (data && data.msg) ? String(data.msg).replace(/^\d+\s*-\s*/, '') : 'Something went wrong — please try again.';
+            showMsg(m, 'error');
+          }
+          try { delete window[cbName]; } catch (_) { window[cbName] = undefined; }
+          if (s && s.parentNode) s.parentNode.removeChild(s);
+        };
+
+        // Mailchimp's post-json endpoint + JSONP callback. The b_<u>_<id>
+        // field is the anti-bot honeypot Mailchimp expects (left empty).
+        const base = 'https://' + MC.dc + '.list-manage.com/subscribe/post-json';
+        const url  = base
+          + '?u='  + encodeURIComponent(MC.u)
+          + '&id=' + encodeURIComponent(MC.id)
+          + '&EMAIL=' + encodeURIComponent(value)
+          + '&b_' + MC.u + '_' + MC.id + '='
+          + '&c=' + cbName;
+
+        const s = document.createElement('script');
+        s.src = url;
+        s.onerror = function () {
+          btn.disabled = false;
+          showMsg('Could not reach the signup service — please try again.', 'error');
+          try { delete window[cbName]; } catch (_) {}
+          if (s && s.parentNode) s.parentNode.removeChild(s);
+        };
+        document.body.appendChild(s);
+      });
+    })();
+  </script>
+</body>
+</html>

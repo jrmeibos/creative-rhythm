@@ -588,3 +588,105 @@
   .up-tier-price-amount { font-size: 2.15rem; }
   .up-summary, .up-card-panel { padding: 1.25rem; }
 }
+
+/* ─── Temporary "coming soon" page ───────────────────────────────────────── */
+.cs-soon {
+  padding: 2rem 2rem 2.25rem;
+  margin: 0 0 2rem;
+  background: var(--color-blank-page);
+  border: 1px solid rgba(112, 92, 108, 0.22);
+  border-radius: 18px;
+}
+.cs-soon-title {
+  font-family: var(--font-display);
+  font-size: 1.7rem;
+  font-weight: 400;
+  color: var(--color-ink-stained);
+  margin: 0 0 0.75rem;
+  line-height: 1.15;
+}
+.cs-soon-body {
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+  font-weight: 300;
+  line-height: 1.6;
+  color: rgba(16, 15, 16, 0.78);
+  margin: 0 0 1.5rem;
+  max-width: 46rem;
+}
+.cs-form { max-width: 34rem; }
+.cs-form-label {
+  display: block;
+  font-family: var(--font-body);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(16, 15, 16, 0.5);
+  margin-bottom: 0.4rem;
+}
+.cs-form-row {
+  display: flex;
+  gap: 0.6rem;
+  align-items: stretch;
+}
+.cs-form-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+  font-weight: 300;
+  padding: 0.7rem 0.9rem;
+  border: 1px solid rgba(112, 92, 108, 0.3);
+  border-radius: 10px;
+  background: var(--color-pearl);
+  color: var(--color-ink-stained);
+  outline: none;
+  transition: border-color 0.15s;
+}
+.cs-form-input:focus { border-color: var(--color-bloem); }
+.cs-form .up-btn { white-space: nowrap; }
+.cs-form-msg {
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  font-weight: 400;
+  margin: 0.75rem 0 0;
+  padding: 0.6rem 0.85rem;
+  border-radius: 8px;
+}
+.cs-form-msg--success {
+  color: #3d5232;
+  background: var(--color-new-growth);
+  border: 1px solid rgba(118, 133, 108, 0.4);
+}
+.cs-form-msg--error {
+  color: #8a4a34;
+  background: rgba(181, 101, 74, 0.1);
+  border: 1px solid rgba(181, 101, 74, 0.25);
+}
+.cs-form-msg--note {
+  color: var(--color-bloem-mid);
+  background: rgba(112, 92, 108, 0.08);
+  border: 1px solid rgba(112, 92, 108, 0.2);
+}
+.cs-form-fineprint {
+  font-family: var(--font-body);
+  font-size: 0.78rem;
+  font-weight: 300;
+  color: rgba(16, 15, 16, 0.5);
+  margin: 0.6rem 0 0;
+}
+.cs-footer {
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  font-weight: 300;
+  color: rgba(16, 15, 16, 0.6);
+  padding: 0.5rem 0 2rem;
+}
+.cs-footer a { color: var(--color-bloem); }
+@media (max-width: 680px) {
+  .cs-soon { padding: 1.5rem 1.25rem; }
+  .cs-soon-title { font-size: 1.4rem; }
+  .cs-form-row { flex-direction: column; }
+  .cs-form .up-btn { width: 100%; }
+}

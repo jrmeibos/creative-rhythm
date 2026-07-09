@@ -368,6 +368,42 @@
             </div>
           </div>
 
+          <!-- Upgrade / pricing page mode -->
+          <div class="admin-settings-block">
+            <span class="admin-settings-block-label">Upgrade page (/upgrade)</span>
+            <p class="admin-field-hint">
+              While the full course is still being built, <code>/upgrade</code> shows a temporary
+              page: the free Winter-season signup + a “coming soon, notify me” form.
+              Flip to <strong>Live pricing</strong> the day you’re ready to take payments —
+              your real pricing page returns instantly, unchanged.
+            </p>
+            <div class="admin-unlock-row" style="margin-top:0.5rem">
+              <div>
+                <strong>Currently showing:
+                  <%= upgradeMode === 'live' ? 'Live pricing page' : 'Coming-soon page' %>
+                </strong>
+                <span class="admin-unlock-hint">
+                  <% if (upgradeMode === 'live') { %>
+                    Visitors see the real tiers + Stripe checkout.
+                  <% } else { %>
+                    Visitors see the free-trial + newsletter signup. Preview the real page:
+                    <a href="/upgrade?preview=full" target="_blank" rel="noopener">/upgrade?preview=full</a>
+                  <% } %>
+                </span>
+              </div>
+              <div style="display:flex;align-items:center;gap:0.6rem">
+                <span class="admin-unlock-badge <%= upgradeMode === 'live' ? 'admin-unlock-badge--on' : 'admin-unlock-badge--off' %>">
+                  <%= upgradeMode === 'live' ? 'Live' : 'Coming soon' %>
+                </span>
+                <% if (upgradeMode === 'live') { %>
+                  <button type="button" class="admin-btn-sm" onclick="setUpgradeMode('coming_soon')">Switch to coming-soon</button>
+                <% } else { %>
+                  <button type="button" class="admin-btn-sm" onclick="setUpgradeMode('live')">Go live with pricing</button>
+                <% } %>
+              </div>
+            </div>
+          </div>
+
           <!-- Backup -->
           <div class="admin-settings-block">
             <span class="admin-settings-block-label">Database backup</span>
@@ -1052,6 +1088,12 @@
       } else {
         alert('Failed to update setting.');
       }
+    }
+
+    // ── Upgrade page mode (coming-soon ↔ live pricing) ───────────────────────
+    async function setUpgradeMode(mode) {
+      if (mode === 'live' && !confirm('Go live with the real pricing page at /upgrade?\n\nVisitors will see the paid tiers and Stripe checkout. Only do this once the full course is ready to sell.')) return;
+      await setFlag('upgrade_mode', mode); // reloads on success
     }
 
     // ── Time Travel ──────────────────────────────────────────────────────────
