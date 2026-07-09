@@ -67,6 +67,11 @@
                     <span class="admin-activity-recent"><%= act.recentCount %> in last 7 days</span>
                   </span>
                 <% } %>
+                <% if (u.notes && u.notes.trim()) { %>
+                  <span class="admin-user-note" title="<%= u.notes %>">
+                    <span aria-hidden="true">✎</span> Private note
+                  </span>
+                <% } %>
               </div>
               <span class="admin-user-role <%= u.role === 'admin' ? 'admin-role--admin' : '' %>">
                 <%= u.role === 'admin' ? 'Curator' : 'Gardener' %>
@@ -81,7 +86,7 @@
               <% } %>
               <div class="admin-row-actions">
                 <button class="admin-btn-icon" type="button" title="Edit"
-                  onclick="openEditStudent(<%= JSON.stringify({ id: u.id, name: u.name, email: u.email, role: u.role, course_length_weeks: u.course_length_weeks || 12 }) %>)">
+                  onclick="openEditStudent(<%= JSON.stringify({ id: u.id, name: u.name, email: u.email, role: u.role, course_length_weeks: u.course_length_weeks || 12, notes: u.notes || '' }) %>)">
                   ✎
                 </button>
                 <button class="admin-btn-icon" type="button" title="Reset password"
@@ -542,6 +547,10 @@
         <option value="12">Full course · 12 weeks</option>
         <option value="3">Trial · 3 weeks</option>
       </select>
+    </div>
+    <div class="admin-form-field">
+      <label class="admin-form-label">Private notes <span class="admin-form-hint">(admin-only · never shown to gardeners)</span></label>
+      <textarea class="admin-input" id="edit-student-notes" rows="3" placeholder="e.g. prefers gentle accountability"></textarea>
     </div>
     <p class="admin-dialog-error" id="edit-student-error" hidden></p>
     <div class="admin-dialog-footer">
@@ -1096,6 +1105,7 @@
       document.getElementById('edit-student-role').value  = u.role;
       document.getElementById('edit-student-length').value = String(u.course_length_weeks || 12);
       document.getElementById('edit-student-password').value = '';
+      document.getElementById('edit-student-notes').value = u.notes || '';
       document.getElementById('edit-student-error').hidden = true;
       openDialog('dialog-edit-student');
     }
@@ -1129,12 +1139,13 @@
       const password = document.getElementById('edit-student-password').value;
       const role     = document.getElementById('edit-student-role').value;
       const courseLengthWeeks = parseInt(document.getElementById('edit-student-length').value, 10) || 12;
+      const notes    = document.getElementById('edit-student-notes').value;
       if (!name || !email) return showError('edit-student-error', 'Name and email are required.');
 
       const res = await fetch(`/api/admin/users/${id}`, {
         method:  'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ name, email, role, password: password || undefined, course_length_weeks: courseLengthWeeks })
+        body:    JSON.stringify({ name, email, role, password: password || undefined, course_length_weeks: courseLengthWeeks, notes })
       });
       const data = await res.json();
       if (!res.ok) return showError('edit-student-error', data.error);

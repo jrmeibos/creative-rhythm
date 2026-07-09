@@ -3886,13 +3886,17 @@ app.post('/api/admin/users', requireAdmin, (req, res) => {
 
 app.put('/api/admin/users/:id', requireAdmin, (req, res) => {
   const id = parseInt(req.params.id);
-  const { name, email, role, password, course_length_weeks } = req.body;
+  const { name, email, role, password, course_length_weeks, notes } = req.body;
   if (!name || !email) return res.status(400).json({ error: 'Name and email are required.' });
   if (!['student', 'admin'].includes(role)) return res.status(400).json({ error: 'Invalid role.' });
   try {
     db.updateUser(id, name, email, role, password || null);
     if (course_length_weeks !== undefined) {
       db.setUserCourseLengthWeeks(id, course_length_weeks);
+    }
+    // Private admin note — always sent by the edit dialog (empty = clear).
+    if (notes !== undefined) {
+      db.setUserNotes(id, notes);
     }
     res.json({ ok: true });
   } catch (e) {

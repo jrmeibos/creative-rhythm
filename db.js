@@ -372,6 +372,13 @@ db.exec(`
     db.exec("ALTER TABLE users ADD COLUMN enrollment_tier TEXT");
     console.log('✓ Migrated: added enrollment_tier column');
   }
+  // Private admin notes — a freeform, admin-only memo per gardener (e.g.
+  // "prefers gentle accountability"). NEVER surfaced to students; only read
+  // back into the admin edit dialog. NULL/empty = no note.
+  if (!userCols.includes('notes')) {
+    db.exec("ALTER TABLE users ADD COLUMN notes TEXT");
+    console.log('✓ Migrated: added notes column to users');
+  }
   // Per-user course start date for multi-cohort support. NULL means "fall
   // back to the global settings.course_start_date" so existing students keep
   // their current timeline observable behavior without a one-time backfill
@@ -1490,6 +1497,13 @@ module.exports = {
     ).run(t, userId);
   },
 
+  // Private admin note per gardener. Stored as-is (trimmed); empty string is
+  // normalized to NULL. Admin-only — never read into any student-facing view.
+  setUserNotes(userId, notes) {
+    const val = (typeof notes === 'string' && notes.trim()) ? notes.trim() : null;
+    return db.prepare('UPDATE users SET notes = ? WHERE id = ?').run(val, userId);
+  },
+
   hasVisitedGreenhouse(userId) {
     const row = db.prepare('SELECT has_visited_greenhouse FROM users WHERE id = ?').get(userId);
     return !!(row && row.has_visited_greenhouse);
@@ -1500,7 +1514,7 @@ module.exports = {
   },
 
   getAllUsers() {
-    return db.prepare('SELECT id, name, email, role, avatar_initial, current_season, profile_photo, community_goals_public, community_season_public, course_start_date, course_length_weeks, enrollment_tier, created_at FROM users ORDER BY role DESC, name ASC').all();
+    return db.prepare('SELECT id, name, email, role, avatar_initial, current_season, profile_photo, community_goals_public, community_season_public, course_start_date, course_length_weeks, enrollment_tier, notes, created_at FROM users ORDER BY role DESC, name ASC').all();
   },
 
   getUserFullProfile(id) {

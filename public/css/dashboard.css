@@ -2895,6 +2895,23 @@ button.mid-card-cta {
   color: #8a4a34;
 }
 
+/* ─── Admin private note indicator (row) ─────────────────────────────────── */
+.admin-user-note {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin-top: 0.35rem;
+  width: fit-content;
+  font-family: var(--font-body);
+  font-size: 0.72rem;
+  letter-spacing: 0.02em;
+  padding: 0.12rem 0.5rem;
+  border-radius: 999px;
+  background: rgba(112, 92, 108, 0.1);
+  color: var(--color-bloem);
+  cursor: help;
+}
+
 /* ─── Admin enrollments overview ─────────────────────────────────────────── */
 .admin-enroll-grid {
   display: grid;
