@@ -3804,12 +3804,11 @@ app.post('/api/admin/users', requireAdmin, (req, res) => {
     // clamps to [1, 52].
     if (course_length_weeks !== undefined && parseInt(course_length_weeks, 10) !== 12) {
       db.setUserCourseLengthWeeks(result.lastInsertRowid, course_length_weeks);
-      // Short-course students need their own start date. Without one, the
-      // fallback is the pilot cohort's global start date — months in the
-      // past — so a fresh trial account would look instantly expired.
-      // Default to today; adjustable afterward via the users table.
-      db.setUserCourseStartDate(result.lastInsertRowid, toLocalDateString(new Date()));
     }
+    // Every admin-created account gets its own start date (today) so it never
+    // depends on the global default — adjustable afterward via the users
+    // table. (The platform is retiring the global course start date.)
+    db.setUserCourseStartDate(result.lastInsertRowid, toLocalDateString(new Date()));
     const newUser = db.getUserById(result.lastInsertRowid);
     res.json({ ok: true, user: newUser });
   } catch (e) {

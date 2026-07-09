@@ -1079,10 +1079,13 @@ function seedDefaultAccounts() {
     { name: 'Test Student',     email: 'jrmeibos@yahoo.com',           password: 'testing123',  initial: 'T' },
   ];
 
-  const ins = db.prepare('INSERT INTO users (name, email, password_hash, role, avatar_initial) VALUES (?, ?, ?, ?, ?)');
+  // Seeded students get their own start date (today) so they never depend on
+  // the global default — the platform is moving to per-user start dates.
+  const today = new Date().toISOString().split('T')[0];
+  const ins = db.prepare('INSERT INTO users (name, email, password_hash, role, avatar_initial, course_start_date) VALUES (?, ?, ?, ?, ?, ?)');
   for (const a of students) {
     const hash = bcrypt.hashSync(a.password, 12);
-    ins.run(a.name, a.email, hash, 'student', a.initial);
+    ins.run(a.name, a.email, hash, 'student', a.initial, today);
     console.log(`✓ Seeded student: ${a.name} (${a.email})`);
   }
 }
@@ -1414,8 +1417,26 @@ function safeInit(label, fn) {
     console.error('');
   }
 }
+// One-time backfill: materialize the global course start date onto every
+// user who doesn't have their own yet. This makes per-user start dates the
+// single source of truth so the global fallback can be retired. Idempotent —
+// once a user has a date, subsequent boots leave them alone; if there's no
+// global setting (fresh install), there's nothing to copy and it no-ops.
+function backfillUserStartDates() {
+  const row = db.prepare("SELECT value FROM settings WHERE key = 'course_start_date'").get();
+  const globalStart = row && row.value ? row.value : null;
+  if (!globalStart) return;
+  const res = db.prepare(
+    "UPDATE users SET course_start_date = ? WHERE course_start_date IS NULL OR course_start_date = ''"
+  ).run(globalStart);
+  if (res.changes) {
+    console.log(`✓ Migrated: backfilled course_start_date for ${res.changes} user(s) from the global default (${globalStart})`);
+  }
+}
+
 safeInit('syncAdminAccount',    syncAdminAccount);
 safeInit('seedDefaultAccounts', seedDefaultAccounts);
+safeInit('backfillUserStartDates', backfillUserStartDates);
 safeInit('seedLessons',             seedLessons);
 safeInit('seedCourseIntroduction',  seedCourseIntroduction);
 safeInit('seedLesson1Homework',     seedLesson1Homework);
