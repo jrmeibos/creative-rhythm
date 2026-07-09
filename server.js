@@ -3886,13 +3886,23 @@ app.post('/api/admin/users', requireAdmin, (req, res) => {
 
 app.put('/api/admin/users/:id', requireAdmin, (req, res) => {
   const id = parseInt(req.params.id);
-  const { name, email, role, password, course_length_weeks, notes } = req.body;
+  const { name, email, role, password, course_length_weeks, notes, enrollment_tier } = req.body;
   if (!name || !email) return res.status(400).json({ error: 'Name and email are required.' });
   if (!['student', 'admin'].includes(role)) return res.status(400).json({ error: 'Invalid role.' });
   try {
     db.updateUser(id, name, email, role, password || null);
     if (course_length_weeks !== undefined) {
       db.setUserCourseLengthWeeks(id, course_length_weeks);
+    }
+    // Enrollment tier — lets the admin comp/gift a paid tier. setUserEnrollmentTier
+    // maps anything outside solo/community/coaching to NULL (= none). Gifting a
+    // paid tier also grants full access (12 weeks), overriding any trial clamp,
+    // so the gift actually unlocks the whole course. Runs AFTER the
+    // course_length_weeks set above so the paid-tier override wins.
+    if (enrollment_tier !== undefined) {
+      const paid = ['solo', 'community', 'coaching'].includes(enrollment_tier);
+      db.setUserEnrollmentTier(id, paid ? enrollment_tier : null);
+      if (paid) db.setUserCourseLengthWeeks(id, 12);
     }
     // Private admin note — always sent by the edit dialog (empty = clear).
     if (notes !== undefined) {

@@ -86,7 +86,7 @@
               <% } %>
               <div class="admin-row-actions">
                 <button class="admin-btn-icon" type="button" title="Edit"
-                  onclick="openEditStudent(<%= JSON.stringify({ id: u.id, name: u.name, email: u.email, role: u.role, course_length_weeks: u.course_length_weeks || 12, notes: u.notes || '' }) %>)">
+                  onclick="openEditStudent(<%= JSON.stringify({ id: u.id, name: u.name, email: u.email, role: u.role, course_length_weeks: u.course_length_weeks || 12, notes: u.notes || '', enrollment_tier: u.enrollment_tier || '' }) %>)">
                   ✎
                 </button>
                 <button class="admin-btn-icon" type="button" title="Reset password"
@@ -546,6 +546,15 @@
       <select class="admin-input admin-select" id="edit-student-length">
         <option value="12">Full course · 12 weeks</option>
         <option value="3">Trial · 3 weeks</option>
+      </select>
+    </div>
+    <div class="admin-form-field">
+      <label class="admin-form-label">Enrollment tier <span class="admin-form-hint">(gift a paid tier · grants full access)</span></label>
+      <select class="admin-input admin-select" id="edit-student-tier">
+        <option value="">None · free / Winter</option>
+        <% for (const t of enrollments.tiers) { %>
+          <option value="<%= t.id %>"><%= t.name %> · <%= t.priceLabel %></option>
+        <% } %>
       </select>
     </div>
     <div class="admin-form-field">
@@ -1104,6 +1113,7 @@
       document.getElementById('edit-student-email').value = u.email;
       document.getElementById('edit-student-role').value  = u.role;
       document.getElementById('edit-student-length').value = String(u.course_length_weeks || 12);
+      document.getElementById('edit-student-tier').value = u.enrollment_tier || '';
       document.getElementById('edit-student-password').value = '';
       document.getElementById('edit-student-notes').value = u.notes || '';
       document.getElementById('edit-student-error').hidden = true;
@@ -1140,12 +1150,13 @@
       const role     = document.getElementById('edit-student-role').value;
       const courseLengthWeeks = parseInt(document.getElementById('edit-student-length').value, 10) || 12;
       const notes    = document.getElementById('edit-student-notes').value;
+      const enrollmentTier = document.getElementById('edit-student-tier').value;
       if (!name || !email) return showError('edit-student-error', 'Name and email are required.');
 
       const res = await fetch(`/api/admin/users/${id}`, {
         method:  'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ name, email, role, password: password || undefined, course_length_weeks: courseLengthWeeks, notes })
+        body:    JSON.stringify({ name, email, role, password: password || undefined, course_length_weeks: courseLengthWeeks, notes, enrollment_tier: enrollmentTier })
       });
       const data = await res.json();
       if (!res.ok) return showError('edit-student-error', data.error);
