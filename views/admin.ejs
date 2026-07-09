@@ -269,22 +269,13 @@
         </div>
         <div class="admin-card admin-settings">
 
-          <!-- Course start date -->
-          <div class="admin-settings-block">
-            <label class="admin-field-label" for="course-start-date">Course start date</label>
-            <p class="admin-field-hint">The Monday Week 1 begins. This is the global default; a gardener with their own start date (set on their row above) overrides it.</p>
-            <div class="admin-field-input-row">
-              <input type="date" id="course-start-date" class="admin-date-input"
-                     value="<%= courseStartDate %>" aria-label="Course start date">
-              <button class="admin-save-btn" id="save-start-date" type="button">Save</button>
-              <span class="admin-save-status" id="start-date-status"></span>
-            </div>
-          </div>
+          <!-- Course start date is now per-gardener — set it on each row in
+               the Gardeners section above. -->
 
           <!-- Automatic unlocks -->
-          <div class="admin-settings-block">
+          <div class="admin-settings-block" style="border-top:none;padding-top:0">
             <span class="admin-settings-block-label">Automatic unlocks</span>
-            <p class="admin-field-hint">These open on their own, based on each gardener's start date. No action needed.</p>
+            <p class="admin-field-hint">These open on their own, based on each gardener's start date — set per gardener in the Gardeners section above. Dates below preview the earliest-started gardener. No action needed.</p>
             <div class="admin-unlock-status-grid">
               <div class="admin-unlock-row">
                 <div>
@@ -1020,25 +1011,6 @@
       });
       if (res.ok) location.reload();
     }
-
-    // ── Course start date ────────────────────────────────────────────────────
-    document.getElementById('save-start-date')?.addEventListener('click', async () => {
-      const val    = document.getElementById('course-start-date').value;
-      const status = document.getElementById('start-date-status');
-      const res = await fetch('/api/admin/settings', {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ key: 'course_start_date', value: val })
-      });
-      if (res.ok) {
-        status.textContent = 'Saved ✓';
-        status.style.color = 'var(--color-understory)';
-      } else {
-        status.textContent = 'Error saving';
-        status.style.color = '#c0392b';
-      }
-      setTimeout(() => { status.textContent = ''; }, 2500);
-    });
 
     // ── Students ─────────────────────────────────────────────────────────────
     function openEditStudent(u) {

@@ -1451,20 +1451,15 @@ module.exports = {
     return db.prepare('SELECT id, name, email, role, avatar_initial, current_season, profile_photo, course_start_date, course_length_weeks, enrollment_tier, community_goals_public FROM users WHERE id = ?').get(id);
   },
 
-  // ─── Per-user course start date (multi-cohort support) ────────────────────
-  // Returns the user's own start date if they have one, else falls back to
-  // the global course_start_date setting. The caller may pass the session
-  // user (which carries the field if the session was created after this
-  // refactor) or a fresh DB row; both work.
-  //
-  // Returns null if neither the user nor the global setting has a date.
-  // Every time-based feature (week number, midcourse/harvest unlock,
-  // garden stage, day-view bounds) reads through this helper instead of
-  // reaching for the global setting directly.
+  // ─── Per-user course start date ───────────────────────────────────────────
+  // The single source of truth: each user carries their own start date (set
+  // at signup / admin-create, backfilled for everyone earlier). The old
+  // global course_start_date fallback has been retired. Returns null if the
+  // user somehow has no date — every time-based feature (week number,
+  // midcourse/harvest unlock, garden stage, day-view bounds) reads through
+  // this helper and degrades gracefully to a "not started" state on null.
   getUserCourseStartDate(user) {
-    if (user && user.course_start_date) return user.course_start_date;
-    return db.prepare("SELECT value FROM settings WHERE key = 'course_start_date'")
-             .get()?.value || null;
+    return (user && user.course_start_date) || null;
   },
 
   setUserCourseStartDate(userId, dateString) {

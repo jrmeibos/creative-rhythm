@@ -3598,7 +3598,13 @@ app.get('/admin', requireAdmin, (req, res) => {
   const lessons            = db.getAllLessonsAdmin();
   const resources          = db.getAllResources();
   const lessonStats        = db.getLessonCompletionCounts();
-  const courseStartDate    = db.getSetting('course_start_date') || '';
+  // The global course start date is retired — each gardener has their own.
+  // For the admin's unlock-date preview + the Time Travel quick-jumps we use
+  // a cohort reference: the earliest student start date currently on file.
+  const courseStartDate    = users
+    .filter(u => u.role === 'student' && u.course_start_date)
+    .map(u => String(u.course_start_date).slice(0, 10))
+    .sort()[0] || '';
   const harvestUnlocked    = db.getSetting('harvest_unlocked') === 'true';
   const midcourseUnlocked  = db.getSetting('midcourse_unlocked') === 'true';
   const simulatedToday     = db.getSetting('simulated_today') || null;
@@ -3778,7 +3784,7 @@ app.get('/admin/seed-packets-export/:userId', requireAdmin, (req, res) => {
 
 app.post('/api/admin/settings', requireAdmin, (req, res) => {
   const { key, value } = req.body;
-  const allowed = ['course_start_date', 'harvest_unlocked', 'midcourse_unlocked', 'simulated_today'];
+  const allowed = ['harvest_unlocked', 'midcourse_unlocked', 'simulated_today'];
   if (!allowed.includes(key)) return res.status(400).json({ error: 'Invalid key' });
   db.setSetting(key, value);
   res.json({ ok: true });
