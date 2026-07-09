@@ -100,6 +100,45 @@
         </div>
       </section>
 
+      <!-- ── Enrollments ──────────────────────────────────────────────────── -->
+      <section class="dash-section" id="section-enrollments">
+        <div class="dash-section-header">
+          <h2 class="dash-section-title">Enrollments</h2>
+          <div class="admin-section-actions">
+            <span class="admin-count"><%= enrollments.paidCount %> paid · <%= enrollments.freeCount %> free</span>
+          </div>
+        </div>
+        <div class="admin-card admin-settings-block">
+          <div class="admin-enroll-grid">
+            <% for (const t of enrollments.tiers) { %>
+              <div class="admin-enroll-tier">
+                <span class="admin-enroll-tier-name"><%= t.name %></span>
+                <span class="admin-enroll-tier-price"><%= t.priceLabel %></span>
+                <span class="admin-enroll-tier-count"><%= t.count %> enrolled</span>
+              </div>
+            <% } %>
+            <div class="admin-enroll-tier admin-enroll-tier--free">
+              <span class="admin-enroll-tier-name">Free / Winter</span>
+              <span class="admin-enroll-tier-price">—</span>
+              <span class="admin-enroll-tier-count"><%= enrollments.freeCount %> gardeners</span>
+            </div>
+          </div>
+          <div class="admin-enroll-total">
+            <span class="admin-enroll-total-label">Estimated revenue</span>
+            <span class="admin-enroll-total-value"><%= enrollments.revenueLabel %></span>
+          </div>
+          <p class="admin-field-hint" style="margin-top:0.6rem">
+            Estimated from catalog prices × paid gardeners.
+            <strong>Stripe is the source of truth</strong> for exact amounts, refunds, and dates.
+            <% if (enrollments.stripeConfigured) { %>
+              Stripe is connected (<%= enrollments.stripeMode %> mode).
+            <% } else { %>
+              Stripe is not configured in this environment.
+            <% } %>
+          </p>
+        </div>
+      </section>
+
       <!-- ── Lessons ──────────────────────────────────────────────────────── -->
       <section class="dash-section" id="section-lessons">
         <div class="dash-section-header">

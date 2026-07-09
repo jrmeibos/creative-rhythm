@@ -3657,10 +3657,39 @@ app.get('/admin', requireAdmin, (req, res) => {
     closingUnlockDate   = fmt(c);
   }
 
+  // ── Enrollments overview ────────────────────────────────────────────────
+  // Count paid students per tier and estimate revenue from the lib/stripe
+  // price catalog (priceCents × paid users). This is a local estimate —
+  // Stripe remains the source of truth for actual amounts, refunds, and
+  // dates. Only students count; admins never carry a paid tier.
+  const tierCatalog = STRIPE.getTiers();
+  const enrollmentTiers = tierCatalog.map(t => {
+    const count = users.filter(u => u.role === 'student' && u.enrollment_tier === t.id).length;
+    return {
+      id: t.id,
+      name: t.name,
+      priceCents: t.priceCents,
+      priceLabel: STRIPE.formatPrice(t.priceCents),
+      count,
+      subtotalCents: count * t.priceCents,
+    };
+  });
+  const paidCount   = enrollmentTiers.reduce((n, t) => n + t.count, 0);
+  const freeCount   = users.filter(u => u.role === 'student' && !u.enrollment_tier).length;
+  const revenueCents = enrollmentTiers.reduce((n, t) => n + t.subtotalCents, 0);
+  const enrollments = {
+    tiers: enrollmentTiers,
+    paidCount,
+    freeCount,
+    revenueLabel: STRIPE.formatPrice(revenueCents),
+    stripeConfigured: STRIPE.isConfigured(),
+    stripeMode: STRIPE.getMode(),
+  };
+
   res.render('admin', {
     title: 'Admin', page: 'admin',
     users, lessons, resources, lessonStats, lessonHomework, courseStartDate,
-    recordingSummary,
+    recordingSummary, enrollments,
     harvestUnlocked, midcourseUnlocked,
     midcourseUnlockDate, closingUnlockDate,
     simulatedToday,

@@ -2895,6 +2895,61 @@ button.mid-card-cta {
   color: #8a4a34;
 }
 
+/* ─── Admin enrollments overview ─────────────────────────────────────────── */
+.admin-enroll-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 0.75rem;
+}
+.admin-enroll-tier {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding: 0.85rem 1rem;
+  background: var(--color-blank-page);
+  border: 1px solid rgba(112, 92, 108, 0.18);
+  border-radius: 8px;
+}
+.admin-enroll-tier--free { background: var(--color-pearl); }
+.admin-enroll-tier-name {
+  font-family: var(--font-body);
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--color-ink-stained);
+}
+.admin-enroll-tier-price {
+  font-family: var(--font-body);
+  font-size: 0.75rem;
+  color: rgba(16, 15, 16, 0.5);
+}
+.admin-enroll-tier-count {
+  font-family: var(--font-display);
+  font-size: 1.35rem;
+  color: var(--color-bloem);
+  margin-top: 0.15rem;
+}
+.admin-enroll-total {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-top: 1rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid rgba(112, 92, 108, 0.18);
+}
+.admin-enroll-total-label {
+  font-family: var(--font-body);
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 600;
+  color: rgba(16, 15, 16, 0.5);
+}
+.admin-enroll-total-value {
+  font-family: var(--font-display);
+  font-size: 1.6rem;
+  color: var(--color-ink-stained);
+}
+
 /* ─── Admin temp-password reveal box ─────────────────────────────────────── */
 .admin-temp-pw-box {
   display: flex;
