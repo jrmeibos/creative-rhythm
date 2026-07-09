@@ -790,17 +790,18 @@ app.post('/api/timezone', requireAuth, (req, res) => {
 // returns the instant the admin flips the toggle to 'live' (or an admin loads
 // /upgrade?preview=full to preview it). Flip it in Admin → Course Settings.
 //
-// Mailchimp embedded-form config for the notify-me box. Populate from your
+// Mailchimp embedded-form config for the notify-me box. Values come from the
 // audience's embedded-form code (Mailchimp → Audience → Signup forms →
-// Embedded forms): the form `action` looks like
-//   https://<DC>.list-manage.com/subscribe/post?u=<U>&id=<ID>
-// Fill dc/u/id below. Until all three are set, the box shows a friendly
-// "signups opening soon" placeholder instead of posting anywhere. The signup
-// posts client-side straight to Mailchimp (JSONP) — no API key, no secret.
+// Embedded forms). The form `action` looks like
+//   https://<HOST>/subscribe/post?u=<U>&id=<ID>&f_id=<F_ID>
+// `host` is that full list-manage host; u/id are the query params. Until all
+// three are set the box shows a friendly "signups opening soon" placeholder
+// instead of posting. The signup posts client-side straight to Mailchimp via
+// its post-json (JSONP) endpoint — no API key, no server round-trip, no secret.
 const MAILCHIMP_SIGNUP = {
-  dc: '',   // e.g. 'us21'  (the subdomain before .list-manage.com)
-  u:  '',   // the u= value from the form action
-  id: '',   // the id= value from the form action
+  host: 'meibostouch.us21.list-manage.com',
+  u:    '98929ca1fa616eb415f3694b2',
+  id:   '86a4e164b2',
 };
 
 // Two-step visual flow on one page: pick a tier → Continue → card form
@@ -819,7 +820,7 @@ app.get('/upgrade', (req, res) => {
   const upgradeMode = db.getSetting('upgrade_mode') || 'coming_soon';
   const adminPreviewFull = !!(sessionUser && sessionUser.role === 'admin' && req.query.preview === 'full');
   if (upgradeMode === 'coming_soon' && !adminPreviewFull) {
-    const mailchimpConfigured = !!(MAILCHIMP_SIGNUP.dc && MAILCHIMP_SIGNUP.u && MAILCHIMP_SIGNUP.id);
+    const mailchimpConfigured = !!(MAILCHIMP_SIGNUP.host && MAILCHIMP_SIGNUP.u && MAILCHIMP_SIGNUP.id);
     return res.render('upgrade-coming-soon', {
       title: 'The full course is coming soon',
       page: 'upgrade',

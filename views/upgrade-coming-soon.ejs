@@ -134,7 +134,13 @@
           btn.disabled = false;
           const ok = data && data.result === 'success';
           if (ok) {
-            showMsg("You're on the list — I'll email you the moment the doors open. 🌱", 'success');
+            // Mailchimp's success msg says "confirm your email" when the
+            // audience uses double opt-in — reflect that so we don't promise
+            // they're subscribed before they've clicked the confirmation link.
+            const needsConfirm = data.msg && /confirm/i.test(data.msg);
+            showMsg(needsConfirm
+              ? "Almost there — check your inbox and click the confirmation link to lock in your spot. 🌱"
+              : "You're on the list — I'll email you the moment the doors open. 🌱", 'success');
             form.reset();
           } else {
             // Mailchimp returns a helpful message (e.g. already subscribed).
@@ -147,7 +153,7 @@
 
         // Mailchimp's post-json endpoint + JSONP callback. The b_<u>_<id>
         // field is the anti-bot honeypot Mailchimp expects (left empty).
-        const base = 'https://' + MC.dc + '.list-manage.com/subscribe/post-json';
+        const base = 'https://' + MC.host + '/subscribe/post-json';
         const url  = base
           + '?u='  + encodeURIComponent(MC.u)
           + '&id=' + encodeURIComponent(MC.id)
