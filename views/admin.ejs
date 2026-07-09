@@ -51,6 +51,22 @@
                     <span class="admin-user-start-fallback" title="No override set; uses the global default course start date.">— uses default</span>
                   <% } %>
                 </span>
+                <% if (u.role === 'student') {
+                  const act = recordingSummary[u.id] || { everRecorded: false, quiet: true, recentCount: 0, daysSince: null, lastRecordedDate: null };
+                  const fmtDate = (s) => new Date(s + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                  let lastLabel;
+                  if (!act.everRecorded) lastLabel = 'No cuttings yet';
+                  else if (act.daysSince === 0) lastLabel = 'Last cutting today';
+                  else if (act.daysSince === 1) lastLabel = 'Last cutting yesterday';
+                  else lastLabel = 'Last cutting ' + fmtDate(act.lastRecordedDate) + ' · ' + act.daysSince + 'd ago';
+                %>
+                  <span class="admin-user-activity <%= act.quiet ? 'admin-user-activity--quiet' : '' %>"
+                        title="<%= act.everRecorded ? ('Last recording: ' + act.lastRecordedDate) : 'This gardener has never recorded a cutting.' %>">
+                    <% if (act.quiet) { %><span class="admin-activity-flag" aria-hidden="true">●</span><% } %>
+                    <span class="admin-activity-last"><%= lastLabel %></span>
+                    <span class="admin-activity-recent"><%= act.recentCount %> in last 7 days</span>
+                  </span>
+                <% } %>
               </div>
               <span class="admin-user-role <%= u.role === 'admin' ? 'admin-role--admin' : '' %>">
                 <%= u.role === 'admin' ? 'Curator' : 'Gardener' %>

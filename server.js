@@ -3610,6 +3610,37 @@ app.get('/admin', requireAdmin, (req, res) => {
   const simulatedToday     = db.getSetting('simulated_today') || null;
   const studentAssessments = db.getAllStudentAssessmentStatus();
 
+  // "Who needs tending" — per-gardener recording activity. Uses the admin's
+  // own "today" (respects Time Travel + timezone) as the reference so the
+  // 7-day window and quiet flag line up with what the admin sees elsewhere.
+  const adminTodayStr  = toLocalDateString(getNow(req.session.user));
+  const windowStartStr = toLocalDateString(
+    new Date(new Date(adminTodayStr + 'T00:00:00').getTime() - 6 * 86400000)
+  );
+  const recordingActivity = db.getRecordingActivityByUser(windowStartStr, adminTodayStr);
+  const recordingSummary = {};
+  const todayMs = new Date(adminTodayStr + 'T00:00:00').getTime();
+  for (const u of users) {
+    const a = recordingActivity.get(u.id);
+    if (a && a.lastRecordedDate) {
+      const daysSince = Math.floor(
+        (todayMs - new Date(a.lastRecordedDate + 'T00:00:00').getTime()) / 86400000
+      );
+      recordingSummary[u.id] = {
+        lastRecordedDate: a.lastRecordedDate,
+        recentCount: a.recentCount,
+        daysSince,
+        quiet: daysSince >= 7,
+        everRecorded: true,
+      };
+    } else {
+      recordingSummary[u.id] = {
+        lastRecordedDate: null, recentCount: 0,
+        daysSince: null, quiet: true, everRecorded: false,
+      };
+    }
+  }
+
   // Attach homework to each lesson for the edit dialog
   const lessonHomework = {};
   for (const l of lessons) {
@@ -3629,6 +3660,7 @@ app.get('/admin', requireAdmin, (req, res) => {
   res.render('admin', {
     title: 'Admin', page: 'admin',
     users, lessons, resources, lessonStats, lessonHomework, courseStartDate,
+    recordingSummary,
     harvestUnlocked, midcourseUnlocked,
     midcourseUnlockDate, closingUnlockDate,
     simulatedToday,

@@ -2858,6 +2858,43 @@ button.mid-card-cta {
   color: rgba(16, 15, 16, 0.45);
 }
 
+/* ─── Who needs tending — per-gardener recording activity ─────────────────── */
+.admin-user-activity {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.35rem;
+  flex-wrap: wrap;
+  font-family: var(--font-body);
+  font-size: 0.78rem;
+  color: rgba(16, 15, 16, 0.6);
+}
+.admin-activity-last { font-weight: 400; }
+.admin-activity-recent {
+  font-size: 0.72rem;
+  letter-spacing: 0.02em;
+  padding: 0.12rem 0.45rem;
+  border-radius: 999px;
+  background: var(--color-new-growth);
+  color: rgba(16, 15, 16, 0.6);
+}
+.admin-activity-flag {
+  color: var(--color-curiositys-kiss);
+  font-size: 0.7rem;
+  line-height: 1;
+}
+/* Gone quiet: no recording in 7+ days — mute + flag so it stands out. */
+.admin-user-activity--quiet {
+  color: var(--color-bloem);
+  font-weight: 400;
+}
+.admin-user-activity--quiet .admin-activity-last { font-weight: 700; }
+.admin-user-activity--quiet .admin-activity-flag { color: #b5654a; }
+.admin-user-activity--quiet .admin-activity-recent {
+  background: rgba(181, 101, 74, 0.12);
+  color: #8a4a34;
+}
+
 /* ─── Share-intentions toggle (near intention cards on dashboard + /goals) ── */
 .share-intentions {
   display: flex;

@@ -3080,6 +3080,35 @@ module.exports = {
     return new Map(rows.map(r => [r.user_id, r.days]));
   },
 
+  // Admin "who needs tending" overview: for every user who has ever recorded,
+  // their most recent recorded_date (overall) plus a count of recordings made
+  // inside the given window (inclusive). Sibling of getCuttingDayCountsByUser,
+  // but counts rows (each cutting) rather than distinct days, and always
+  // surfaces the last-ever date so the admin can spot who's gone quiet.
+  // Users with zero cuttings simply don't appear in the Map (route treats
+  // missing as never-recorded).
+  getRecordingActivityByUser(windowStart, windowEnd) {
+    const lastRows = db.prepare(
+      `SELECT user_id, MAX(recorded_date) AS last_date
+       FROM cuttings GROUP BY user_id`
+    ).all();
+    const countRows = db.prepare(
+      `SELECT user_id, COUNT(*) AS cnt
+       FROM cuttings WHERE recorded_date BETWEEN ? AND ?
+       GROUP BY user_id`
+    ).all(windowStart, windowEnd);
+    const map = new Map();
+    for (const r of lastRows) {
+      map.set(r.user_id, { lastRecordedDate: r.last_date, recentCount: 0 });
+    }
+    for (const r of countRows) {
+      const e = map.get(r.user_id) || { lastRecordedDate: null, recentCount: 0 };
+      e.recentCount = r.cnt;
+      map.set(r.user_id, e);
+    }
+    return map;
+  },
+
   getUserTimezone(userId) {
     const row = db.prepare('SELECT timezone FROM users WHERE id = ?').get(userId);
     return row ? row.timezone : null;
