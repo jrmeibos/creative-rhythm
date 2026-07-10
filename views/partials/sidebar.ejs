@@ -92,6 +92,9 @@
             Calendar
           </a>
         </li>
+        <%# Lessons are hidden from students during the trial run — not ready yet.
+            Admin-only for now; remove this role guard to show students again. %>
+        <% if (user && user.role === 'admin') { %>
         <li class="sidebar-nav-item <%= page === 'lessons' ? 'active' : '' %>">
           <a href="/lessons">
             <svg width="17" height="17" viewBox="0 0 17 17" fill="none" aria-hidden="true">
@@ -103,6 +106,7 @@
             Lessons
           </a>
         </li>
+        <% } %>
         <li class="sidebar-nav-item <%= page === 'community' ? 'active' : '' %>">
           <a href="/community">
             <svg width="17" height="17" viewBox="0 0 17 17" fill="none" aria-hidden="true">

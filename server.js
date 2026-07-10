@@ -1272,6 +1272,10 @@ function normalizeVideoUrl(url) {
 }
 
 app.get('/lessons', requireAuth, (req, res) => {
+  // Lessons are hidden from students during the trial run — not ready yet.
+  // Admin-only for now (nav link + dashboard surfaces are hidden to match);
+  // remove this guard to reopen lessons to students.
+  if (req.session.user.role !== 'admin') return res.redirect('/dashboard');
   const allLessons = db.getAllLessons();
   const completedIds = new Set(db.completedLessonIds(req.session.user.id));
   // Trial students only see lessons within their course length. The
@@ -1294,6 +1298,8 @@ app.get('/lessons', requireAuth, (req, res) => {
 });
 
 app.get('/lessons/:slug', requireAuth, (req, res) => {
+  // Lessons hidden from students during the trial run (see /lessons above).
+  if (req.session.user.role !== 'admin') return res.redirect('/dashboard');
   const lesson = db.getLessonBySlug(req.params.slug);
   if (!lesson) return res.status(404).render('error', { title: '404', message: 'Lesson not found.', user: req.session.user, page: 'lessons' });
   // Block trial students from URL-hacking into a lesson past their length.

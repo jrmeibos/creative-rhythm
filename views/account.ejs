@@ -254,6 +254,9 @@
         <div class="acct-card">
           <p class="acct-section-subtitle">Choose what you'd like to hear about.</p>
 
+          <%# "New Lessons" notification hidden from students during the trial
+              run — lessons aren't live yet. Admin-only; remove guard to restore. %>
+          <% if (user && user.role === 'admin') { %>
           <div class="acct-toggle-row">
             <div class="acct-toggle-text">
               <strong>New Lessons</strong>
@@ -268,6 +271,7 @@
               </button>
             </div>
           </div>
+          <% } %>
 
           <div class="acct-toggle-row">
             <div class="acct-toggle-text">

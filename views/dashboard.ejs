@@ -46,10 +46,14 @@
             <% } %>
           </p>
         </div>
+        <%# Lessons hidden from students during the trial run. The completion
+            pill stays visible to admin only; remove this guard to restore it. %>
+        <% if (user && user.role === 'admin') { %>
         <div class="dash-progress-pill">
           <span class="dash-progress-count"><%= completedCount %> / <%= totalLessons %></span>
           <span class="dash-progress-label">lessons complete</span>
         </div>
+        <% } %>
       </header>
 
       <!-- Day-view: per-day topic + reflection with back/forward day nav.
@@ -538,6 +542,9 @@
       <% } %>
 
       <!-- Continue learning -->
+      <%# Lessons hidden from students during the trial run. Whole section is
+          admin-only for now; remove this role guard to show students again. %>
+      <% if (user && user.role === 'admin') { %>
       <% if (currentLesson) { %>
       <section class="dash-section">
         <div class="dash-section-header">
@@ -565,6 +572,7 @@
           <a href="/lessons" class="dash-section-link">Browse lessons →</a>
         </div>
       </section>
+      <% } %>
       <% } %>
 
       <!-- Daily quote -->
