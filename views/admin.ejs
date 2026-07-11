@@ -926,8 +926,18 @@
             : 'margin-bottom:0.6rem;padding:0.65rem 0.8rem;border-radius:8px;background:var(--color-new-growth);border:1px solid rgba(118,133,108,0.3)';
           const textStyle = isReplaced ? 'color:rgba(16,15,16,0.45)' : '';
 
+          // "Planted" date = when this goal row was created. Use the date part
+          // only so timezone can't shift the calendar day.
+          const planted = s.created_at
+            ? new Date(String(s.created_at).slice(0, 10) + 'T00:00:00')
+                .toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+            : null;
+          const plantedHtml = planted
+            ? `<span style="margin-left:auto;font-size:0.72rem;color:rgba(16,15,16,0.5);white-space:nowrap">Planted ${planted}</span>`
+            : '';
+
           html += `<div style="${cardStyle}">`;
-          html += `<div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.35rem"><strong>Bed ${s.seed_number}</strong> ${pill}</div>`;
+          html += `<div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.35rem"><strong>Bed ${s.seed_number}</strong> ${pill}${plantedHtml}</div>`;
           if (hasFacets) {
             html += `<div style="margin-left:0.15rem;${textStyle}">`;
             html += `<div><strong>Soil:</strong> ${esc(s.soil)  || '—'}</div>`;
