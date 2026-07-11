@@ -95,18 +95,25 @@
               aria-expanded="false">How to do the daily recording ↓</button>
     </div>
   <% } else { %>
-    <p class="dayview-empty">
-      <% if (dayview.isToday) { %>
-        Nothing here yet. Record when you're ready.
-      <% } else { %>
-        Nothing recorded for this day. You can still add one if you'd like.
-      <% } %>
-    </p>
-    <div class="dayview-cta-row">
-      <button type="button" class="recording-card-btn" id="dayview-add-btn">Add a recording for this day</button>
-      <button type="button" class="recording-about-toggle"
-              id="dayview-howto-toggle" aria-controls="dayview-howto-panel"
-              aria-expanded="false">How to do the daily recording ↓</button>
+    <div class="dayview-empty-box">
+      <svg class="dayview-empty-icon" viewBox="0 0 24 24" fill="none"
+           stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true">
+        <rect x="2.5" y="6.5" width="13" height="11" rx="2.5"/>
+        <path d="M15.5 10.5 L21 7.5 L21 16.5 L15.5 13.5 Z"/>
+      </svg>
+      <p class="dayview-empty">
+        <% if (dayview.isToday) { %>
+          Nothing here yet. Record when you're ready.
+        <% } else { %>
+          Nothing recorded for this day. You can still add one if you'd like.
+        <% } %>
+      </p>
+      <div class="dayview-cta-row">
+        <button type="button" class="recording-card-btn" id="dayview-add-btn">Add a recording for this day</button>
+        <button type="button" class="recording-about-toggle"
+                id="dayview-howto-toggle" aria-controls="dayview-howto-panel"
+                aria-expanded="false">How to do the daily recording ↓</button>
+      </div>
     </div>
   <% } %>
 

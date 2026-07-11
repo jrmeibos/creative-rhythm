@@ -258,12 +258,36 @@
           margin: 0;
           white-space: pre-wrap;
         }
+        /* Empty "slot" for a day with no recording yet — a dashed placeholder
+           that reads as fillable and disappears once a cutting is added. */
+        .dayview-empty-box {
+          margin-top: 1.25rem;
+          padding: 2rem 1.5rem;
+          border: 1.5px dashed rgba(118, 133, 108, 0.5);
+          border-radius: 14px;
+          background: rgba(230, 235, 224, 0.35);
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          text-align: center;
+          gap: 1rem;
+        }
+        .dayview-empty-icon {
+          width: 34px;
+          height: 34px;
+          color: var(--color-understory);
+          opacity: 0.75;
+        }
         .dayview-empty {
-          font-family: var(--font-display);
-          font-style: italic;
-          font-size: 1.02rem;
-          color: rgba(16, 15, 16, 0.55);
-          margin: 1.25rem 0 1rem;
+          font-family: var(--font-body);
+          font-size: 0.98rem;
+          font-weight: 300;
+          color: rgba(16, 15, 16, 0.6);
+          margin: 0;
+        }
+        .dayview-empty-box .dayview-cta-row {
+          margin-top: 0;
+          justify-content: center;
         }
         .dayview-cta-row {
           margin-top: 1.1rem;
