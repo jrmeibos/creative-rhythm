@@ -2,130 +2,172 @@
 <html lang="en">
 <head>
   <%- include('partials/head') %>
-  <link rel="stylesheet" href="/css/login.css">
+  <link rel="stylesheet" href="/css/signup.css">
 </head>
-<body class="login-body">
+<body class="signup-body">
 
-  <div class="login-layout">
+  <main class="sg-page">
 
-    <!-- Left brand panel -->
-    <div class="login-brand">
+    <!-- ── Hero ─────────────────────────────────────────────────────────── -->
+    <header class="sg-hero">
       <a href="https://www.meibostouch.com/the-creatives-garden"
-         target="_blank" rel="noopener"
-         class="login-brand-link"
+         target="_blank" rel="noopener" class="sg-logo-link"
          aria-label="The Creative's Garden — visit the course page on meibostouch.com">
-        <img
-          src="/images/brand/Stacked_Logo.png"
-          alt=""
-          class="login-brand-icon">
+        <img src="/images/brand/The Creative's Garden Icon with Text_1.svg"
+             alt="The Creative's Garden" class="sg-logo">
       </a>
-      <p class="login-attribution login-attribution--on-brand">
-        A content creation course by The Meibos Touch.
-        <a href="https://www.meibostouch.com/the-creatives-garden"
-           target="_blank" rel="noopener"
-           class="login-attribution-link">Learn more here</a>.
+      <p class="sg-eyebrow">The free 3-week challenge</p>
+      <h1 class="sg-hero-title">Grow in private.<br>Bloom when you're ready.</h1>
+      <p class="sg-hero-sub">
+        The Creative's Garden is a content creation course for creatives who want
+        to share their work online — but freeze, overthink, or burn out trying.
+        It starts with three weeks, completely free.
       </p>
-    </div>
+      <a href="#signup" class="btn btn-primary sg-hero-cta">Start the free 3 weeks →</a>
+      <p class="sg-signin-line">
+        Already have an account?
+        <a href="/<%= returnTo ? '?returnTo=' + encodeURIComponent(returnTo) : '' %>" class="sg-link">Sign in</a>
+      </p>
+    </header>
 
-    <!-- Right form panel -->
-    <div class="login-form-panel">
-      <div class="login-form-inner">
+    <!-- ── This is for you if ───────────────────────────────────────────── -->
+    <section class="sg-section">
+      <h2 class="sg-section-title">This is for you if…</h2>
+      <ul class="sg-list">
+        <li>You post in anxious bursts, go quiet for weeks, then feel guilty about the silence.</li>
+        <li>You have plenty of ideas — until it's time to share, and your mind goes blank.</li>
+        <li>You can hype up everyone else's work, but freeze the second it's your own.</li>
+        <li>You're worn out from performing for the algorithm, and want visibility to feel like <em>yours</em>.</li>
+      </ul>
+      <p class="sg-note">
+        If that sounds familiar, it's not a discipline problem. When being seen
+        doesn't feel safe, showing up consistently is hard — so we start somewhere
+        gentler.
+      </p>
+    </section>
 
-        <a href="https://www.meibostouch.com/the-creatives-garden"
-           target="_blank" rel="noopener"
-           class="login-logo-link"
-           aria-label="The Creative's Garden — visit the course page on meibostouch.com">
-          <img
-            src="/images/brand/The Creative's Garden Icon with Text_1.svg"
-            alt=""
-            class="login-logo">
-        </a>
+    <!-- ── How the free weeks work ──────────────────────────────────────── -->
+    <section class="sg-section sg-section--tinted">
+      <p class="sg-eyebrow sg-eyebrow--sage">Weeks 1–3 · Winter</p>
+      <h2 class="sg-section-title">How the free three weeks work</h2>
+      <p class="sg-body">
+        It begins with one small ritual: a daily video recording — just for you.
+      </p>
+      <p class="sg-body">
+        Come as you are. No makeup, no script, pajamas welcome. Nobody watches
+        these but you (and even that's optional). You record, then log what you
+        talked about and how it felt in your body.
+      </p>
+      <p class="sg-body">
+        That's the whole practice: three weeks of quietly showing up for yourself,
+        to see what unblocks.
+      </p>
+    </section>
 
-        <p class="login-form-eyebrow">Start with Winter — free</p>
-        <h2 class="login-form-title">Create your account</h2>
+    <!-- ── What's included, free ────────────────────────────────────────── -->
+    <section class="sg-section">
+      <h2 class="sg-section-title">What's included, free</h2>
+      <div class="sg-grid">
+        <div class="sg-card">
+          <h3 class="sg-card-title">Three weeks of guided practice</h3>
+          <p>Pre-recorded lessons, so you always have a next step and can move at your own pace.</p>
+        </div>
+        <div class="sg-card">
+          <h3 class="sg-card-title">Your own private platform</h3>
+          <p>A personal login with optional daily prompts, where you log each recording and watch what shifts.</p>
+        </div>
+        <div class="sg-card">
+          <h3 class="sg-card-title">A group Discord</h3>
+          <p>Grow alongside other creatives who know exactly what it's like to struggle to show up online.</p>
+        </div>
+        <div class="sg-card">
+          <h3 class="sg-card-title">Seed Packets</h3>
+          <p>A free resource to map out your curiosities and get clear on what's genuinely yours to say.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Signup form ──────────────────────────────────────────────────── -->
+    <section class="sg-section sg-signup" id="signup">
+      <div class="sg-form-card">
+        <h2 class="sg-form-title">Start your free three weeks</h2>
+        <p class="sg-form-sub">No card required. No pressure. Ever.</p>
 
         <% if (error) { %>
-          <div class="login-error" role="alert">
-            <%= error %>
-          </div>
+          <div class="sg-error" role="alert"><%= error %></div>
         <% } %>
 
-        <form action="/signup" method="POST" class="login-form" novalidate>
+        <form action="/signup" method="POST" class="sg-form" novalidate>
           <div class="form-group">
             <label for="name" class="form-label">Name</label>
-            <input
-              type="text"
-              id="name"
-              name="name"
-              class="form-input"
-              placeholder="Your name"
-              autocomplete="name"
-              value="<%= name %>"
-              required>
+            <input type="text" id="name" name="name" class="form-input"
+                   placeholder="Your name" autocomplete="name"
+                   value="<%= name %>" required>
           </div>
 
           <div class="form-group">
             <label for="email" class="form-label">Email</label>
-            <input
-              type="email"
-              id="email"
-              name="email"
-              class="form-input"
-              placeholder="you@example.com"
-              autocomplete="email"
-              value="<%= email %>"
-              required>
+            <input type="email" id="email" name="email" class="form-input"
+                   placeholder="you@example.com" autocomplete="email"
+                   value="<%= email %>" required>
           </div>
 
           <div class="form-group">
             <label for="password" class="form-label">Password</label>
-            <input
-              type="password"
-              id="password"
-              name="password"
-              class="form-input"
-              placeholder="At least 8 characters"
-              autocomplete="new-password"
-              required>
-            <p class="login-help" style="margin-top:0.4rem;font-size:0.78rem">
-              Minimum 8 characters. Include a number or symbol.
-            </p>
+            <input type="password" id="password" name="password" class="form-input"
+                   placeholder="At least 8 characters" autocomplete="new-password" required>
+            <p class="sg-help">Minimum 8 characters. Include a number or symbol.</p>
           </div>
 
-          <!-- Timezone is detected client-side (see script below) and posted as
-               a hidden field. Server falls back to America/Denver if empty. -->
+          <!-- Timezone detected client-side; server falls back to America/Denver. -->
           <input type="hidden" id="timezone" name="timezone" value="">
           <% if (returnTo) { %>
             <input type="hidden" name="returnTo" value="<%= returnTo %>">
           <% } %>
 
-          <button type="submit" class="btn btn-primary btn-full">
-            Create account →
-          </button>
+          <button type="submit" class="btn btn-primary btn-full">Start the free 3 weeks →</button>
         </form>
 
-        <p class="login-forgot">
-          Already have an account? <a href="/<%= returnTo ? '?returnTo=' + encodeURIComponent(returnTo) : '' %>" class="login-forgot-link">Sign in</a>
+        <p class="sg-signin-line">
+          Already have an account?
+          <a href="/<%= returnTo ? '?returnTo=' + encodeURIComponent(returnTo) : '' %>" class="sg-link">Sign in</a>
         </p>
-
-        <p class="login-help">
-          Signing up starts your free three-week Winter journey. You can continue
-          into the full 12-week course any time.
-        </p>
-
       </div>
-    </div>
+    </section>
 
-  </div>
+    <!-- ── After the challenge: the full course ─────────────────────────── -->
+    <section class="sg-section">
+      <p class="sg-eyebrow sg-eyebrow--sage">After Winter</p>
+      <h2 class="sg-section-title">Where it can grow from here</h2>
+      <p class="sg-body">
+        The free three weeks are <strong>Winter</strong> — the first season of a full
+        12-week journey through Spring, Summer, and Fall. Each season moves you a little
+        closer to sharing: from recording privately, to watching yourself back, to editing,
+        to finally sharing from overflow. You can continue into the full course whenever
+        you're ready (it starts at $397) — but there's no pressure. Winter stands on its own.
+      </p>
+      <p class="sg-note">
+        A note of honesty: this is the very first cohort of The Creative's Garden. You'd
+        be one of the first people ever to walk through it, which means your feedback will
+        shape what it becomes — less a polished product, more a collaboration.
+      </p>
+    </section>
+
+    <footer class="sg-footer">
+      A content creation course by
+      <a href="https://www.meibostouch.com/the-creatives-garden" target="_blank" rel="noopener" class="sg-link">The Meibos Touch</a>.
+      <a href="https://www.meibostouch.com/the-creatives-garden" target="_blank" rel="noopener" class="sg-link">Learn more here</a>.
+    </footer>
+
+  </main>
 
   <script>
-    // Pass the user's IANA timezone to the server so their course_start_date
-    // matches their wall clock. Falls back to America/Denver server-side if
-    // this is empty or unrecognized.
+    // Pass the user's IANA timezone so their course_start_date matches their
+    // wall clock. Server falls back to America/Denver if empty/unrecognized.
     try {
       const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
       if (tz) document.getElementById('timezone').value = tz;
-    } catch (_) { /* no-op — fallback handles it */ }
+    } catch (_) { /* no-op — server fallback handles it */ }
   </script>
 
 </body>

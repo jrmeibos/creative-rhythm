@@ -1,0 +1,246 @@
+/* ─── Signup / free-challenge page ───────────────────────────────────────── */
+/* Deliberately different from the split-panel login: a single, centered,
+   scrollable marketing column on the warm pearl background. */
+
+.signup-body {
+  min-height: 100vh;
+  background: var(--color-pearl);
+}
+
+.sg-page {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 3rem 1.5rem 4rem;
+}
+
+/* ─── Hero ───────────────────────────────────────────────────────────────── */
+.sg-hero { text-align: center; }
+
+.sg-logo-link {
+  display: block;
+  width: fit-content;
+  margin: 0 auto 1.75rem;
+  line-height: 0;
+}
+.sg-logo {
+  display: block;
+  width: 100%;
+  max-width: 150px;
+  height: auto;
+}
+
+.sg-eyebrow {
+  font-family: var(--font-body);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--color-curiositys-kiss);
+  margin: 0 0 0.75rem;
+}
+.sg-eyebrow--sage { color: var(--color-understory); }
+
+.sg-hero-title {
+  font-family: var(--font-display);
+  font-size: 2.6rem;
+  font-weight: 400;
+  line-height: 1.12;
+  color: var(--color-ink-stained);
+  margin: 0 0 1.1rem;
+}
+
+.sg-hero-sub {
+  font-family: var(--font-body);
+  font-size: 1.02rem;
+  font-weight: 300;
+  line-height: 1.6;
+  color: rgba(16, 15, 16, 0.75);
+  max-width: 34rem;
+  margin: 0 auto 1.75rem;
+}
+
+.sg-hero-cta {
+  display: inline-block;
+  width: auto;
+  text-decoration: none;
+  padding: 0.85rem 2rem;
+  font-size: 0.95rem;
+  letter-spacing: 0.03em;
+}
+
+.sg-signin-line {
+  font-family: var(--font-body);
+  font-size: 0.88rem;
+  font-weight: 300;
+  color: rgba(16, 15, 16, 0.6);
+  margin: 1rem 0 0;
+  text-align: center;
+}
+.sg-link {
+  color: var(--color-bloem);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.sg-link:hover { opacity: 0.75; }
+
+/* ─── Sections ───────────────────────────────────────────────────────────── */
+.sg-section {
+  margin-top: 3rem;
+  padding-top: 2.5rem;
+  border-top: 1px solid rgba(112, 92, 108, 0.14);
+}
+.sg-section--tinted {
+  background: var(--color-new-growth);
+  border: 1px solid rgba(118, 133, 108, 0.25);
+  border-radius: 16px;
+  padding: 2rem 1.75rem;
+  border-top: 1px solid rgba(118, 133, 108, 0.25);
+}
+
+.sg-section-title {
+  font-family: var(--font-display);
+  font-size: 1.7rem;
+  font-weight: 400;
+  color: var(--color-ink-stained);
+  margin: 0 0 1.25rem;
+  line-height: 1.2;
+}
+
+.sg-body {
+  font-family: var(--font-body);
+  font-size: 1rem;
+  font-weight: 300;
+  line-height: 1.65;
+  color: rgba(16, 15, 16, 0.8);
+  margin: 0 0 1rem;
+}
+.sg-body:last-child { margin-bottom: 0; }
+
+.sg-note {
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+  font-weight: 300;
+  font-style: italic;
+  line-height: 1.6;
+  color: rgba(16, 15, 16, 0.62);
+  margin: 1.25rem 0 0;
+}
+
+.sg-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.sg-list li {
+  position: relative;
+  padding-left: 1.6rem;
+  margin-bottom: 0.85rem;
+  font-family: var(--font-body);
+  font-size: 1rem;
+  font-weight: 300;
+  line-height: 1.55;
+  color: rgba(16, 15, 16, 0.8);
+}
+.sg-list li::before {
+  content: "";
+  position: absolute;
+  left: 0.15rem;
+  top: 0.62em;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--color-curiositys-kiss);
+}
+
+/* ─── Included grid ──────────────────────────────────────────────────────── */
+.sg-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+}
+.sg-card {
+  background: var(--color-blank-page);
+  border: 1px solid rgba(112, 92, 108, 0.16);
+  border-radius: 12px;
+  padding: 1.25rem 1.35rem;
+}
+.sg-card-title {
+  font-family: var(--font-body);
+  font-size: 0.98rem;
+  font-weight: 700;
+  color: var(--color-ink-stained);
+  margin: 0 0 0.4rem;
+}
+.sg-card p {
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  font-weight: 300;
+  line-height: 1.55;
+  color: rgba(16, 15, 16, 0.72);
+  margin: 0;
+}
+
+/* ─── Signup form ────────────────────────────────────────────────────────── */
+.sg-signup { border-top: none; }
+.sg-form-card {
+  background: var(--color-blank-page);
+  border: 1px solid rgba(112, 92, 108, 0.2);
+  border-radius: 18px;
+  padding: 2.25rem 2rem;
+  box-shadow: 0 12px 40px rgba(112, 92, 108, 0.08);
+}
+.sg-form-title {
+  font-family: var(--font-display);
+  font-size: 1.7rem;
+  font-weight: 400;
+  color: var(--color-ink-stained);
+  text-align: center;
+  margin: 0 0 0.4rem;
+}
+.sg-form-sub {
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  font-weight: 300;
+  color: rgba(16, 15, 16, 0.6);
+  text-align: center;
+  margin: 0 0 1.75rem;
+}
+.sg-form { display: flex; flex-direction: column; }
+.sg-help {
+  margin-top: 0.4rem;
+  font-family: var(--font-body);
+  font-size: 0.78rem;
+  font-weight: 300;
+  color: rgba(16, 15, 16, 0.5);
+}
+.sg-error {
+  background: rgba(216, 176, 171, 0.25);
+  border: 1px solid rgba(216, 176, 171, 0.6);
+  border-radius: var(--radius-sm);
+  padding: 0.75rem 1rem;
+  font-family: var(--font-body);
+  font-size: 0.875rem;
+  font-weight: 300;
+  color: #6b3430;
+  margin-bottom: 1.25rem;
+}
+
+/* ─── Footer ─────────────────────────────────────────────────────────────── */
+.sg-footer {
+  margin-top: 3rem;
+  padding-top: 2rem;
+  border-top: 1px solid rgba(112, 92, 108, 0.14);
+  text-align: center;
+  font-family: var(--font-body);
+  font-size: 0.82rem;
+  font-weight: 300;
+  color: rgba(16, 15, 16, 0.5);
+  line-height: 1.6;
+}
+
+/* ─── Responsive ─────────────────────────────────────────────────────────── */
+@media (max-width: 560px) {
+  .sg-hero-title { font-size: 2.05rem; }
+  .sg-grid { grid-template-columns: 1fr; }
+  .sg-form-card { padding: 1.75rem 1.35rem; }
+}
