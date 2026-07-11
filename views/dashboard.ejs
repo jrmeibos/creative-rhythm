@@ -461,8 +461,6 @@
           <a href="/weekly-intentions" class="dash-section-link">View & edit all →</a>
         </div>
 
-        <%- include('partials/share-intentions-toggle') %>
-
           <div class="goals-grid">
             <%
               const categories = [
@@ -525,6 +523,10 @@
               </div>
             <% } %>
           </div>
+
+        <div style="margin-top: 1.5rem">
+          <%- include('partials/share-intentions-toggle') %>
+        </div>
       </section>
 
       <!-- Current Season — hidden entirely for pre-Week-4 trial students.
