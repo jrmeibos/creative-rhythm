@@ -40,15 +40,28 @@
     <% } %>
   </header>
 
-  <% if (dayview.seasonLabel) { %>
+  <% if (dayview.seasonLabel || dayview.aboutText || dayview.topic) { %>
+    <%# Weeks 1–3 are the free Winter block — reframe the "about" toggle around
+        the daily recording rather than the season. %>
+    <% const aboutLabel = (dayview.season === 'winter') ? 'About the daily recording' : 'About this season'; %>
     <div class="dayview-season-row">
-      <span class="recording-card-season"><%= dayview.seasonLabel.toUpperCase() %></span>
+      <% if (dayview.seasonLabel) { %>
+        <span class="recording-card-season"><%= dayview.seasonLabel.toUpperCase() %></span>
+      <% } %>
       <% if (dayview.aboutText) { %>
         <button type="button"
                 class="recording-about-toggle"
                 id="dayview-about-toggle"
+                data-label="<%= aboutLabel %>"
                 aria-controls="dayview-about-panel"
-                aria-expanded="false">About this season ↓</button>
+                aria-expanded="false"><%= aboutLabel %> ↓</button>
+      <% } %>
+      <% if (dayview.topic) { %>
+        <button type="button"
+                class="recording-about-toggle"
+                id="dayview-topic-toggle"
+                aria-controls="dayview-topic-panel"
+                aria-expanded="false">Want an idea of what to talk about today? ↓</button>
       <% } %>
     </div>
     <% if (dayview.aboutText) { %>
@@ -56,17 +69,11 @@
         <p><%= dayview.aboutText %></p>
       </div>
     <% } %>
-  <% } %>
-
-  <% if (dayview.topic) { %>
-    <button type="button"
-            class="recording-about-toggle"
-            id="dayview-topic-toggle"
-            aria-controls="dayview-topic-panel"
-            aria-expanded="false">Want an idea of what to talk about today? ↓</button>
-    <div id="dayview-topic-panel" class="recording-about-panel is-hidden">
-      <p class="recording-card-prompt">"<%= dayview.topic %>"</p>
-    </div>
+    <% if (dayview.topic) { %>
+      <div id="dayview-topic-panel" class="recording-about-panel is-hidden">
+        <p class="recording-card-prompt">"<%= dayview.topic %>"</p>
+      </div>
+    <% } %>
   <% } %>
 
   <%# Shared "How to do the daily recording" toggle markup. Rendered inside each
