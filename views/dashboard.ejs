@@ -355,6 +355,23 @@
               }
               return;
             }
+            const howtoBtn = e.target.closest('#dayview-howto-toggle');
+            if (howtoBtn) {
+              const panel = container.querySelector('#dayview-howto-panel');
+              if (panel) {
+                const opened = panel.classList.toggle('is-hidden') === false;
+                howtoBtn.setAttribute('aria-expanded', opened ? 'true' : 'false');
+                howtoBtn.textContent = opened
+                  ? 'How to do the daily recording ↑'
+                  : 'How to do the daily recording ↓';
+                // Lazy-load the YouTube iframe the first time it's opened.
+                if (opened) {
+                  const f = panel.querySelector('iframe[data-src]');
+                  if (f && !f.src) f.src = f.getAttribute('data-src');
+                }
+              }
+              return;
+            }
             if (e.target.closest('#dayview-add-btn'))    { showForm(); return; }
             if (e.target.closest('#dayview-cancel'))     { hideForm(true); return; }
             if (e.target.closest('#dayview-save'))       { saveReflection(); return; }

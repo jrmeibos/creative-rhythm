@@ -69,6 +69,25 @@
     </div>
   <% } %>
 
+  <%# How-to video for the daily recording practice. The iframe is lazy-loaded
+      (data-src → src on first open) so YouTube isn't pulled in on every day
+      render or day-nav re-render. Toggle wired up in dashboard.ejs. %>
+  <button type="button"
+          class="recording-about-toggle"
+          id="dayview-howto-toggle"
+          aria-controls="dayview-howto-panel"
+          aria-expanded="false">How to do the daily recording ↓</button>
+  <div id="dayview-howto-panel" class="recording-about-panel is-hidden">
+    <div class="recording-howto-video">
+      <iframe
+        data-src="https://www.youtube.com/embed/_eZRUVOSv4Q"
+        title="How to do the daily recording"
+        frameborder="0"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+        allowfullscreen></iframe>
+    </div>
+  </div>
+
   <% if (dayview.cuttings && dayview.cuttings.length) { %>
     <% dayview.cuttings.forEach(function (c, idx) { %>
       <% const populated = cuttingPrompts.filter(p => c[p.key] != null && String(c[p.key]).trim() !== ''); %>
