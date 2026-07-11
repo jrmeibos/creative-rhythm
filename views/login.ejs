@@ -19,6 +19,9 @@
           alt=""
           class="login-brand-icon">
       </a>
+      <p class="login-brand-tagline">Visibility Unblocking for Creatives</p>
+      <a href="/signup<%= returnTo ? '?returnTo=' + encodeURIComponent(returnTo) : '' %>"
+         class="login-brand-cta">Join the free 3 week challenge →</a>
       <p class="login-attribution login-attribution--on-brand">
         <a href="https://www.meibostouch.com/the-creatives-garden"
            target="_blank" rel="noopener"
@@ -84,16 +87,15 @@
         </form>
 
         <p class="login-forgot">
+          <a href="mailto:julia@meibostouch.com" class="login-forgot-link">Contact us</a>
+          <span class="login-forgot-sep" aria-hidden="true">·</span>
           <a href="/forgot-password" class="login-forgot-link">Forgot your password?</a>
         </p>
 
-        <p class="login-forgot">
-          New here? <a href="/signup<%= returnTo ? '?returnTo=' + encodeURIComponent(returnTo) : '' %>" class="login-forgot-link">Start your free Winter journey →</a>
-        </p>
-
-        <p class="login-help">
-          Trouble signing in? <a href="mailto:julia@meibostouch.com" class="login-help-link">Reach out to Julia directly</a>.
-        </p>
+        <!-- The challenge signup CTA lives on the left brand panel, which is
+             hidden on mobile — surface it here so phone visitors still see it. -->
+        <a href="/signup<%= returnTo ? '?returnTo=' + encodeURIComponent(returnTo) : '' %>"
+           class="login-signup-mobile">Join the free 3 week challenge →</a>
 
       </div>
     </div>
