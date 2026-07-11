@@ -6,6 +6,13 @@
 </head>
 <body class="ob-body">
 
+  <% if (typeof adminPreview !== 'undefined' && adminPreview) { %>
+    <div class="ob-preview-banner">
+      Admin preview — students won't see this bar. Nothing you do here is saved.
+      <a href="/dashboard">Exit preview →</a>
+    </div>
+  <% } %>
+
   <!-- Progress bar -->
   <div class="ob-progress" id="ob-progress">
     <div class="ob-progress-inner">

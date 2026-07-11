@@ -1984,20 +1984,29 @@ async function notifyAdminOfTrialClosing(student, row) {
 }
 
 app.get('/onboarding', requireAuth, (req, res) => {
-  if (req.session.user.role === 'admin') return res.redirect('/dashboard');
-  if (req.session.user.onboarding_completed) return res.redirect('/dashboard');
+  // Admin preview: /onboarding?preview=1 lets Julia view the flow (e.g. to
+  // check the welcome video) without a test account. It never writes — the
+  // onboarding API routes below no-op for admins — so clicking through is safe.
+  const adminPreview = req.session.user.role === 'admin' && req.query.preview === '1';
+  if (req.session.user.role === 'admin' && !adminPreview) return res.redirect('/dashboard');
+  if (req.session.user.onboarding_completed && !adminPreview) return res.redirect('/dashboard');
   res.render('onboarding', {
     title: 'Welcome',
-    questions: ASSESSMENT_QUESTIONS
+    questions: ASSESSMENT_QUESTIONS,
+    adminPreview
   });
 });
 
 app.post('/api/onboarding/assessment', requireAuth, (req, res) => {
+  // Admin preview never persists — admins have no onboarding data.
+  if (req.session.user.role === 'admin') return res.json({ ok: true, preview: true });
   db.upsertAssessment(req.session.user.id, 'opening', req.body);
   res.json({ ok: true });
 });
 
 app.post('/api/onboarding/complete', requireAuth, (req, res) => {
+  // Admin preview never persists or emails a milestone — just bounce home.
+  if (req.session.user.role === 'admin') return res.json({ ok: true, redirect: '/dashboard', preview: true });
   const userId = req.session.user.id;
   db.setOnboardingComplete(userId);
   console.log(`✓ Onboarding complete: user ${userId}`);
