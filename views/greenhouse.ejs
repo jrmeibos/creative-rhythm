@@ -55,13 +55,30 @@
           <h1 class="dash-greeting-text">The Greenhouse</h1>
         </div>
         <% if (isWinterLocked) { %>
-        <p class="gh-subtitle">A quiet greenhouse. Beds wait for Spring.</p>
+        <p class="gh-subtitle">Your private place to cultivate, nurture, grow, and share your thoughts.</p>
         <% } else { %>
         <p class="gh-subtitle">Plant three goals. What do you hope to grow?</p>
         <% } %>
       </header>
 
+      <% if (isWinterLocked) { %>
+      <!-- Winter/trial: show the roof scene and surface Your Cuttings to the
+           top (reviewing recordings is the practice during these weeks). The
+           beds are locked until Spring — the message sits right above them. -->
+      <section class="garden-visual">
+        <div class="garden-visual-illustration">
+          <img src="/images/greenhouse/greenhouse-roof-3.svg" alt="" class="plant-svg" />
+        </div>
+      </section>
+      <%- include('partials/greenhouse-cuttings-section') %>
+      <% } %>
+
       <section class="dash-section">
+        <% if (isWinterLocked) { %>
+          <p class="gh-beds-caption gh-beds-caption--winter">
+            It's currently Winter in the garden. Return in <% if (user && (user.course_length_weeks || 12) < 12) { %><a href="/upgrade" class="gh-winter-link">Spring</a><% } else { %>Spring<% } %> to plant your goals.
+          </p>
+        <% } %>
         <div class="gh-beds">
           <% for (let n = 1; n <= 3; n++) { %>
             <% const isBedEmpty = emptyBedPositions.includes(n); %>
@@ -75,7 +92,7 @@
                 <p class="gh-bed-fallow-note">Resting this season</p>
                 <a href="/greenhouse/plant?bed=<%= n %>" class="gh-bed-fallow-replant">Plant something here →</a>
               <% } else if (isWinterLocked) { %>
-                <%# Winter: beds are locked; the explanation lives in the caption below. %>
+                <%# Winter: beds are locked; the explanation sits above the beds. %>
               <% } else { %>
                 <div class="gh-bed-empty-actions">
                   <a href="/greenhouse/plant?bed=<%= n %>" class="gh-bed-cta">+ plant a goal</a>
@@ -85,34 +102,20 @@
             </div>
           <% } %>
         </div>
-        <% if (isWinterLocked) { %>
-          <p class="gh-beds-caption gh-beds-caption--winter">
-            It's currently Winter in the garden. Return in <% if (user && (user.course_length_weeks || 12) < 12) { %><a href="/upgrade" class="gh-winter-link">Spring</a><% } else { %>Spring<% } %> to plant your goals.
-          </p>
-        <% } else { %>
+        <% if (!isWinterLocked) { %>
           <p class="gh-beds-caption">You can plant up to three goals here. Plant them one at a time, in whatever order feels right.</p>
         <% } %>
       </section>
 
-      <!-- Ordered newest-seasonal first so the current-season assignment
-           sits at the top of the greenhouse:
-             Winter  → Cuttings only
-             Spring  → Tending, Cuttings
-             Summer  → Make, Tending, Cuttings
-             Autumn  → Share, Make, Tending, Cuttings
-           Each partial self-hides if its seasonal flag isn't set. -->
-
-      <!-- ── Share the Bounty — Autumn only (self-hides otherwise) ─────── -->
+      <!-- Seasonal sections (Spring+). Each self-hides in Winter. -->
       <%- include('partials/greenhouse-autumn-section') %>
-
-      <!-- ── Make Something — Summer+ only (self-hides pre-Summer) ────── -->
       <%- include('partials/greenhouse-summer-section') %>
-
-      <!-- ── Tend Your Cuttings — Spring+ only (self-hides pre-Spring) ────── -->
       <%- include('partials/greenhouse-tending-section') %>
 
-      <!-- ── Your Cuttings — always visible after welcome ────────────── -->
+      <!-- Your Cuttings — at the bottom outside Winter (Winter surfaces it up top). -->
+      <% if (!isWinterLocked) { %>
       <%- include('partials/greenhouse-cuttings-section') %>
+      <% } %>
 
       <% } else { %>
       <!-- ══ TENDING STATE ════════════════════════════════════════════════ -->

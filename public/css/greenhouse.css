@@ -973,6 +973,7 @@ details[open] .gh-planted-summary::before { content: '▾  '; }
   font-weight: 400;
   font-size: 0.98rem;
   color: var(--color-understory);
+  margin-bottom: 1.75rem;
 }
 .gh-winter-link {
   color: var(--color-understory);
