@@ -4105,48 +4105,20 @@ app.delete('/api/admin/resources/:id', requireAdmin, (req, res) => {
   res.json({ ok: true });
 });
 
-// ─── Daily cuttings digest ─────────────────────────────────────────────────
-// Triggered by an external cron (GitHub Actions) hitting this route every
-// morning. Reports yesterday's cuttings — one email per student who
-// recorded something. Protected by CRON_SECRET in the X-Cron-Secret header
-// instead of the admin session, because the cron caller doesn't have one.
+// ─── Shared cron auth ──────────────────────────────────────────────────────
+// Constant-time compare for the X-Cron-Secret header used by the cron-driven
+// routes below (nightly backup, daily reminders). Bails on length mismatch.
 //
-// Gated by a constant-time compare on the secret to avoid timing-based
-// guessing, and bails fast with 503 if CRON_SECRET isn't set (so a
-// misconfigured production never silently accepts unauthenticated requests).
-// Response body includes the per-line trace so you can read it in the
-// GitHub Actions logs.
-const { runDigest: runDailyDigest } = require('./lib/daily-cuttings-digest');
-
+// NOTE: The daily *cuttings digest* automation was removed (July 2026). It
+// emailed the admin a PDF of each student's private daily reflections, which
+// conflicted with the platform's "grow in private" promise. Engagement is now
+// tracked without content via the admin "Who needs tending" view.
 function safeEqual(a, b) {
   const ab = Buffer.from(String(a), 'utf8');
   const bb = Buffer.from(String(b), 'utf8');
   if (ab.length !== bb.length) return false;
   return require('crypto').timingSafeEqual(ab, bb);
 }
-
-app.post('/admin/run-daily-digest', async (req, res) => {
-  const expected = process.env.CRON_SECRET;
-  if (!expected) {
-    return res.status(503).json({ error: 'CRON_SECRET not configured on this server.' });
-  }
-  const provided = req.get('X-Cron-Secret') || '';
-  if (!safeEqual(provided, expected)) {
-    return res.status(401).json({ error: 'Invalid or missing X-Cron-Secret.' });
-  }
-  const dryRun = req.query.dryRun === '1' || req.query.dryRun === 'true';
-
-  const log = [];
-  const capture = (line) => { log.push(line); console.log(line); };
-
-  try {
-    const summary = await runDailyDigest({ dryRun, log: capture });
-    res.json({ ok: true, dryRun, summary, log });
-  } catch (err) {
-    console.error('[digest route] fatal:', err);
-    res.status(500).json({ ok: false, error: err.message, log });
-  }
-});
 
 // ─── Nightly backup ────────────────────────────────────────────────────────
 // Triggered daily by GitHub Actions (nightly-backup.yml). Takes a VACUUM
