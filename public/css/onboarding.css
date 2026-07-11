@@ -117,12 +117,13 @@
   margin-left: 0.5rem;
 }
 
-/* Welcome-step video (daily-recording how-to) — responsive 16:9. */
+/* Welcome-step video (daily-recording how-to) — vertical (portrait) video. */
 .ob-welcome-video {
   position: relative;
   width: 100%;
-  aspect-ratio: 16 / 9;
-  margin: 0 0 2rem;
+  max-width: 340px;
+  aspect-ratio: 9 / 16;
+  margin: 0 auto 2rem;
   border-radius: 12px;
   overflow: hidden;
   background: var(--color-ink-stained);

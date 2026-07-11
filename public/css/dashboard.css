@@ -2621,11 +2621,12 @@
 }
 .recording-about-panel.is-hidden { display: none; }
 .recording-about-panel .recording-card-prompt { margin: 0; }
-/* Responsive 16:9 wrapper for the "How to do the daily recording" video. */
+/* Vertical (portrait) wrapper for the "How to do the daily recording" video. */
 .recording-howto-video {
   position: relative;
   width: 100%;
-  aspect-ratio: 16 / 9;
+  max-width: 320px;
+  aspect-ratio: 9 / 16;
   border-radius: 10px;
   overflow: hidden;
   background: var(--color-ink-stained);
