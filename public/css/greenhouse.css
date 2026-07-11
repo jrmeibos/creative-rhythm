@@ -973,7 +973,15 @@ details[open] .gh-planted-summary::before { content: '▾  '; }
   font-weight: 400;
   font-size: 0.98rem;
   color: var(--color-understory);
-  margin-bottom: 1.75rem;
+}
+/* "Your Goals" heading above the beds — matches the "Your Cuttings" title. */
+.gh-goals-title {
+  font-family: var(--font-display);
+  font-size: 1.6rem;
+  font-weight: 400;
+  color: var(--color-bloem);
+  text-align: center;
+  margin: 0 0 1.25rem;
 }
 .gh-winter-link {
   color: var(--color-understory);
