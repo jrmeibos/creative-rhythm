@@ -233,6 +233,14 @@
   line-height: 0;
   text-decoration: none;
 }
+/* Center the right-panel logo: the inline-block anchor otherwise hugs the
+   image and sits left inside the left-aligned form column. fit-content keeps
+   the click target tight to the logo. */
+.login-logo-link {
+  display: block;
+  width: fit-content;
+  margin-inline: auto;
+}
 .login-brand-link:focus-visible,
 .login-logo-link:focus-visible {
   outline: 2px solid var(--color-bloem);
