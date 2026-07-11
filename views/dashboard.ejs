@@ -64,7 +64,8 @@
            controller below delegates events from. -->
       <% if (trialClosingCardVisible) { %>
       <section class="dash-section">
-        <div class="mid-card">
+        <div class="mid-card" data-banner-key="trial_closing">
+          <%- include('partials/card-dismiss', { snoozeLabel: 'Remind me later', removeLabel: "I'd rather not give feedback" }) %>
           <p class="mid-card-eyebrow">You've reached week <%= courseLengthWeeks %></p>
           <h2 class="mid-card-title">Closing Reflection</h2>
           <p class="mid-card-body">
@@ -91,7 +92,8 @@
       <% } %>
       <% if (midcourseCardVisible) { %>
       <section class="dash-section">
-        <div class="mid-card">
+        <div class="mid-card" data-banner-key="midcourse">
+          <%- include('partials/card-dismiss', { snoozeLabel: 'Remind me later', removeLabel: "I'd rather not give feedback" }) %>
           <p class="mid-card-eyebrow">A Short, Anonymous Survey</p>
           <h2 class="mid-card-title">Mid-Course Check-In</h2>
           <p class="mid-card-body">
@@ -104,9 +106,10 @@
       </section>
       <% } %>
 
-      <% if (locals.showSummer) { %>
+      <% if (summerCardVisible) { %>
       <section class="dash-section">
-        <div class="mid-card">
+        <div class="mid-card" data-banner-key="season_summer">
+          <%- include('partials/card-dismiss', { snoozeLabel: 'Show this again later', removeLabel: 'Remove this reminder' }) %>
           <p class="mid-card-eyebrow">Summer is here</p>
           <h2 class="mid-card-title">Try making something this week</h2>
           <p class="mid-card-body">
@@ -155,6 +158,55 @@
         })();
       </script>
       <% } %>
+
+      <script>
+        // Dismissible dashboard banners: ✕ reveals a menu (snooze / remove);
+        // choosing an option POSTs the choice and removes the card. Delegated
+        // so it covers whichever dismissible cards rendered.
+        (function () {
+          function closeMenus(except) {
+            document.querySelectorAll('.mid-card-dismiss-menu').forEach(function (m) {
+              if (m !== except) m.classList.add('is-hidden');
+            });
+            document.querySelectorAll('.mid-card-x').forEach(function (x) {
+              if (!except || x.parentElement.querySelector('.mid-card-dismiss-menu') !== except) {
+                x.setAttribute('aria-expanded', 'false');
+              }
+            });
+          }
+          document.addEventListener('click', function (e) {
+            var x = e.target.closest('.mid-card-x');
+            if (x) {
+              var menu = x.parentElement.querySelector('.mid-card-dismiss-menu');
+              var opening = menu.classList.contains('is-hidden');
+              closeMenus(opening ? menu : null);
+              menu.classList.toggle('is-hidden', !opening);
+              x.setAttribute('aria-expanded', opening ? 'true' : 'false');
+              return;
+            }
+            var opt = e.target.closest('.mid-card-dismiss-opt');
+            if (opt) {
+              var card = opt.closest('.mid-card');
+              var key  = card && card.dataset.bannerKey;
+              if (!key) return;
+              opt.closest('.mid-card-dismiss-menu').classList.add('is-hidden');
+              fetch('/api/banner/dismiss', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'same-origin',
+                body: JSON.stringify({ key: key, action: opt.dataset.bannerAction })
+              }).catch(function () {}).finally(function () {
+                var section = card.closest('.dash-section') || card;
+                section.style.transition = 'opacity 0.22s ease';
+                section.style.opacity = '0';
+                setTimeout(function () { section.remove(); }, 240);
+              });
+              return;
+            }
+            if (!e.target.closest('.mid-card-dismiss')) closeMenus(null);
+          });
+        })();
+      </script>
 
       <section class="dash-section">
         <div id="dayview-container"

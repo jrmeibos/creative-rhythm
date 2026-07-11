@@ -1,0 +1,11 @@
+<%# Dismiss control for a dashboard card. The card must have position:relative
+    and data-banner-key="<key>". Params: snoozeLabel, removeLabel.
+    Clicking ✕ reveals the two options; the handler lives in dashboard.ejs. %>
+<div class="mid-card-dismiss">
+  <button type="button" class="mid-card-x" aria-label="Dismiss this card"
+          aria-haspopup="true" aria-expanded="false">&times;</button>
+  <div class="mid-card-dismiss-menu is-hidden" role="menu">
+    <button type="button" class="mid-card-dismiss-opt" data-banner-action="snooze"><%= snoozeLabel %></button>
+    <button type="button" class="mid-card-dismiss-opt" data-banner-action="remove"><%= removeLabel %></button>
+  </div>
+</div>

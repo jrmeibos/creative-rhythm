@@ -622,13 +622,17 @@ app.get('/dashboard', requireAuth, (req, res) => {
 
   const { dayview, today } = buildDayviewPayload(req.session.user, req.query.day, courseStart);
 
+  // Banners the student has snoozed ("remind me later") or removed for good.
+  const hiddenBanners = db.getHiddenBannerKeys(req.session.user.id, today);
+
   // Mid-course check-in card: visible only when the global setting is
   // unlocked AND this specific student hasn't submitted yet. Admins never
   // see the card (they can't submit, and POST is 403-gated server-side).
   const midcourseCardVisible = (
     req.session.user.role !== 'admin' &&
     isMidcourseUnlockedFor(req.session.user) &&
-    !db.hasMidcourseBeenSubmittedByUser(req.session.user.id)
+    !db.hasMidcourseBeenSubmittedByUser(req.session.user.id) &&
+    !hiddenBanners.has('midcourse')
   );
 
   // Trial-aware fields: total weeks for the "Week N of X" label, plus
@@ -642,7 +646,11 @@ app.get('/dashboard', requireAuth, (req, res) => {
     db.hasTrialClosingBeenSubmittedByUser(req.session.user.id);
   const trialClosingCardVisible = isTrial &&
     !trialClosingSubmitted &&
-    isTrialClosingUnlockedFor(req.session.user);
+    isTrialClosingUnlockedFor(req.session.user) &&
+    !hiddenBanners.has('trial_closing');
+
+  // Season "Summer is here" card — dismissible like the survey cards.
+  const summerCardVisible = res.locals.showSummer && !hiddenBanners.has('season_summer');
   const trialComplete = isTrial && (
     trialClosingSubmitted ||
     (typeof weekNumber === 'number' && weekNumber > courseLengthWeeks)
@@ -688,6 +696,7 @@ app.get('/dashboard', requireAuth, (req, res) => {
     isTrial,
     trialComplete,
     trialClosingCardVisible,
+    summerCardVisible,
   });
 });
 
@@ -1247,6 +1256,29 @@ app.post('/api/season', requireAuth, (req, res) => {
 app.post('/api/season/intro-seen', requireAuth, (req, res) => {
   db.markSeasonIntroSeen(req.session.user.id);
   res.json({ ok: true });
+});
+
+// Dismiss a dashboard banner. action='snooze' hides it until tomorrow (it
+// re-shows the next calendar day); action='remove' hides it for good.
+const DISMISSIBLE_BANNERS = ['midcourse', 'trial_closing', 'season_summer'];
+app.post('/api/banner/dismiss', requireAuth, (req, res) => {
+  const key    = String((req.body && req.body.key) || '').trim();
+  const action = String((req.body && req.body.action) || '').trim();
+  if (!DISMISSIBLE_BANNERS.includes(key)) {
+    return res.status(400).json({ error: 'Unknown banner.' });
+  }
+  const userId = req.session.user.id;
+  if (action === 'snooze') {
+    const today    = toLocalDateString(getNow(req.session.user));
+    const tomorrow = toLocalDateString(new Date(new Date(today + 'T00:00:00').getTime() + 86400000));
+    db.snoozeBanner(userId, key, tomorrow);
+    return res.json({ ok: true, action: 'snooze', until: tomorrow });
+  }
+  if (action === 'remove') {
+    db.dismissBannerPermanently(userId, key);
+    return res.json({ ok: true, action: 'remove' });
+  }
+  return res.status(400).json({ error: 'Unknown action.' });
 });
 
 // ─── Lessons ───────────────────────────────────────────────────────────────

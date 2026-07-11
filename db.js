@@ -77,6 +77,20 @@ db.exec(`
     FOREIGN KEY (user_id) REFERENCES users(id)
   );
 
+  -- Per-user dismissal state for dismissible dashboard banners (mid-course
+  -- survey, closing reflection, season cards). One row per (user, banner_key):
+  --   snooze_until = YYYY-MM-DD; the banner reappears on/after this date.
+  --   dismissed    = 1 when removed for good (a permanent dismissal wins).
+  CREATE TABLE IF NOT EXISTS banner_dismissals (
+    user_id INTEGER NOT NULL,
+    banner_key TEXT NOT NULL,
+    snooze_until TEXT,
+    dismissed INTEGER NOT NULL DEFAULT 0,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (user_id, banner_key),
+    FOREIGN KEY (user_id) REFERENCES users(id)
+  );
+
   CREATE TABLE IF NOT EXISTS lessons (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     slug TEXT UNIQUE NOT NULL,
@@ -1694,6 +1708,43 @@ module.exports = {
     `).run(userId, weekStart, shared ? 1 : 0);
   },
 
+  // ─── Dismissible dashboard banners ────────────────────────────────────────
+  // A banner is hidden when it's been permanently dismissed OR snoozed to a
+  // future date. Returns the set of banner_keys to hide for this user today.
+  getHiddenBannerKeys(userId, todayStr) {
+    const rows = db.prepare(
+      `SELECT banner_key FROM banner_dismissals
+       WHERE user_id = ?
+         AND (dismissed = 1 OR (snooze_until IS NOT NULL AND snooze_until > ?))`
+    ).all(userId, todayStr);
+    return new Set(rows.map(r => r.banner_key));
+  },
+
+  // "Remind me later" — hide until untilStr (typically tomorrow); it re-shows
+  // on/after that date. Clears any prior permanent dismissal.
+  snoozeBanner(userId, bannerKey, untilStr) {
+    return db.prepare(`
+      INSERT INTO banner_dismissals (user_id, banner_key, snooze_until, dismissed)
+      VALUES (?, ?, ?, 0)
+      ON CONFLICT(user_id, banner_key) DO UPDATE SET
+        snooze_until = excluded.snooze_until,
+        dismissed = 0,
+        updated_at = CURRENT_TIMESTAMP
+    `).run(userId, bannerKey, untilStr);
+  },
+
+  // "Remove this reminder / I'd rather not" — hide for good.
+  dismissBannerPermanently(userId, bannerKey) {
+    return db.prepare(`
+      INSERT INTO banner_dismissals (user_id, banner_key, snooze_until, dismissed)
+      VALUES (?, ?, NULL, 1)
+      ON CONFLICT(user_id, banner_key) DO UPDATE SET
+        dismissed = 1,
+        snooze_until = NULL,
+        updated_at = CURRENT_TIMESTAMP
+    `).run(userId, bannerKey);
+  },
+
   // All explicit per-week overrides for one week, as a Map(user_id → bool).
   // The community page uses this + each member's default to resolve who's
   // sharing that week without a query per member.
@@ -1878,6 +1929,7 @@ module.exports = {
       db.prepare('DELETE FROM lesson_completions WHERE user_id=?').run(id);
       db.prepare('DELETE FROM homework_completions WHERE user_id=?').run(id);
       db.prepare('DELETE FROM weekly_goal_shares WHERE user_id=?').run(id);
+      db.prepare('DELETE FROM banner_dismissals WHERE user_id=?').run(id);
       db.prepare('DELETE FROM weekly_goals WHERE user_id=?').run(id);
       db.prepare('DELETE FROM goals WHERE user_id=?').run(id);
       db.prepare('DELETE FROM weekly_reflections WHERE user_id=?').run(id);
