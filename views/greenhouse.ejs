@@ -75,7 +75,7 @@
                 <p class="gh-bed-fallow-note">Resting this season</p>
                 <a href="/greenhouse/plant?bed=<%= n %>" class="gh-bed-fallow-replant">Plant something here →</a>
               <% } else if (isWinterLocked) { %>
-                <p class="gh-bed-winter-note">It's currently Winter. Come back in Spring to plant your goals.</p>
+                <%# Winter: beds are locked; the explanation lives in the caption below. %>
               <% } else { %>
                 <div class="gh-bed-empty-actions">
                   <a href="/greenhouse/plant?bed=<%= n %>" class="gh-bed-cta">+ plant a goal</a>
@@ -85,7 +85,13 @@
             </div>
           <% } %>
         </div>
-        <p class="gh-beds-caption">You can plant up to three goals here. Plant them one at a time, in whatever order feels right.</p>
+        <% if (isWinterLocked) { %>
+          <p class="gh-beds-caption gh-beds-caption--winter">
+            It's currently Winter in the garden. Return in <% if (user && (user.course_length_weeks || 12) < 12) { %><a href="/upgrade" class="gh-winter-link">Spring</a><% } else { %>Spring<% } %> to plant your goals.
+          </p>
+        <% } else { %>
+          <p class="gh-beds-caption">You can plant up to three goals here. Plant them one at a time, in whatever order feels right.</p>
+        <% } %>
       </section>
 
       <!-- Ordered newest-seasonal first so the current-season assignment
