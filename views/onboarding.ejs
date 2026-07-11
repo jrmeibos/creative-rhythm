@@ -98,8 +98,8 @@
   <div class="ob-step" id="step-3">
     <div class="ob-center">
       <div class="ob-done-icon">🌿</div>
-      <h2 class="ob-title ob-title--hero">You're ready.<br>Let's begin.</h2>
-      <p class="ob-body-text">Your snapshot is saved.<br>Now — let's start growing.</p>
+      <h2 class="ob-title ob-title--hero">Your snapshot is saved</h2>
+      <p class="ob-body-text">Now, here's an introduction to your new practice: the daily talk-to-camera video. Here's what to do each day.</p>
 
       <!-- Welcome video: the daily-recording practice + how to log it. -->
       <div class="ob-welcome-video">
@@ -111,7 +111,7 @@
           allowfullscreen></iframe>
       </div>
 
-      <button class="ob-btn ob-btn--primary" id="enter-btn" onclick="completeOnboarding()">Enter The Creative's Garden →</button>
+      <button class="ob-btn ob-btn--primary" id="enter-btn" onclick="completeOnboarding()">Enter the Garden</button>
     </div>
   </div>
 
@@ -228,7 +228,7 @@
       const btn = document.getElementById('enter-btn');
       btn.disabled = true;
       btn.textContent = 'Starting…';
-      const reset = () => { btn.disabled = false; btn.textContent = 'Enter The Creative\'s Garden →'; };
+      const reset = () => { btn.disabled = false; btn.textContent = 'Enter the Garden'; };
       try {
         const res = await fetch('/api/onboarding/complete', { method: 'POST' });
         if (res.ok) {
