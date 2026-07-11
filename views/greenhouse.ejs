@@ -38,7 +38,7 @@
              alt="An illustrated greenhouse"
              class="gh-welcome-art" width="800" height="679">
         <h1 class="gh-locked-title">Welcome to Your Greenhouse</h1>
-        <p class="gh-locked-subtitle">Your private place to nurture and grow your thoughts.</p>
+        <p class="gh-locked-subtitle">Your personal place to nurture and grow your thoughts.</p>
         <div class="gh-welcome-body">
           <p>In the coming weeks, your logged daily recordings will appear here as "cuttings." Return here to review what you've talked about, to scan for patterns, and to help nurture your own growth.</p>
           <p>(That's right—plants aren't the only things that grow in this greenhouse! 😉)</p>
@@ -55,7 +55,7 @@
           <h1 class="dash-greeting-text">The Greenhouse</h1>
         </div>
         <% if (isWinterLocked) { %>
-        <p class="gh-subtitle">Your private place to cultivate, nurture, grow, and share your thoughts.</p>
+        <p class="gh-subtitle">Your personal place to cultivate, nurture, grow, and share your thoughts.</p>
         <% } else { %>
         <p class="gh-subtitle">Plant three goals. What do you hope to grow?</p>
         <% } %>
@@ -84,7 +84,7 @@
             <% const isBedEmpty = emptyBedPositions.includes(n); %>
             <% const isFallow = fallowBedNumbers.includes(n); %>
             <div class="gh-bed<%= isFallow ? ' gh-bed--fallow' : '' %>">
-              <span class="gh-bed-label">Bed <%= n %></span>
+              <span class="gh-bed-label">Goal <%= n %></span>
               <img class="gh-bed-art" src="/images/greenhouse/goal-pot.svg" alt="" width="120" height="120">
               <% if (!isBedEmpty) { %>
                 <span class="gh-bed-filled-note">Planted</span>
