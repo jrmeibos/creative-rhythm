@@ -453,6 +453,12 @@ app.post('/signup', signupLimiter, async (req, res) => {
       course_start_date: user.course_start_date || null,
       course_length_weeks: user.course_length_weeks || 3,
     };
+    // Optional newsletter opt-in — fire-and-forget so it never blocks or
+    // breaks signup.
+    if (req.body.newsletter) {
+      subscribeToNewsletter(email, name.split(/\s+/)[0]).catch(() => {});
+    }
+
     // Stash post-onboarding destination (e.g. /upgrade?tier=X when they came
     // from the pricing page). Consumed by /api/onboarding/complete.
     if (returnTo) req.session.postOnboardingReturnTo = returnTo;
@@ -818,6 +824,29 @@ const MAILCHIMP_SIGNUP = {
   u:    '98929ca1fa616eb415f3694b2',
   id:   '86a4e164b2',
 };
+
+// Subscribe an email to the Meibos Touch newsletter, server-side and
+// fire-and-forget: a newsletter hiccup must never break account signup. Hits
+// the same post-json endpoint the coming-soon box uses, so no API key is
+// needed. Double opt-in (if enabled on the audience) still sends the usual
+// confirmation email.
+async function subscribeToNewsletter(email, firstName) {
+  const mc = MAILCHIMP_SIGNUP;
+  if (!mc.host || !mc.u || !mc.id || !email) return;
+  const params = new URLSearchParams();
+  params.set('u', mc.u);
+  params.set('id', mc.id);
+  params.set('EMAIL', email);
+  if (firstName) params.set('FNAME', firstName);
+  params.set(`b_${mc.u}_${mc.id}`, ''); // anti-bot honeypot, left empty
+  params.set('c', 'cb');
+  try {
+    const resp = await fetch(`https://${mc.host}/subscribe/post-json?${params.toString()}`);
+    await resp.text().catch(() => {});
+  } catch (e) {
+    console.error('[newsletter] subscribe failed for', email, '—', e.message);
+  }
+}
 
 // Two-step visual flow on one page: pick a tier → Continue → card form
 // (Stripe Elements). JS toggles between the two panels; server hands the

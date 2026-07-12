@@ -239,6 +239,26 @@
   font-weight: 300;
   color: rgba(16, 15, 16, 0.5);
 }
+.sg-newsletter {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  margin: 0.25rem 0 1.25rem;
+  cursor: pointer;
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  font-weight: 300;
+  line-height: 1.45;
+  color: rgba(16, 15, 16, 0.7);
+}
+.sg-newsletter-cb {
+  flex-shrink: 0;
+  width: 1.05rem;
+  height: 1.05rem;
+  margin-top: 0.1rem;
+  accent-color: var(--color-bloem);
+  cursor: pointer;
+}
 .sg-error {
   background: rgba(216, 176, 171, 0.25);
   border: 1px solid rgba(216, 176, 171, 0.6);
