@@ -2797,6 +2797,23 @@
   max-height: 156px;
   margin: 0 auto 1.15rem;
 }
+
+/* Spring/Fall cards: illustration to the LEFT of the text (a touch larger). */
+.mid-card-split {
+  display: flex;
+  align-items: center;
+  gap: 1.6rem;
+}
+.mid-card-split .mid-card-season-art--tall {
+  flex-shrink: 0;
+  max-height: 172px;
+  margin: 0;
+}
+.mid-card-split-text { min-width: 0; }
+@media (max-width: 560px) {
+  .mid-card-split { flex-direction: column; align-items: flex-start; gap: 1.1rem; }
+  .mid-card-split .mid-card-season-art--tall { align-self: center; }
+}
 /* The ✕ sits over the illustration on season cards — give it a backdrop. */
 .mid-card--season .mid-card-x {
   background: rgba(255, 255, 255, 0.78);
