@@ -893,6 +893,8 @@ async function addContactToMailchimp(email, firstName, lastName, tags) {
       console.error('[mailchimp] tagging failed for', email, tagRes.status,
         await tagRes.text().catch(() => ''));
     }
+    console.log('[mailchimp] synced', email,
+      tagRes.ok ? `— tags: ${tags.join(', ')}` : '(contact added; tag step failed)');
   } catch (e) {
     console.error('[mailchimp] contact sync failed for', email, '—', e.message);
   }
@@ -3969,6 +3971,31 @@ app.get('/admin/mailchimp-check', requireAdmin, async (req, res) => {
     } else {
       out.notes.push(`Could not list audiences (status ${listsRes.status}). ` +
         (listsRes.status === 401 ? 'Same auth problem as the ping.' : ''));
+    }
+
+    // Optional: look up one contact by email to confirm a specific signup
+    // landed. Add ?email=someone@example.com to the URL.
+    const lookupEmail = (req.query.email || '').trim().toLowerCase();
+    if (lookupEmail) {
+      const lhash = crypto.createHash('md5').update(lookupEmail).digest('hex');
+      const memRes = await fetch(
+        `${base}/lists/${configuredListId}/members/${lhash}?fields=email_address,status,tags,last_changed`,
+        { headers });
+      if (memRes.status === 404) {
+        out.lookup = { email: lookupEmail, found: false };
+        out.notes.push(`Contact "${lookupEmail}" is NOT in the audience — that signup never reached ` +
+          `Mailchimp. Check the Railway logs for a "[mailchimp]" line from that signup.`);
+      } else if (memRes.ok) {
+        const m = await memRes.json();
+        out.lookup = {
+          email: m.email_address, found: true, status: m.status,
+          tags: (m.tags || []).map((t) => t.name), last_changed: m.last_changed,
+        };
+        out.notes.push(`Contact "${lookupEmail}" IS in the audience (status: ${m.status}). ` +
+          `Tags: ${(m.tags || []).map((t) => t.name).join(', ') || 'none'}.`);
+      } else {
+        out.notes.push(`Lookup for "${lookupEmail}" returned status ${memRes.status}.`);
+      }
     }
   } catch (e) {
     out.notes.push('Request to Mailchimp failed: ' + e.message);
