@@ -3913,6 +3913,74 @@ app.get('/api/admin/midcourse-responses', requireAdmin, (req, res) => {
   res.json({ responses: db.getAllMidcourseResponses() });
 });
 
+// Admin-only diagnostic for the Mailchimp contact sync. Open in a browser when
+// signups aren't showing up in Mailchimp. Reports whether the key is wired up,
+// whether the account is reachable, and whether the configured audience id
+// actually exists — WITHOUT ever exposing the key itself.
+app.get('/admin/mailchimp-check', requireAdmin, async (req, res) => {
+  const apiKey = process.env.MAILCHIMP_API_KEY;
+  const configuredListId = MAILCHIMP_SIGNUP.id;
+  const out = {
+    keyPresent: !!apiKey,
+    // Mailchimp keys end in a datacenter suffix like "-us21".
+    keyHasDatacenterSuffix: !!apiKey && /-[a-z]+\d+$/.test(apiKey.trim()),
+    datacenter: apiKey ? apiKey.trim().split('-').pop() : null,
+    configuredListId,
+    registrationTag: MAILCHIMP_TAG_REGISTERED,
+    newsletterTag: MAILCHIMP_TAG_NEWSLETTER,
+    ping: null,
+    audiences: null,
+    configuredAudienceFound: null,
+    configuredAudienceMemberCount: null,
+    notes: [],
+  };
+
+  if (!apiKey) {
+    out.notes.push('MAILCHIMP_API_KEY is not set in this environment. Add it in Railway → Variables and redeploy.');
+    return res.json(out);
+  }
+
+  const key  = apiKey.trim();
+  const dc   = key.split('-').pop();
+  const base = `https://${dc}.api.mailchimp.com/3.0`;
+  const headers = { Authorization: 'Basic ' + Buffer.from(`anystring:${key}`).toString('base64') };
+
+  try {
+    const pingRes = await fetch(`${base}/ping`, { headers });
+    out.ping = { ok: pingRes.ok, status: pingRes.status };
+    if (pingRes.status === 401) {
+      out.notes.push('401 Unauthorized — the API key is wrong, expired, or has stray spaces. Re-copy it from Mailchimp.');
+    }
+
+    const listsRes = await fetch(
+      `${base}/lists?count=100&fields=lists.id,lists.name,lists.stats.member_count`, { headers });
+    if (listsRes.ok) {
+      const data = await listsRes.json();
+      out.audiences = (data.lists || []).map((l) => ({
+        id: l.id, name: l.name, member_count: l.stats && l.stats.member_count,
+      }));
+      const match = out.audiences.find((l) => l.id === configuredListId);
+      out.configuredAudienceFound = !!match;
+      out.configuredAudienceMemberCount = match ? match.member_count : null;
+      if (!match) {
+        out.notes.push(`Configured audience id "${configuredListId}" was NOT found on this account. ` +
+          `Use the correct id from the "audiences" list below — tell it to me and I'll update the code.`);
+      }
+    } else {
+      out.notes.push(`Could not list audiences (status ${listsRes.status}). ` +
+        (listsRes.status === 401 ? 'Same auth problem as the ping.' : ''));
+    }
+  } catch (e) {
+    out.notes.push('Request to Mailchimp failed: ' + e.message);
+  }
+
+  if (out.notes.length === 0) {
+    out.notes.push('Everything looks wired up correctly. If contacts still aren\'t appearing, ' +
+      'do a fresh signup and check the Railway logs for a "[mailchimp]" line.');
+  }
+  res.json(out);
+});
+
 // ─── Admin: Seed Packets export ───────────────────────────────────────────────
 
 app.get('/admin/curiosity-map-export', requireAdmin, (req, res) => res.redirect(301, '/admin/seed-packets-export'));
