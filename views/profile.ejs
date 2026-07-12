@@ -287,64 +287,13 @@
         </div>
       </section>
 
-      <!-- ── Notifications ─────────────────────────────────────────────────── -->
-      <section class="dash-section">
-        <div class="dash-section-header">
-          <h2 class="dash-section-title">Notifications</h2>
-        </div>
-        <div class="acct-card">
-          <p class="acct-section-subtitle">Choose what you'd like to hear about.</p>
-
-          <%# "New Lessons" notification hidden from students during the trial
-              run — lessons aren't live yet. Admin-only; remove guard to restore. %>
-          <% if (user && user.role === 'admin') { %>
-          <div class="acct-toggle-row">
-            <div class="acct-toggle-text">
-              <strong>New Lessons</strong>
-              <span>Get notified when new content is published</span>
-            </div>
-            <div class="acct-toggle-right">
-              <span class="acct-toggle-saved" id="saved-notify_new_fieldnotes" hidden>Saved ✓</span>
-              <button class="acct-toggle" id="toggle-notify_new_fieldnotes"
-                      aria-pressed="<%= profile.notify_new_fieldnotes !== 0 ? 'true' : 'false' %>"
-                      type="button" onclick="togglePref(this, 'notify_new_fieldnotes')">
-                <span class="acct-toggle-track"><span class="acct-toggle-thumb"></span></span>
-              </button>
-            </div>
-          </div>
-          <% } %>
-
-          <div class="acct-toggle-row">
-            <div class="acct-toggle-text">
-              <strong>Community Activity</strong>
-              <span>Get notified when someone posts in the community</span>
-            </div>
-            <div class="acct-toggle-right">
-              <span class="acct-toggle-saved" id="saved-notify_community" hidden>Saved ✓</span>
-              <button class="acct-toggle" id="toggle-notify_community"
-                      aria-pressed="<%= profile.notify_community !== 0 ? 'true' : 'false' %>"
-                      type="button" onclick="togglePref(this, 'notify_community')">
-                <span class="acct-toggle-track"><span class="acct-toggle-thumb"></span></span>
-              </button>
-            </div>
-          </div>
-
-          <div class="acct-toggle-row acct-toggle-row--last">
-            <div class="acct-toggle-text">
-              <strong>Weekly Reminder</strong>
-              <span>A gentle nudge to set your weekly intentions every Monday</span>
-            </div>
-            <div class="acct-toggle-right">
-              <span class="acct-toggle-saved" id="saved-notify_weekly_reminder" hidden>Saved ✓</span>
-              <button class="acct-toggle" id="toggle-notify_weekly_reminder"
-                      aria-pressed="<%= profile.notify_weekly_reminder !== 0 ? 'true' : 'false' %>"
-                      type="button" onclick="togglePref(this, 'notify_weekly_reminder')">
-                <span class="acct-toggle-track"><span class="acct-toggle-thumb"></span></span>
-              </button>
-            </div>
-          </div>
-        </div>
-      </section>
+      <%# ── Notifications section hidden until delivery is built ──────────────
+          The New Lessons / Community Activity / Weekly Reminder toggles had no
+          sender wired up (nothing read notify_* to actually notify anyone), so
+          showing them promised notifications students would never receive.
+          Removed pending real delivery. The notify_* columns + preference
+          whitelist stay in place, so restoring this section (see git history
+          for commit "Merge Account page into Profile") is drop-in. %>
 
       <!-- ── Privacy ───────────────────────────────────────────────────────── -->
       <section class="dash-section">
