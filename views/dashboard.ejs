@@ -106,6 +106,22 @@
       </section>
       <% } %>
 
+      <% if (springCardVisible) { %>
+      <section class="dash-section">
+        <div class="mid-card mid-card--season" data-banner-key="season_spring">
+          <%- include('partials/card-dismiss', { snoozeLabel: 'Show this again later', removeLabel: 'Remove this reminder' }) %>
+          <img class="mid-card-season-art mid-card-season-art--tall" src="/images/seasons/spring.webp" alt="" width="563" height="800">
+          <p class="mid-card-eyebrow">Spring is here</p>
+          <h2 class="mid-card-title">Tend what you've recorded</h2>
+          <p class="mid-card-body">
+            A weekly return to what you recorded — read what you noticed, and
+            choose where each cutting goes.
+          </p>
+          <a href="/tending" class="mid-card-cta">Tend your cuttings →</a>
+        </div>
+      </section>
+      <% } %>
+
       <% if (summerCardVisible) { %>
       <section class="dash-section">
         <div class="mid-card mid-card--season" data-banner-key="season_summer">
@@ -120,6 +136,22 @@
             one thing over time.
           </p>
           <a href="/summer" class="mid-card-cta">Make something →</a>
+        </div>
+      </section>
+      <% } %>
+
+      <% if (fallCardVisible) { %>
+      <section class="dash-section">
+        <div class="mid-card mid-card--season" data-banner-key="season_autumn">
+          <%- include('partials/card-dismiss', { snoozeLabel: 'Show this again later', removeLabel: 'Remove this reminder' }) %>
+          <img class="mid-card-season-art mid-card-season-art--tall" src="/images/seasons/autumn.webp" alt="" width="757" height="800">
+          <p class="mid-card-eyebrow">Autumn is here</p>
+          <h2 class="mid-card-title">Share what you've made</h2>
+          <p class="mid-card-body">
+            Bring what you've created out into the world. As you share — a post,
+            a video, a note — come back and add the links.
+          </p>
+          <a href="/grove" class="mid-card-cta">Share the bounty →</a>
         </div>
       </section>
       <% } %>

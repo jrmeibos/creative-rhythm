@@ -649,8 +649,12 @@ app.get('/dashboard', requireAuth, (req, res) => {
     isTrialClosingUnlockedFor(req.session.user) &&
     !hiddenBanners.has('trial_closing');
 
-  // Season "Summer is here" card — dismissible like the survey cards.
-  const summerCardVisible = res.locals.showSummer && !hiddenBanners.has('season_summer');
+  // Season cards — one per season, each dismissible. effectiveSeason is the
+  // student's current season (null until they're eligible to pick → no card).
+  const effSeason = res.locals.effectiveSeason;
+  const springCardVisible = effSeason === 'spring' && !hiddenBanners.has('season_spring');
+  const summerCardVisible = effSeason === 'summer' && !hiddenBanners.has('season_summer');
+  const fallCardVisible   = effSeason === 'autumn' && !hiddenBanners.has('season_autumn');
   const trialComplete = isTrial && (
     trialClosingSubmitted ||
     (typeof weekNumber === 'number' && weekNumber > courseLengthWeeks)
@@ -696,7 +700,9 @@ app.get('/dashboard', requireAuth, (req, res) => {
     isTrial,
     trialComplete,
     trialClosingCardVisible,
+    springCardVisible,
     summerCardVisible,
+    fallCardVisible,
   });
 });
 
@@ -1260,7 +1266,7 @@ app.post('/api/season/intro-seen', requireAuth, (req, res) => {
 
 // Dismiss a dashboard banner. action='snooze' hides it until tomorrow (it
 // re-shows the next calendar day); action='remove' hides it for good.
-const DISMISSIBLE_BANNERS = ['midcourse', 'trial_closing', 'season_summer'];
+const DISMISSIBLE_BANNERS = ['midcourse', 'trial_closing', 'season_spring', 'season_summer', 'season_autumn'];
 app.post('/api/banner/dismiss', requireAuth, (req, res) => {
   const key    = String((req.body && req.body.key) || '').trim();
   const action = String((req.body && req.body.action) || '').trim();
