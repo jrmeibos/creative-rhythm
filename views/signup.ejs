@@ -102,11 +102,19 @@
         <% } %>
 
         <form action="/signup" method="POST" class="sg-form" novalidate>
-          <div class="form-group">
-            <label for="name" class="form-label">Name</label>
-            <input type="text" id="name" name="name" class="form-input"
-                   placeholder="Your name" autocomplete="name"
-                   value="<%= name %>" required>
+          <div class="sg-name-row">
+            <div class="form-group">
+              <label for="firstName" class="form-label">First name</label>
+              <input type="text" id="firstName" name="firstName" class="form-input"
+                     placeholder="First name" autocomplete="given-name"
+                     value="<%= firstName %>" required>
+            </div>
+            <div class="form-group">
+              <label for="lastName" class="form-label">Last name</label>
+              <input type="text" id="lastName" name="lastName" class="form-input"
+                     placeholder="Last name" autocomplete="family-name"
+                     value="<%= lastName %>" required>
+            </div>
           </div>
 
           <div class="form-group">

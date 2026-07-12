@@ -232,6 +232,11 @@
   margin: 0 0 1.75rem;
 }
 .sg-form { display: flex; flex-direction: column; }
+.sg-name-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
 .sg-help {
   margin-top: 0.4rem;
   font-family: var(--font-body);
@@ -288,5 +293,6 @@
 @media (max-width: 560px) {
   .sg-hero-title { font-size: 2.05rem; }
   .sg-grid { grid-template-columns: 1fr; }
+  .sg-name-row { grid-template-columns: 1fr; gap: 0; }
   .sg-form-card { padding: 1.75rem 1.35rem; }
 }

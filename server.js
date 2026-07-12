@@ -397,14 +397,16 @@ function sanitizeReturnTo(raw) {
 app.get('/signup', (req, res) => {
   const returnTo = sanitizeReturnTo(req.query.returnTo);
   if (req.session.user) return res.redirect(returnTo || '/dashboard');
-  res.render('signup', { error: null, name: '', email: '', returnTo });
+  res.render('signup', { error: null, firstName: '', lastName: '', email: '', returnTo });
 });
 
 app.post('/signup', signupLimiter, async (req, res) => {
-  const name     = (req.body.name  || '').trim();
-  const email    = (req.body.email || '').trim().toLowerCase();
-  const password = req.body.password || '';
-  const returnTo = sanitizeReturnTo(req.body.returnTo);
+  const firstName = (req.body.firstName || '').trim();
+  const lastName  = (req.body.lastName  || '').trim();
+  const name      = `${firstName} ${lastName}`.trim();
+  const email     = (req.body.email || '').trim().toLowerCase();
+  const password  = req.body.password || '';
+  const returnTo  = sanitizeReturnTo(req.body.returnTo);
 
   // Validate the client-supplied IANA timezone BEFORE any DB write. An
   // invalid value used to throw mid-flow (after createUser) and strand a
@@ -417,9 +419,9 @@ app.post('/signup', signupLimiter, async (req, res) => {
     timezone = 'America/Denver';
   }
 
-  const rerender = (error) => res.render('signup', { error, name, email, returnTo });
+  const rerender = (error) => res.render('signup', { error, firstName, lastName, email, returnTo });
 
-  if (!name || !email || !password) return rerender('Please fill in all fields.');
+  if (!firstName || !lastName || !email || !password) return rerender('Please fill in all fields.');
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return rerender('Please enter a valid email address.');
   if (!isPasswordValid(password)) return rerender('Password must be at least 8 characters and include a number or symbol.');
   if (db.getUserByEmail(email)) return rerender('An account with that email already exists. Try signing in.');
@@ -456,7 +458,7 @@ app.post('/signup', signupLimiter, async (req, res) => {
     // Optional newsletter opt-in — fire-and-forget so it never blocks or
     // breaks signup.
     if (req.body.newsletter) {
-      subscribeToNewsletter(email, name.split(/\s+/)[0]).catch(() => {});
+      subscribeToNewsletter(email, firstName, lastName).catch(() => {});
     }
 
     // Stash post-onboarding destination (e.g. /upgrade?tier=X when they came
@@ -830,7 +832,7 @@ const MAILCHIMP_SIGNUP = {
 // the same post-json endpoint the coming-soon box uses, so no API key is
 // needed. Double opt-in (if enabled on the audience) still sends the usual
 // confirmation email.
-async function subscribeToNewsletter(email, firstName) {
+async function subscribeToNewsletter(email, firstName, lastName) {
   const mc = MAILCHIMP_SIGNUP;
   if (!mc.host || !mc.u || !mc.id || !email) return;
   const params = new URLSearchParams();
@@ -838,6 +840,7 @@ async function subscribeToNewsletter(email, firstName) {
   params.set('id', mc.id);
   params.set('EMAIL', email);
   if (firstName) params.set('FNAME', firstName);
+  if (lastName)  params.set('LNAME', lastName);
   params.set(`b_${mc.u}_${mc.id}`, ''); // anti-bot honeypot, left empty
   params.set('c', 'cb');
   try {
