@@ -836,7 +836,7 @@ const MAILCHIMP_SIGNUP = {
 //   NEWSLETTER — applied only to people who tick the newsletter box, so ongoing
 //     newsletter campaigns can target just them (not every registrant).
 const MAILCHIMP_TAG_REGISTERED = "Garden – New Registration"; // en dash
-const MAILCHIMP_TAG_NEWSLETTER = "The Creative's Garden";
+const MAILCHIMP_TAG_NEWSLETTER = "Meibos Touch";
 
 // Upsert a contact into the Meibos Touch audience via the Mailchimp Marketing
 // API and apply the given tags. Everyone who registers is added as a
