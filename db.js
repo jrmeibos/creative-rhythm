@@ -430,6 +430,12 @@ db.exec(`
     db.exec("ALTER TABLE users ADD COLUMN daily_reminder_hour INTEGER DEFAULT 8");
     console.log('✓ Migrated: added daily_reminder_hour column');
   }
+  // Email is a second delivery channel for the daily reminder, independent of
+  // push. Off by default — students opt in from their profile.
+  if (!userCols.includes('reminder_email_enabled')) {
+    db.exec("ALTER TABLE users ADD COLUMN reminder_email_enabled INTEGER DEFAULT 0");
+    console.log('✓ Migrated: added reminder_email_enabled column');
+  }
 
   if (!userCols.includes('community_season_public')) {
     db.exec("ALTER TABLE users ADD COLUMN community_season_public INTEGER DEFAULT 1");
@@ -1532,7 +1538,7 @@ module.exports = {
   },
 
   getUserFullProfile(id) {
-    return db.prepare('SELECT id, name, email, role, avatar_initial, current_season, profile_photo, timezone, notify_new_fieldnotes, notify_community, notify_weekly_reminder, community_goals_public, community_season_public, daily_reminder_enabled, daily_reminder_hour FROM users WHERE id = ?').get(id);
+    return db.prepare('SELECT id, name, email, role, avatar_initial, current_season, profile_photo, timezone, notify_new_fieldnotes, notify_community, notify_weekly_reminder, community_goals_public, community_season_public, daily_reminder_enabled, daily_reminder_hour, reminder_email_enabled FROM users WHERE id = ?').get(id);
   },
 
   updateUserDetails(userId, name, email) {
@@ -1557,7 +1563,7 @@ module.exports = {
   },
 
   updateUserPreference(userId, key, value) {
-    const allowed = ['notify_new_fieldnotes','notify_community','notify_weekly_reminder','community_goals_public','community_season_public'];
+    const allowed = ['notify_new_fieldnotes','notify_community','notify_weekly_reminder','community_goals_public','community_season_public','reminder_email_enabled'];
     if (!allowed.includes(key)) throw new Error('Invalid preference key');
     return db.prepare(`UPDATE users SET ${key}=? WHERE id=?`).run(value ? 1 : 0, userId);
   },
@@ -3489,7 +3495,7 @@ module.exports = {
   // "is it 8 AM in their timezone right now?").
   getUsersWithDailyReminderEnabled() {
     return db.prepare(
-      'SELECT id, name, email, timezone, daily_reminder_hour FROM users WHERE daily_reminder_enabled = 1'
+      'SELECT id, name, email, timezone, daily_reminder_hour, reminder_email_enabled FROM users WHERE daily_reminder_enabled = 1'
     ).all();
   },
 

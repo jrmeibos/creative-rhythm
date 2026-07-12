@@ -168,21 +168,39 @@
         <div class="acct-card">
           <p class="acct-section-subtitle">
             Get one gentle nudge per day to log your reflection — at a time you choose.
-            You'll need to install <em>The Creative's Garden</em> to your home screen and turn on
-            notifications for this device.
+            Receive it as a phone notification (you'll need to install the app first) or
+            by email (works anywhere, no install needed). Pick either or both below.
           </p>
 
-          <!-- iOS install guidance: only visible on iPhone/iPad in non-installed mode -->
-          <div class="acct-install-card" id="ios-install-card" hidden>
-            <strong>One step first — install to your home screen.</strong>
-            <p>iPhone only delivers notifications to installed apps. To install:</p>
-            <ol>
-              <li>Tap the <em>Share</em> button at the bottom of Safari</li>
-              <li>Scroll down and tap <em>Add to Home Screen</em></li>
-              <li>Tap <em>Add</em>, then open the app from your home screen</li>
-              <li>Return here to enable notifications</li>
-            </ol>
-          </div>
+          <!-- Install guide: how to add the site as an app on iPhone + Android.
+               Auto-expands on a phone that hasn't installed it yet (see JS). -->
+          <details class="acct-install-card" id="install-guide">
+            <summary class="acct-install-summary">📲 How to install this as an app — needed for phone notifications</summary>
+            <div class="acct-install-body">
+              <p>Phone notifications only reach you when <em>The Creative's Garden</em> is installed to your home screen.</p>
+
+              <p class="acct-install-os-title"><strong>iPhone &amp; iPad — using Safari</strong></p>
+              <ol>
+                <li>Open this site in <em>Safari</em> (not Chrome)</li>
+                <li>Tap the <em>Share</em> button — the square with an upward arrow</li>
+                <li>Scroll down and tap <em>Add to Home Screen</em></li>
+                <li>Tap <em>Add</em>, then open the app from your home screen</li>
+              </ol>
+
+              <p class="acct-install-os-title"><strong>Android — using Chrome</strong></p>
+              <ol>
+                <li>Open this site in <em>Chrome</em></li>
+                <li>Tap the <em>⋮</em> menu in the top-right</li>
+                <li>Tap <em>Install app</em> (or <em>Add to Home screen</em>)</li>
+                <li>Confirm, then open the app from your home screen</li>
+              </ol>
+
+              <p class="acct-install-note">
+                Then come back here and tap "Enable on this device." Prefer not to install?
+                Turn on <strong>email reminders</strong> below instead — those work anywhere.
+              </p>
+            </div>
+          </details>
 
           <!-- Master toggle: cron checks this column before sending -->
           <div class="acct-toggle-row">
@@ -211,6 +229,8 @@
             <span class="acct-reminder-tz">in your timezone (<%= profile.timezone || 'America/Denver' %>)</span>
           </div>
 
+          <p class="acct-reminder-channels-label">How would you like to receive it?</p>
+
           <!-- Per-device enable: separate concept from the master toggle because -->
           <!-- browser push permission lives on the device, not the account.       -->
           <div class="acct-device-row">
@@ -220,6 +240,23 @@
             </div>
             <button class="acct-save-btn" id="enable-device-btn" type="button" onclick="enableOnDevice()">Enable on this device</button>
             <button class="acct-text-btn" id="disable-device-btn" type="button" onclick="disableOnDevice()" hidden>Disable on this device</button>
+          </div>
+
+          <!-- Email channel: independent of push, sent by the daily cron via
+               Resend. Turning it on also flips the master toggle on (see JS). -->
+          <div class="acct-toggle-row acct-toggle-row--last">
+            <div class="acct-toggle-text">
+              <strong>Email me the reminder</strong>
+              <span>Get the daily nudge in your inbox — no app install needed.</span>
+            </div>
+            <div class="acct-toggle-right">
+              <span class="acct-toggle-saved" id="saved-reminder_email_enabled" hidden>Saved ✓</span>
+              <button class="acct-toggle" id="toggle-reminder_email_enabled"
+                      aria-pressed="<%= profile.reminder_email_enabled ? 'true' : 'false' %>"
+                      type="button" onclick="toggleEmailReminder(this)">
+                <span class="acct-toggle-track"><span class="acct-toggle-thumb"></span></span>
+              </button>
+            </div>
           </div>
           <p class="acct-status acct-status--error" id="reminder-error" hidden></p>
         </div>
@@ -524,6 +561,36 @@
       }
     }
 
+    // Email reminder channel. Persists the preference, then — if turning it on
+    // while the master reminder is off — flips the master on too, since the
+    // cron only sends to users with the master toggle enabled.
+    async function toggleEmailReminder(btn) {
+      const wasOn = btn.getAttribute('aria-pressed') === 'true';
+      const nowOn = !wasOn;
+      btn.setAttribute('aria-pressed', String(nowOn));
+      const savedEl = document.getElementById('saved-reminder_email_enabled');
+      const res = await fetch('/api/account/preference', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key: 'reminder_email_enabled', value: nowOn })
+      });
+      if (!res.ok) { btn.setAttribute('aria-pressed', String(wasOn)); return; }
+      if (savedEl) { savedEl.hidden = false; setTimeout(() => { savedEl.hidden = true; }, 2000); }
+
+      if (nowOn) {
+        const masterBtn = document.getElementById('toggle-daily-reminder');
+        if (masterBtn && masterBtn.getAttribute('aria-pressed') !== 'true') {
+          masterBtn.setAttribute('aria-pressed', 'true');
+          document.getElementById('reminder-time-row').hidden = false;
+          await fetch('/api/account/daily-reminder', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ enabled: true })
+          });
+        }
+      }
+    }
+
     // ── Daily Reminder ─────────────────────────────────────────────────────────
     // Two-axis state model:
     //   • Master toggle (`daily_reminder_enabled`) — server-side per-user flag
@@ -661,11 +728,12 @@
     // On page load, reconcile UI with reality: does this browser have an active
     // subscription? + is this an iOS Safari that needs the install guidance?
     (async () => {
-      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+      const isMobile = /iPad|iPhone|iPod|Android/.test(navigator.userAgent) && !window.MSStream;
       const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
-      if (isIOS && !isStandalone) {
-        const card = document.getElementById('ios-install-card');
-        if (card) card.hidden = false;
+      // Auto-expand the install steps on a phone that hasn't installed the app yet.
+      if (isMobile && !isStandalone) {
+        const guide = document.getElementById('install-guide');
+        if (guide) guide.open = true;
       }
 
       if (!('serviceWorker' in navigator) || !('PushManager' in window)) {

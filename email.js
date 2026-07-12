@@ -169,4 +169,80 @@ The Creative's Garden`;
   }
 }
 
-module.exports = { sendPasswordResetEmail, sendAdminMilestoneEmail };
+// ─── Daily reminder (student opt-in email channel) ──────────────────────────
+// The email twin of the daily push. Sent by lib/daily-reminders.js to students
+// who turned on "Email me the reminder." Calm, one gentle nudge + a link back
+// to the dashboard, with a note on how to turn it off.
+async function sendDailyReminderEmail(toEmail, displayName) {
+  const fromAddress  = process.env.EMAIL_FROM || 'hello@creativesgarden.com';
+  const appUrl       = (process.env.APP_URL || 'https://www.creativesgarden.com').replace(/\/$/, '');
+  const dashboardUrl = `${appUrl}/dashboard`;
+  const name         = displayName || 'there';
+  const subject      = 'Your daily recording reminder 🌿';
+
+  const text = `Hi ${name},
+
+A gentle nudge — have you logged your recording for today?
+
+Open your garden: ${dashboardUrl}
+
+You can change the time or turn these reminders off anytime from your profile.
+
+🌿
+The Creative's Garden`;
+
+  const html = `<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><title>${subject}</title></head>
+<body style="font-family: Georgia, serif; background: #FAFAFA; margin: 0; padding: 32px;">
+  <div style="max-width: 560px; margin: 0 auto; background: #F2EEE3; padding: 40px; border-radius: 8px;">
+    <div style="text-align: center; margin-bottom: 32px;">
+      <img src="https://www.creativesgarden.com/images/brand/Favicon_3.png"
+           alt="The Creative's Garden"
+           width="80"
+           height="80"
+           style="display: inline-block; max-width: 80px; height: auto;" />
+    </div>
+    <p style="color: #100F10; font-size: 16px; line-height: 1.6; margin: 0 0 16px;">
+      Hi ${name},
+    </p>
+    <p style="color: #100F10; font-size: 16px; line-height: 1.7; margin: 0 0 24px;">
+      A gentle nudge — have you logged your recording for today?
+    </p>
+    <p style="margin: 32px 0;">
+      <a href="${dashboardUrl}"
+         style="background: #705C6C; color: #F2EEE3; text-decoration: none; padding: 14px 28px; border-radius: 6px; font-family: Georgia, serif; display: inline-block;">
+        Open your garden
+      </a>
+    </p>
+    <p style="color: #76856C; font-size: 14px; line-height: 1.6; margin: 24px 0 0; font-style: italic;">
+      You can change the time or turn these reminders off anytime from your profile.
+    </p>
+    <p style="color: #76856C; font-size: 14px; line-height: 1.6; margin: 32px 0 0; text-align: center;">
+      🌿 The Creative's Garden
+    </p>
+  </div>
+</body>
+</html>`;
+
+  try {
+    const client = getResend();
+    if (!client) {
+      console.warn('[email] RESEND_API_KEY not set — skipping send');
+      return { ok: false, error: 'RESEND_API_KEY not set' };
+    }
+    const result = await client.emails.send({
+      from: `The Creative's Garden <${fromAddress}>`,
+      to: toEmail,
+      subject,
+      text,
+      html,
+    });
+    return { ok: true, id: result.data?.id };
+  } catch (err) {
+    console.error('[email] Failed to send daily reminder:', err);
+    return { ok: false, error: err.message };
+  }
+}
+
+module.exports = { sendPasswordResetEmail, sendAdminMilestoneEmail, sendDailyReminderEmail };

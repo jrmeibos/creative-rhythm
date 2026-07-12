@@ -371,8 +371,51 @@
   color: var(--color-bloem);
 }
 .acct-install-card p { margin: 0 0 0.5rem; }
-.acct-install-card ol { margin: 0; padding-left: 1.4rem; line-height: 1.6; }
+.acct-install-card ol { margin: 0 0 0.5rem; padding-left: 1.4rem; line-height: 1.6; }
 .acct-install-card li em { font-style: normal; font-weight: 700; }
+
+/* Collapsible <details> variant of the install card. */
+.acct-install-card summary.acct-install-summary {
+  cursor: pointer;
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 1rem;
+  color: var(--color-bloem);
+  list-style: none;
+}
+.acct-install-card summary.acct-install-summary::-webkit-details-marker { display: none; }
+.acct-install-card summary.acct-install-summary::before { content: "▸ "; }
+.acct-install-card[open] summary.acct-install-summary::before { content: "▾ "; }
+.acct-install-body { margin-top: 0.85rem; }
+.acct-install-os-title { margin: 0.85rem 0 0.35rem; }
+.acct-install-card .acct-install-os-title strong {
+  display: block;
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: var(--color-ink-stained);
+  margin: 0;
+}
+.acct-install-note { margin: 0.85rem 0 0; font-style: italic; color: rgba(16, 15, 16, 0.7); }
+.acct-install-card .acct-install-note strong {
+  display: inline;
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: inherit;
+  color: inherit;
+  margin: 0;
+}
+
+/* "How would you like to receive it?" label above the channel controls. */
+.acct-reminder-channels-label {
+  margin: 1.1rem 0 0.5rem;
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 0.78rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: rgba(16, 15, 16, 0.55);
+}
 
 .acct-reminder-time {
   display: flex;
