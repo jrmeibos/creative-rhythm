@@ -827,25 +827,64 @@ const MAILCHIMP_SIGNUP = {
   id:   '86a4e164b2',
 };
 
-// Subscribe an email to the Meibos Touch newsletter, server-side and
-// fire-and-forget: a newsletter hiccup must never break account signup. Hits
-// the same post-json endpoint the coming-soon box uses, so no API key is
-// needed. Double opt-in (if enabled on the audience) still sends the usual
-// confirmation email.
+// Tag applied to everyone who opts into the newsletter from this platform, so
+// Garden signups are easy to segment in Mailchimp. Created automatically the
+// first time it's used — no need to pre-make it in Mailchimp.
+const MAILCHIMP_SIGNUP_TAG = "The Creative's Garden";
+
+// Subscribe an email to the Meibos Touch newsletter via the Mailchimp
+// Marketing API and tag it, so Garden signups can be segmented. Requires
+// MAILCHIMP_API_KEY (set as a Railway secret); the audience/list id is the
+// same `id` the embed forms use. Fire-and-forget: a newsletter hiccup must
+// never break account signup. If the key isn't set (e.g. local dev) it no-ops
+// with a warning rather than erroring.
 async function subscribeToNewsletter(email, firstName, lastName) {
-  const mc = MAILCHIMP_SIGNUP;
-  if (!mc.host || !mc.u || !mc.id || !email) return;
-  const params = new URLSearchParams();
-  params.set('u', mc.u);
-  params.set('id', mc.id);
-  params.set('EMAIL', email);
-  if (firstName) params.set('FNAME', firstName);
-  if (lastName)  params.set('LNAME', lastName);
-  params.set(`b_${mc.u}_${mc.id}`, ''); // anti-bot honeypot, left empty
-  params.set('c', 'cb');
+  const apiKey = process.env.MAILCHIMP_API_KEY;
+  const listId = MAILCHIMP_SIGNUP.id;
+  if (!email || !listId) return;
+  if (!apiKey) {
+    console.warn('[newsletter] MAILCHIMP_API_KEY not set — skipping subscribe for', email);
+    return;
+  }
+
+  const dc   = apiKey.split('-').pop();            // datacenter, e.g. "us21"
+  const base = `https://${dc}.api.mailchimp.com/3.0`;
+  const hash = crypto.createHash('md5').update(email.toLowerCase()).digest('hex');
+  const headers = {
+    Authorization: 'Basic ' + Buffer.from(`anystring:${apiKey}`).toString('base64'),
+    'Content-Type': 'application/json',
+  };
+
+  // Only send merge fields we actually have, so we never blank out an existing
+  // contact's name on a repeat signup.
+  const merge_fields = {};
+  if (firstName) merge_fields.FNAME = firstName;
+  if (lastName)  merge_fields.LNAME = lastName;
+
   try {
-    const resp = await fetch(`https://${mc.host}/subscribe/post-json?${params.toString()}`);
-    await resp.text().catch(() => {});
+    // 1) Upsert the contact. `status_if_new: subscribed` because they actively
+    //    checked the opt-in box; existing contacts keep their current status.
+    const memberRes = await fetch(`${base}/lists/${listId}/members/${hash}`, {
+      method: 'PUT',
+      headers,
+      body: JSON.stringify({ email_address: email, status_if_new: 'subscribed', merge_fields }),
+    });
+    if (!memberRes.ok) {
+      console.error('[newsletter] member upsert failed for', email, memberRes.status,
+        await memberRes.text().catch(() => ''));
+      return;
+    }
+
+    // 2) Apply the tag (creates it in the audience if it doesn't exist yet).
+    const tagRes = await fetch(`${base}/lists/${listId}/members/${hash}/tags`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ tags: [{ name: MAILCHIMP_SIGNUP_TAG, status: 'active' }] }),
+    });
+    if (!tagRes.ok) {
+      console.error('[newsletter] tag failed for', email, tagRes.status,
+        await tagRes.text().catch(() => ''));
+    }
   } catch (e) {
     console.error('[newsletter] subscribe failed for', email, '—', e.message);
   }
