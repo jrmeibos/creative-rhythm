@@ -455,11 +455,12 @@ app.post('/signup', signupLimiter, async (req, res) => {
       course_start_date: user.course_start_date || null,
       course_length_weeks: user.course_length_weeks || 3,
     };
-    // Optional newsletter opt-in — fire-and-forget so it never blocks or
-    // breaks signup.
-    if (req.body.newsletter) {
-      subscribeToNewsletter(email, firstName, lastName).catch(() => {});
-    }
+    // Sync to Mailchimp — fire-and-forget so it never blocks or breaks signup.
+    // Every registrant gets the "New Registration" tag (triggers the onboarding
+    // Journey); the newsletter tag is added only if they ticked the box.
+    const mcTags = [MAILCHIMP_TAG_REGISTERED];
+    if (req.body.newsletter) mcTags.push(MAILCHIMP_TAG_NEWSLETTER);
+    addContactToMailchimp(email, firstName, lastName, mcTags).catch(() => {});
 
     // Stash post-onboarding destination (e.g. /upgrade?tier=X when they came
     // from the pricing page). Consumed by /api/onboarding/complete.
@@ -827,23 +828,30 @@ const MAILCHIMP_SIGNUP = {
   id:   '86a4e164b2',
 };
 
-// Tag applied to everyone who opts into the newsletter from this platform, so
-// Garden signups are easy to segment in Mailchimp. Created automatically the
-// first time it's used — no need to pre-make it in Mailchimp.
-const MAILCHIMP_SIGNUP_TAG = "The Creative's Garden";
+// Mailchimp tags applied from this platform. Both are created automatically
+// the first time they're used — no need to pre-make them in Mailchimp.
+//   REGISTERED — applied to EVERY registrant, whether or not they opt into the
+//     newsletter. This is the trigger for the "Tag added" Customer Journey, so
+//     everyone who signs up enters the onboarding automation.
+//   NEWSLETTER — applied only to people who tick the newsletter box, so ongoing
+//     newsletter campaigns can target just them (not every registrant).
+const MAILCHIMP_TAG_REGISTERED = "Garden – New Registration"; // en dash
+const MAILCHIMP_TAG_NEWSLETTER = "The Creative's Garden";
 
-// Subscribe an email to the Meibos Touch newsletter via the Mailchimp
-// Marketing API and tag it, so Garden signups can be segmented. Requires
-// MAILCHIMP_API_KEY (set as a Railway secret); the audience/list id is the
-// same `id` the embed forms use. Fire-and-forget: a newsletter hiccup must
-// never break account signup. If the key isn't set (e.g. local dev) it no-ops
-// with a warning rather than erroring.
-async function subscribeToNewsletter(email, firstName, lastName) {
+// Upsert a contact into the Meibos Touch audience via the Mailchimp Marketing
+// API and apply the given tags. Everyone who registers is added as a
+// subscribed contact (so the tag-triggered Customer Journey can reach them);
+// the newsletter tag is what actually gates ongoing newsletter sends. Requires
+// MAILCHIMP_API_KEY (a Railway secret); the audience/list id is the same `id`
+// the embed forms use. Fire-and-forget: a Mailchimp hiccup must never break
+// account signup. If the key isn't set (e.g. local dev) it no-ops with a
+// warning rather than erroring.
+async function addContactToMailchimp(email, firstName, lastName, tags) {
   const apiKey = process.env.MAILCHIMP_API_KEY;
   const listId = MAILCHIMP_SIGNUP.id;
-  if (!email || !listId) return;
+  if (!email || !listId || !tags || !tags.length) return;
   if (!apiKey) {
-    console.warn('[newsletter] MAILCHIMP_API_KEY not set — skipping subscribe for', email);
+    console.warn('[mailchimp] MAILCHIMP_API_KEY not set — skipping contact sync for', email);
     return;
   }
 
@@ -862,31 +870,31 @@ async function subscribeToNewsletter(email, firstName, lastName) {
   if (lastName)  merge_fields.LNAME = lastName;
 
   try {
-    // 1) Upsert the contact. `status_if_new: subscribed` because they actively
-    //    checked the opt-in box; existing contacts keep their current status.
+    // 1) Upsert the contact. `status_if_new: subscribed` so new registrants can
+    //    receive the Journey; existing contacts keep their current status.
     const memberRes = await fetch(`${base}/lists/${listId}/members/${hash}`, {
       method: 'PUT',
       headers,
       body: JSON.stringify({ email_address: email, status_if_new: 'subscribed', merge_fields }),
     });
     if (!memberRes.ok) {
-      console.error('[newsletter] member upsert failed for', email, memberRes.status,
+      console.error('[mailchimp] member upsert failed for', email, memberRes.status,
         await memberRes.text().catch(() => ''));
       return;
     }
 
-    // 2) Apply the tag (creates it in the audience if it doesn't exist yet).
+    // 2) Apply the tags (each is created in the audience if it doesn't exist).
     const tagRes = await fetch(`${base}/lists/${listId}/members/${hash}/tags`, {
       method: 'POST',
       headers,
-      body: JSON.stringify({ tags: [{ name: MAILCHIMP_SIGNUP_TAG, status: 'active' }] }),
+      body: JSON.stringify({ tags: tags.map((name) => ({ name, status: 'active' })) }),
     });
     if (!tagRes.ok) {
-      console.error('[newsletter] tag failed for', email, tagRes.status,
+      console.error('[mailchimp] tagging failed for', email, tagRes.status,
         await tagRes.text().catch(() => ''));
     }
   } catch (e) {
-    console.error('[newsletter] subscribe failed for', email, '—', e.message);
+    console.error('[mailchimp] contact sync failed for', email, '—', e.message);
   }
 }
 
