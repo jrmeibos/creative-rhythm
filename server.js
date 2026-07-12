@@ -2156,7 +2156,8 @@ app.get('/profile', requireAuth, (req, res) => {
   res.render('profile', {
     title: 'My Profile',
     page: 'profile',
-    profile
+    profile,
+    timezones: TIMEZONES
   });
 });
 
@@ -3436,15 +3437,9 @@ app.post('/api/harvest', requireAuth, (req, res) => {
 
 // ─── Account ───────────────────────────────────────────────────────────────
 
-app.get('/account', requireAuth, (req, res) => {
-  const profile = db.getUserFullProfile(req.session.user.id);
-  res.render('account', {
-    title: 'My Account',
-    page: 'account',
-    profile,
-    timezones: TIMEZONES
-  });
-});
+// /account was merged into /profile — keep the path working for old links/
+// bookmarks by redirecting. All settings now live on the single profile page.
+app.get('/account', requireAuth, (req, res) => res.redirect(301, '/profile'));
 
 app.post('/api/account/details', requireAuth, async (req, res) => {
   const { name, email } = req.body;

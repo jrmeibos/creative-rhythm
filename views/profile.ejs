@@ -4,6 +4,9 @@
   <%- include('partials/head') %>
   <link rel="stylesheet" href="/css/dashboard.css">
   <link rel="stylesheet" href="/css/profile.css">
+  <!-- Settings sections (reminders, timezone, notifications, privacy) merged in
+       from the former /account page use acct-* styles. -->
+  <link rel="stylesheet" href="/css/account.css">
 </head>
 <body class="app-body">
   <div class="app-layout">
@@ -145,6 +148,207 @@
       </section>
       <% } %>
 
+      <!-- ── Daily Reminder ────────────────────────────────────────────────── -->
+      <%
+        // Pre-render the time picker options here so the inline JS doesn't
+        // have to. Storing the hour as 0–23 keeps timezone math simple; the
+        // display labels are the conventional 12-hour clock for legibility.
+        const currentHour = (typeof profile.daily_reminder_hour === 'number') ? profile.daily_reminder_hour : 8;
+        const reminderEnabled = profile.daily_reminder_enabled === 1;
+        const HOURS = Array.from({ length: 24 }, (_, h) => {
+          const ampm = h < 12 ? 'AM' : 'PM';
+          const display = h === 0 ? 12 : (h > 12 ? h - 12 : h);
+          return { value: h, label: `${display}:00 ${ampm}` };
+        });
+      %>
+      <section class="dash-section">
+        <div class="dash-section-header">
+          <h2 class="dash-section-title">Daily Reminder</h2>
+        </div>
+        <div class="acct-card">
+          <p class="acct-section-subtitle">
+            Get one gentle nudge per day to log your reflection — at a time you choose.
+            You'll need to install <em>The Creative's Garden</em> to your home screen and turn on
+            notifications for this device.
+          </p>
+
+          <!-- iOS install guidance: only visible on iPhone/iPad in non-installed mode -->
+          <div class="acct-install-card" id="ios-install-card" hidden>
+            <strong>One step first — install to your home screen.</strong>
+            <p>iPhone only delivers notifications to installed apps. To install:</p>
+            <ol>
+              <li>Tap the <em>Share</em> button at the bottom of Safari</li>
+              <li>Scroll down and tap <em>Add to Home Screen</em></li>
+              <li>Tap <em>Add</em>, then open the app from your home screen</li>
+              <li>Return here to enable notifications</li>
+            </ol>
+          </div>
+
+          <!-- Master toggle: cron checks this column before sending -->
+          <div class="acct-toggle-row">
+            <div class="acct-toggle-text">
+              <strong>Send me a daily reminder</strong>
+              <span>You can turn this off any time.</span>
+            </div>
+            <div class="acct-toggle-right">
+              <span class="acct-toggle-saved" id="saved-daily_reminder" hidden>Saved ✓</span>
+              <button class="acct-toggle" id="toggle-daily-reminder"
+                      aria-pressed="<%= reminderEnabled ? 'true' : 'false' %>"
+                      type="button" onclick="toggleDailyReminder(this)">
+                <span class="acct-toggle-track"><span class="acct-toggle-thumb"></span></span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Time picker: hidden when master toggle is off -->
+          <div class="acct-reminder-time" id="reminder-time-row"<%= reminderEnabled ? '' : ' hidden' %>>
+            <label class="acct-label" for="reminder-hour-select">Send it at</label>
+            <select class="acct-input acct-select" id="reminder-hour-select" onchange="saveReminderHour(this)">
+              <% for (const h of HOURS) { %>
+                <option value="<%= h.value %>"<%= h.value === currentHour ? ' selected' : '' %>><%= h.label %></option>
+              <% } %>
+            </select>
+            <span class="acct-reminder-tz">in your timezone (<%= profile.timezone || 'America/Denver' %>)</span>
+          </div>
+
+          <!-- Per-device enable: separate concept from the master toggle because -->
+          <!-- browser push permission lives on the device, not the account.       -->
+          <div class="acct-device-row">
+            <div class="acct-device-state">
+              <strong id="device-status-label">Not enabled on this device</strong>
+              <span id="device-status-hint">Tap below to allow notifications in this browser.</span>
+            </div>
+            <button class="acct-save-btn" id="enable-device-btn" type="button" onclick="enableOnDevice()">Enable on this device</button>
+            <button class="acct-text-btn" id="disable-device-btn" type="button" onclick="disableOnDevice()" hidden>Disable on this device</button>
+          </div>
+          <p class="acct-status acct-status--error" id="reminder-error" hidden></p>
+        </div>
+      </section>
+
+      <!-- ── Timezone ──────────────────────────────────────────────────────── -->
+      <section class="dash-section">
+        <div class="dash-section-header">
+          <h2 class="dash-section-title">Your Timezone</h2>
+        </div>
+        <div class="acct-card">
+          <div class="acct-form acct-form--inline">
+            <div class="acct-field-group">
+              <label class="acct-label" for="timezone-select">Timezone</label>
+              <select class="acct-input acct-select" id="timezone-select">
+                <% for (const tz of timezones) { %>
+                  <option value="<%= tz.value %>"<%= (profile.timezone || 'America/Denver') === tz.value ? ' selected' : '' %>>
+                    <%= tz.label %>
+                  </option>
+                <% } %>
+              </select>
+            </div>
+            <div class="acct-form-footer">
+              <button class="acct-save-btn" type="button" onclick="saveTimezone()">Save Timezone</button>
+              <span class="acct-status" id="tz-status"></span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── Notifications ─────────────────────────────────────────────────── -->
+      <section class="dash-section">
+        <div class="dash-section-header">
+          <h2 class="dash-section-title">Notifications</h2>
+        </div>
+        <div class="acct-card">
+          <p class="acct-section-subtitle">Choose what you'd like to hear about.</p>
+
+          <%# "New Lessons" notification hidden from students during the trial
+              run — lessons aren't live yet. Admin-only; remove guard to restore. %>
+          <% if (user && user.role === 'admin') { %>
+          <div class="acct-toggle-row">
+            <div class="acct-toggle-text">
+              <strong>New Lessons</strong>
+              <span>Get notified when new content is published</span>
+            </div>
+            <div class="acct-toggle-right">
+              <span class="acct-toggle-saved" id="saved-notify_new_fieldnotes" hidden>Saved ✓</span>
+              <button class="acct-toggle" id="toggle-notify_new_fieldnotes"
+                      aria-pressed="<%= profile.notify_new_fieldnotes !== 0 ? 'true' : 'false' %>"
+                      type="button" onclick="togglePref(this, 'notify_new_fieldnotes')">
+                <span class="acct-toggle-track"><span class="acct-toggle-thumb"></span></span>
+              </button>
+            </div>
+          </div>
+          <% } %>
+
+          <div class="acct-toggle-row">
+            <div class="acct-toggle-text">
+              <strong>Community Activity</strong>
+              <span>Get notified when someone posts in the community</span>
+            </div>
+            <div class="acct-toggle-right">
+              <span class="acct-toggle-saved" id="saved-notify_community" hidden>Saved ✓</span>
+              <button class="acct-toggle" id="toggle-notify_community"
+                      aria-pressed="<%= profile.notify_community !== 0 ? 'true' : 'false' %>"
+                      type="button" onclick="togglePref(this, 'notify_community')">
+                <span class="acct-toggle-track"><span class="acct-toggle-thumb"></span></span>
+              </button>
+            </div>
+          </div>
+
+          <div class="acct-toggle-row acct-toggle-row--last">
+            <div class="acct-toggle-text">
+              <strong>Weekly Reminder</strong>
+              <span>A gentle nudge to set your weekly intentions every Monday</span>
+            </div>
+            <div class="acct-toggle-right">
+              <span class="acct-toggle-saved" id="saved-notify_weekly_reminder" hidden>Saved ✓</span>
+              <button class="acct-toggle" id="toggle-notify_weekly_reminder"
+                      aria-pressed="<%= profile.notify_weekly_reminder !== 0 ? 'true' : 'false' %>"
+                      type="button" onclick="togglePref(this, 'notify_weekly_reminder')">
+                <span class="acct-toggle-track"><span class="acct-toggle-thumb"></span></span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── Privacy ───────────────────────────────────────────────────────── -->
+      <section class="dash-section">
+        <div class="dash-section-header">
+          <h2 class="dash-section-title">Privacy</h2>
+        </div>
+        <div class="acct-card">
+          <p class="acct-section-subtitle">Control what others in the course can see.</p>
+
+          <div class="acct-toggle-row">
+            <div class="acct-toggle-text">
+              <strong>Show my weekly intentions to the community</strong>
+              <span>Your goal status dots are visible on the community page</span>
+            </div>
+            <div class="acct-toggle-right">
+              <span class="acct-toggle-saved" id="saved-community_goals_public" hidden>Saved ✓</span>
+              <button class="acct-toggle" id="toggle-community_goals_public"
+                      aria-pressed="<%= profile.community_goals_public !== 0 ? 'true' : 'false' %>"
+                      type="button" onclick="togglePref(this, 'community_goals_public')">
+                <span class="acct-toggle-track"><span class="acct-toggle-thumb"></span></span>
+              </button>
+            </div>
+          </div>
+
+          <div class="acct-toggle-row acct-toggle-row--last">
+            <div class="acct-toggle-text">
+              <strong>Show my current season to the community</strong>
+              <span>Your season icon appears next to your name on the community page</span>
+            </div>
+            <div class="acct-toggle-right">
+              <span class="acct-toggle-saved" id="saved-community_season_public" hidden>Saved ✓</span>
+              <button class="acct-toggle" id="toggle-community_season_public"
+                      aria-pressed="<%= profile.community_season_public !== 0 ? 'true' : 'false' %>"
+                      type="button" onclick="togglePref(this, 'community_season_public')">
+                <span class="acct-toggle-track"><span class="acct-toggle-thumb"></span></span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
     </main>
   </div>
 
@@ -273,6 +477,207 @@
         `<div class="${cls}" id="profile-avatar-initials">${initial}</div>`;
       toggleEdit('photo');
     }
+
+    // ── Status helper for the merged settings sections ─────────────────────────
+    function showStatus(el, msg, isError) {
+      el.textContent = msg;
+      el.className = 'acct-status ' + (isError ? 'acct-status--error' : 'acct-status--ok');
+      el.hidden = false;
+      if (!isError) setTimeout(() => { el.hidden = true; el.textContent = ''; }, 3500);
+    }
+
+    // ── Timezone ───────────────────────────────────────────────────────────────
+    async function saveTimezone() {
+      const timezone = document.getElementById('timezone-select').value;
+      const statusEl = document.getElementById('tz-status');
+      const res = await fetch('/api/account/timezone', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ timezone })
+      });
+      if (res.ok) {
+        showStatus(statusEl, 'Saved. ✓', false);
+      } else {
+        const data = await res.json();
+        showStatus(statusEl, data.error, true);
+      }
+    }
+
+    // ── Notification / privacy preference toggles ──────────────────────────────
+    async function togglePref(btn, key) {
+      const wasOn = btn.getAttribute('aria-pressed') === 'true';
+      const nowOn = !wasOn;
+      btn.setAttribute('aria-pressed', String(nowOn));
+      const savedEl = document.getElementById(`saved-${key}`);
+      const res = await fetch('/api/account/preference', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key, value: nowOn })
+      });
+      if (res.ok) {
+        if (savedEl) {
+          savedEl.hidden = false;
+          setTimeout(() => { savedEl.hidden = true; }, 2000);
+        }
+      } else {
+        btn.setAttribute('aria-pressed', String(wasOn));
+      }
+    }
+
+    // ── Daily Reminder ─────────────────────────────────────────────────────────
+    // Two-axis state model:
+    //   • Master toggle (`daily_reminder_enabled`) — server-side per-user flag
+    //     the cron checks before sending. Persists across devices.
+    //   • Per-device push subscription — browser-level permission + endpoint
+    //     stored in push_subscriptions. One row per device/browser install.
+    // The "Enable on this device" button grants permission, subscribes, AND
+    // turns on the master toggle in one tap.
+    const reminderErrEl = document.getElementById('reminder-error');
+
+    async function toggleDailyReminder(btn) {
+      const wasOn = btn.getAttribute('aria-pressed') === 'true';
+      const nowOn = !wasOn;
+      btn.setAttribute('aria-pressed', String(nowOn));
+      document.getElementById('reminder-time-row').hidden = !nowOn;
+      const savedEl = document.getElementById('saved-daily_reminder');
+      const res = await fetch('/api/account/daily-reminder', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ enabled: nowOn })
+      });
+      if (res.ok) {
+        if (savedEl) { savedEl.hidden = false; setTimeout(() => savedEl.hidden = true, 2000); }
+      } else {
+        btn.setAttribute('aria-pressed', String(wasOn));
+        document.getElementById('reminder-time-row').hidden = !wasOn;
+      }
+    }
+
+    async function saveReminderHour(sel) {
+      await fetch('/api/account/daily-reminder', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ hour: parseInt(sel.value, 10) })
+      });
+    }
+
+    // Convert a base64url-encoded VAPID key into the Uint8Array subscribe() wants.
+    function urlBase64ToUint8Array(s) {
+      const padding = '='.repeat((4 - s.length % 4) % 4);
+      const base64 = (s + padding).replace(/-/g, '+').replace(/_/g, '/');
+      const raw = atob(base64);
+      const out = new Uint8Array(raw.length);
+      for (let i = 0; i < raw.length; ++i) out[i] = raw.charCodeAt(i);
+      return out;
+    }
+
+    function showReminderError(msg) {
+      reminderErrEl.textContent = msg;
+      reminderErrEl.hidden = false;
+    }
+
+    function setDeviceUiEnabled(isEnabled) {
+      document.getElementById('device-status-label').textContent =
+        isEnabled ? 'Enabled on this device' : 'Not enabled on this device';
+      document.getElementById('device-status-hint').textContent = isEnabled
+        ? "You'll get the daily reminder here."
+        : 'Tap below to allow notifications in this browser.';
+      document.getElementById('enable-device-btn').hidden  = isEnabled;
+      document.getElementById('disable-device-btn').hidden = !isEnabled;
+    }
+
+    async function enableOnDevice() {
+      reminderErrEl.hidden = true;
+      if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) {
+        return showReminderError('This browser does not support push notifications.');
+      }
+
+      // Permission has to be requested from a user gesture — we are inside one.
+      const permission = await Notification.requestPermission();
+      if (permission !== 'granted') {
+        return showReminderError('Permission denied. You can enable it in your browser settings.');
+      }
+
+      // Pull the VAPID public key fresh — handles the case where the server
+      // rotated keys since the last visit.
+      const keyRes = await fetch('/api/push/vapid-public-key');
+      if (!keyRes.ok) {
+        return showReminderError('Notifications are not configured on the server yet.');
+      }
+      const { key } = await keyRes.json();
+
+      const reg = await navigator.serviceWorker.ready;
+      let sub;
+      try {
+        sub = await reg.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(key),
+        });
+      } catch (e) {
+        return showReminderError('Could not subscribe: ' + (e.message || e));
+      }
+
+      const res = await fetch('/api/push/subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ subscription: sub.toJSON() })
+      });
+      if (!res.ok) {
+        return showReminderError('Could not save the subscription.');
+      }
+
+      // If the master toggle is off, flip it on — enabling a device but having
+      // the cron skip you would be confusing.
+      const masterBtn = document.getElementById('toggle-daily-reminder');
+      if (masterBtn.getAttribute('aria-pressed') !== 'true') {
+        masterBtn.setAttribute('aria-pressed', 'true');
+        document.getElementById('reminder-time-row').hidden = false;
+        await fetch('/api/account/daily-reminder', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ enabled: true })
+        });
+      }
+      setDeviceUiEnabled(true);
+    }
+
+    async function disableOnDevice() {
+      reminderErrEl.hidden = true;
+      if (!('serviceWorker' in navigator)) return;
+      const reg = await navigator.serviceWorker.ready;
+      const sub = await reg.pushManager.getSubscription();
+      if (sub) {
+        // Tell the server first, then unsubscribe locally.
+        await fetch('/api/push/unsubscribe', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ endpoint: sub.endpoint })
+        });
+        await sub.unsubscribe();
+      }
+      setDeviceUiEnabled(false);
+    }
+
+    // On page load, reconcile UI with reality: does this browser have an active
+    // subscription? + is this an iOS Safari that needs the install guidance?
+    (async () => {
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+      const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+      if (isIOS && !isStandalone) {
+        const card = document.getElementById('ios-install-card');
+        if (card) card.hidden = false;
+      }
+
+      if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+        // Leave the button visible — clicking it shows a friendly unsupported message.
+        return;
+      }
+      try {
+        const reg = await navigator.serviceWorker.ready;
+        const sub = await reg.pushManager.getSubscription();
+        setDeviceUiEnabled(!!sub);
+      } catch (_) { /* no-op */ }
+    })();
   </script>
 
 </body>
