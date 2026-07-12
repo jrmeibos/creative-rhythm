@@ -173,16 +173,19 @@ The Creative's Garden`;
 // The email twin of the daily push. Sent by lib/daily-reminders.js to students
 // who turned on "Email me the reminder." Calm, one gentle nudge + a link back
 // to the dashboard, with a note on how to turn it off.
-async function sendDailyReminderEmail(toEmail, displayName) {
+async function sendDailyReminderEmail(toEmail, displayName, nudge) {
   const fromAddress  = process.env.EMAIL_FROM || 'hello@creativesgarden.com';
   const appUrl       = (process.env.APP_URL || 'https://www.creativesgarden.com').replace(/\/$/, '');
   const dashboardUrl = `${appUrl}/dashboard`;
   const name         = displayName || 'there';
   const subject      = 'Your daily recording reminder 🌿';
+  // The daily-reminder job rotates this line; fall back to a default if called
+  // without one so the email still reads correctly.
+  const line         = nudge || 'A gentle nudge — have you logged your recording for today?';
 
   const text = `Hi ${name},
 
-A gentle nudge — have you logged your recording for today?
+${line}
 
 Open your garden: ${dashboardUrl}
 
@@ -207,7 +210,7 @@ The Creative's Garden`;
       Hi ${name},
     </p>
     <p style="color: #100F10; font-size: 16px; line-height: 1.7; margin: 0 0 24px;">
-      A gentle nudge — have you logged your recording for today?
+      ${line}
     </p>
     <p style="margin: 32px 0;">
       <a href="${dashboardUrl}"
