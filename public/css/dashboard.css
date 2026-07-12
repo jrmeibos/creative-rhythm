@@ -2780,6 +2780,21 @@
   box-shadow: 0 2px 14px rgba(16, 15, 16, 0.05);
 }
 
+/* ─── Season cards: watercolor illustration banner ───────────────────────── */
+.mid-card-season-art {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 10px;
+  margin: 0 0 1.15rem;
+}
+/* The ✕ sits over the illustration on season cards — give it a backdrop. */
+.mid-card--season .mid-card-x {
+  background: rgba(255, 255, 255, 0.78);
+  color: rgba(16, 15, 16, 0.55);
+}
+.mid-card--season .mid-card-x:hover { background: #fff; color: rgba(16, 15, 16, 0.8); }
+
 /* ─── Dismiss control (✕ → snooze / remove) on dashboard cards ────────────── */
 .mid-card-dismiss {
   position: absolute;

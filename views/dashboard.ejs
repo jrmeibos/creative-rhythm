@@ -108,8 +108,9 @@
 
       <% if (summerCardVisible) { %>
       <section class="dash-section">
-        <div class="mid-card" data-banner-key="season_summer">
+        <div class="mid-card mid-card--season" data-banner-key="season_summer">
           <%- include('partials/card-dismiss', { snoozeLabel: 'Show this again later', removeLabel: 'Remove this reminder' }) %>
+          <img class="mid-card-season-art" src="/images/seasons/summer.webp" alt="" width="800" height="268">
           <p class="mid-card-eyebrow">Summer is here</p>
           <h2 class="mid-card-title">Try making something this week</h2>
           <p class="mid-card-body">
