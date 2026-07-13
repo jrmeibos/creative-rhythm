@@ -35,11 +35,11 @@ The Creative's Garden`;
 <body style="font-family: Georgia, serif; background: #FAFAFA; margin: 0; padding: 32px;">
   <div style="max-width: 560px; margin: 0 auto; background: #F2EEE3; padding: 40px; border-radius: 8px;">
     <div style="text-align: center; margin-bottom: 32px;">
-      <img src="https://www.creativesgarden.com/images/brand/Favicon_3.png"
+      <img src="https://www.creativesgarden.com/images/brand/email-badge-green.png"
            alt="The Creative's Garden"
-           width="80"
-           height="80"
-           style="display: inline-block; max-width: 80px; height: auto;" />
+           width="96"
+           height="96"
+           style="display: inline-block; width: 96px; max-width: 96px; height: auto; border-radius: 50%;" />
     </div>
     <h1 style="font-family: Georgia, serif; color: #100F10; font-weight: 400; margin: 0 0 24px; font-size: 24px;">
       Reset your password
@@ -117,11 +117,11 @@ The Creative's Garden`;
 <body style="font-family: Georgia, serif; background: #FAFAFA; margin: 0; padding: 32px;">
   <div style="max-width: 560px; margin: 0 auto; background: #F2EEE3; padding: 40px; border-radius: 8px;">
     <div style="text-align: center; margin-bottom: 32px;">
-      <img src="https://www.creativesgarden.com/images/brand/Favicon_3.png"
+      <img src="https://www.creativesgarden.com/images/brand/email-badge-green.png"
            alt="The Creative's Garden"
-           width="80"
-           height="80"
-           style="display: inline-block; max-width: 80px; height: auto;" />
+           width="96"
+           height="96"
+           style="display: inline-block; width: 96px; max-width: 96px; height: auto; border-radius: 50%;" />
     </div>
     <p style="color: #100F10; font-size: 16px; line-height: 1.6; margin: 0 0 16px;">
       Hi Julia,
@@ -200,11 +200,11 @@ The Creative's Garden`;
 <body style="font-family: Georgia, serif; background: #FAFAFA; margin: 0; padding: 32px;">
   <div style="max-width: 560px; margin: 0 auto; background: #F2EEE3; padding: 40px; border-radius: 8px;">
     <div style="text-align: center; margin-bottom: 32px;">
-      <img src="https://www.creativesgarden.com/images/brand/Favicon_3.png"
+      <img src="https://www.creativesgarden.com/images/brand/email-badge-green.png"
            alt="The Creative's Garden"
-           width="80"
-           height="80"
-           style="display: inline-block; max-width: 80px; height: auto;" />
+           width="96"
+           height="96"
+           style="display: inline-block; width: 96px; max-width: 96px; height: auto; border-radius: 50%;" />
     </div>
     <p style="color: #100F10; font-size: 16px; line-height: 1.6; margin: 0 0 16px;">
       Hi ${name},
@@ -276,11 +276,11 @@ The Creative's Garden`;
 <body style="font-family: Georgia, serif; background: #FAFAFA; margin: 0; padding: 32px;">
   <div style="max-width: 560px; margin: 0 auto; background: #F2EEE3; padding: 40px; border-radius: 8px;">
     <div style="text-align: center; margin-bottom: 32px;">
-      <img src="https://www.creativesgarden.com/images/brand/Favicon_3.png"
+      <img src="https://www.creativesgarden.com/images/brand/email-badge-green.png"
            alt="The Creative's Garden"
-           width="80"
-           height="80"
-           style="display: inline-block; max-width: 80px; height: auto;" />
+           width="96"
+           height="96"
+           style="display: inline-block; width: 96px; max-width: 96px; height: auto; border-radius: 50%;" />
     </div>
     <p style="color: #100F10; font-size: 16px; line-height: 1.6; margin: 0 0 16px;">
       Hi ${name},
