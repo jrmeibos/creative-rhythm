@@ -239,7 +239,8 @@ app.use((req, res, next) => {
   if (u && u.role === 'student' && !u.onboarding_completed) {
     const ok = req.path === '/' || req.path === '/logout'
       || req.path.startsWith('/onboarding')
-      || req.path.startsWith('/api/onboarding');
+      || req.path.startsWith('/api/onboarding')
+      || req.path === '/privacy' || req.path === '/terms' || req.path === '/accessibility';
     if (!ok) return res.redirect('/onboarding');
   }
   next();
@@ -399,6 +400,9 @@ app.get('/signup', (req, res) => {
   if (req.session.user) return res.redirect(returnTo || '/dashboard');
   res.render('signup', { error: null, firstName: '', lastName: '', email: '', returnTo });
 });
+
+// Legal pages — public, no auth (must be viewable by anyone, incl. logged out).
+app.get('/privacy', (req, res) => res.render('privacy', { title: 'Privacy Policy' }));
 
 app.post('/signup', signupLimiter, async (req, res) => {
   const firstName = (req.body.firstName || '').trim();
