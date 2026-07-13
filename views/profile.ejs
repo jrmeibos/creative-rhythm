@@ -262,6 +262,75 @@
         </div>
       </section>
 
+      <!-- ── Weekly Reminder ───────────────────────────────────────────────── -->
+      <%
+        const weeklyHour    = (typeof profile.weekly_reminder_hour === 'number') ? profile.weekly_reminder_hour : 9;
+        const weeklyEnabled = profile.weekly_reminder_enabled === 1;
+      %>
+      <section class="dash-section">
+        <div class="dash-section-header">
+          <h2 class="dash-section-title">Weekly Reminder</h2>
+        </div>
+        <div class="acct-card">
+          <p class="acct-section-subtitle">
+            A gentle nudge every <strong>Monday</strong> to set your weekly intentions.
+          </p>
+
+          <!-- Master toggle -->
+          <div class="acct-toggle-row">
+            <div class="acct-toggle-text">
+              <strong>Remind me to set my weekly intentions</strong>
+              <span>Sent every Monday. Turn this off any time.</span>
+            </div>
+            <div class="acct-toggle-right">
+              <span class="acct-toggle-saved" id="saved-weekly_reminder" hidden>Saved ✓</span>
+              <button class="acct-toggle" id="toggle-weekly-reminder"
+                      aria-pressed="<%= weeklyEnabled ? 'true' : 'false' %>"
+                      type="button" onclick="toggleWeeklyReminder(this)">
+                <span class="acct-toggle-track"><span class="acct-toggle-thumb"></span></span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Time picker: hidden when the toggle is off -->
+          <div class="acct-reminder-time" id="weekly-time-row"<%= weeklyEnabled ? '' : ' hidden' %>>
+            <label class="acct-label" for="weekly-hour-select">Monday at</label>
+            <select class="acct-input acct-select" id="weekly-hour-select" onchange="saveWeeklyReminderHour(this)">
+              <% for (const h of HOURS) { %>
+                <option value="<%= h.value %>"<%= h.value === weeklyHour ? ' selected' : '' %>><%= h.label %></option>
+              <% } %>
+            </select>
+            <span class="acct-reminder-tz">in your timezone (<%= profile.timezone || 'America/Denver' %>)</span>
+          </div>
+
+          <p class="acct-reminder-channels-label">How would you like to receive it?</p>
+
+          <!-- Push uses the same registered devices as the daily reminder -->
+          <div class="acct-device-row">
+            <div class="acct-device-state">
+              <strong>On your enabled devices</strong>
+              <span>Sent to the phone/desktop you enabled for the daily reminder above.</span>
+            </div>
+          </div>
+
+          <!-- Email channel (independent boolean) -->
+          <div class="acct-toggle-row acct-toggle-row--last">
+            <div class="acct-toggle-text">
+              <strong>Email me this reminder</strong>
+              <span>Get the Monday nudge in your inbox — no app install needed.</span>
+            </div>
+            <div class="acct-toggle-right">
+              <span class="acct-toggle-saved" id="saved-weekly_reminder_email" hidden>Saved ✓</span>
+              <button class="acct-toggle" id="toggle-weekly_reminder_email"
+                      aria-pressed="<%= profile.weekly_reminder_email ? 'true' : 'false' %>"
+                      type="button" onclick="toggleWeeklyEmail(this)">
+                <span class="acct-toggle-track"><span class="acct-toggle-thumb"></span></span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <!-- ── Timezone ──────────────────────────────────────────────────────── -->
       <section class="dash-section">
         <div class="dash-section-header">
@@ -575,6 +644,63 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ hour: parseInt(sel.value, 10) })
       });
+    }
+
+    // ── Weekly Reminder ─────────────────────────────────────────────────────────
+    async function toggleWeeklyReminder(btn) {
+      const wasOn = btn.getAttribute('aria-pressed') === 'true';
+      const nowOn = !wasOn;
+      btn.setAttribute('aria-pressed', String(nowOn));
+      document.getElementById('weekly-time-row').hidden = !nowOn;
+      const savedEl = document.getElementById('saved-weekly_reminder');
+      const res = await fetch('/api/account/weekly-reminder', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ enabled: nowOn })
+      });
+      if (res.ok) {
+        if (savedEl) { savedEl.hidden = false; setTimeout(() => savedEl.hidden = true, 2000); }
+      } else {
+        btn.setAttribute('aria-pressed', String(wasOn));
+        document.getElementById('weekly-time-row').hidden = !wasOn;
+      }
+    }
+
+    async function saveWeeklyReminderHour(sel) {
+      await fetch('/api/account/weekly-reminder', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ hour: parseInt(sel.value, 10) })
+      });
+    }
+
+    // Weekly email channel. Like the daily one, turning it on also flips the
+    // weekly master on so an email-only student isn't skipped.
+    async function toggleWeeklyEmail(btn) {
+      const wasOn = btn.getAttribute('aria-pressed') === 'true';
+      const nowOn = !wasOn;
+      btn.setAttribute('aria-pressed', String(nowOn));
+      const savedEl = document.getElementById('saved-weekly_reminder_email');
+      const res = await fetch('/api/account/preference', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key: 'weekly_reminder_email', value: nowOn })
+      });
+      if (!res.ok) { btn.setAttribute('aria-pressed', String(wasOn)); return; }
+      if (savedEl) { savedEl.hidden = false; setTimeout(() => { savedEl.hidden = true; }, 2000); }
+
+      if (nowOn) {
+        const masterBtn = document.getElementById('toggle-weekly-reminder');
+        if (masterBtn && masterBtn.getAttribute('aria-pressed') !== 'true') {
+          masterBtn.setAttribute('aria-pressed', 'true');
+          document.getElementById('weekly-time-row').hidden = false;
+          await fetch('/api/account/weekly-reminder', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ enabled: true })
+          });
+        }
+      }
     }
 
     // Convert a base64url-encoded VAPID key into the Uint8Array subscribe() wants.

@@ -248,4 +248,80 @@ The Creative's Garden`;
   }
 }
 
-module.exports = { sendPasswordResetEmail, sendAdminMilestoneEmail, sendDailyReminderEmail };
+// ─── Weekly reminder (Monday "set your intentions" nudge) ───────────────────
+// Sent by lib/weekly-reminders.js to students who opted into the weekly email.
+// Points at /weekly-intentions rather than the dashboard.
+async function sendWeeklyReminderEmail(toEmail, displayName, nudge) {
+  const fromAddress = process.env.EMAIL_FROM || 'hello@creativesgarden.com';
+  const appUrl      = (process.env.APP_URL || 'https://www.creativesgarden.com').replace(/\/$/, '');
+  const link        = `${appUrl}/weekly-intentions`;
+  const name        = displayName || 'there';
+  const subject     = 'A new week — set your intentions 🌱';
+  const line        = nudge || 'It’s a new week. What would you like to tend to over the next few days?';
+
+  const text = `Hi ${name},
+
+${line}
+
+Set your weekly intentions: ${link}
+
+You can change the day/time or turn this off anytime from your profile.
+
+🌿
+The Creative's Garden`;
+
+  const html = `<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><title>${subject}</title></head>
+<body style="font-family: Georgia, serif; background: #FAFAFA; margin: 0; padding: 32px;">
+  <div style="max-width: 560px; margin: 0 auto; background: #F2EEE3; padding: 40px; border-radius: 8px;">
+    <div style="text-align: center; margin-bottom: 32px;">
+      <img src="https://www.creativesgarden.com/images/brand/Favicon_3.png"
+           alt="The Creative's Garden"
+           width="80"
+           height="80"
+           style="display: inline-block; max-width: 80px; height: auto;" />
+    </div>
+    <p style="color: #100F10; font-size: 16px; line-height: 1.6; margin: 0 0 16px;">
+      Hi ${name},
+    </p>
+    <p style="color: #100F10; font-size: 16px; line-height: 1.7; margin: 0 0 24px;">
+      ${line}
+    </p>
+    <p style="margin: 32px 0;">
+      <a href="${link}"
+         style="background: #705C6C; color: #F2EEE3; text-decoration: none; padding: 14px 28px; border-radius: 6px; font-family: Georgia, serif; display: inline-block;">
+        Set your intentions
+      </a>
+    </p>
+    <p style="color: #76856C; font-size: 14px; line-height: 1.6; margin: 24px 0 0; font-style: italic;">
+      You can change the day/time or turn this off anytime from your profile.
+    </p>
+    <p style="color: #76856C; font-size: 14px; line-height: 1.6; margin: 32px 0 0; text-align: center;">
+      🌿 The Creative's Garden
+    </p>
+  </div>
+</body>
+</html>`;
+
+  try {
+    const client = getResend();
+    if (!client) {
+      console.warn('[email] RESEND_API_KEY not set — skipping send');
+      return { ok: false, error: 'RESEND_API_KEY not set' };
+    }
+    const result = await client.emails.send({
+      from: `The Creative's Garden <${fromAddress}>`,
+      to: toEmail,
+      subject,
+      text,
+      html,
+    });
+    return { ok: true, id: result.data?.id };
+  } catch (err) {
+    console.error('[email] Failed to send weekly reminder:', err);
+    return { ok: false, error: err.message };
+  }
+}
+
+module.exports = { sendPasswordResetEmail, sendAdminMilestoneEmail, sendDailyReminderEmail, sendWeeklyReminderEmail };

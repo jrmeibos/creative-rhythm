@@ -436,6 +436,21 @@ db.exec(`
     db.exec("ALTER TABLE users ADD COLUMN reminder_email_enabled INTEGER DEFAULT 0");
     console.log('✓ Migrated: added reminder_email_enabled column');
   }
+  // Weekly reminder (Monday nudge to set weekly intentions). Self-contained,
+  // parallel to the daily reminder: its own on/off, hour, and email channel.
+  // All off by default — opt-in, like the daily one.
+  if (!userCols.includes('weekly_reminder_enabled')) {
+    db.exec("ALTER TABLE users ADD COLUMN weekly_reminder_enabled INTEGER DEFAULT 0");
+    console.log('✓ Migrated: added weekly_reminder_enabled column');
+  }
+  if (!userCols.includes('weekly_reminder_hour')) {
+    db.exec("ALTER TABLE users ADD COLUMN weekly_reminder_hour INTEGER DEFAULT 9");
+    console.log('✓ Migrated: added weekly_reminder_hour column');
+  }
+  if (!userCols.includes('weekly_reminder_email')) {
+    db.exec("ALTER TABLE users ADD COLUMN weekly_reminder_email INTEGER DEFAULT 0");
+    console.log('✓ Migrated: added weekly_reminder_email column');
+  }
 
   if (!userCols.includes('community_season_public')) {
     db.exec("ALTER TABLE users ADD COLUMN community_season_public INTEGER DEFAULT 1");
@@ -1538,7 +1553,7 @@ module.exports = {
   },
 
   getUserFullProfile(id) {
-    return db.prepare('SELECT id, name, email, role, avatar_initial, current_season, profile_photo, timezone, notify_new_fieldnotes, notify_community, notify_weekly_reminder, community_goals_public, community_season_public, daily_reminder_enabled, daily_reminder_hour, reminder_email_enabled FROM users WHERE id = ?').get(id);
+    return db.prepare('SELECT id, name, email, role, avatar_initial, current_season, profile_photo, timezone, notify_new_fieldnotes, notify_community, notify_weekly_reminder, community_goals_public, community_season_public, daily_reminder_enabled, daily_reminder_hour, reminder_email_enabled, weekly_reminder_enabled, weekly_reminder_hour, weekly_reminder_email FROM users WHERE id = ?').get(id);
   },
 
   updateUserDetails(userId, name, email) {
@@ -1563,7 +1578,7 @@ module.exports = {
   },
 
   updateUserPreference(userId, key, value) {
-    const allowed = ['notify_new_fieldnotes','notify_community','notify_weekly_reminder','community_goals_public','community_season_public','reminder_email_enabled'];
+    const allowed = ['notify_new_fieldnotes','notify_community','notify_weekly_reminder','community_goals_public','community_season_public','reminder_email_enabled','weekly_reminder_email'];
     if (!allowed.includes(key)) throw new Error('Invalid preference key');
     return db.prepare(`UPDATE users SET ${key}=? WHERE id=?`).run(value ? 1 : 0, userId);
   },
@@ -3496,6 +3511,27 @@ module.exports = {
   getUsersWithDailyReminderEnabled() {
     return db.prepare(
       'SELECT id, name, email, timezone, daily_reminder_hour, reminder_email_enabled FROM users WHERE daily_reminder_enabled = 1'
+    ).all();
+  },
+
+  // ─── Weekly reminder preferences (Monday "set your intentions" nudge) ──────
+
+  setWeeklyReminderEnabled(userId, enabled) {
+    return db.prepare(
+      'UPDATE users SET weekly_reminder_enabled = ? WHERE id = ?'
+    ).run(enabled ? 1 : 0, userId);
+  },
+
+  setWeeklyReminderHour(userId, hour) {
+    const h = Math.max(0, Math.min(23, parseInt(hour, 10) || 0));
+    return db.prepare(
+      'UPDATE users SET weekly_reminder_hour = ? WHERE id = ?'
+    ).run(h, userId);
+  },
+
+  getUsersWithWeeklyReminderEnabled() {
+    return db.prepare(
+      'SELECT id, name, email, timezone, weekly_reminder_hour, weekly_reminder_email FROM users WHERE weekly_reminder_enabled = 1'
     ).all();
   },
 

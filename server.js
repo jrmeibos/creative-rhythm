@@ -3538,6 +3538,15 @@ app.post('/api/account/daily-reminder', requireAuth, (req, res) => {
   res.json({ ok: true });
 });
 
+// Weekly reminder — same shape as the daily one (enabled + hour). Fixed to
+// Mondays for now; the email channel is a separate boolean pref.
+app.post('/api/account/weekly-reminder', requireAuth, (req, res) => {
+  const { enabled, hour } = req.body || {};
+  if (enabled !== undefined) db.setWeeklyReminderEnabled(req.session.user.id, !!enabled);
+  if (hour    !== undefined) db.setWeeklyReminderHour(req.session.user.id, hour);
+  res.json({ ok: true });
+});
+
 // ─── Resources ─────────────────────────────────────────────────────────────
 
 app.get('/resources', requireAuth, (req, res) => {
@@ -4381,6 +4390,7 @@ app.get('/admin/download-backup', requireAdmin, (req, res) => {
 // current UTC hour maps to that student's chosen local hour, so this route
 // is dumb — it just runs the lib and reports.
 const { runDailyReminders } = require('./lib/daily-reminders');
+const { runWeeklyReminders } = require('./lib/weekly-reminders');
 
 app.post('/admin/run-daily-reminders', async (req, res) => {
   const expected = process.env.CRON_SECRET;
@@ -4397,8 +4407,11 @@ app.post('/admin/run-daily-reminders', async (req, res) => {
   const capture = (line) => { log.push(line); console.log(line); };
 
   try {
-    const summary = await runDailyReminders({ dryRun, log: capture });
-    res.json({ ok: true, dryRun, summary, log });
+    // One hourly job runs both cadences. Weekly self-gates to Mondays, so it's
+    // a cheap no-op on other days.
+    const daily  = await runDailyReminders({ dryRun, log: capture });
+    const weekly = await runWeeklyReminders({ dryRun, log: capture });
+    res.json({ ok: true, dryRun, summary: { daily, weekly }, log });
   } catch (err) {
     console.error('[daily-reminders route] fatal:', err);
     res.status(500).json({ ok: false, error: err.message, log });
@@ -4413,6 +4426,7 @@ app.post('/admin/run-daily-reminders', async (req, res) => {
 // check a student.
 app.get('/admin/reminder-check', requireAdmin, (req, res) => {
   const { getHourInTimezone, getDateInTimezone } = require('./lib/daily-reminders');
+  const { getWeekdayInTimezone } = require('./lib/weekly-reminders');
 
   const lookupEmail = (req.query.email || '').trim().toLowerCase();
   const target = lookupEmail ? db.getUserByEmail(lookupEmail) : db.getUserById(req.session.user.id);
@@ -4425,6 +4439,10 @@ app.get('/admin/reminder-check', requireAdmin, (req, res) => {
   const milestone   = `daily-reminder-${getDateInTimezone(now, tz)}`;
   const claimed     = db.hasMilestoneBeenClaimed(u.id, milestone);
   const pushCount   = db.countPushSubscriptionsForUser(u.id);
+
+  const weekday        = getWeekdayInTimezone(now, tz);
+  const weeklyMilestone = `weekly-reminder-${getDateInTimezone(now, tz)}`;
+  const weeklyClaimed   = db.hasMilestoneBeenClaimed(u.id, weeklyMilestone);
 
   const out = {
     server: {
@@ -4446,6 +4464,17 @@ app.get('/admin/reminder-check', requireAdmin, (req, res) => {
       hourMatchesRightNow: currentHour === u.daily_reminder_hour,
       todaysReminderAlreadyProcessed: claimed,
       milestoneKey: milestone,
+      weekly: {
+        enabled: u.weekly_reminder_enabled === 1,
+        hour: u.weekly_reminder_hour,
+        emailChannelOn: u.weekly_reminder_email === 1,
+        todayIsMonday: weekday === 'Mon',
+        weekdayInYourTimezone: weekday,
+        thisWeekAlreadyProcessed: weeklyClaimed,
+        milestoneKey: weeklyMilestone,
+        // Weekly uses the same registered push devices as the daily reminder.
+        pushDevicesRegistered: pushCount,
+      },
     },
     notes: [],
   };
