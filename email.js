@@ -53,7 +53,7 @@ The Creative's Garden`;
     <p style="color: #100F10; font-size: 16px; line-height: 1.6; margin: 0 0 24px;">
       If this was you, click the button below to set a new password. The link expires in 1 hour.
     </p>
-    <p style="margin: 32px 0;">
+    <p style="margin: 32px 0; text-align: center;">
       <a href="${resetLink}"
          style="background: #705C6C; color: #F2EEE3; text-decoration: none; padding: 14px 28px; border-radius: 6px; font-family: Georgia, serif; display: inline-block;">
         Set a new password
@@ -62,8 +62,12 @@ The Creative's Garden`;
     <p style="color: #76856C; font-size: 14px; line-height: 1.6; margin: 24px 0 0; font-style: italic;">
       If you didn't request this, you can safely ignore this email — your password won't change.
     </p>
-    <p style="color: #76856C; font-size: 14px; line-height: 1.6; margin: 32px 0 0; text-align: center;">
-      🌿 The Creative's Garden
+    <p style="margin: 32px 0 0; text-align: center;">
+      <img src="https://www.creativesgarden.com/images/brand/Favicon_3.png"
+           alt="The Creative's Garden"
+           width="32"
+           height="32"
+           style="display: inline-block; width: 32px; max-width: 32px; height: auto;" />
     </p>
   </div>
 </body>
@@ -132,8 +136,12 @@ The Creative's Garden`;
     <p style="color: #76856C; font-size: 14px; line-height: 1.6; margin: 0 0 24px; font-style: italic;">
       A PDF copy is attached.
     </p>
-    <p style="color: #76856C; font-size: 14px; line-height: 1.6; margin: 32px 0 0; text-align: center;">
-      🌿 The Creative's Garden
+    <p style="margin: 32px 0 0; text-align: center;">
+      <img src="https://www.creativesgarden.com/images/brand/Favicon_3.png"
+           alt="The Creative's Garden"
+           width="32"
+           height="32"
+           style="display: inline-block; width: 32px; max-width: 32px; height: auto;" />
     </p>
   </div>
 </body>
@@ -189,7 +197,7 @@ ${line}
 
 Open your garden: ${dashboardUrl}
 
-You can change the time or turn these reminders off anytime from your profile.
+You can change or turn off these reminders anytime from your profile: ${appUrl}/profile
 
 🌿
 The Creative's Garden`;
@@ -212,17 +220,22 @@ The Creative's Garden`;
     <p style="color: #100F10; font-size: 16px; line-height: 1.7; margin: 0 0 24px;">
       ${line}
     </p>
-    <p style="margin: 32px 0;">
+    <p style="margin: 32px 0; text-align: center;">
       <a href="${dashboardUrl}"
          style="background: #705C6C; color: #F2EEE3; text-decoration: none; padding: 14px 28px; border-radius: 6px; font-family: Georgia, serif; display: inline-block;">
         Open your garden
       </a>
     </p>
     <p style="color: #76856C; font-size: 14px; line-height: 1.6; margin: 24px 0 0; font-style: italic;">
-      You can change the time or turn these reminders off anytime from your profile.
+      You can change or turn off these reminders anytime from your
+      <a href="${appUrl}/profile" style="color: #705C6C;">profile</a>.
     </p>
-    <p style="color: #76856C; font-size: 14px; line-height: 1.6; margin: 32px 0 0; text-align: center;">
-      🌿 The Creative's Garden
+    <p style="margin: 32px 0 0; text-align: center;">
+      <img src="https://www.creativesgarden.com/images/brand/Favicon_3.png"
+           alt="The Creative's Garden"
+           width="32"
+           height="32"
+           style="display: inline-block; width: 32px; max-width: 32px; height: auto;" />
     </p>
   </div>
 </body>
@@ -265,7 +278,7 @@ ${line}
 
 Set your weekly intentions: ${link}
 
-You can change the day/time or turn this off anytime from your profile.
+You can change or turn off these reminders anytime from your profile: ${appUrl}/profile
 
 🌿
 The Creative's Garden`;
@@ -288,17 +301,22 @@ The Creative's Garden`;
     <p style="color: #100F10; font-size: 16px; line-height: 1.7; margin: 0 0 24px;">
       ${line}
     </p>
-    <p style="margin: 32px 0;">
+    <p style="margin: 32px 0; text-align: center;">
       <a href="${link}"
          style="background: #705C6C; color: #F2EEE3; text-decoration: none; padding: 14px 28px; border-radius: 6px; font-family: Georgia, serif; display: inline-block;">
         Set your intentions
       </a>
     </p>
     <p style="color: #76856C; font-size: 14px; line-height: 1.6; margin: 24px 0 0; font-style: italic;">
-      You can change the day/time or turn this off anytime from your profile.
+      You can change or turn off these reminders anytime from your
+      <a href="${appUrl}/profile" style="color: #705C6C;">profile</a>.
     </p>
-    <p style="color: #76856C; font-size: 14px; line-height: 1.6; margin: 32px 0 0; text-align: center;">
-      🌿 The Creative's Garden
+    <p style="margin: 32px 0 0; text-align: center;">
+      <img src="https://www.creativesgarden.com/images/brand/Favicon_3.png"
+           alt="The Creative's Garden"
+           width="32"
+           height="32"
+           style="display: inline-block; width: 32px; max-width: 32px; height: auto;" />
     </p>
   </div>
 </body>
