@@ -96,7 +96,7 @@
     <% }); %>
 
     <div class="dayview-cta-row">
-      <button type="button" class="recording-card-btn-secondary" id="dayview-add-btn">+ Add another</button>
+      <button type="button" class="recording-card-btn-secondary" id="dayview-add-btn">+ Log another</button>
       <button type="button" class="recording-about-toggle"
               id="dayview-howto-toggle" aria-controls="dayview-howto-panel"
               aria-expanded="false">How to do the daily recording ↓</button>
@@ -104,19 +104,22 @@
   <% } else { %>
     <div class="dayview-empty-box">
       <svg class="dayview-empty-icon" viewBox="0 0 24 24" fill="none"
-           stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true">
-        <rect x="2.5" y="6.5" width="13" height="11" rx="2.5"/>
-        <path d="M15.5 10.5 L21 7.5 L21 16.5 L15.5 13.5 Z"/>
+           stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/>
+        <path d="M2 21c0-3 1.85-5.36 5.08-6"/>
       </svg>
       <p class="dayview-empty">
         <% if (dayview.isToday) { %>
-          Nothing here yet. Record when you're ready.
+          Recorded your video? Log it here.
         <% } else { %>
-          Nothing recorded for this day. You can still add one if you'd like.
+          Nothing logged for this day. You can still add one.
         <% } %>
       </p>
+      <p class="dayview-empty-sub">
+        Record a short video on your phone or camera first — it's private, just for you.
+      </p>
       <div class="dayview-cta-row">
-        <button type="button" class="recording-card-btn" id="dayview-add-btn">Add a recording for this day</button>
+        <button type="button" class="recording-card-btn" id="dayview-add-btn">Log today's recording</button>
         <button type="button" class="recording-about-toggle"
                 id="dayview-howto-toggle" aria-controls="dayview-howto-panel"
                 aria-expanded="false">How to do the daily recording ↓</button>
@@ -137,6 +140,7 @@
   </div>
 
   <div class="dayview-form is-hidden" id="dayview-form">
+    <p class="dayview-form-intro">A few notes on the video you just recorded —</p>
     <% cuttingPrompts.forEach(function (p) { %>
       <div class="recording-reflect-field">
         <label class="recording-reflect-q" for="dayview-input-<%= p.key %>"><%= p.label %></label>
