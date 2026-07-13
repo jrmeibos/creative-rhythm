@@ -4405,6 +4405,69 @@ app.post('/admin/run-daily-reminders', async (req, res) => {
   }
 });
 
+// Admin-only diagnostic for the daily reminder. Open in a browser when a
+// reminder didn't arrive. Reports the target user's settings, whether each
+// channel is configured server-side, and — the key signal — whether today's
+// reminder was already claimed (which tells us if the hourly job actually
+// reached this user). Defaults to yourself; add ?email=someone@example.com to
+// check a student.
+app.get('/admin/reminder-check', requireAdmin, (req, res) => {
+  const { getHourInTimezone, getDateInTimezone } = require('./lib/daily-reminders');
+
+  const lookupEmail = (req.query.email || '').trim().toLowerCase();
+  const target = lookupEmail ? db.getUserByEmail(lookupEmail) : db.getUserById(req.session.user.id);
+  if (!target) return res.json({ error: `No user found for "${lookupEmail}".` });
+  const u = db.getUserFullProfile(target.id);
+
+  const now = new Date();
+  const tz  = u.timezone || 'America/Denver';
+  const currentHour = getHourInTimezone(now, tz);
+  const milestone   = `daily-reminder-${getDateInTimezone(now, tz)}`;
+  const claimed     = db.hasMilestoneBeenClaimed(u.id, milestone);
+  const pushCount   = db.countPushSubscriptionsForUser(u.id);
+
+  const out = {
+    server: {
+      cronSecretConfigured: !!process.env.CRON_SECRET,
+      vapidConfigured: PUSH.isPushConfigured(),
+      resendConfigured: !!process.env.RESEND_API_KEY,
+      appUrl: process.env.APP_URL || 'https://www.creativesgarden.com (default)',
+      nowUtc: now.toISOString(),
+    },
+    user: {
+      email: u.email,
+      timezone: tz,
+      masterToggleOn: u.daily_reminder_enabled === 1,
+      reminderHour: u.daily_reminder_hour,
+      emailChannelOn: u.reminder_email_enabled === 1,
+      pushDevicesRegistered: pushCount,
+      pushDevices: db.getPushSubscriptionsForUser(u.id).map((s) => ({ device: s.user_agent, added: s.created_at })),
+      currentHourInYourTimezone: currentHour,
+      hourMatchesRightNow: currentHour === u.daily_reminder_hour,
+      todaysReminderAlreadyProcessed: claimed,
+      milestoneKey: milestone,
+    },
+    notes: [],
+  };
+  const n = out.notes;
+
+  if (!out.server.cronSecretConfigured) n.push('❌ CRON_SECRET is NOT set on this server — the hourly job\'s requests are rejected (503/401), so nothing ever sends. Set it on Railway AND as a GitHub Actions repository secret (same value).');
+  if (!u.daily_reminder_enabled) n.push('❌ The master "Send me a daily reminder" toggle is OFF for this user — nothing sends until it\'s on.');
+  if (u.daily_reminder_hour === null || u.daily_reminder_hour === undefined) n.push('❌ No reminder hour saved.');
+  if (pushCount === 0) n.push('⚠ No push devices registered — "Enable on this device" never completed on any phone/desktop, so there\'s no push to send. (Email still works if enabled.)');
+  if (!u.reminder_email_enabled) n.push('⚠ Email channel is OFF for this user.');
+  if (!out.server.vapidConfigured) n.push('❌ VAPID keys not configured — push cannot send from this server.');
+  if (!out.server.resendConfigured) n.push('❌ RESEND_API_KEY not set — email cannot send from this server.');
+
+  if (claimed) {
+    n.push('✅ Today\'s reminder WAS already processed by the job (milestone claimed) — so the hourly job IS reaching the server and matched this user\'s hour. If nothing arrived, the issue is delivery: no push devices, email off, or the email landed in spam.');
+  } else {
+    n.push('⚠ Today\'s reminder has NOT been processed yet. Either (a) the hourly GitHub Actions job isn\'t reaching the server — check the Actions tab for failed/absent runs and confirm CRON_SECRET matches on both sides; (b) the job hasn\'t hit your target hour yet; or (c) your reminder hour / timezone don\'t line up (see currentHourInYourTimezone vs reminderHour above).');
+  }
+
+  res.json(out);
+});
+
 // ─── Helpers ───────────────────────────────────────────────────────────────
 
 function getUnlockState(user) {
