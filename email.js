@@ -186,7 +186,7 @@ async function sendDailyReminderEmail(toEmail, displayName, nudge) {
   const appUrl       = (process.env.APP_URL || 'https://www.creativesgarden.com').replace(/\/$/, '');
   const dashboardUrl = `${appUrl}/dashboard`;
   const name         = displayName || 'there';
-  const subject      = 'Your daily recording reminder 🌿';
+  const subject      = 'Your daily recording reminder 🪴';
   // The daily-reminder job rotates this line; fall back to a default if called
   // without one so the email still reads correctly.
   const line         = nudge || 'A gentle nudge — have you logged your recording for today?';
@@ -195,7 +195,7 @@ async function sendDailyReminderEmail(toEmail, displayName, nudge) {
 
 ${line}
 
-Open your garden: ${dashboardUrl}
+Tend your Garden: ${dashboardUrl}
 
 You can change or turn off these reminders anytime from your profile: ${appUrl}/profile
 
@@ -223,7 +223,7 @@ The Creative's Garden`;
     <p style="margin: 32px 0; text-align: center;">
       <a href="${dashboardUrl}"
          style="background: #705C6C; color: #F2EEE3; text-decoration: none; padding: 14px 28px; border-radius: 6px; font-family: Georgia, serif; display: inline-block;">
-        Open your garden
+        Tend your Garden
       </a>
     </p>
     <p style="color: #76856C; font-size: 14px; line-height: 1.6; margin: 24px 0 0; font-style: italic;">
@@ -269,14 +269,14 @@ async function sendWeeklyReminderEmail(toEmail, displayName, nudge) {
   const appUrl      = (process.env.APP_URL || 'https://www.creativesgarden.com').replace(/\/$/, '');
   const link        = `${appUrl}/weekly-intentions`;
   const name        = displayName || 'there';
-  const subject     = 'A new week — set your intentions 🌱';
+  const subject     = 'Time to set your weekly intentions 🪴';
   const line        = nudge || 'It’s a new week. What would you like to tend to over the next few days?';
 
   const text = `Hi ${name},
 
 ${line}
 
-Set your weekly intentions: ${link}
+Let's Get Intentional: ${link}
 
 You can change or turn off these reminders anytime from your profile: ${appUrl}/profile
 
@@ -304,7 +304,7 @@ The Creative's Garden`;
     <p style="margin: 32px 0; text-align: center;">
       <a href="${link}"
          style="background: #705C6C; color: #F2EEE3; text-decoration: none; padding: 14px 28px; border-radius: 6px; font-family: Georgia, serif; display: inline-block;">
-        Set your intentions
+        Let's Get Intentional
       </a>
     </p>
     <p style="color: #76856C; font-size: 14px; line-height: 1.6; margin: 24px 0 0; font-style: italic;">
