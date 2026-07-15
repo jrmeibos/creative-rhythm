@@ -17,6 +17,7 @@ const { getDailyPrompt } = require('./lib/daily-prompts');
 const CUTTING_PROMPTS = require('./lib/cutting-prompts');
 const { renderHtmlToPdf } = require('./lib/pdf-render');
 const PUSH = require('./lib/push');
+const VIDEO = require('./lib/video');
 const STRIPE = require('./lib/stripe');
 const ejs = require('ejs');
 const ALL_QUESTION_IDS = new Set(ANGLES.flatMap(a => a.questions.map(q => q.id)));
@@ -194,6 +195,13 @@ app.use((req, res, next) => {
     const isEligible = u.role === 'admin' ? isPaid : (isPaid && pastWinter);
 
     res.locals.canPickSeason = isEligible;
+
+    // ── Video upload gate ──────────────────────────────────────────────────
+    // Admin-only while we experiment: Julia can feel the flow and watch the
+    // Cloudflare bill without storing any student's private video. To open it
+    // to paid students, change `u.role === 'admin'` to `isPaid` — and update
+    // the Privacy Policy first, which currently promises we never store videos.
+    res.locals.canUploadVideo = u.role === 'admin' && VIDEO.isVideoConfigured();
 
     if (isEligible) {
       // Auto-advance to Spring on first eligible render (students only —
@@ -403,6 +411,51 @@ app.get('/signup', (req, res) => {
 
 // Legal pages — public, no auth (must be viewable by anyone, incl. logged out).
 app.get('/privacy', (req, res) => res.render('privacy', { title: 'Privacy Policy' }));
+
+// ─── Video (Cloudflare Stream) ─────────────────────────────────────────────
+// Mint a one-time direct-upload URL. The browser uploads the file straight to
+// Cloudflare with this — the bytes never pass through us, which is the only way
+// a 500MB phone video uploads reliably.
+app.post('/api/video/upload-url', requireAuth, async (req, res) => {
+  if (!res.locals.canUploadVideo) return res.status(403).json({ error: 'not_enabled' });
+  try {
+    const { uploadURL, uid } = await VIDEO.createDirectUpload({
+      userId: req.session.user.id,
+      name: `${req.session.user.name} — ${(req.body && req.body.recorded_date) || 'recording'}`,
+    });
+    res.json({ ok: true, uploadURL, uid });
+  } catch (e) {
+    console.error('[video] direct upload failed:', e.message);
+    res.status(502).json({ error: 'upload_url_failed', detail: e.message });
+  }
+});
+
+// Signed playback for a private video. Videos are uploaded with
+// requireSignedURLs, so they can't be watched without a short-lived token —
+// and we only mint one for the user who owns the recording.
+app.get('/api/video/:uid/playback', requireAuth, async (req, res) => {
+  const uid = req.params.uid;
+  if (!db.userOwnsVideo(req.session.user.id, uid)) {
+    return res.status(403).json({ error: 'not_yours' });
+  }
+  try {
+    const video = await VIDEO.getVideo(uid);
+    if (!video.readyToStream) {
+      return res.json({ ok: true, ready: false, state: video.status && video.status.state });
+    }
+    const token = await VIDEO.getPlaybackToken(uid);
+    const host  = VIDEO.customerHostFromVideo(video) || 'iframe.videodelivery.net';
+    res.json({
+      ok: true,
+      ready: true,
+      iframeUrl: `https://${host}/${token}/iframe`,
+      duration: video.duration,
+    });
+  } catch (e) {
+    console.error('[video] playback failed for', uid, '—', e.message);
+    res.status(502).json({ error: 'playback_failed', detail: e.message });
+  }
+});
 
 app.post('/signup', signupLimiter, async (req, res) => {
   const firstName = (req.body.firstName || '').trim();
@@ -745,6 +798,14 @@ app.post('/dashboard/cutting', requireAuth, (req, res) => {
     fields[key] = raw || null;
     if (raw) anyFilled = true;
   }
+  // An attached video counts as content on its own — someone who uploads the
+  // recording but doesn't feel like writing notes has still logged the day.
+  // Only trust the uid if this user is actually allowed to upload.
+  const rawVideoUid = typeof body.video_uid === 'string' ? body.video_uid.trim() : '';
+  const videoUid = (res.locals.canUploadVideo && /^[a-zA-Z0-9]{20,}$/.test(rawVideoUid))
+    ? rawVideoUid : null;
+  if (videoUid) anyFilled = true;
+
   if (!anyFilled) {
     return res.json({ saved: false });
   }
@@ -778,7 +839,7 @@ app.post('/dashboard/cutting', requireAuth, (req, res) => {
 
   // `prompt` column is vestigial — kept set to the first/noticed prompt for
   // continuity with legacy rows and any future direct queries.
-  db.createCutting(req.session.user.id, season, CUTTING_PROMPTS[0].label, fields, recordedDate);
+  db.createCutting(req.session.user.id, season, CUTTING_PROMPTS[0].label, fields, recordedDate, videoUid);
 
   res.json({ saved: true, recorded_date: recordedDate, backdated: isBackdated });
 });
@@ -4395,7 +4456,6 @@ app.get('/admin/download-backup', requireAdmin, (req, res) => {
 // is dumb — it just runs the lib and reports.
 const { runDailyReminders } = require('./lib/daily-reminders');
 const { runWeeklyReminders } = require('./lib/weekly-reminders');
-const VIDEO = require('./lib/video');
 
 app.post('/admin/run-daily-reminders', async (req, res) => {
   const expected = process.env.CRON_SECRET;

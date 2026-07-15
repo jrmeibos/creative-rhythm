@@ -414,6 +414,114 @@
         .dayview-form { margin-top: 1.5rem; }
         .dayview-form.is-hidden { display: none; }
 
+        /* ── Video upload (admin-only experiment) ── */
+        .dayview-video-upload {
+          margin: 0 0 1.25rem;
+          padding: 1rem 1.1rem;
+          border: 1.5px dashed rgba(118, 133, 108, 0.5);
+          border-radius: 12px;
+          background: rgba(230, 235, 224, 0.35);
+        }
+        .dayview-video-label {
+          display: block;
+          font-family: var(--font-body);
+          font-size: 0.9rem;
+          font-weight: 700;
+          color: var(--color-ink-stained);
+          margin-bottom: 0.5rem;
+        }
+        .dayview-video-optional {
+          font-weight: 300;
+          color: rgba(16, 15, 16, 0.5);
+        }
+        .dayview-video-input {
+          font-family: var(--font-body);
+          font-size: 0.85rem;
+          font-weight: 300;
+          color: rgba(16, 15, 16, 0.75);
+          max-width: 100%;
+        }
+        .dayview-video-progress {
+          display: flex;
+          align-items: center;
+          gap: 0.6rem;
+          margin-top: 0.75rem;
+        }
+        /* `display: flex` above beats the [hidden] attribute's UA display:none,
+           so restate it — otherwise an empty progress bar shows at 0%. */
+        .dayview-video-progress[hidden] { display: none; }
+        .dayview-video-bar {
+          flex: 1;
+          height: 6px;
+          border-radius: 3px;
+          background: rgba(112, 92, 108, 0.15);
+          overflow: hidden;
+        }
+        .dayview-video-bar span {
+          display: block;
+          height: 100%;
+          width: 0%;
+          background: var(--color-bloem);
+          transition: width 0.2s ease;
+        }
+        .dayview-video-pct {
+          font-family: var(--font-body);
+          font-size: 0.78rem;
+          font-weight: 400;
+          color: rgba(16, 15, 16, 0.6);
+          min-width: 2.6rem;
+          text-align: right;
+        }
+        .dayview-video-status {
+          margin: 0.6rem 0 0;
+          font-family: var(--font-body);
+          font-size: 0.82rem;
+          font-weight: 300;
+          line-height: 1.5;
+          color: var(--color-understory);
+        }
+        .dayview-video-status.is-error { color: #8c4a45; }
+
+        /* ── Video playback on a logged entry ── */
+        .dayview-video { margin-bottom: 1rem; }
+        .dayview-video-play {
+          font-family: var(--font-body);
+          font-size: 0.85rem;
+          font-weight: 400;
+          color: var(--color-bloem);
+          background: none;
+          border: 1px solid rgba(112, 92, 108, 0.35);
+          border-radius: 999px;
+          padding: 0.4rem 0.9rem;
+          cursor: pointer;
+        }
+        .dayview-video-play:hover { background: rgba(112, 92, 108, 0.07); }
+        .dayview-video-play:disabled { opacity: 0.6; cursor: default; }
+        .dayview-video-frame {
+          position: relative;
+          width: 100%;
+          aspect-ratio: 9 / 16;
+          max-width: 320px;
+          border-radius: 12px;
+          overflow: hidden;
+          background: #000;
+        }
+        .dayview-video-frame iframe {
+          position: absolute;
+          inset: 0;
+          width: 100%;
+          height: 100%;
+          border: none;
+        }
+        .dayview-video-msg {
+          margin: 0.5rem 0 0;
+          font-family: var(--font-body);
+          font-size: 0.82rem;
+          font-weight: 300;
+          font-style: italic;
+          color: rgba(16, 15, 16, 0.6);
+        }
+
         /* Fetch-and-swap loading state — calm fade + arrows go inert while
            the next day's fragment is on the wire. Brief enough that we don't
            need a spinner; just stops double-clicks and signals "working." */
@@ -522,7 +630,119 @@
             if (e.target.closest('#dayview-add-btn'))    { showForm(); return; }
             if (e.target.closest('#dayview-cancel'))     { hideForm(true); return; }
             if (e.target.closest('#dayview-save'))       { saveReflection(); return; }
+            const playBtn = e.target.closest('[data-video-play]');
+            if (playBtn) { playVideo(playBtn); return; }
           });
+
+          // Delegated because the fragment is replaced on day-nav.
+          container.addEventListener('change', (e) => {
+            if (e.target && e.target.id === 'dayview-video-input') uploadVideo(e.target);
+          });
+
+          // ─── Video ──────────────────────────────────────────────────────
+          function showVideoStatus(msg, isError) {
+            const el = container.querySelector('#dayview-video-status');
+            if (!el) return;
+            el.textContent = msg;
+            el.classList.toggle('is-error', !!isError);
+            el.hidden = false;
+          }
+
+          // Two steps: ask our server for a one-time Cloudflare upload URL,
+          // then PUT the bytes straight to Cloudflare (never through us — a
+          // 500MB file would not survive the trip). XHR, not fetch, because we
+          // want an upload progress bar.
+          async function uploadVideo(input) {
+            const file = input.files && input.files[0];
+            if (!file) return;
+            const progress = container.querySelector('#dayview-video-progress');
+            const fill     = container.querySelector('#dayview-video-bar-fill');
+            const pct      = container.querySelector('#dayview-video-pct');
+            const uidEl    = container.querySelector('#dayview-video-uid');
+            const saveBtn  = container.querySelector('#dayview-save');
+
+            showVideoStatus('Starting upload…', false);
+
+            let uploadURL, uid;
+            try {
+              const r = await fetch('/api/video/upload-url', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ recorded_date: viewedDate() })
+              });
+              const d = await r.json();
+              if (!r.ok || !d.ok) throw new Error(d.detail || d.error || 'could not start upload');
+              uploadURL = d.uploadURL; uid = d.uid;
+            } catch (err) {
+              showVideoStatus('Could not start the upload: ' + err.message, true);
+              return;
+            }
+
+            if (saveBtn)  saveBtn.disabled = true;
+            if (progress) progress.hidden = false;
+            if (fill)     fill.style.width = '0%';
+
+            const fd = new FormData();
+            fd.append('file', file);
+
+            await new Promise((resolve) => {
+              const xhr = new XMLHttpRequest();
+              xhr.open('POST', uploadURL, true);
+              xhr.upload.onprogress = (ev) => {
+                if (!ev.lengthComputable) return;
+                const p = Math.round((ev.loaded / ev.total) * 100);
+                if (fill) fill.style.width = p + '%';
+                if (pct)  pct.textContent  = p + '%';
+              };
+              xhr.onload = () => {
+                if (xhr.status >= 200 && xhr.status < 300) {
+                  if (uidEl) uidEl.value = uid;
+                  showVideoStatus('Video attached ✓ It keeps processing in the background — save whenever you’re ready.', false);
+                } else {
+                  showVideoStatus('Upload failed (HTTP ' + xhr.status + '). Please try again.', true);
+                }
+                resolve();
+              };
+              xhr.onerror = () => {
+                showVideoStatus('Upload failed — check your connection and try again.', true);
+                resolve();
+              };
+              xhr.send(fd);
+            });
+
+            if (progress) progress.hidden = true;
+            if (saveBtn)  saveBtn.disabled = false;
+          }
+
+          // Playback is private: fetch a short-lived signed iframe URL, minted
+          // only for the owner. Lazy — we don't mint tokens nobody watches.
+          async function playVideo(btn) {
+            const wrap = btn.closest('.dayview-video');
+            if (!wrap) return;
+            const uid   = wrap.dataset.videoUid;
+            const frame = wrap.querySelector('.dayview-video-frame');
+            const msg   = wrap.querySelector('.dayview-video-msg');
+            const reset = () => { btn.disabled = false; btn.textContent = '▶ Watch this recording'; };
+            btn.disabled = true; btn.textContent = 'Loading…';
+            if (msg) msg.hidden = true;
+            try {
+              const r = await fetch('/api/video/' + encodeURIComponent(uid) + '/playback');
+              const d = await r.json();
+              if (!r.ok || !d.ok) throw new Error(d.detail || d.error || 'could not load');
+              if (!d.ready) {
+                if (msg) { msg.textContent = 'Still processing — give it a minute and try again.'; msg.hidden = false; }
+                reset();
+                return;
+              }
+              frame.innerHTML = '<iframe src="' + d.iframeUrl + '" loading="lazy" ' +
+                'allow="accelerometer; gyroscope; encrypted-media; picture-in-picture;" allowfullscreen></iframe>';
+              frame.hidden = false;
+              btn.hidden = true;
+            } catch (err) {
+              if (msg) { msg.textContent = 'Could not load the video: ' + err.message; msg.hidden = false; }
+              reset();
+            }
+          }
 
           // ─── popstate (browser back/forward) ────────────────────────────
           window.addEventListener('popstate', () => {
@@ -555,6 +775,16 @@
             if (saveBtn)  saveBtn.disabled = false;
             if (clearText) {
               form.querySelectorAll('textarea[data-cutting-key]').forEach(t => { t.value = ''; });
+              // Drop any staged video too, so a cancelled entry doesn't silently
+              // attach its upload to the next one.
+              const uidEl   = form.querySelector('#dayview-video-uid');
+              const fileEl  = form.querySelector('#dayview-video-input');
+              const statusEl= form.querySelector('#dayview-video-status');
+              const progEl  = form.querySelector('#dayview-video-progress');
+              if (uidEl)    uidEl.value = '';
+              if (fileEl)   fileEl.value = '';
+              if (statusEl) { statusEl.hidden = true; statusEl.textContent = ''; }
+              if (progEl)   progEl.hidden = true;
             }
           }
 
@@ -572,6 +802,10 @@
               payload[t.dataset.cuttingKey] = v;
               if (v) anyFilled = true;
             });
+            // An attached video is content on its own — save even with no notes.
+            const uidEl = form.querySelector('#dayview-video-uid');
+            const videoUid = uidEl ? uidEl.value.trim() : '';
+            if (videoUid) { payload.video_uid = videoUid; anyFilled = true; }
             if (!anyFilled) { hideForm(true); return; }
             saveBtn.disabled = true;
             try {

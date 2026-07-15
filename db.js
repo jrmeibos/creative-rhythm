@@ -681,6 +681,14 @@ db.exec(`
     console.log('✓ Migrated: added recorded_date to cuttings + backfilled from created_at');
   }
 
+  // Cuttings: optional Cloudflare Stream video attached to a logged recording.
+  // Stores only the Stream uid — the bytes live at Cloudflare, and playback
+  // requires a signed token minted for the owner (see lib/video.js).
+  if (!cuttingCols.includes('video_uid')) {
+    db.exec("ALTER TABLE cuttings ADD COLUMN video_uid TEXT");
+    console.log('✓ Migrated: added video_uid to cuttings');
+  }
+
   // Cuttings: watched/edited marks — booleans (0/1) per cutting so the
   // student can flag that they rewatched a past take or edited it externally.
   // Default 0 so existing rows seamlessly read as unmarked.
@@ -2465,13 +2473,14 @@ module.exports = {
   // how_it_felt, takeaway } — any/all may be null. `recordedDate` is the
   // day-it-happened (YYYY-MM-DD) — caller stamps it explicitly (today for
   // normal logging, a backdated date for backdating). `prompt` is the
-  // vestigial legacy column.
-  createCutting(userId, season, prompt, fields, recordedDate) {
+  // vestigial legacy column. `videoUid` is an optional Cloudflare Stream uid
+  // when the student attached a video to this entry.
+  createCutting(userId, season, prompt, fields, recordedDate, videoUid) {
     return db.prepare(`
       INSERT INTO cuttings
         (user_id, season, prompt, recorded_date,
-         reflection_text, talked_about, how_it_felt, takeaway)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+         reflection_text, talked_about, how_it_felt, takeaway, video_uid)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       userId,
       season || null,
@@ -2480,8 +2489,18 @@ module.exports = {
       fields.reflection_text || null,
       fields.talked_about    || null,
       fields.how_it_felt     || null,
-      fields.takeaway        || null
+      fields.takeaway        || null,
+      videoUid || null
     );
+  },
+
+  // Does this Stream video belong to this user? Gate for minting playback
+  // tokens — without this check, any signed-in user could request a token for
+  // someone else's private recording.
+  userOwnsVideo(userId, videoUid) {
+    return !!db.prepare(
+      'SELECT 1 FROM cuttings WHERE user_id = ? AND video_uid = ? LIMIT 1'
+    ).get(userId, videoUid);
   },
 
   // Has this user already logged a recording for a given local day
@@ -2569,7 +2588,7 @@ module.exports = {
     return db.prepare(
       `SELECT id, created_at, recorded_date, season, prompt,
               reflection_text, talked_about, how_it_felt, takeaway,
-              watched, edited
+              watched, edited, video_uid
        FROM cuttings WHERE user_id = ? AND recorded_date = ?
        ORDER BY created_at ASC`
     ).all(userId, recordedDate);

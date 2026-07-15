@@ -86,6 +86,17 @@
     <% dayview.cuttings.forEach(function (c, idx) { %>
       <% const populated = cuttingPrompts.filter(p => c[p.key] != null && String(c[p.key]).trim() !== ''); %>
       <article class="dayview-entry<%= idx > 0 ? ' dayview-entry--stacked' : '' %>">
+        <%# Attached recording. Playback is private: the iframe src is fetched
+            from /api/video/:uid/playback, which mints a short-lived signed
+            token only for the owner. Lazily loaded on click so we don't mint
+            tokens for videos nobody watches. %>
+        <% if (c.video_uid) { %>
+          <div class="dayview-video" data-video-uid="<%= c.video_uid %>">
+            <button type="button" class="dayview-video-play" data-video-play>▶ Watch this recording</button>
+            <div class="dayview-video-frame" hidden></div>
+            <p class="dayview-video-msg" hidden></p>
+          </div>
+        <% } %>
         <% populated.forEach(function (p) { %>
           <div class="dayview-field">
             <p class="dayview-field-label"><%= p.label %></p>
@@ -141,6 +152,23 @@
 
   <div class="dayview-form is-hidden" id="dayview-form">
     <p class="dayview-form-intro">A few notes on the video you just recorded —</p>
+
+    <%# Video upload — admin-only experiment for now (res.locals.canUploadVideo).
+        The file goes browser -> Cloudflare directly; we only keep the uid. %>
+    <% if (locals.canUploadVideo) { %>
+      <div class="dayview-video-upload" id="dayview-video-upload">
+        <label class="dayview-video-label" for="dayview-video-input">
+          Add your video <span class="dayview-video-optional">(optional)</span>
+        </label>
+        <input type="file" id="dayview-video-input" accept="video/*" class="dayview-video-input">
+        <div class="dayview-video-progress" id="dayview-video-progress" hidden>
+          <div class="dayview-video-bar"><span id="dayview-video-bar-fill"></span></div>
+          <span class="dayview-video-pct" id="dayview-video-pct">0%</span>
+        </div>
+        <p class="dayview-video-status" id="dayview-video-status" hidden></p>
+        <input type="hidden" id="dayview-video-uid" value="">
+      </div>
+    <% } %>
     <% cuttingPrompts.forEach(function (p) { %>
       <div class="recording-reflect-field">
         <label class="recording-reflect-q" for="dayview-input-<%= p.key %>"><%= p.label %></label>
