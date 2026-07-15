@@ -2484,6 +2484,15 @@ module.exports = {
     );
   },
 
+  // Has this user already logged a recording for a given local day
+  // (YYYY-MM-DD)? Used by the daily reminder so we don't nag someone who's
+  // already done it. Hits the (user_id, recorded_date) index.
+  hasCuttingForDate(userId, dateStr) {
+    return !!db.prepare(
+      'SELECT 1 FROM cuttings WHERE user_id = ? AND recorded_date = ? LIMIT 1'
+    ).get(userId, dateStr);
+  },
+
   // Read-only: all cuttings for a user. Ordered by recorded_date DESC
   // (newest day first across days) then created_at ASC (within a day,
   // earliest-written first — morning entry above evening entry).
