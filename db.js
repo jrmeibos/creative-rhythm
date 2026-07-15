@@ -713,7 +713,7 @@ db.exec(`
       id              INTEGER PRIMARY KEY AUTOINCREMENT,
       cutting_id      INTEGER NOT NULL,
       user_id         INTEGER NOT NULL,
-      category        TEXT NOT NULL CHECK (category IN ('keep_growing','return_later','archive')),
+      category        TEXT NOT NULL CHECK (category IN ('keep_growing','return_later','archive','just_for_me')),
       curated_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
       resurface_after TEXT,
       reflection_text TEXT,
@@ -724,6 +724,44 @@ db.exec(`
     CREATE INDEX IF NOT EXISTS idx_cutting_curations_user     ON cutting_curations (user_id);
     CREATE INDEX IF NOT EXISTS idx_cutting_curations_resurface ON cutting_curations (resurface_after);
   `);
+
+  // Tending: add the 'just_for_me' bucket ("this one was just for me" — it
+  // mattered, it's simply not for sharing; distinct from Compost's "there's
+  // nothing more here"). The category is pinned by a CHECK constraint, and
+  // SQLite can't alter a CHECK in place — so on databases created before this
+  // bucket existed, rebuild the table and copy every row across. Detected by
+  // reading the stored DDL rather than a column check, since the shape is the
+  // same; only the constraint differs.
+  const curationDdl = db.prepare(
+    "SELECT sql FROM sqlite_master WHERE type='table' AND name='cutting_curations'"
+  ).get();
+  if (curationDdl && curationDdl.sql && !curationDdl.sql.includes('just_for_me')) {
+    db.exec(`
+      BEGIN TRANSACTION;
+      CREATE TABLE cutting_curations_new (
+        id              INTEGER PRIMARY KEY AUTOINCREMENT,
+        cutting_id      INTEGER NOT NULL,
+        user_id         INTEGER NOT NULL,
+        category        TEXT NOT NULL CHECK (category IN ('keep_growing','return_later','archive','just_for_me')),
+        curated_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        resurface_after TEXT,
+        reflection_text TEXT,
+        FOREIGN KEY (cutting_id) REFERENCES cuttings(id),
+        FOREIGN KEY (user_id)    REFERENCES users(id)
+      );
+      INSERT INTO cutting_curations_new
+        (id, cutting_id, user_id, category, curated_at, resurface_after, reflection_text)
+        SELECT id, cutting_id, user_id, category, curated_at, resurface_after, reflection_text
+        FROM cutting_curations;
+      DROP TABLE cutting_curations;
+      ALTER TABLE cutting_curations_new RENAME TO cutting_curations;
+      CREATE INDEX IF NOT EXISTS idx_cutting_curations_cutting   ON cutting_curations (cutting_id);
+      CREATE INDEX IF NOT EXISTS idx_cutting_curations_user      ON cutting_curations (user_id);
+      CREATE INDEX IF NOT EXISTS idx_cutting_curations_resurface ON cutting_curations (resurface_after);
+      COMMIT;
+    `);
+    console.log('✓ Migrated: cutting_curations now allows just_for_me');
+  }
 
   // Tending: pause events. Small append-only log so we can see how often
   // students choose to pause vs push through, and let the student leave a
@@ -2745,7 +2783,7 @@ module.exports = {
   // Also flips cuttings.watched = 1 as a side effect (auto-mark on curate),
   // wrapped in a single transaction so the two writes stay consistent.
   setCuttingCuration(cuttingId, userId, category, todayStr, reflectionText) {
-    if (!['keep_growing', 'return_later', 'archive'].includes(category)) {
+    if (!['keep_growing', 'return_later', 'archive', 'just_for_me'].includes(category)) {
       throw new Error('Invalid curation category: ' + category);
     }
     // Ownership gate: a curation row silently becomes the cutting's "latest"
@@ -3174,7 +3212,7 @@ module.exports = {
       ) latest
       GROUP BY latest.category
     `).all(userId);
-    const counts = { keep_growing: 0, return_later: 0, archive: 0 };
+    const counts = { keep_growing: 0, return_later: 0, archive: 0, just_for_me: 0 };
     for (const r of rows) counts[r.category] = r.n;
     return counts;
   },

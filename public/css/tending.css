@@ -108,6 +108,7 @@
 }
 .tending-destination--grow:hover    { border-color: var(--color-understory); }
 .tending-destination--return:hover  { border-color: var(--color-apricity);   }
+.tending-destination--mine:hover    { border-color: var(--color-curiositys-kiss); }
 .tending-destination--compost:hover { border-color: var(--color-bloem);      }
 
 .tending-destination-emoji {
@@ -373,6 +374,7 @@
 }
 .tending-cat--grow:hover:not(:disabled)    { border-color: var(--color-understory); background: rgba(118, 133, 108, 0.08); }
 .tending-cat--return:hover:not(:disabled)  { border-color: var(--color-apricity);   background: rgba(246, 201, 92, 0.12); }
+.tending-cat--mine:hover:not(:disabled)    { border-color: var(--color-curiositys-kiss); background: rgba(216, 176, 171, 0.14); }
 .tending-cat--archive:hover:not(:disabled) { border-color: var(--color-bloem);      background: var(--color-bloem-light); }
 
 .tending-card-error {

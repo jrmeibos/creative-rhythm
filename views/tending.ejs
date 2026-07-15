@@ -69,6 +69,14 @@
             <span class="tending-destination-count"><%= counts.return_later %> <%= counts.return_later === 1 ? 'cutting' : 'cuttings' %></span>
           </span>
         </a>
+        <a class="tending-destination tending-destination--mine"
+           href="/greenhouse/cuttings?rating=just-for-me">
+          <span class="tending-destination-emoji" aria-hidden="true">🤍</span>
+          <span class="tending-destination-body">
+            <span class="tending-destination-name">Just for me</span>
+            <span class="tending-destination-count"><%= counts.just_for_me %> <%= counts.just_for_me === 1 ? 'cutting' : 'cuttings' %></span>
+          </span>
+        </a>
         <a class="tending-destination tending-destination--compost"
            href="/greenhouse/cuttings?rating=compost">
           <span class="tending-destination-emoji" aria-hidden="true">🗑️</span>
@@ -205,6 +213,12 @@
                          still 'archive' under the hood; only the UI label is
                          being renamed to Compost. If we ever migrate the DB
                          value too, swap this to 'compost'. -->
+                    <%# Distinct from Compost: this one had meaning, it's just
+                        not for anyone else. Private-by-choice, not discarded. %>
+                    <button type="button" class="tending-cat tending-cat--mine" data-category="just_for_me">
+                      <span class="tending-cat-title">🤍 Just for me</span>
+                      <span class="tending-cat-sub">This one was just for me.</span>
+                    </button>
                     <button type="button" class="tending-cat tending-cat--archive" data-category="archive">
                       <span class="tending-cat-title">🗑️ Compost</span>
                       <span class="tending-cat-sub">The meaning was in the doing — there's no more here.</span>

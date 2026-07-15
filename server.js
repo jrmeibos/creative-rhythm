@@ -2503,6 +2503,7 @@ app.get('/greenhouse/cuttings', requireAuth, (req, res) => {
   if      (rating === 'keep-growing') cuttings = cuttings.filter(c => c.tending_category === 'keep_growing');
   else if (rating === 'return-later') cuttings = cuttings.filter(c => c.tending_category === 'return_later');
   else if (rating === 'compost')      cuttings = cuttings.filter(c => c.tending_category === 'archive');
+  else if (rating === 'just-for-me')  cuttings = cuttings.filter(c => c.tending_category === 'just_for_me');
 
   // Sort within-day order. getCuttingsForUser already returns rows in
   // recorded_date DESC + created_at ASC, so 'newest' is a no-op. For
@@ -3135,7 +3136,7 @@ app.post('/tending/curate/:cuttingId', requireAuth, (req, res) => {
     return res.status(400).json({ error: 'Invalid cutting id.' });
   }
   const { category, reflection } = req.body || {};
-  if (!['keep_growing', 'return_later', 'archive'].includes(category)) {
+  if (!['keep_growing', 'return_later', 'archive', 'just_for_me'].includes(category)) {
     return res.status(400).json({ error: 'Invalid category.' });
   }
   const todayStr = toLocalDateString(getNow(req.session.user));
