@@ -420,15 +420,38 @@
           display: flex;
           flex-direction: column;
           align-items: center;
-          gap: 0.5rem;
+          gap: 0.6rem;
           background: none;
           border: none;
-          padding: 0.25rem 0.5rem;
+          padding: 0;
           cursor: pointer;
-          color: var(--color-understory);
         }
-        .dayview-empty-camera:hover { opacity: 0.75; }
-        .dayview-empty-camera .dayview-empty-icon { opacity: 1; }
+        /* Filled bloem circle — reads as a tappable button, not decoration. */
+        .dayview-empty-camera-circle {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 64px;
+          height: 64px;
+          border-radius: 50%;
+          background: var(--color-bloem);
+          box-shadow: 0 4px 14px rgba(112, 92, 108, 0.30);
+          transition: background 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+        }
+        .dayview-empty-camera:hover .dayview-empty-camera-circle {
+          background: var(--color-bloem-mid);
+          transform: translateY(-1px);
+          box-shadow: 0 6px 18px rgba(112, 92, 108, 0.38);
+        }
+        .dayview-empty-camera:active .dayview-empty-camera-circle {
+          transform: translateY(0);
+          box-shadow: 0 3px 10px rgba(112, 92, 108, 0.32);
+        }
+        .dayview-empty-camera-icon {
+          width: 28px;
+          height: 28px;
+          color: #fff;
+        }
         .dayview-empty-camera-text {
           font-family: var(--font-body);
           font-size: 0.88rem;
