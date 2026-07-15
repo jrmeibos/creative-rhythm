@@ -4395,6 +4395,7 @@ app.get('/admin/download-backup', requireAdmin, (req, res) => {
 // is dumb — it just runs the lib and reports.
 const { runDailyReminders } = require('./lib/daily-reminders');
 const { runWeeklyReminders } = require('./lib/weekly-reminders');
+const VIDEO = require('./lib/video');
 
 app.post('/admin/run-daily-reminders', async (req, res) => {
   const expected = process.env.CRON_SECRET;
@@ -4420,6 +4421,56 @@ app.post('/admin/run-daily-reminders', async (req, res) => {
     console.error('[daily-reminders route] fatal:', err);
     res.status(500).json({ ok: false, error: err.message, log });
   }
+});
+
+// Admin-only diagnostic for the Cloudflare Stream video integration. Open in a
+// browser after setting the Railway variables to confirm the credentials work
+// BEFORE we build anything on top of them. Add ?testUpload=1 to also mint a
+// throwaway direct-upload URL — that exercises the exact call the feature
+// depends on. (An unused direct upload just expires; it costs nothing.)
+app.get('/admin/video-check', requireAdmin, async (req, res) => {
+  const cfg = VIDEO._accountConfigured();
+  const out = {
+    configured: VIDEO.isVideoConfigured(),
+    accountIdSet: cfg.accountId,
+    tokenSet: cfg.token,
+    apiReachable: null,
+    videosOnAccount: null,
+    directUploadTest: null,
+    notes: [],
+  };
+
+  if (!out.configured) {
+    out.notes.push('❌ Not configured. Set CLOUDFLARE_ACCOUNT_ID and CLOUDFLARE_STREAM_TOKEN as Railway variables, then redeploy.');
+    return res.json(out);
+  }
+
+  try {
+    const videos = await VIDEO.listVideos(1);
+    out.apiReachable = true;
+    out.videosOnAccount = Array.isArray(videos) ? videos.length : 0;
+    out.notes.push('✅ Credentials work — Cloudflare Stream is reachable.');
+  } catch (e) {
+    out.apiReachable = false;
+    out.notes.push(`❌ Stream API call failed: ${e.message}`);
+    out.notes.push('Common causes: the token lacks Stream:Read/Edit permission, the Account ID is wrong, or Stream isn\'t enabled on the account.');
+    return res.json(out);
+  }
+
+  if (req.query.testUpload === '1') {
+    try {
+      const { uid } = await VIDEO.createDirectUpload({ userId: req.session.user.id, name: 'diagnostic test' });
+      out.directUploadTest = { ok: true, uid };
+      out.notes.push('✅ Direct-upload URL minted successfully — the upload path will work. (This placeholder expires unused.)');
+    } catch (e) {
+      out.directUploadTest = { ok: false, error: e.message };
+      out.notes.push(`❌ Could not mint a direct-upload URL: ${e.message}`);
+    }
+  } else {
+    out.notes.push('Tip: add ?testUpload=1 to also verify the direct-upload call.');
+  }
+
+  res.json(out);
 });
 
 // Admin-only diagnostic for the daily reminder. Open in a browser when a
