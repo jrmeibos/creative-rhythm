@@ -196,12 +196,19 @@ app.use((req, res, next) => {
 
     res.locals.canPickSeason = isEligible;
 
-    // ── Video upload gate ──────────────────────────────────────────────────
-    // Admin-only while we experiment: Julia can feel the flow and watch the
-    // Cloudflare bill without storing any student's private video. To open it
-    // to paid students, change `u.role === 'admin'` to `isPaid` — and update
-    // the Privacy Policy first, which currently promises we never store videos.
-    res.locals.canUploadVideo = u.role === 'admin' && VIDEO.isVideoConfigured();
+    // ── Video upload gate — OFF ────────────────────────────────────────────
+    // Experiment paused (July 2026). Uploading a 6-minute phone video took long
+    // enough that it wasn't worth pursuing yet — real friction for a habit
+    // that's meant to be daily. Admin now sees exactly what students see.
+    //
+    // The plumbing is intentionally left intact and dormant: lib/video.js, the
+    // upload + playback routes, and cuttings.video_uid. Nothing runs while this
+    // is false. To resume:
+    //   admin-only trial → u.role === 'admin' && VIDEO.isVideoConfigured()
+    //   paid students    → isPaid && VIDEO.isVideoConfigured()
+    // If it ever reaches students, update the Privacy Policy first — it
+    // currently promises we never store their videos.
+    res.locals.canUploadVideo = false;
 
     if (isEligible) {
       // Auto-advance to Spring on first eligible render (students only —
