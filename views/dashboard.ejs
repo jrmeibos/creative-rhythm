@@ -414,6 +414,28 @@
         .dayview-form { margin-top: 1.5rem; }
         .dayview-form.is-hidden { display: none; }
 
+        /* Clickable camera in the empty box — the upload affordance for people
+           who can actually upload (admin now, paid students later). */
+        .dayview-empty-camera {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 0.5rem;
+          background: none;
+          border: none;
+          padding: 0.25rem 0.5rem;
+          cursor: pointer;
+          color: var(--color-understory);
+        }
+        .dayview-empty-camera:hover { opacity: 0.75; }
+        .dayview-empty-camera .dayview-empty-icon { opacity: 1; }
+        .dayview-empty-camera-text {
+          font-family: var(--font-body);
+          font-size: 0.88rem;
+          font-weight: 700;
+          color: var(--color-bloem);
+        }
+
         /* ── Video upload (admin-only experiment) ── */
         .dayview-video-upload {
           margin: 0 0 1.25rem;
@@ -627,6 +649,12 @@
               }
               return;
             }
+            // Camera icon in the empty box → open the file picker.
+            if (e.target.closest('#dayview-box-upload-btn')) {
+              const fileEl = container.querySelector('#dayview-video-input');
+              if (fileEl) fileEl.click();
+              return;
+            }
             if (e.target.closest('#dayview-add-btn'))    { showForm(); return; }
             if (e.target.closest('#dayview-cancel'))     { hideForm(true); return; }
             if (e.target.closest('#dayview-save'))       { saveReflection(); return; }
@@ -697,7 +725,10 @@
               xhr.onload = () => {
                 if (xhr.status >= 200 && xhr.status < 300) {
                   if (uidEl) uidEl.value = uid;
-                  showVideoStatus('Video attached ✓ It keeps processing in the background — save whenever you’re ready.', false);
+                  showVideoStatus('Video attached ✓ Add a note if you like, then hit Save to log the day.', false);
+                  // The video is only really "logged" once the entry saves, so
+                  // open the notes form rather than leave them on a dead end.
+                  showForm();
                 } else {
                   showVideoStatus('Upload failed (HTTP ' + xhr.status + '). Please try again.', true);
                 }
@@ -776,11 +807,12 @@
             if (clearText) {
               form.querySelectorAll('textarea[data-cutting-key]').forEach(t => { t.value = ''; });
               // Drop any staged video too, so a cancelled entry doesn't silently
-              // attach its upload to the next one.
-              const uidEl   = form.querySelector('#dayview-video-uid');
-              const fileEl  = form.querySelector('#dayview-video-input');
-              const statusEl= form.querySelector('#dayview-video-status');
-              const progEl  = form.querySelector('#dayview-video-progress');
+              // attach its upload to the next one. Container-scoped — the upload
+              // block sits in the empty box, not the form.
+              const uidEl   = container.querySelector('#dayview-video-uid');
+              const fileEl  = container.querySelector('#dayview-video-input');
+              const statusEl= container.querySelector('#dayview-video-status');
+              const progEl  = container.querySelector('#dayview-video-progress');
               if (uidEl)    uidEl.value = '';
               if (fileEl)   fileEl.value = '';
               if (statusEl) { statusEl.hidden = true; statusEl.textContent = ''; }
@@ -803,7 +835,9 @@
               if (v) anyFilled = true;
             });
             // An attached video is content on its own — save even with no notes.
-            const uidEl = form.querySelector('#dayview-video-uid');
+            // Queried from the container, not the form: when the empty box is
+            // showing, the upload block (and this field) lives up there.
+            const uidEl = container.querySelector('#dayview-video-uid');
             const videoUid = uidEl ? uidEl.value.trim() : '';
             if (videoUid) { payload.video_uid = videoUid; anyFilled = true; }
             if (!anyFilled) { hideForm(true); return; }

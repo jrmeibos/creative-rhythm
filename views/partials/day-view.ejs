@@ -114,21 +114,53 @@
     </div>
   <% } else { %>
     <div class="dayview-empty-box">
-      <svg class="dayview-empty-icon" viewBox="0 0 24 24" fill="none"
-           stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-        <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>
-        <path d="m15 5 4 4"/>
-      </svg>
-      <p class="dayview-empty">
-        <% if (dayview.isToday) { %>
-          Recorded your video? Log it here.
-        <% } else { %>
-          Nothing logged for this day. You can still add one.
-        <% } %>
-      </p>
-      <p class="dayview-empty-sub">
-        Record a short video on your phone or camera first. Then log it here.
-      </p>
+      <% if (locals.canUploadVideo) { %>
+        <%# Uploaders get the camera back — it now tells the truth: tapping it
+            uploads the video right here. The upload block lives in this box
+            (not the form) so ids stay unique; the form only carries it when
+            there's no empty box, i.e. "+ Log another". %>
+        <button type="button" class="dayview-empty-camera" id="dayview-box-upload-btn"
+                aria-label="Upload your video">
+          <svg class="dayview-empty-icon" viewBox="0 0 24 24" fill="none"
+               stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true">
+            <rect x="2.5" y="6.5" width="13" height="11" rx="2.5"/>
+            <path d="M15.5 10.5 L21 7.5 L21 16.5 L15.5 13.5 Z"/>
+          </svg>
+          <span class="dayview-empty-camera-text">Upload your video</span>
+        </button>
+        <p class="dayview-empty">
+          <% if (dayview.isToday) { %>
+            Nothing here yet. Record when you're ready.
+          <% } else { %>
+            Nothing recorded for this day. You can still add one.
+          <% } %>
+        </p>
+        <input type="file" id="dayview-video-input" accept="video/*" class="dayview-video-input" hidden>
+        <div class="dayview-video-progress" id="dayview-video-progress" hidden>
+          <div class="dayview-video-bar"><span id="dayview-video-bar-fill"></span></div>
+          <span class="dayview-video-pct" id="dayview-video-pct">0%</span>
+        </div>
+        <p class="dayview-video-status" id="dayview-video-status" hidden></p>
+        <input type="hidden" id="dayview-video-uid" value="">
+      <% } else { %>
+        <%# No upload for this student — keep the pencil + "log it here" framing.
+            A camera they can't use is exactly the confusion we just fixed. %>
+        <svg class="dayview-empty-icon" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>
+          <path d="m15 5 4 4"/>
+        </svg>
+        <p class="dayview-empty">
+          <% if (dayview.isToday) { %>
+            Recorded your video? Log it here.
+          <% } else { %>
+            Nothing logged for this day. You can still add one.
+          <% } %>
+        </p>
+        <p class="dayview-empty-sub">
+          Record a short video on your phone or camera first. Then log it here.
+        </p>
+      <% } %>
       <div class="dayview-cta-row">
         <button type="button" class="recording-card-btn" id="dayview-add-btn">Log today's recording</button>
         <button type="button" class="recording-about-toggle"
@@ -153,9 +185,10 @@
   <div class="dayview-form is-hidden" id="dayview-form">
     <p class="dayview-form-intro">A few notes on the video you just recorded —</p>
 
-    <%# Video upload — admin-only experiment for now (res.locals.canUploadVideo).
-        The file goes browser -> Cloudflare directly; we only keep the uid. %>
-    <% if (locals.canUploadVideo) { %>
+    <%# Video upload for the "+ Log another" case only. When the empty box is on
+        screen it owns the upload UI (camera icon) — rendering it in both places
+        would duplicate ids, so exactly one exists at a time. %>
+    <% if (locals.canUploadVideo && dayview.cuttings && dayview.cuttings.length) { %>
       <div class="dayview-video-upload" id="dayview-video-upload">
         <label class="dayview-video-label" for="dayview-video-input">
           Add your video <span class="dayview-video-optional">(optional)</span>
