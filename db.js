@@ -91,6 +91,32 @@ db.exec(`
     FOREIGN KEY (user_id) REFERENCES users(id)
   );
 
+  -- "The Creative Block Buster" — per-student personalization on top of the
+  -- built-in blocks defined in lib/creative-blocks.js. block_key is either a
+  -- built-in block's slug or 'custom-<id>' for a student's own block.
+  CREATE TABLE IF NOT EXISTS block_buster_blocks (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    title TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id)
+  );
+  CREATE TABLE IF NOT EXISTS block_buster_options (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    block_key TEXT NOT NULL,
+    text TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id)
+  );
+  CREATE TABLE IF NOT EXISTS block_buster_hidden (
+    user_id INTEGER NOT NULL,
+    block_key TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (user_id, block_key),
+    FOREIGN KEY (user_id) REFERENCES users(id)
+  );
+
   CREATE TABLE IF NOT EXISTS lessons (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     slug TEXT UNIQUE NOT NULL,
@@ -1825,6 +1851,76 @@ module.exports = {
     return m;
   },
 
+  // ── The Creative Block Buster ───────────────────────────────────────────
+  // A student's custom blocks (their own additions to the built-in set).
+  getCustomBlocks(userId) {
+    return db.prepare(
+      'SELECT id, title FROM block_buster_blocks WHERE user_id = ? ORDER BY created_at ASC, id ASC'
+    ).all(userId);
+  },
+  addCustomBlock(userId, title) {
+    return db.prepare(
+      'INSERT INTO block_buster_blocks (user_id, title) VALUES (?, ?)'
+    ).run(userId, String(title).trim()).lastInsertRowid;
+  },
+  // Delete a custom block plus everything attached to it (its added options
+  // and any hide row), scoped to the owner.
+  deleteCustomBlock(blockId, userId) {
+    const key = 'custom-' + blockId;
+    db.exec('BEGIN');
+    try {
+      db.prepare('DELETE FROM block_buster_options WHERE user_id = ? AND block_key = ?').run(userId, key);
+      db.prepare('DELETE FROM block_buster_hidden  WHERE user_id = ? AND block_key = ?').run(userId, key);
+      const r = db.prepare('DELETE FROM block_buster_blocks WHERE id = ? AND user_id = ?').run(blockId, userId);
+      db.exec('COMMIT');
+      return r.changes;
+    } catch (e) {
+      try { db.exec('ROLLBACK'); } catch (_) {}
+      throw e;
+    }
+  },
+
+  // Student-added options across all blocks, grouped as Map(block_key → [{id,text}]).
+  getAddedOptionsByBlock(userId) {
+    const m = new Map();
+    for (const r of db.prepare(
+      'SELECT id, block_key, text FROM block_buster_options WHERE user_id = ? ORDER BY created_at ASC, id ASC'
+    ).all(userId)) {
+      if (!m.has(r.block_key)) m.set(r.block_key, []);
+      m.get(r.block_key).push({ id: r.id, text: r.text });
+    }
+    return m;
+  },
+  addBlockOption(userId, blockKey, text) {
+    return db.prepare(
+      'INSERT INTO block_buster_options (user_id, block_key, text) VALUES (?, ?, ?)'
+    ).run(userId, String(blockKey), String(text).trim()).lastInsertRowid;
+  },
+  deleteBlockOption(optionId, userId) {
+    return db.prepare(
+      'DELETE FROM block_buster_options WHERE id = ? AND user_id = ?'
+    ).run(optionId, userId).changes;
+  },
+
+  // Hidden blocks for a student, as a Set of block_key.
+  getHiddenBlockKeys(userId) {
+    return new Set(
+      db.prepare('SELECT block_key FROM block_buster_hidden WHERE user_id = ?')
+        .all(userId).map(r => r.block_key)
+    );
+  },
+  setBlockHidden(userId, blockKey, hidden) {
+    if (hidden) {
+      db.prepare(
+        'INSERT OR IGNORE INTO block_buster_hidden (user_id, block_key) VALUES (?, ?)'
+      ).run(userId, String(blockKey));
+    } else {
+      db.prepare(
+        'DELETE FROM block_buster_hidden WHERE user_id = ? AND block_key = ?'
+      ).run(userId, String(blockKey));
+    }
+  },
+
   getAllUsersGoalsForWeek(weekStart) {
     return db.prepare(`
       SELECT wg.*, u.name, u.avatar_initial FROM weekly_goals wg
@@ -1996,6 +2092,9 @@ module.exports = {
       db.prepare('DELETE FROM lesson_completions WHERE user_id=?').run(id);
       db.prepare('DELETE FROM homework_completions WHERE user_id=?').run(id);
       db.prepare('DELETE FROM weekly_goal_shares WHERE user_id=?').run(id);
+      db.prepare('DELETE FROM block_buster_options WHERE user_id=?').run(id);
+      db.prepare('DELETE FROM block_buster_hidden WHERE user_id=?').run(id);
+      db.prepare('DELETE FROM block_buster_blocks WHERE user_id=?').run(id);
       db.prepare('DELETE FROM banner_dismissals WHERE user_id=?').run(id);
       db.prepare('DELETE FROM weekly_goals WHERE user_id=?').run(id);
       db.prepare('DELETE FROM goals WHERE user_id=?').run(id);

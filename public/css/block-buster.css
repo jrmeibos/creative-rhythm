@@ -1,0 +1,244 @@
+/* ─── The Creative Block Buster ──────────────────────────────────────────── */
+
+.bb-header {
+  max-width: 720px;
+  margin: 0 0 2rem;
+}
+.bb-title {
+  font-family: var(--font-display);
+  font-size: 2rem;
+  font-weight: 400;
+  color: var(--color-ink-stained);
+  margin: 0 0 0.75rem;
+}
+.bb-subtitle {
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+  font-weight: 300;
+  line-height: 1.6;
+  color: rgba(16, 15, 16, 0.65);
+  margin: 0;
+}
+
+.bb-blocks {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  max-width: 760px;
+}
+
+/* ── One block card ── */
+.bb-block {
+  background: var(--color-blank-page);
+  border: 1px solid rgba(112, 92, 108, 0.14);
+  border-radius: 16px;
+  padding: 1.35rem 1.5rem;
+}
+.bb-block-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+.bb-block-title {
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: 400;
+  color: var(--color-ink-stained);
+  margin: 0;
+  line-height: 1.25;
+}
+.bb-yours-tag {
+  display: inline-block;
+  vertical-align: middle;
+  margin-left: 0.5rem;
+  font-family: var(--font-body);
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-understory);
+  background: var(--color-new-growth);
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+}
+.bb-block-actions { flex-shrink: 0; }
+.bb-icon-btn {
+  font-family: var(--font-body);
+  font-size: 0.78rem;
+  color: rgba(16, 15, 16, 0.45);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.2rem 0.35rem;
+  border-radius: 6px;
+  transition: color 0.15s, background 0.15s;
+}
+.bb-icon-btn:hover { color: var(--color-bloem); background: rgba(112, 92, 108, 0.06); }
+.bb-icon-btn:disabled { opacity: 0.5; cursor: default; }
+
+/* ── Options ("ways through") ── */
+.bb-options {
+  list-style: none;
+  margin: 0 0 0.9rem;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.bb-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  padding: 0.6rem 0.8rem;
+  border-radius: 10px;
+  background: var(--color-pearl);
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  font-weight: 300;
+  line-height: 1.5;
+  color: var(--color-ink-stained);
+}
+.bb-option::before {
+  content: '→';
+  color: var(--color-understory);
+  flex-shrink: 0;
+  font-weight: 400;
+}
+.bb-option--mine {
+  background: var(--color-new-growth);
+  justify-content: space-between;
+}
+.bb-option-text { flex: 1; min-width: 0; }
+.bb-option-remove {
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1.1rem;
+  line-height: 1;
+  color: rgba(16, 15, 16, 0.35);
+  padding: 0 0.15rem;
+  transition: color 0.15s;
+}
+.bb-option-remove:hover { color: var(--color-bloem); }
+
+/* ── Add-your-own-option row ── */
+.bb-add-option {
+  display: flex;
+  gap: 0.5rem;
+}
+.bb-add-option-input {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--font-body);
+  font-size: 0.88rem;
+  padding: 0.55rem 0.8rem;
+  border: 1px solid rgba(112, 92, 108, 0.25);
+  border-radius: 10px;
+  background: #fff;
+  color: var(--color-ink-stained);
+}
+.bb-add-option-input:focus {
+  outline: none;
+  border-color: var(--color-bloem);
+  box-shadow: 0 0 0 3px rgba(112, 92, 108, 0.12);
+}
+.bb-add-option-btn,
+.bb-newblock-btn {
+  flex-shrink: 0;
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  color: var(--color-blank-page);
+  background: var(--color-bloem);
+  border: none;
+  border-radius: 999px;
+  padding: 0.55rem 1.1rem;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.bb-add-option-btn:hover,
+.bb-newblock-btn:hover { background: var(--color-bloem-mid); }
+.bb-add-option-btn:disabled,
+.bb-newblock-btn:disabled { opacity: 0.55; cursor: default; }
+
+/* ── Add your own block ── */
+.bb-newblock {
+  max-width: 760px;
+  margin: 2rem 0 1.5rem;
+  padding: 1.35rem 1.5rem;
+  background: var(--color-new-growth);
+  border: 1px dashed rgba(118, 133, 108, 0.5);
+  border-radius: 16px;
+}
+.bb-newblock-title {
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  font-weight: 400;
+  color: var(--color-ink-stained);
+  margin: 0 0 0.3rem;
+}
+.bb-newblock-hint {
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  font-weight: 300;
+  color: rgba(16, 15, 16, 0.6);
+  margin: 0 0 0.9rem;
+}
+.bb-newblock-form { display: flex; gap: 0.5rem; }
+.bb-newblock-input {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  padding: 0.6rem 0.85rem;
+  border: 1px solid rgba(112, 92, 108, 0.25);
+  border-radius: 10px;
+  background: #fff;
+  color: var(--color-ink-stained);
+}
+.bb-newblock-input:focus {
+  outline: none;
+  border-color: var(--color-understory);
+  box-shadow: 0 0 0 3px rgba(118, 133, 108, 0.15);
+}
+
+/* ── Hidden blocks ── */
+.bb-hidden-wrap { max-width: 760px; margin-top: 0.5rem; }
+.bb-hidden-summary {
+  cursor: pointer;
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  color: rgba(16, 15, 16, 0.55);
+  padding: 0.4rem 0;
+}
+.bb-hidden-list {
+  list-style: none;
+  margin: 0.5rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+.bb-hidden-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.5rem 0.8rem;
+  background: var(--color-pearl);
+  border-radius: 10px;
+}
+.bb-hidden-item-title {
+  font-family: var(--font-body);
+  font-size: 0.88rem;
+  font-weight: 300;
+  color: rgba(16, 15, 16, 0.6);
+}
+
+@media (max-width: 560px) {
+  .bb-block { padding: 1.1rem 1.15rem; }
+  .bb-add-option, .bb-newblock-form { flex-direction: column; }
+  .bb-add-option-btn, .bb-newblock-btn { align-self: flex-start; }
+}

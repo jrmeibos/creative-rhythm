@@ -15,6 +15,7 @@ const { getCurricularSeason, getCurricularSeasonLabel, getCurricularSeasonDescri
 const { getSeasonPrompt } = require('./lib/season-prompts');
 const { getDailyPrompt } = require('./lib/daily-prompts');
 const CUTTING_PROMPTS = require('./lib/cutting-prompts');
+const { CREATIVE_BLOCKS } = require('./lib/creative-blocks');
 const { renderHtmlToPdf } = require('./lib/pdf-render');
 const PUSH = require('./lib/push');
 const VIDEO = require('./lib/video');
@@ -3624,6 +3625,88 @@ app.post('/api/account/weekly-reminder', requireAuth, (req, res) => {
 
 app.get('/resources', requireAuth, (req, res) => {
   res.render('resources', { title: 'Resources', page: 'resources' });
+});
+
+// ─── The Creative Block Buster ─────────────────────────────────────────────
+// Open to every student (blocks around getting on camera hit hardest early).
+// Built-in blocks come from lib/creative-blocks.js; each student layers their
+// own options, own blocks, and hides on top (block_buster_* tables). The view
+// model merges them: built-in slug keys stay as-is, custom blocks get the key
+// 'custom-<id>'.
+app.get('/block-buster', requireAuth, (req, res) => {
+  const userId    = req.session.user.id;
+  const added     = db.getAddedOptionsByBlock(userId);   // Map(key → [{id,text}])
+  const hidden    = db.getHiddenBlockKeys(userId);        // Set(key)
+  const custom    = db.getCustomBlocks(userId);           // [{id,title}]
+
+  const builtin = CREATIVE_BLOCKS.map(b => ({
+    key:            b.slug,
+    title:          b.title,
+    isCustom:       false,
+    defaultOptions: b.options,
+    addedOptions:   added.get(b.slug) || [],
+    hidden:         hidden.has(b.slug),
+  }));
+  const customBlocks = custom.map(c => {
+    const key = 'custom-' + c.id;
+    return {
+      key,
+      title:          c.title,
+      isCustom:       true,
+      customId:       c.id,
+      defaultOptions: [],
+      addedOptions:   added.get(key) || [],
+      hidden:         hidden.has(key),
+    };
+  });
+
+  const blocks = [...builtin, ...customBlocks];
+  res.render('block-buster', {
+    title: 'The Creative Block Buster',
+    page:  'resources',
+    blocks,
+  });
+});
+
+// Add a personal option to any block (built-in slug or custom-<id> key).
+app.post('/api/block-buster/option', requireAuth, (req, res) => {
+  const { blockKey, text } = req.body || {};
+  if (!blockKey || !String(blockKey).trim()) return res.status(400).json({ error: 'Missing block.' });
+  if (!text || !String(text).trim())         return res.status(400).json({ error: 'Write an option first.' });
+  const id = db.addBlockOption(req.session.user.id, String(blockKey).trim(), text);
+  res.json({ ok: true, id });
+});
+
+// Delete one of the student's own added options.
+app.post('/api/block-buster/option/:id/delete', requireAuth, (req, res) => {
+  const optId = parseInt(req.params.id, 10);
+  if (!Number.isInteger(optId)) return res.status(400).json({ error: 'Invalid option.' });
+  db.deleteBlockOption(optId, req.session.user.id);
+  res.json({ ok: true });
+});
+
+// Create a student's own block.
+app.post('/api/block-buster/block', requireAuth, (req, res) => {
+  const { title } = req.body || {};
+  if (!title || !String(title).trim()) return res.status(400).json({ error: 'Give the block a name.' });
+  const id = db.addCustomBlock(req.session.user.id, title);
+  res.json({ ok: true, id, key: 'custom-' + id });
+});
+
+// Delete a student's own block (and its options).
+app.post('/api/block-buster/block/:id/delete', requireAuth, (req, res) => {
+  const blockId = parseInt(req.params.id, 10);
+  if (!Number.isInteger(blockId)) return res.status(400).json({ error: 'Invalid block.' });
+  db.deleteCustomBlock(blockId, req.session.user.id);
+  res.json({ ok: true });
+});
+
+// Hide / unhide a block for this student.
+app.post('/api/block-buster/hide', requireAuth, (req, res) => {
+  const { blockKey, hidden } = req.body || {};
+  if (!blockKey || !String(blockKey).trim()) return res.status(400).json({ error: 'Missing block.' });
+  db.setBlockHidden(req.session.user.id, String(blockKey).trim(), !!hidden);
+  res.json({ ok: true });
 });
 
 // ─── Watch Yourself — Spring+ only ─────────────────────────────────────────

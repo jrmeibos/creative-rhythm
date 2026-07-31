@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <%- include('partials/head') %>
+  <link rel="stylesheet" href="/css/dashboard.css">
+  <link rel="stylesheet" href="/css/block-buster.css">
+</head>
+<body class="app-body">
+  <div class="app-layout">
+    <%- include('partials/sidebar') %>
+    <main class="main-content">
+
+      <a href="/resources" class="cm-back-link" style="display:inline-block; margin: 1.5rem 0 1rem;">← Back to Resources</a>
+
+      <header class="bb-header">
+        <h1 class="bb-title">The Creative Block Buster</h1>
+        <p class="bb-subtitle">
+          Stuck? Find the block that fits, then pick a way through. As you learn
+          what works for you, add your own ways through — and your own blocks —
+          so this becomes your toolkit, not just mine.
+        </p>
+      </header>
+
+      <%
+        const visibleBlocks = blocks.filter(b => !b.hidden);
+        const hiddenBlocks  = blocks.filter(b => b.hidden);
+      %>
+
+      <div class="bb-blocks" id="bb-blocks">
+        <% visibleBlocks.forEach(function(b) { %>
+          <section class="bb-block" data-key="<%= b.key %>" data-custom="<%= b.isCustom %>" <% if (b.isCustom) { %>data-block-id="<%= b.customId %>"<% } %>>
+            <div class="bb-block-head">
+              <h2 class="bb-block-title">
+                <%= b.title %>
+                <% if (b.isCustom) { %><span class="bb-yours-tag">yours</span><% } %>
+              </h2>
+              <div class="bb-block-actions">
+                <% if (b.isCustom) { %>
+                  <button type="button" class="bb-icon-btn bb-delete-block" title="Delete this block">Delete</button>
+                <% } else { %>
+                  <button type="button" class="bb-icon-btn bb-hide-block" title="Hide this block">Hide</button>
+                <% } %>
+              </div>
+            </div>
+
+            <ul class="bb-options">
+              <% b.defaultOptions.forEach(function(opt) { %>
+                <li class="bb-option bb-option--default"><span class="bb-option-text"><%= opt %></span></li>
+              <% }); %>
+              <% b.addedOptions.forEach(function(opt) { %>
+                <li class="bb-option bb-option--mine" data-option-id="<%= opt.id %>">
+                  <span class="bb-option-text"><%= opt.text %></span>
+                  <button type="button" class="bb-option-remove bb-delete-option" title="Remove this option" aria-label="Remove this option">×</button>
+                </li>
+              <% }); %>
+            </ul>
+
+            <form class="bb-add-option">
+              <input type="text" class="bb-add-option-input" placeholder="Add your own way through…" maxlength="300" autocomplete="off">
+              <button type="submit" class="bb-add-option-btn">Add</button>
+            </form>
+          </section>
+        <% }); %>
+      </div>
+
+      <!-- Add your own block -->
+      <section class="bb-newblock">
+        <h2 class="bb-newblock-title">Add your own block</h2>
+        <p class="bb-newblock-hint">Facing something that isn't listed? Name it here, then add your own ways through.</p>
+        <form class="bb-newblock-form" id="bb-newblock-form">
+          <input type="text" id="bb-newblock-input" class="bb-newblock-input" placeholder="e.g. “I keep comparing myself to other people”" maxlength="200" autocomplete="off">
+          <button type="submit" class="bb-newblock-btn">Add block</button>
+        </form>
+      </section>
+
+      <!-- Hidden blocks -->
+      <section class="bb-hidden-wrap" id="bb-hidden-wrap" <% if (!hiddenBlocks.length) { %>hidden<% } %>>
+        <details class="bb-hidden">
+          <summary class="bb-hidden-summary">Hidden blocks (<span id="bb-hidden-count"><%= hiddenBlocks.length %></span>)</summary>
+          <ul class="bb-hidden-list" id="bb-hidden-list">
+            <% hiddenBlocks.forEach(function(b) { %>
+              <li class="bb-hidden-item" data-key="<%= b.key %>">
+                <span class="bb-hidden-item-title"><%= b.title %></span>
+                <button type="button" class="bb-icon-btn bb-unhide-block">Unhide</button>
+              </li>
+            <% }); %>
+          </ul>
+        </details>
+      </section>
+
+    </main>
+  </div>
+
+  <script src="/js/block-buster.js"></script>
+</body>
+</html>
