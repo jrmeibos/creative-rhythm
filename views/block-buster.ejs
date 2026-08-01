@@ -10,20 +10,49 @@
     <%- include('partials/sidebar') %>
     <main class="main-content">
 
+      <%
+        // Each category gets its own brand color + readable ink. These block
+        // categories are distinct from the four intention categories, so the
+        // ink choices follow brand usage per swatch (dark on gold/rose/share,
+        // white on the darker sage/bloem).
+        const CAT_COLORS = {
+          'blank-page':      { bg: '#F6C95C', ink: '#100F10' },
+          'overwhelm':       { bg: '#D8B0AB', ink: '#100F10' },
+          'critic-clash':    { bg: '#a990a4', ink: '#100F10' },
+          'burnout':         { bg: '#76856C', ink: '#FAFAFA' },
+          'comparison-trap': { bg: '#705C6C', ink: '#FAFAFA' },
+        };
+        const catColor = (slug) => CAT_COLORS[slug] || { bg: '#705C6C', ink: '#FAFAFA' };
+        const visibleCount = (cat) => cat.blocks.filter(b => !b.hidden).length;
+      %>
+
       <a href="/resources" class="cm-back-link" style="display:inline-block; margin: 1.5rem 0 1rem;">← Back to Resources</a>
 
       <header class="bb-header">
-        <h1 class="bb-title">The Creative Block Buster</h1>
-        <p class="bb-subtitle">
-          Name what's in the way, and find a way through it. Search for what
-          you're feeling — or what you don't want to do — and open the block
-          that fits. Add your own ways through as you learn what works, so this
-          becomes your toolkit, not just mine.
-        </p>
+        <div class="bb-header-text">
+          <span class="bb-eyebrow">Your unstuck toolkit</span>
+          <h1 class="bb-title">The Creative Block Buster</h1>
+          <p class="bb-subtitle">
+            Name what's in the way, and find a way through it. Pick the block that
+            fits — or search for what you're feeling — then open it. Add your own
+            ways through as you learn what works, so this becomes your toolkit,
+            not just mine.
+          </p>
+        </div>
+        <img class="bb-header-art" src="/images/block-buster.svg"
+             alt="A tumbling tower of wooden building blocks" width="150" height="191">
       </header>
+
+      <!-- Busted tally -->
+      <p class="bb-tally" id="bb-tally" <% if (!bustedCount) { %>hidden<% } %>>
+        <span class="bb-tally-burst" aria-hidden="true">💥</span>
+        You've busted <strong id="bb-tally-count"><%= bustedCount %></strong>
+        <span id="bb-tally-noun"><%= bustedCount === 1 ? 'block' : 'blocks' %></span> so far. Keep going.
+      </p>
 
       <!-- Search -->
       <div class="bb-search">
+        <span class="bb-search-icon" aria-hidden="true">⌕</span>
         <input type="search" id="bb-search-input" class="bb-search-input"
                placeholder="What are you stuck on? e.g. “too tired,” “editing,” “what will people think”"
                autocomplete="off" aria-label="Search creative blocks">
@@ -33,6 +62,39 @@
       <div class="bb-nomatch" id="bb-nomatch" hidden>
         <p class="bb-nomatch-text">No block matches “<span id="bb-nomatch-query"></span>” yet.</p>
         <button type="button" class="bb-nomatch-btn" id="bb-nomatch-add">Add it as your own block →</button>
+      </div>
+
+      <!-- Category chooser — each category rides a literal block that rotates
+           face-on when you hover it (or when it's the selected filter). -->
+      <p class="bb-chooser-hint">Hover a block to turn it face-on — tap to open it.</p>
+      <div class="bb-chooser" id="bb-chooser" role="group" aria-label="Filter by category">
+        <button type="button" class="bb-chooser-card bb-chooser-card--all bb-chooser-card--active"
+                data-cat="all" aria-pressed="true">
+          <span class="bb-cube">
+            <span class="bb-face bb-face--top" aria-hidden="true"></span>
+            <span class="bb-face bb-face--side" aria-hidden="true"></span>
+            <span class="bb-face bb-face--front">
+              <span class="bb-chooser-name">All blocks</span>
+              <span class="bb-chooser-meta">Everything</span>
+            </span>
+          </span>
+        </button>
+        <% categories.forEach(function(cat) { const c = catColor(cat.slug); %>
+          <button type="button" class="bb-chooser-card" data-cat="<%= cat.slug %>"
+                  aria-pressed="false"
+                  style="--cat: <%= c.bg %>; --cat-ink: <%= c.ink %>;">
+            <span class="bb-cube">
+              <span class="bb-face bb-face--top" aria-hidden="true">
+                <span class="bb-chooser-count" data-cat-count="<%= cat.slug %>"><%= visibleCount(cat) %></span>
+              </span>
+              <span class="bb-face bb-face--side" aria-hidden="true"></span>
+              <span class="bb-face bb-face--front">
+                <span class="bb-chooser-name"><%= cat.name %></span>
+                <span class="bb-chooser-meta"><%= cat.descriptor %></span>
+              </span>
+            </span>
+          </button>
+        <% }); %>
       </div>
 
       <% const hiddenCount = categories.reduce((n, c) => n + c.blocks.filter(b => b.hidden).length, 0); %>
@@ -45,16 +107,17 @@
 
       <!-- Categories → blocks -->
       <div class="bb-categories" id="bb-categories">
-        <% categories.forEach(function(cat) { %>
-          <section class="bb-category" data-cat="<%= cat.slug %>">
+        <% categories.forEach(function(cat) { const c = catColor(cat.slug); %>
+          <section class="bb-category" data-cat="<%= cat.slug %>"
+                   style="--cat: <%= c.bg %>; --cat-ink: <%= c.ink %>;">
             <div class="bb-category-head">
-              <h2 class="bb-category-name"><%= cat.name %></h2>
+              <span class="bb-category-name"><%= cat.name %></span>
               <span class="bb-category-descriptor"><%= cat.descriptor %></span>
             </div>
 
             <div class="bb-category-blocks">
               <% cat.blocks.forEach(function(b) { %>
-                <div class="bb-block <%= b.hidden ? 'bb-block--hidden' : '' %>"
+                <div class="bb-block <%= b.hidden ? 'bb-block--hidden' : '' %> <%= b.busted ? 'bb-block--busted' : '' %>"
                      data-key="<%= b.key %>"
                      data-custom="<%= b.isCustom %>"
                      <% if (b.isCustom) { %>data-block-id="<%= b.customId %>"<% } %>
@@ -63,17 +126,31 @@
                     <span class="bb-block-title">
                       <%= b.title %><% if (b.isCustom) { %> <span class="bb-yours-tag">yours</span><% } %>
                     </span>
-                    <span class="bb-block-chevron" aria-hidden="true">▸</span>
+                    <span class="bb-busted-badge" aria-hidden="true">💥 Busted</span>
+                    <span class="bb-block-chevron" aria-hidden="true">
+                      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"></polyline></svg>
+                    </span>
                   </button>
 
                   <div class="bb-block-body" hidden>
-                    <p class="bb-then-label">Try one of these →</p>
+                    <div class="bb-busted-banner">
+                      <span class="bb-busted-banner-text">
+                        💥 You busted this block<% if (b.busted && b.bustedWith) { %> with: <em class="bb-busted-with"><%= b.bustedWith %></em><% } %>
+                      </span>
+                      <button type="button" class="bb-unbust-btn">Bring it back</button>
+                    </div>
+
+                    <p class="bb-then-label">Ways through <span class="bb-then-hint">— check one off when it works</span></p>
                     <ul class="bb-options">
                       <% b.defaultOptions.forEach(function(opt) { %>
-                        <li class="bb-option bb-option--default"><span class="bb-option-text"><%= opt %></span></li>
+                        <li class="bb-option bb-option--default">
+                          <button type="button" class="bb-try" title="I tried this — it worked" aria-label="I tried this — bust the block"></button>
+                          <span class="bb-option-text"><%= opt %></span>
+                        </li>
                       <% }); %>
                       <% b.addedOptions.forEach(function(opt) { %>
                         <li class="bb-option bb-option--mine" data-option-id="<%= opt.id %>">
+                          <button type="button" class="bb-try" title="I tried this — it worked" aria-label="I tried this — bust the block"></button>
                           <span class="bb-option-text"><%= opt.text %></span>
                           <button type="button" class="bb-option-remove bb-delete-option" title="Remove this" aria-label="Remove this">×</button>
                         </li>

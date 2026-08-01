@@ -17,6 +17,7 @@
   }
 
   const categoriesEl = document.getElementById('bb-categories');
+  const chooserEl    = document.getElementById('bb-chooser');
   const searchInput  = document.getElementById('bb-search-input');
   const nomatch      = document.getElementById('bb-nomatch');
   const nomatchQuery = document.getElementById('bb-nomatch-query');
@@ -26,6 +27,100 @@
   const newBlockForm  = document.getElementById('bb-newblock-form');
   const newBlockInput = document.getElementById('bb-newblock-input');
   const newBlockCat   = document.getElementById('bb-newblock-category');
+  const tallyEl       = document.getElementById('bb-tally');
+  const tallyCountEl  = document.getElementById('bb-tally-count');
+  const tallyNounEl   = document.getElementById('bb-tally-noun');
+
+  // Which category chip is active ('all' or a category slug).
+  let activeCat = 'all';
+
+  const reduceMotion = () =>
+    window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // ── Bust / un-bust a block ──────────────────────────────────────────────
+  function updateTally(delta) {
+    let n = (parseInt(tallyCountEl.textContent, 10) || 0) + delta;
+    if (n < 0) n = 0;
+    tallyCountEl.textContent = n;
+    tallyNounEl.textContent = n === 1 ? 'block' : 'blocks';
+    tallyEl.hidden = n === 0;
+  }
+  function applyBusted(block, optionText) {
+    block.classList.add('bb-block--busted');
+    const span = block.querySelector('.bb-busted-banner-text');
+    if (span) {
+      span.textContent = '💥 You busted this block';
+      if (optionText) {
+        span.append(' with: ');
+        const em = document.createElement('em');
+        em.className = 'bb-busted-with';
+        em.textContent = optionText;
+        span.appendChild(em);
+      }
+    }
+  }
+  function clearBusted(block) {
+    block.classList.remove('bb-block--busted');
+    const span = block.querySelector('.bb-busted-banner-text');
+    if (span) span.textContent = '💥 You busted this block';
+  }
+
+  // Confetti-ish burst of block-colored shards from a point (viewport coords).
+  function burst(cx, cy, color) {
+    const count = 26;
+    for (let i = 0; i < count; i++) {
+      const shard = document.createElement('div');
+      shard.className = 'bb-shard';
+      const sz = 7 + Math.random() * 11;
+      shard.style.width = sz + 'px';
+      shard.style.height = (sz * (0.7 + Math.random() * 0.6)) + 'px';
+      shard.style.left = cx + 'px';
+      shard.style.top = cy + 'px';
+      shard.style.background = Math.random() < 0.28 ? '#ffffff' : color;
+      document.body.appendChild(shard);
+      const angle = Math.random() * Math.PI * 2;
+      const dist = 55 + Math.random() * 150;
+      const dx = Math.cos(angle) * dist;
+      const dy = Math.sin(angle) * dist - (35 + Math.random() * 55);
+      const gravity = 110 + Math.random() * 130;
+      const rot = Math.random() * 720 - 360;
+      const dur = 650 + Math.random() * 450;
+      const anim = shard.animate([
+        { transform: 'translate(-50%,-50%) rotate(0deg)', opacity: 1 },
+        { offset: 0.7, opacity: 1 },
+        { transform: `translate(-50%,-50%) translate(${dx}px, ${dy + gravity}px) rotate(${rot}deg)`, opacity: 0 },
+      ], { duration: dur, easing: 'cubic-bezier(0.15, 0.6, 0.35, 1)' });
+      anim.onfinish = () => shard.remove();
+    }
+  }
+
+  async function bustBlock(block, optionText) {
+    if (block.classList.contains('bb-block--busted')) return;
+    const catColor = getComputedStyle(block).getPropertyValue('--cat').trim() || '#705C6C';
+    const collapseDelay = reduceMotion() ? 0 : 700;
+
+    if (!reduceMotion()) {
+      const r = block.getBoundingClientRect();
+      burst(r.left + r.width / 2, r.top + r.height / 2, catColor);
+      block.classList.add('bb-block--bursting');
+      setTimeout(() => block.classList.remove('bb-block--bursting'), 520);
+    }
+    applyBusted(block, optionText);
+    updateTally(+1);
+    // collapse after the burst so it reads as "busted, done"
+    setTimeout(() => {
+      block.querySelector('.bb-block-trigger').setAttribute('aria-expanded', 'false');
+      block.querySelector('.bb-block-body').hidden = true;
+    }, collapseDelay);
+
+    try {
+      await post('/api/block-buster/bust', { blockKey: block.dataset.key, optionText: optionText || '' });
+    } catch (err) {
+      clearBusted(block);
+      updateTally(-1);
+      alert("Couldn't save that just now. Please try again.");
+    }
+  }
 
   // ── Visibility helpers ──────────────────────────────────────────────────
   function showingHidden() { return categoriesEl.classList.contains('bb-show-hidden'); }
@@ -37,13 +132,36 @@
   function refreshCategories() {
     let anyVisibleAll = false;
     categoriesEl.querySelectorAll('.bb-category').forEach(cat => {
-      const any = [...cat.querySelectorAll('.bb-block')].some(blockVisible);
+      const inFilter = activeCat === 'all' || cat.dataset.cat === activeCat;
+      const any = inFilter && [...cat.querySelectorAll('.bb-block')].some(blockVisible);
+      // Filtered-out categories collapse via a class; empty ones via display.
+      cat.classList.toggle('bb-cat-filtered', !inFilter);
       cat.style.display = any ? '' : 'none';
       if (any) anyVisibleAll = true;
     });
     return anyVisibleAll;
   }
+
+  // Count of non-hidden blocks per category, mirrored onto its chooser chip.
+  function updateCatCounts() {
+    categoriesEl.querySelectorAll('.bb-category').forEach(cat => {
+      const n = [...cat.querySelectorAll('.bb-block')]
+        .filter(b => !b.classList.contains('bb-block--hidden')).length;
+      const badge = chooserEl.querySelector('[data-cat-count="' + cat.dataset.cat + '"]');
+      if (badge) badge.textContent = n;
+    });
+  }
+
+  // Move the active state to a chooser chip (by slug) without re-filtering.
+  function markActiveChip(slug) {
+    chooserEl.querySelectorAll('.bb-chooser-card').forEach(card => {
+      const on = card.dataset.cat === slug;
+      card.classList.toggle('bb-chooser-card--active', on);
+      card.setAttribute('aria-pressed', String(on));
+    });
+  }
   function updateHiddenCount() {
+    updateCatCounts();
     const n = categoriesEl.querySelectorAll('.bb-block--hidden').length;
     hiddenCountEl.textContent = n;
     showHiddenBtn.hidden = n === 0;
@@ -56,6 +174,29 @@
 
   // ── Accordion open/close + all click actions ────────────────────────────
   categoriesEl.addEventListener('click', async function (e) {
+    // Check off a way through → bust the block
+    const tryBtn = e.target.closest('.bb-try');
+    if (tryBtn) {
+      const block = tryBtn.closest('.bb-block');
+      const opt = tryBtn.parentElement.querySelector('.bb-option-text');
+      bustBlock(block, opt ? opt.textContent.trim() : '');
+      return;
+    }
+
+    // Bring a busted block back
+    const unbustBtn = e.target.closest('.bb-unbust-btn');
+    if (unbustBtn) {
+      const block = unbustBtn.closest('.bb-block');
+      unbustBtn.disabled = true;
+      try {
+        await post('/api/block-buster/unbust', { blockKey: block.dataset.key });
+        clearBusted(block);
+        updateTally(-1);
+      } catch (err) { alert("Couldn't bring it back. Please try again."); }
+      finally { unbustBtn.disabled = false; }
+      return;
+    }
+
     // Toggle a block open/closed
     const trigger = e.target.closest('.bb-block-trigger');
     if (trigger) {
@@ -114,7 +255,7 @@
       const block = delBtn.closest('.bb-block');
       if (!confirm('Delete this block and everything you added to it?')) return;
       delBtn.disabled = true;
-      try { await post('/api/block-buster/block/' + block.dataset.blockId + '/delete', {}); block.remove(); refreshCategories(); }
+      try { await post('/api/block-buster/block/' + block.dataset.blockId + '/delete', {}); block.remove(); updateCatCounts(); refreshCategories(); }
       catch (err) { delBtn.disabled = false; alert("Couldn't delete that. Please try again."); }
       return;
     }
@@ -145,8 +286,10 @@
       const li = document.createElement('li');
       li.className = 'bb-option bb-option--mine';
       li.dataset.optionId = data.id;
-      li.innerHTML = '<span class="bb-option-text">' + esc(text) +
-        '</span><button type="button" class="bb-option-remove bb-delete-option" title="Remove this" aria-label="Remove this">×</button>';
+      li.innerHTML =
+        '<button type="button" class="bb-try" title="I tried this — it worked" aria-label="I tried this — bust the block"></button>' +
+        '<span class="bb-option-text">' + esc(text) + '</span>' +
+        '<button type="button" class="bb-option-remove bb-delete-option" title="Remove this" aria-label="Remove this">×</button>';
       block.querySelector('.bb-options').appendChild(li);
       input.value = '';
       input.focus();
@@ -154,9 +297,31 @@
     finally { btn.disabled = false; }
   });
 
+  // ── Category chooser (pick your block) ──────────────────────────────────
+  chooserEl.addEventListener('click', function (e) {
+    const card = e.target.closest('.bb-chooser-card');
+    if (!card) return;
+    activeCat = card.dataset.cat;
+    markActiveChip(activeCat);
+    // A category pick is a fresh filter — clear any active search.
+    if (searchInput.value) { searchInput.value = ''; }
+    categoriesEl.querySelectorAll('.bb-block').forEach(b => b.classList.remove('bb-search-hidden'));
+    nomatch.hidden = true;
+    refreshCategories();
+    // Scroll the chosen category into view (but not on "all" / when nothing shows).
+    if (activeCat !== 'all') {
+      const section = categoriesEl.querySelector('.bb-category[data-cat="' + activeCat + '"]');
+      if (section && section.style.display !== 'none') {
+        section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }
+  });
+
   // ── Search ──────────────────────────────────────────────────────────────
   function runSearch() {
     const q = searchInput.value.trim().toLowerCase();
+    // Searching spans every category, so it resets the chooser to "all".
+    if (q && activeCat !== 'all') { activeCat = 'all'; markActiveChip('all'); }
     categoriesEl.querySelectorAll('.bb-block').forEach(block => {
       const match = !q || block.dataset.title.indexOf(q) !== -1;
       block.classList.toggle('bb-search-hidden', !match);
@@ -207,10 +372,17 @@
       div.innerHTML =
         '<button type="button" class="bb-block-trigger" aria-expanded="true">' +
           '<span class="bb-block-title">' + esc(title) + ' <span class="bb-yours-tag">yours</span></span>' +
-          '<span class="bb-block-chevron" aria-hidden="true">▸</span>' +
+          '<span class="bb-busted-badge" aria-hidden="true">💥 Busted</span>' +
+          '<span class="bb-block-chevron" aria-hidden="true">' +
+            '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"></polyline></svg>' +
+          '</span>' +
         '</button>' +
         '<div class="bb-block-body">' +
-          '<p class="bb-then-label">Try one of these →</p>' +
+          '<div class="bb-busted-banner">' +
+            '<span class="bb-busted-banner-text">💥 You busted this block</span>' +
+            '<button type="button" class="bb-unbust-btn">Bring it back</button>' +
+          '</div>' +
+          '<p class="bb-then-label">Ways through <span class="bb-then-hint">— check one off when it works</span></p>' +
           '<ul class="bb-options"></ul>' +
           '<form class="bb-add-option">' +
             '<input type="text" class="bb-add-option-input" placeholder="Add your own way through…" maxlength="300" autocomplete="off">' +
@@ -221,9 +393,15 @@
       holder.appendChild(div);
       newBlockInput.value = '';
       newBlockCat.selectedIndex = 0;
-      // clear any active search so the new block is visible, then reveal it
+      // clear any search AND focus the filter on this block's category so the
+      // new block is guaranteed visible, then reveal it.
       searchInput.value = '';
-      runSearch();
+      categoriesEl.querySelectorAll('.bb-block').forEach(b => b.classList.remove('bb-search-hidden'));
+      activeCat = category;
+      markActiveChip(category);
+      nomatch.hidden = true;
+      updateCatCounts();
+      refreshCategories();
       div.scrollIntoView({ behavior: 'smooth', block: 'center' });
       div.querySelector('.bb-add-option-input').focus();
     } catch (err) { alert("Couldn't add that block. Please try again."); }
@@ -231,5 +409,6 @@
   });
 
   // Initial pass so any server-hidden blocks collapse their now-empty categories.
+  updateCatCounts();
   refreshCategories();
 })();

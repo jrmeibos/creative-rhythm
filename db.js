@@ -117,6 +117,17 @@ db.exec(`
     PRIMARY KEY (user_id, block_key),
     FOREIGN KEY (user_id) REFERENCES users(id)
   );
+  -- Blocks a student has "busted" (tried a way through and it worked). One row
+  -- per user+block; option_text records which way through did it, for a little
+  -- record of what works for them.
+  CREATE TABLE IF NOT EXISTS block_buster_busted (
+    user_id INTEGER NOT NULL,
+    block_key TEXT NOT NULL,
+    option_text TEXT,
+    busted_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (user_id, block_key),
+    FOREIGN KEY (user_id) REFERENCES users(id)
+  );
 
   CREATE TABLE IF NOT EXISTS lessons (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1930,6 +1941,31 @@ module.exports = {
     }
   },
 
+  // Busted blocks for a student, as a Map(block_key → { option_text, busted_at }).
+  getBustedBlocks(userId) {
+    const rows = db.prepare(
+      'SELECT block_key, option_text, busted_at FROM block_buster_busted WHERE user_id = ?'
+    ).all(userId);
+    const map = new Map();
+    for (const r of rows) map.set(r.block_key, { option_text: r.option_text, busted_at: r.busted_at });
+    return map;
+  },
+  // Mark a block busted (idempotent). Records which way through worked.
+  bustBlock(userId, blockKey, optionText) {
+    db.prepare(
+      `INSERT INTO block_buster_busted (user_id, block_key, option_text)
+       VALUES (?, ?, ?)
+       ON CONFLICT(user_id, block_key)
+       DO UPDATE SET option_text = excluded.option_text, busted_at = CURRENT_TIMESTAMP`
+    ).run(userId, String(blockKey), optionText ? String(optionText) : null);
+  },
+  // Un-bust a block (bring it back).
+  unbustBlock(userId, blockKey) {
+    return db.prepare(
+      'DELETE FROM block_buster_busted WHERE user_id = ? AND block_key = ?'
+    ).run(userId, String(blockKey)).changes;
+  },
+
   getAllUsersGoalsForWeek(weekStart) {
     return db.prepare(`
       SELECT wg.*, u.name, u.avatar_initial FROM weekly_goals wg
@@ -2103,6 +2139,7 @@ module.exports = {
       db.prepare('DELETE FROM weekly_goal_shares WHERE user_id=?').run(id);
       db.prepare('DELETE FROM block_buster_options WHERE user_id=?').run(id);
       db.prepare('DELETE FROM block_buster_hidden WHERE user_id=?').run(id);
+      db.prepare('DELETE FROM block_buster_busted WHERE user_id=?').run(id);
       db.prepare('DELETE FROM block_buster_blocks WHERE user_id=?').run(id);
       db.prepare('DELETE FROM banner_dismissals WHERE user_id=?').run(id);
       db.prepare('DELETE FROM weekly_goals WHERE user_id=?').run(id);

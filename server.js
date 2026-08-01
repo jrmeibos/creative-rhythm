@@ -3639,6 +3639,7 @@ app.get('/block-buster', requireAuth, (req, res) => {
   const added  = db.getAddedOptionsByBlock(userId);  // Map(key → [{id,text}])
   const hidden = db.getHiddenBlockKeys(userId);       // Set(key)
   const custom = db.getCustomBlocks(userId);          // [{id,title,category}]
+  const busted = db.getBustedBlocks(userId);          // Map(key → {option_text, busted_at})
 
   // Group custom blocks by category slug so we can append them under the
   // matching built-in category. Anything with an unknown/blank category
@@ -3655,6 +3656,8 @@ app.get('/block-buster', requireAuth, (req, res) => {
     defaultOptions,
     addedOptions: added.get(key) || [],
     hidden:       hidden.has(key),
+    busted:       busted.has(key),
+    bustedWith:   busted.get(key) ? busted.get(key).option_text : null,
   });
 
   const categories = CREATIVE_BLOCK_CATEGORIES.map(cat => {
@@ -3674,6 +3677,7 @@ app.get('/block-buster', requireAuth, (req, res) => {
     title: 'The Creative Block Buster',
     page:  'resources',
     categories,
+    bustedCount: busted.size,
   });
 });
 
@@ -3717,6 +3721,23 @@ app.post('/api/block-buster/hide', requireAuth, (req, res) => {
   if (!blockKey || !String(blockKey).trim()) return res.status(400).json({ error: 'Missing block.' });
   db.setBlockHidden(req.session.user.id, String(blockKey).trim(), !!hidden);
   res.json({ ok: true });
+});
+
+// Bust a block — a way through worked. optionText records which one.
+app.post('/api/block-buster/bust', requireAuth, (req, res) => {
+  const { blockKey, optionText } = req.body || {};
+  if (!blockKey || !String(blockKey).trim()) return res.status(400).json({ error: 'Missing block.' });
+  const text = optionText ? String(optionText).slice(0, 400) : null;
+  db.bustBlock(req.session.user.id, String(blockKey).trim(), text);
+  res.json({ ok: true, bustedCount: db.getBustedBlocks(req.session.user.id).size });
+});
+
+// Un-bust a block (bring it back).
+app.post('/api/block-buster/unbust', requireAuth, (req, res) => {
+  const { blockKey } = req.body || {};
+  if (!blockKey || !String(blockKey).trim()) return res.status(400).json({ error: 'Missing block.' });
+  db.unbustBlock(req.session.user.id, String(blockKey).trim());
+  res.json({ ok: true, bustedCount: db.getBustedBlocks(req.session.user.id).size });
 });
 
 // ─── Watch Yourself — Spring+ only ─────────────────────────────────────────
