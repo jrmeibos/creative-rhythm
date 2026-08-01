@@ -15,50 +15,89 @@
       <header class="bb-header">
         <h1 class="bb-title">The Creative Block Buster</h1>
         <p class="bb-subtitle">
-          Stuck? Find the block that fits, then pick a way through. As you learn
-          what works for you, add your own ways through — and your own blocks —
-          so this becomes your toolkit, not just mine.
+          Name what's in the way, and find a way through it. Search for what
+          you're feeling — or what you don't want to do — and open the block
+          that fits. Add your own ways through as you learn what works, so this
+          becomes your toolkit, not just mine.
         </p>
       </header>
 
-      <%
-        const visibleBlocks = blocks.filter(b => !b.hidden);
-        const hiddenBlocks  = blocks.filter(b => b.hidden);
-      %>
+      <!-- Search -->
+      <div class="bb-search">
+        <input type="search" id="bb-search-input" class="bb-search-input"
+               placeholder="What are you stuck on? e.g. “too tired,” “editing,” “what will people think”"
+               autocomplete="off" aria-label="Search creative blocks">
+      </div>
 
-      <div class="bb-blocks" id="bb-blocks">
-        <% visibleBlocks.forEach(function(b) { %>
-          <section class="bb-block" data-key="<%= b.key %>" data-custom="<%= b.isCustom %>" <% if (b.isCustom) { %>data-block-id="<%= b.customId %>"<% } %>>
-            <div class="bb-block-head">
-              <h2 class="bb-block-title">
-                <%= b.title %>
-                <% if (b.isCustom) { %><span class="bb-yours-tag">yours</span><% } %>
-              </h2>
-              <div class="bb-block-actions">
-                <% if (b.isCustom) { %>
-                  <button type="button" class="bb-icon-btn bb-delete-block" title="Delete this block">Delete</button>
-                <% } else { %>
-                  <button type="button" class="bb-icon-btn bb-hide-block" title="Hide this block">Hide</button>
-                <% } %>
-              </div>
+      <!-- No-match prompt (revealed by search when nothing matches) -->
+      <div class="bb-nomatch" id="bb-nomatch" hidden>
+        <p class="bb-nomatch-text">No block matches “<span id="bb-nomatch-query"></span>” yet.</p>
+        <button type="button" class="bb-nomatch-btn" id="bb-nomatch-add">Add it as your own block →</button>
+      </div>
+
+      <% const hiddenCount = categories.reduce((n, c) => n + c.blocks.filter(b => b.hidden).length, 0); %>
+      <div class="bb-showhidden-row">
+        <button type="button" id="bb-showhidden-toggle" class="bb-showhidden-toggle" aria-pressed="false"
+                <% if (!hiddenCount) { %>hidden<% } %>>
+          Show hidden blocks (<span id="bb-hidden-count"><%= hiddenCount %></span>)
+        </button>
+      </div>
+
+      <!-- Categories → blocks -->
+      <div class="bb-categories" id="bb-categories">
+        <% categories.forEach(function(cat) { %>
+          <section class="bb-category" data-cat="<%= cat.slug %>">
+            <div class="bb-category-head">
+              <h2 class="bb-category-name"><%= cat.name %></h2>
+              <span class="bb-category-descriptor"><%= cat.descriptor %></span>
             </div>
 
-            <ul class="bb-options">
-              <% b.defaultOptions.forEach(function(opt) { %>
-                <li class="bb-option bb-option--default"><span class="bb-option-text"><%= opt %></span></li>
-              <% }); %>
-              <% b.addedOptions.forEach(function(opt) { %>
-                <li class="bb-option bb-option--mine" data-option-id="<%= opt.id %>">
-                  <span class="bb-option-text"><%= opt.text %></span>
-                  <button type="button" class="bb-option-remove bb-delete-option" title="Remove this option" aria-label="Remove this option">×</button>
-                </li>
-              <% }); %>
-            </ul>
+            <div class="bb-category-blocks">
+              <% cat.blocks.forEach(function(b) { %>
+                <div class="bb-block <%= b.hidden ? 'bb-block--hidden' : '' %>"
+                     data-key="<%= b.key %>"
+                     data-custom="<%= b.isCustom %>"
+                     <% if (b.isCustom) { %>data-block-id="<%= b.customId %>"<% } %>
+                     data-title="<%= b.title.toLowerCase() %>">
+                  <button type="button" class="bb-block-trigger" aria-expanded="false">
+                    <span class="bb-block-title">
+                      <%= b.title %><% if (b.isCustom) { %> <span class="bb-yours-tag">yours</span><% } %>
+                    </span>
+                    <span class="bb-block-chevron" aria-hidden="true">▸</span>
+                  </button>
 
-            <form class="bb-add-option">
-              <input type="text" class="bb-add-option-input" placeholder="Add your own way through…" maxlength="300" autocomplete="off">
-              <button type="submit" class="bb-add-option-btn">Add</button>
-            </form>
+                  <div class="bb-block-body" hidden>
+                    <p class="bb-then-label">Try one of these →</p>
+                    <ul class="bb-options">
+                      <% b.defaultOptions.forEach(function(opt) { %>
+                        <li class="bb-option bb-option--default"><span class="bb-option-text"><%= opt %></span></li>
+                      <% }); %>
+                      <% b.addedOptions.forEach(function(opt) { %>
+                        <li class="bb-option bb-option--mine" data-option-id="<%= opt.id %>">
+                          <span class="bb-option-text"><%= opt.text %></span>
+                          <button type="button" class="bb-option-remove bb-delete-option" title="Remove this" aria-label="Remove this">×</button>
+                        </li>
+                      <% }); %>
+                    </ul>
+
+                    <form class="bb-add-option">
+                      <input type="text" class="bb-add-option-input" placeholder="Add your own way through…" maxlength="300" autocomplete="off">
+                      <button type="submit" class="bb-add-option-btn">Add</button>
+                    </form>
+
+                    <div class="bb-block-manage">
+                      <% if (b.isCustom) { %>
+                        <button type="button" class="bb-icon-btn bb-delete-block">Delete this block</button>
+                      <% } else if (b.hidden) { %>
+                        <button type="button" class="bb-icon-btn bb-unhide-block">Unhide this block</button>
+                      <% } else { %>
+                        <button type="button" class="bb-icon-btn bb-hide-block">Hide this block</button>
+                      <% } %>
+                    </div>
+                  </div>
+                </div>
+              <% }); %>
+            </div>
           </section>
         <% }); %>
       </div>
@@ -66,26 +105,17 @@
       <!-- Add your own block -->
       <section class="bb-newblock">
         <h2 class="bb-newblock-title">Add your own block</h2>
-        <p class="bb-newblock-hint">Facing something that isn't listed? Name it here, then add your own ways through.</p>
+        <p class="bb-newblock-hint">Facing something that isn't here? Name it, choose where it fits, then add your own ways through.</p>
         <form class="bb-newblock-form" id="bb-newblock-form">
-          <input type="text" id="bb-newblock-input" class="bb-newblock-input" placeholder="e.g. “I keep comparing myself to other people”" maxlength="200" autocomplete="off">
+          <input type="text" id="bb-newblock-input" class="bb-newblock-input" placeholder="e.g. “I keep second-guessing every caption”" maxlength="200" autocomplete="off">
+          <select id="bb-newblock-category" class="bb-newblock-select" aria-label="Category">
+            <option value="" disabled selected>Choose a category…</option>
+            <% categories.forEach(function(cat) { %>
+              <option value="<%= cat.slug %>"><%= cat.name %></option>
+            <% }); %>
+          </select>
           <button type="submit" class="bb-newblock-btn">Add block</button>
         </form>
-      </section>
-
-      <!-- Hidden blocks -->
-      <section class="bb-hidden-wrap" id="bb-hidden-wrap" <% if (!hiddenBlocks.length) { %>hidden<% } %>>
-        <details class="bb-hidden">
-          <summary class="bb-hidden-summary">Hidden blocks (<span id="bb-hidden-count"><%= hiddenBlocks.length %></span>)</summary>
-          <ul class="bb-hidden-list" id="bb-hidden-list">
-            <% hiddenBlocks.forEach(function(b) { %>
-              <li class="bb-hidden-item" data-key="<%= b.key %>">
-                <span class="bb-hidden-item-title"><%= b.title %></span>
-                <button type="button" class="bb-icon-btn bb-unhide-block">Unhide</button>
-              </li>
-            <% }); %>
-          </ul>
-        </details>
       </section>
 
     </main>

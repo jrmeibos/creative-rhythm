@@ -15,7 +15,7 @@ const { getCurricularSeason, getCurricularSeasonLabel, getCurricularSeasonDescri
 const { getSeasonPrompt } = require('./lib/season-prompts');
 const { getDailyPrompt } = require('./lib/daily-prompts');
 const CUTTING_PROMPTS = require('./lib/cutting-prompts');
-const { CREATIVE_BLOCKS } = require('./lib/creative-blocks');
+const { CREATIVE_BLOCK_CATEGORIES, CATEGORY_SLUGS } = require('./lib/creative-blocks');
 const { renderHtmlToPdf } = require('./lib/pdf-render');
 const PUSH = require('./lib/push');
 const VIDEO = require('./lib/video');
@@ -3629,42 +3629,51 @@ app.get('/resources', requireAuth, (req, res) => {
 
 // ─── The Creative Block Buster ─────────────────────────────────────────────
 // Open to every student (blocks around getting on camera hit hardest early).
-// Built-in blocks come from lib/creative-blocks.js; each student layers their
-// own options, own blocks, and hides on top (block_buster_* tables). The view
-// model merges them: built-in slug keys stay as-is, custom blocks get the key
+// Organized as categories → blocks → "ways through." Built-in content comes
+// from lib/creative-blocks.js; each student layers their own options, their
+// own blocks (filed into a category), and hides on top (block_buster_*
+// tables). Built-in blocks keep their slug as the key; custom blocks use
 // 'custom-<id>'.
 app.get('/block-buster', requireAuth, (req, res) => {
-  const userId    = req.session.user.id;
-  const added     = db.getAddedOptionsByBlock(userId);   // Map(key → [{id,text}])
-  const hidden    = db.getHiddenBlockKeys(userId);        // Set(key)
-  const custom    = db.getCustomBlocks(userId);           // [{id,title}]
+  const userId = req.session.user.id;
+  const added  = db.getAddedOptionsByBlock(userId);  // Map(key → [{id,text}])
+  const hidden = db.getHiddenBlockKeys(userId);       // Set(key)
+  const custom = db.getCustomBlocks(userId);          // [{id,title,category}]
 
-  const builtin = CREATIVE_BLOCKS.map(b => ({
-    key:            b.slug,
-    title:          b.title,
-    isCustom:       false,
-    defaultOptions: b.options,
-    addedOptions:   added.get(b.slug) || [],
-    hidden:         hidden.has(b.slug),
-  }));
-  const customBlocks = custom.map(c => {
-    const key = 'custom-' + c.id;
+  // Group custom blocks by category slug so we can append them under the
+  // matching built-in category. Anything with an unknown/blank category
+  // falls under the first category as a safe default.
+  const customByCat = new Map();
+  for (const c of custom) {
+    const cat = CATEGORY_SLUGS.includes(c.category) ? c.category : CATEGORY_SLUGS[0];
+    if (!customByCat.has(cat)) customByCat.set(cat, []);
+    customByCat.get(cat).push(c);
+  }
+
+  const buildBlock = (key, title, isCustom, defaultOptions, customId) => ({
+    key, title, isCustom, customId: customId || null,
+    defaultOptions,
+    addedOptions: added.get(key) || [],
+    hidden:       hidden.has(key),
+  });
+
+  const categories = CREATIVE_BLOCK_CATEGORIES.map(cat => {
+    const builtinBlocks = cat.blocks.map(b =>
+      buildBlock(b.slug, b.title, false, b.options));
+    const customBlocks = (customByCat.get(cat.slug) || []).map(c =>
+      buildBlock('custom-' + c.id, c.title, true, [], c.id));
     return {
-      key,
-      title:          c.title,
-      isCustom:       true,
-      customId:       c.id,
-      defaultOptions: [],
-      addedOptions:   added.get(key) || [],
-      hidden:         hidden.has(key),
+      slug: cat.slug,
+      name: cat.name,
+      descriptor: cat.descriptor,
+      blocks: [...builtinBlocks, ...customBlocks],
     };
   });
 
-  const blocks = [...builtin, ...customBlocks];
   res.render('block-buster', {
     title: 'The Creative Block Buster',
     page:  'resources',
-    blocks,
+    categories,
   });
 });
 
@@ -3685,12 +3694,13 @@ app.post('/api/block-buster/option/:id/delete', requireAuth, (req, res) => {
   res.json({ ok: true });
 });
 
-// Create a student's own block.
+// Create a student's own block, filed into one of the built-in categories.
 app.post('/api/block-buster/block', requireAuth, (req, res) => {
-  const { title } = req.body || {};
+  const { title, category } = req.body || {};
   if (!title || !String(title).trim()) return res.status(400).json({ error: 'Give the block a name.' });
-  const id = db.addCustomBlock(req.session.user.id, title);
-  res.json({ ok: true, id, key: 'custom-' + id });
+  if (!CATEGORY_SLUGS.includes(category)) return res.status(400).json({ error: 'Choose a category.' });
+  const id = db.addCustomBlock(req.session.user.id, title, category);
+  res.json({ ok: true, id, key: 'custom-' + id, category });
 });
 
 // Delete a student's own block (and its options).

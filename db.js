@@ -98,6 +98,7 @@ db.exec(`
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER NOT NULL,
     title TEXT NOT NULL,
+    category TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id)
   );
@@ -418,6 +419,13 @@ db.exec(`
   if (!userCols.includes('notes')) {
     db.exec("ALTER TABLE users ADD COLUMN notes TEXT");
     console.log('✓ Migrated: added notes column to users');
+  }
+  // Block Buster custom blocks gained a `category` column when the resource
+  // was reorganized into categories. Guarded add for DBs created before that.
+  const bbBlockCols = db.prepare("PRAGMA table_info(block_buster_blocks)").all().map(r => r.name);
+  if (bbBlockCols.length && !bbBlockCols.includes('category')) {
+    db.exec("ALTER TABLE block_buster_blocks ADD COLUMN category TEXT");
+    console.log('✓ Migrated: added category column to block_buster_blocks');
   }
   // Per-user course start date for multi-cohort support. NULL means "fall
   // back to the global settings.course_start_date" so existing students keep
@@ -1852,16 +1860,17 @@ module.exports = {
   },
 
   // ── The Creative Block Buster ───────────────────────────────────────────
-  // A student's custom blocks (their own additions to the built-in set).
+  // A student's custom blocks (their own additions to the built-in set),
+  // each filed into one of the built-in category slugs.
   getCustomBlocks(userId) {
     return db.prepare(
-      'SELECT id, title FROM block_buster_blocks WHERE user_id = ? ORDER BY created_at ASC, id ASC'
+      'SELECT id, title, category FROM block_buster_blocks WHERE user_id = ? ORDER BY created_at ASC, id ASC'
     ).all(userId);
   },
-  addCustomBlock(userId, title) {
+  addCustomBlock(userId, title, category) {
     return db.prepare(
-      'INSERT INTO block_buster_blocks (user_id, title) VALUES (?, ?)'
-    ).run(userId, String(title).trim()).lastInsertRowid;
+      'INSERT INTO block_buster_blocks (user_id, title, category) VALUES (?, ?, ?)'
+    ).run(userId, String(title).trim(), category || null).lastInsertRowid;
   },
   // Delete a custom block plus everything attached to it (its added options
   // and any hide row), scoped to the owner.
