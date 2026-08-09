@@ -3219,46 +3219,38 @@ function requireFullCourse(req, res, next) {
 }
 app.use(['/summer', '/grove'], requireAuth, requireFullCourse);
 
-// The Propagation Table opens only in Summer: a paid student who is in (or has
-// selected) the Summer season, plus admins for preview. effectiveSeason is
-// forced to 'winter' for non-paid users, so 'summer' already implies paid.
-function requireSummer(req, res, next) {
+// The Propagation Table (making hub) opens in the making seasons — Summer and
+// Autumn — for paid students in (or who've selected) either, plus admins for
+// preview. effectiveSeason is forced to 'winter' for non-paid users, so
+// summer/autumn already implies paid. Mirrors res.locals.showSummer.
+function requireMakingSeason(req, res, next) {
   const u = req.session.user;
-  if (u && (u.role === 'admin' || res.locals.effectiveSeason === 'summer')) return next();
+  const season = res.locals.effectiveSeason;
+  if (u && (u.role === 'admin' || season === 'summer' || season === 'autumn')) return next();
   if (req.method === 'GET') return res.redirect('/greenhouse');
-  return res.status(403).json({ error: 'The Propagation Table opens in Summer.' });
+  return res.status(403).json({ error: 'The Propagation Table opens in Summer and Autumn.' });
 }
 
+// Cultivated Ideas moved onto the Propagation Table (the unified making hub).
+// The old /summer page now redirects there.
 app.get('/summer', requireAuth, (req, res) => {
-  const userId = req.session.user.id;
+  res.redirect(301, '/greenhouse/propagation-table');
+});
 
-  // Cultivate pile — reuse getCuttingsForUser (which already carries the
-  // latest tending_category) and filter in-JS. At pilot scale (≤ ~100
-  // cuttings per user) this is cheap and matches how /greenhouse/cuttings
-  // filters. Renders newest-first, same as the archive.
+// Load the Cultivate pile + formats + makes for the "Cultivated Ideas" section
+// that now renders at the bottom of the Propagation Table. Shared by that route.
+function loadCultivatedIdeas(userId) {
   const cuttings = db.getCuttingsForUser(userId)
     .filter(c => c.tending_category === 'keep_growing');
-
   const formats = db.getFormatsForUser(userId);
-
-  // Group makes by cutting_id so the view can render existing formats
-  // inline on each Cultivate card without extra DB round-trips.
   const makes = db.getMakesForUser(userId);
   const makesByCutting = new Map();
   for (const m of makes) {
     if (!makesByCutting.has(m.cutting_id)) makesByCutting.set(m.cutting_id, []);
     makesByCutting.get(m.cutting_id).push(m);
   }
-
-  res.render('summer', {
-    title: 'Cultivated Ideas',
-    page: 'summer',
-    user: req.session.user,
-    cuttings,
-    formats,
-    makesByCutting,
-  });
-});
+  return { cuttings, formats, makesByCutting };
+}
 
 // Manage custom formats — student-created + editable + archivable.
 // Built-ins are shown read-only for context; the CRUD only touches the
@@ -3362,9 +3354,11 @@ app.get('/summer/format/:slug', requireAuth, (req, res) => {
 const PROPAGATION_SLUGS = PROPAGATION_RUNGS.map(r => r.slug);
 const splitParas = (s) => (s || '').split(/\n\s*\n/).map(x => x.trim()).filter(Boolean);
 
-// Lives in The Greenhouse, open only in the Summer season (see requireSummer).
-app.get('/greenhouse/propagation-table', requireAuth, requireSummer, (req, res) => {
-  const made = db.getPropagationMakes(req.session.user.id);
+// Lives in The Greenhouse's Summer/Autumn making seasons (see requireMakingSeason).
+// The 7-rung challenge up top, then the "Cultivated Ideas" pile at the bottom.
+app.get('/greenhouse/propagation-table', requireAuth, requireMakingSeason, (req, res) => {
+  const userId = req.session.user.id;
+  const made = db.getPropagationMakes(userId);
   const rungs = PROPAGATION_RUNGS.map(r => {
     const m = made.get(r.slug);
     return {
@@ -3375,6 +3369,7 @@ app.get('/greenhouse/propagation-table', requireAuth, requireSummer, (req, res) 
       link: m ? m.published_url : null,
     };
   });
+  const { cuttings, formats, makesByCutting } = loadCultivatedIdeas(userId);
   res.render('propagation-table', {
     title: 'The Propagation Table',
     page: 'greenhouse',
@@ -3384,6 +3379,9 @@ app.get('/greenhouse/propagation-table', requireAuth, requireSummer, (req, res) 
     finishParagraphs: splitParas(PROPAGATION_FINISH),
     doneCount: rungs.filter(r => r.made).length,
     total: rungs.length,
+    cuttings,
+    formats,
+    makesByCutting,
   });
 });
 
@@ -3395,7 +3393,7 @@ app.get('/summer/propagation-table', requireAuth, (req, res) => {
 
 // Complete a rung by uploading a file and/or pasting a link (at least one).
 // Multipart: field `file` (optional), fields `slug` + `link`.
-app.post('/api/propagation-table/mark', requireAuth, requireSummer, (req, res) => {
+app.post('/api/propagation-table/mark', requireAuth, requireMakingSeason, (req, res) => {
   propagationUpload.single('file')(req, res, err => {
     if (err) return res.status(400).json({ error: err.message });
     const userId = req.session.user.id;
@@ -3417,7 +3415,7 @@ app.post('/api/propagation-table/mark', requireAuth, requireSummer, (req, res) =
   });
 });
 
-app.post('/api/propagation-table/unmark', requireAuth, requireSummer, (req, res) => {
+app.post('/api/propagation-table/unmark', requireAuth, requireMakingSeason, (req, res) => {
   const { slug } = req.body || {};
   if (!PROPAGATION_SLUGS.includes(slug)) return res.status(400).json({ error: 'Unknown rung.' });
   const userId = req.session.user.id;

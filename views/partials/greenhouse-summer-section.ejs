@@ -1,42 +1,19 @@
-<!-- Make Something with Your Cuttings — parallel section to Your Cuttings
-     and Tend Your Cuttings. Appears only when locals.showSummer is true
-     (effective season is Summer or Autumn). Clicking the button takes
-     the student to /summer, where they turn Cultivate cuttings into
-     content in the format of their choice. Reuses the .gh-cuttings-
-     section-* classes for identical visual, plus a --summer modifier so
-     future visual divergence is a one-line change. -->
+<!-- Make Something: The Propagation Table — the unified making hub. Shows in
+     the making seasons (Summer + Autumn, i.e. locals.showSummer). Combines what
+     used to be two cards ("Make Something" → /summer and "The Propagation
+     Table"): the guided challenge and the Cultivate pile now live together on
+     /greenhouse/propagation-table. -->
 <% if (locals.showSummer) { %>
 <section class="dash-section gh-cuttings-section gh-cuttings-section--summer">
-  <h2 class="gh-cuttings-section-title">Make Something</h2>
+  <h2 class="gh-cuttings-section-title">Make Something: The Propagation Table</h2>
   <p class="gh-cuttings-section-body">
-    Pick a cutting from your Cultivate pile and try turning it into
-    content — a post, a video, a note. Once you've shared it, add the
-    link in <a href="/grove">Share the Bounty</a>.
-  </p>
-  <img class="gh-cuttings-section-art"
-       src="/images/greenhouse/create-something.webp"
-       alt=""
-       width="240" height="220">
-  <a href="/summer" class="gh-cuttings-section-btn">Make Something</a>
-</section>
-<% } %>
-
-<!-- The Propagation Table — a guided making challenge. Summer season only
-     (effectiveSeason === 'summer'), so it's absent in Autumn even though
-     Make Something above stays. The route + APIs are gated the same way via
-     requireSummer. -->
-<% if (locals.effectiveSeason === 'summer') { %>
-<section class="dash-section gh-cuttings-section gh-cuttings-section--propagation">
-  <h2 class="gh-cuttings-section-title">The Propagation Table</h2>
-  <p class="gh-cuttings-section-body">
-    A guided challenge for turning everything you've filmed this season into
-    seven kinds of shareable content — from a simple post all the way to your
-    own TED talk.
+    Turn everything you've filmed this season into shareable content — a guided
+    challenge from a simple post all the way to your own TED talk, with your
+    Cultivate pile right there to build from.
   </p>
   <img class="gh-cuttings-section-art"
        src="/images/propagation-table.svg"
-       alt=""
-       width="1250" height="508" style="max-width: 380px;">
+       alt="" width="1250" height="508" style="max-width: 300px;">
   <a href="/greenhouse/propagation-table" class="gh-cuttings-section-btn">Open the Propagation Table</a>
 </section>
 <% } %>
