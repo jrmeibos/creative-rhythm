@@ -3219,6 +3219,16 @@ function requireFullCourse(req, res, next) {
 }
 app.use(['/summer', '/grove'], requireAuth, requireFullCourse);
 
+// The Propagation Table opens only in Summer: a paid student who is in (or has
+// selected) the Summer season, plus admins for preview. effectiveSeason is
+// forced to 'winter' for non-paid users, so 'summer' already implies paid.
+function requireSummer(req, res, next) {
+  const u = req.session.user;
+  if (u && (u.role === 'admin' || res.locals.effectiveSeason === 'summer')) return next();
+  if (req.method === 'GET') return res.redirect('/greenhouse');
+  return res.status(403).json({ error: 'The Propagation Table opens in Summer.' });
+}
+
 app.get('/summer', requireAuth, (req, res) => {
   const userId = req.session.user.id;
 
@@ -3352,7 +3362,8 @@ app.get('/summer/format/:slug', requireAuth, (req, res) => {
 const PROPAGATION_SLUGS = PROPAGATION_RUNGS.map(r => r.slug);
 const splitParas = (s) => (s || '').split(/\n\s*\n/).map(x => x.trim()).filter(Boolean);
 
-app.get('/summer/propagation-table', requireAuth, (req, res) => {
+// Lives in The Greenhouse, open only in the Summer season (see requireSummer).
+app.get('/greenhouse/propagation-table', requireAuth, requireSummer, (req, res) => {
   const made = db.getPropagationMakes(req.session.user.id);
   const rungs = PROPAGATION_RUNGS.map(r => {
     const m = made.get(r.slug);
@@ -3366,7 +3377,7 @@ app.get('/summer/propagation-table', requireAuth, (req, res) => {
   });
   res.render('propagation-table', {
     title: 'The Propagation Table',
-    page: 'summer',
+    page: 'greenhouse',
     user: req.session.user,
     rungs,
     introParagraphs: splitParas(PROPAGATION_INTRO),
@@ -3376,9 +3387,15 @@ app.get('/summer/propagation-table', requireAuth, (req, res) => {
   });
 });
 
+// The Propagation Table moved from Summer into The Greenhouse — keep the old
+// URL working for anyone who bookmarked it.
+app.get('/summer/propagation-table', requireAuth, (req, res) => {
+  res.redirect(301, '/greenhouse/propagation-table');
+});
+
 // Complete a rung by uploading a file and/or pasting a link (at least one).
 // Multipart: field `file` (optional), fields `slug` + `link`.
-app.post('/api/propagation-table/mark', requireAuth, requireFullCourse, (req, res) => {
+app.post('/api/propagation-table/mark', requireAuth, requireSummer, (req, res) => {
   propagationUpload.single('file')(req, res, err => {
     if (err) return res.status(400).json({ error: err.message });
     const userId = req.session.user.id;
@@ -3400,7 +3417,7 @@ app.post('/api/propagation-table/mark', requireAuth, requireFullCourse, (req, re
   });
 });
 
-app.post('/api/propagation-table/unmark', requireAuth, requireFullCourse, (req, res) => {
+app.post('/api/propagation-table/unmark', requireAuth, requireSummer, (req, res) => {
   const { slug } = req.body || {};
   if (!PROPAGATION_SLUGS.includes(slug)) return res.status(400).json({ error: 'Unknown rung.' });
   const userId = req.session.user.id;

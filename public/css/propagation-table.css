@@ -3,7 +3,14 @@
    apricity gold for progress + accents, understory green for the "made" state.
    Depth ladder: pearl page → blank-page cards → green-tinted made cards. */
 
-.pt-header { max-width: 820px; margin: 1.25rem 0 1.5rem; }
+.pt-hero-art {
+  display: block;
+  width: 100%;
+  max-width: 820px;
+  height: auto;
+  margin: 0.75rem 0 0.5rem;
+}
+.pt-header { max-width: 820px; margin: 0.5rem 0 1.5rem; }
 .pt-eyebrow {
   display: inline-block;
   font-family: var(--font-body);
