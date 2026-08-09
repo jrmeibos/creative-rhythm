@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <%- include('partials/head') %>
+  <link rel="stylesheet" href="/css/dashboard.css">
+  <link rel="stylesheet" href="/css/propagation-table.css">
+</head>
+<body class="app-body">
+  <div class="app-layout">
+    <%- include('partials/sidebar') %>
+    <main class="main-content" id="main">
+
+      <a href="/summer" class="lesson-back">← Back to Cultivated Ideas</a>
+
+      <header class="pt-header">
+        <span class="pt-eyebrow">Summer challenge</span>
+        <h1 class="pt-title">The Propagation Table</h1>
+        <div class="pt-intro">
+          <% introParagraphs.forEach(function (p) { %><p><%= p %></p><% }); %>
+        </div>
+      </header>
+
+      <!-- Progress -->
+      <div class="pt-progress">
+        <div class="pt-progress-track">
+          <div class="pt-progress-fill" id="pt-fill"
+               style="width: <%= total ? Math.round(doneCount / total * 100) : 0 %>%"></div>
+        </div>
+        <p class="pt-progress-label">
+          <strong id="pt-done"><%= doneCount %></strong> of <span id="pt-total"><%= total %></span> made
+        </p>
+      </div>
+
+      <!-- Finish-line celebration (revealed at 8 of 8) -->
+      <section class="pt-finish" id="pt-finish" <% if (doneCount < total) { %>hidden<% } %>>
+        <span class="pt-finish-burst" aria-hidden="true">🌱</span>
+        <div class="pt-finish-text">
+          <% finishParagraphs.forEach(function (p) { %><p><%= p %></p><% }); %>
+        </div>
+      </section>
+
+      <!-- The eight rungs (open menu — start anywhere) -->
+      <div class="pt-rungs" id="pt-rungs">
+        <% rungs.forEach(function (r, i) { %>
+          <div class="pt-rung <%= r.made ? 'pt-rung--made' : '' %> <%= r.boss ? 'pt-rung--boss' : '' %>"
+               data-slug="<%= r.slug %>">
+            <button type="button" class="pt-rung-head" aria-expanded="false">
+              <span class="pt-rung-emoji" aria-hidden="true"><%= r.emoji %></span>
+              <span class="pt-rung-titles">
+                <span class="pt-rung-title"><%= r.title %></span>
+                <span class="pt-rung-sub"><%= r.subtitle %></span>
+              </span>
+              <span class="pt-rung-check" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+              </span>
+              <span class="pt-rung-chevron" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"></polyline></svg>
+              </span>
+            </button>
+
+            <div class="pt-rung-body" hidden>
+              <div class="pt-guide">
+                <% r.paragraphs.forEach(function (p) { %><p><%= p %></p><% }); %>
+              </div>
+              <button type="button" class="pt-mark">
+                <span class="pt-mark-do">Mark as made</span>
+                <span class="pt-mark-done">Made ✓ — tap to undo</span>
+              </button>
+            </div>
+          </div>
+        <% }); %>
+      </div>
+
+    </main>
+  </div>
+
+  <script src="/js/propagation-table.js"></script>
+</body>
+</html>

@@ -128,6 +128,19 @@ db.exec(`
     PRIMARY KEY (user_id, block_key),
     FOREIGN KEY (user_id) REFERENCES users(id)
   );
+  -- The Propagation Table (Summer challenge): one row per rung a student has
+  -- marked "made." Progress is per-rung, deliberately NOT tied to a specific
+  -- cutting — the point is making from their whole idea bank. Rungs are defined
+  -- in lib/propagation-table.js; note/published_url are reserved for later.
+  CREATE TABLE IF NOT EXISTS propagation_makes (
+    user_id INTEGER NOT NULL,
+    rung_slug TEXT NOT NULL,
+    note TEXT,
+    published_url TEXT,
+    made_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (user_id, rung_slug),
+    FOREIGN KEY (user_id) REFERENCES users(id)
+  );
 
   CREATE TABLE IF NOT EXISTS lessons (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1966,6 +1979,30 @@ module.exports = {
     ).run(userId, String(blockKey)).changes;
   },
 
+  // ── The Propagation Table (Summer challenge) ────────────────────────────
+  // Rungs a student has marked "made", as a Map(rung_slug → { made_at }).
+  getPropagationMakes(userId) {
+    const rows = db.prepare(
+      'SELECT rung_slug, note, published_url, made_at FROM propagation_makes WHERE user_id = ?'
+    ).all(userId);
+    const map = new Map();
+    for (const r of rows) map.set(r.rung_slug, { note: r.note, published_url: r.published_url, made_at: r.made_at });
+    return map;
+  },
+  markPropagationRung(userId, rungSlug, note, publishedUrl) {
+    db.prepare(
+      `INSERT INTO propagation_makes (user_id, rung_slug, note, published_url)
+       VALUES (?, ?, ?, ?)
+       ON CONFLICT(user_id, rung_slug)
+       DO UPDATE SET note = excluded.note, published_url = excluded.published_url, made_at = CURRENT_TIMESTAMP`
+    ).run(userId, String(rungSlug), note ? String(note) : null, publishedUrl ? String(publishedUrl) : null);
+  },
+  unmarkPropagationRung(userId, rungSlug) {
+    return db.prepare(
+      'DELETE FROM propagation_makes WHERE user_id = ? AND rung_slug = ?'
+    ).run(userId, String(rungSlug)).changes;
+  },
+
   getAllUsersGoalsForWeek(weekStart) {
     return db.prepare(`
       SELECT wg.*, u.name, u.avatar_initial FROM weekly_goals wg
@@ -2141,6 +2178,7 @@ module.exports = {
       db.prepare('DELETE FROM block_buster_hidden WHERE user_id=?').run(id);
       db.prepare('DELETE FROM block_buster_busted WHERE user_id=?').run(id);
       db.prepare('DELETE FROM block_buster_blocks WHERE user_id=?').run(id);
+      db.prepare('DELETE FROM propagation_makes WHERE user_id=?').run(id);
       db.prepare('DELETE FROM banner_dismissals WHERE user_id=?').run(id);
       db.prepare('DELETE FROM weekly_goals WHERE user_id=?').run(id);
       db.prepare('DELETE FROM goals WHERE user_id=?').run(id);

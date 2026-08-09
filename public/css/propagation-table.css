@@ -1,0 +1,238 @@
+/* ─── The Propagation Table (Summer challenge) ───────────────────────────────
+   Eight rungs, gentlest → boldest, as an open menu. Warm summer palette:
+   apricity gold for progress + accents, understory green for the "made" state.
+   Depth ladder: pearl page → blank-page cards → green-tinted made cards. */
+
+.pt-header { max-width: 820px; margin: 1.25rem 0 1.5rem; }
+.pt-eyebrow {
+  display: inline-block;
+  font-family: var(--font-body);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--color-apricity) 60%, var(--color-ink-stained));
+  margin: 0 0 0.55rem;
+}
+.pt-title {
+  font-family: var(--font-display);
+  font-size: 2.25rem;
+  font-weight: 400;
+  line-height: 1.1;
+  color: var(--color-ink-stained);
+  margin: 0 0 0.9rem;
+}
+.pt-intro p {
+  font-family: var(--font-body);
+  font-size: 0.96rem;
+  font-weight: 300;
+  line-height: 1.65;
+  color: rgba(16, 15, 16, 0.72);
+  margin: 0 0 0.7rem;
+  max-width: 720px;
+}
+.pt-intro p:last-child { margin-bottom: 0; }
+
+/* ── Progress ── */
+.pt-progress { max-width: 820px; margin: 0 0 1.5rem; }
+.pt-progress-track {
+  height: 12px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-apricity) 22%, #fff);
+  overflow: hidden;
+  box-shadow: inset 0 1px 3px rgba(16, 15, 16, 0.08);
+}
+.pt-progress-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg,
+    var(--color-apricity),
+    color-mix(in srgb, var(--color-apricity) 70%, var(--color-curiositys-kiss)));
+  transition: width 0.6s cubic-bezier(0.34, 1.2, 0.5, 1);
+}
+.pt-progress-label {
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  color: rgba(16, 15, 16, 0.6);
+  margin: 0.5rem 0 0;
+}
+.pt-progress-label strong { color: var(--color-ink-stained); font-weight: 700; }
+
+/* ── Finish-line celebration ── */
+.pt-finish {
+  max-width: 820px;
+  margin: 0 0 1.75rem;
+  padding: 1.4rem 1.6rem;
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  background: color-mix(in srgb, var(--color-understory) 14%, #fff);
+  border: 1px solid color-mix(in srgb, var(--color-understory) 32%, #fff);
+  border-radius: 18px;
+}
+.pt-finish[hidden] { display: none; }
+.pt-finish-burst { font-size: 1.8rem; line-height: 1; flex-shrink: 0; }
+.pt-finish-text p {
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+  font-weight: 300;
+  line-height: 1.6;
+  color: var(--color-ink-stained);
+  margin: 0 0 0.6rem;
+}
+.pt-finish-text p:first-child {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 1.2rem;
+}
+.pt-finish-text p:last-child { margin-bottom: 0; }
+
+/* ── Rungs ── */
+.pt-rungs { max-width: 820px; display: flex; flex-direction: column; gap: 0.7rem; }
+.pt-rung {
+  position: relative;
+  background: var(--color-blank-page);
+  border: 1px solid rgba(112, 92, 108, 0.13);
+  border-left: 4px solid color-mix(in srgb, var(--color-apricity) 78%, #fff);
+  border-radius: 13px;
+  overflow: hidden;
+  box-shadow: 0 1px 4px rgba(16, 15, 16, 0.04);
+  transition: box-shadow 0.16s ease, background 0.25s ease, border-color 0.25s ease;
+}
+.pt-rung:hover { box-shadow: 0 4px 14px rgba(16, 15, 16, 0.09); }
+.pt-rung--boss {
+  border-left-color: var(--color-apricity);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--color-apricity) 9%, #fff), var(--color-blank-page));
+}
+.pt-rung--made {
+  border-left-color: var(--color-understory);
+  background: color-mix(in srgb, var(--color-new-growth) 45%, var(--color-blank-page));
+}
+
+.pt-rung-head {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  text-align: left;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 1rem 1.15rem;
+  font-family: var(--font-body);
+}
+.pt-rung-head:hover { background: rgba(246, 201, 92, 0.06); }
+.pt-rung-emoji {
+  flex-shrink: 0;
+  font-size: 1.4rem;
+  line-height: 1;
+  width: 2.4rem;
+  height: 2.4rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--color-apricity) 16%, #fff);
+}
+.pt-rung--made .pt-rung-emoji { background: color-mix(in srgb, var(--color-understory) 18%, #fff); }
+.pt-rung-titles { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 0.12rem; }
+.pt-rung-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--color-ink-stained);
+  line-height: 1.25;
+}
+.pt-rung-sub {
+  font-size: 0.78rem;
+  font-weight: 400;
+  color: rgba(16, 15, 16, 0.5);
+}
+.pt-rung--made .pt-rung-title { color: rgba(16, 15, 16, 0.62); }
+
+/* check badge — hidden until made */
+.pt-rung-check {
+  flex-shrink: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  color: #fff;
+  background: var(--color-understory);
+}
+.pt-rung--made .pt-rung-check { display: inline-flex; }
+
+.pt-rung-chevron {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  color: rgba(16, 15, 16, 0.4);
+  transition: transform 0.2s ease;
+}
+.pt-rung-head[aria-expanded="true"] .pt-rung-chevron { transform: rotate(90deg); }
+
+.pt-rung-body {
+  padding: 0.25rem 1.15rem 1.2rem 4.45rem;
+  border-top: 1px solid rgba(112, 92, 108, 0.08);
+}
+.pt-guide p {
+  font-family: var(--font-body);
+  font-size: 0.92rem;
+  font-weight: 300;
+  line-height: 1.6;
+  color: var(--color-ink-stained);
+  margin: 0.9rem 0 0;
+}
+.pt-guide p:first-child { margin-top: 0.9rem; }
+
+/* mark-as-made toggle */
+.pt-mark {
+  margin-top: 1.1rem;
+  font-family: var(--font-body);
+  font-size: 0.88rem;
+  font-weight: 400;
+  color: var(--color-blank-page);
+  background: var(--color-understory);
+  border: none;
+  border-radius: 999px;
+  padding: 0.55rem 1.3rem;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.12s;
+}
+.pt-mark:hover { background: #5f6d56; }
+.pt-mark:active { transform: translateY(1px); }
+.pt-mark:disabled { opacity: 0.6; cursor: default; }
+.pt-mark .pt-mark-done { display: none; }
+.pt-rung--made .pt-mark {
+  background: #fff;
+  color: var(--color-understory);
+  border: 1px solid color-mix(in srgb, var(--color-understory) 45%, #fff);
+}
+.pt-rung--made .pt-mark:hover { background: color-mix(in srgb, var(--color-understory) 10%, #fff); }
+.pt-rung--made .pt-mark .pt-mark-do { display: none; }
+.pt-rung--made .pt-mark .pt-mark-done { display: inline; }
+
+/* celebration shards (spawned from JS) */
+.pt-shard {
+  position: fixed;
+  z-index: 9999;
+  border-radius: 3px;
+  pointer-events: none;
+  will-change: transform, opacity;
+}
+.pt-rung--popping { animation: pt-pop 0.5s ease; }
+@keyframes pt-pop {
+  0% { transform: scale(1); }
+  30% { transform: scale(1.025); }
+  100% { transform: scale(1); }
+}
+
+@media (max-width: 560px) {
+  .pt-title { font-size: 1.85rem; }
+  .pt-rung-body { padding-left: 1.15rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pt-rung--popping { animation: none; }
+  .pt-progress-fill { transition: none; }
+}

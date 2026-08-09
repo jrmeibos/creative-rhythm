@@ -16,6 +16,7 @@ const { getSeasonPrompt } = require('./lib/season-prompts');
 const { getDailyPrompt } = require('./lib/daily-prompts');
 const CUTTING_PROMPTS = require('./lib/cutting-prompts');
 const { CREATIVE_BLOCK_CATEGORIES, CATEGORY_SLUGS } = require('./lib/creative-blocks');
+const { PROPAGATION_RUNGS, PROPAGATION_INTRO, PROPAGATION_FINISH } = require('./lib/propagation-table');
 const { renderHtmlToPdf } = require('./lib/pdf-render');
 const PUSH = require('./lib/push');
 const VIDEO = require('./lib/video');
@@ -3313,6 +3314,49 @@ app.get('/summer/format/:slug', requireAuth, (req, res) => {
     format,
     paragraphs,
   });
+});
+
+// ─── The Propagation Table (Summer challenge) ─────────────────────────────
+// Eight formats to make from their idea bank, gentlest → boldest. Open menu:
+// every rung available, progress tracked per rung (not per cutting). Page is
+// gated to the Summer experience by the /summer requireFullCourse mount above;
+// the API POSTs re-apply requireFullCourse since they live under /api.
+const PROPAGATION_SLUGS = PROPAGATION_RUNGS.map(r => r.slug);
+const splitParas = (s) => (s || '').split(/\n\s*\n/).map(x => x.trim()).filter(Boolean);
+
+app.get('/summer/propagation-table', requireAuth, (req, res) => {
+  const made = db.getPropagationMakes(req.session.user.id);
+  const rungs = PROPAGATION_RUNGS.map(r => ({
+    ...r,
+    paragraphs: splitParas(r.guide),
+    made: made.has(r.slug),
+  }));
+  res.render('propagation-table', {
+    title: 'The Propagation Table',
+    page: 'summer',
+    user: req.session.user,
+    rungs,
+    introParagraphs: splitParas(PROPAGATION_INTRO),
+    finishParagraphs: splitParas(PROPAGATION_FINISH),
+    doneCount: rungs.filter(r => r.made).length,
+    total: rungs.length,
+  });
+});
+
+app.post('/api/propagation-table/mark', requireAuth, requireFullCourse, (req, res) => {
+  const { slug, note, url } = req.body || {};
+  if (!PROPAGATION_SLUGS.includes(slug)) return res.status(400).json({ error: 'Unknown rung.' });
+  db.markPropagationRung(req.session.user.id, slug,
+    note ? String(note).slice(0, 400) : null,
+    url ? String(url).slice(0, 500) : null);
+  res.json({ ok: true, doneCount: db.getPropagationMakes(req.session.user.id).size, total: PROPAGATION_SLUGS.length });
+});
+
+app.post('/api/propagation-table/unmark', requireAuth, requireFullCourse, (req, res) => {
+  const { slug } = req.body || {};
+  if (!PROPAGATION_SLUGS.includes(slug)) return res.status(400).json({ error: 'Unknown rung.' });
+  db.unmarkPropagationRung(req.session.user.id, slug);
+  res.json({ ok: true, doneCount: db.getPropagationMakes(req.session.user.id).size, total: PROPAGATION_SLUGS.length });
 });
 
 // Record a format-idea for a Cultivate cutting. Body:
