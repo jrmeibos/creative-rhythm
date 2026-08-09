@@ -6,7 +6,7 @@
 .pt-hero-art {
   display: block;
   width: 100%;
-  max-width: 820px;
+  max-width: 615px; /* 25% smaller than the 820px content column */
   height: auto;
   margin: 0.75rem 0 0.5rem;
 }
