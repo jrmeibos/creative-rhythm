@@ -74,8 +74,9 @@
    three floating cards. A subtle horizontal ground line runs across
    the bottom to reinforce the shelf metaphor. */
 .gh-seeds {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  align-items: start;
   gap: 0.75rem;
   padding: 1.25rem;
   background: rgba(118, 133, 108, 0.06);
@@ -97,29 +98,30 @@
   background: var(--color-blank-page);
   border: 1.5px solid rgba(112, 92, 108, 0.1);
   border-radius: 16px;
-  padding: 1.25rem 1.5rem;
+  padding: 1.1rem 1.15rem;
   display: grid;
-  grid-template-columns: 1fr auto;
-  column-gap: 1.25rem;
-  row-gap: 0.75rem;
+  grid-template-columns: 1fr;
+  row-gap: 0.6rem;
   align-items: start;
 }
-/* Card layout, by grid slot:
-     Row 1: "Goal N" header, full width
-     Row 2: text/CTAs on the left, watercolor illustration on the right
-     Row 3+: Keep/Replace buttons + kept confirm + replace form, full width */
-.gh-seed-card > .gh-seed-num       { grid-column: 1 / -1; grid-row: 1; }
-.gh-seed-card > .gh-active-block   { grid-column: 1;      grid-row: 2; }
-.gh-seed-card > .gh-seed-art       { grid-column: 2;      grid-row: 2; }
+/* Cards are narrow (three across), so they stack internally:
+     "Goal N" header, watercolor illustration, then text/CTAs and any
+     Keep/Replace buttons + replace form — all full width. */
+.gh-seed-card > .gh-seed-num       { grid-column: 1; grid-row: 1; }
+.gh-seed-card > .gh-seed-art       { grid-column: 1; grid-row: 2; justify-self: center; }
+.gh-seed-card > .gh-active-block,
+.gh-seed-card > .gh-original-block,
 .gh-seed-card > .gh-actions,
 .gh-seed-card > .gh-kept-confirm,
-.gh-seed-card > .gh-replace-form   { grid-column: 1 / -1; }
+.gh-seed-card > .gh-replace-form   { grid-column: 1; }
 
-@media (max-width: 680px) {
-  .gh-seed-card {
-    grid-template-columns: 1fr;
-  }
-  .gh-seed-card > .gh-seed-art { grid-column: 1; grid-row: auto; justify-self: center; }
+/* Stack the three goals when there isn't room for a comfortable row. */
+@media (max-width: 720px) {
+  .gh-seeds { grid-template-columns: 1fr; }
+  .gh-seed-card { grid-template-columns: 1fr auto; }
+  .gh-seed-card > .gh-seed-num     { grid-column: 1 / -1; }
+  .gh-seed-card > .gh-active-block { grid-column: 1; grid-row: 2; }
+  .gh-seed-card > .gh-seed-art     { grid-column: 2; grid-row: 2; justify-self: end; }
 }
 
 .gh-seed-num {
