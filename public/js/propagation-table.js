@@ -10,6 +10,12 @@
     if (!res.ok) throw new Error('request failed');
     return res.json();
   }
+  async function postForm(url, formData) {
+    const res = await fetch(url, { method: 'POST', body: formData });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || 'request failed');
+    return data;
+  }
 
   const rungsEl  = document.getElementById('pt-rungs');
   const fillEl   = document.getElementById('pt-fill');
@@ -77,31 +83,79 @@
     burst(window.innerWidth / 2, window.innerHeight * 0.4, 64);
   }
 
+  // Point the "View your upload / Open your link" anchors at what was saved.
+  function setMadeLinks(rung, fileName, link) {
+    const fileA = rung.querySelector('.pt-made-file');
+    const linkA = rung.querySelector('.pt-made-link');
+    if (fileName) { fileA.href = '/propagation-file/' + encodeURIComponent(fileName); fileA.hidden = false; }
+    else { fileA.hidden = true; fileA.removeAttribute('href'); }
+    if (link) { linkA.href = link; linkA.hidden = false; }
+    else { linkA.hidden = true; linkA.removeAttribute('href'); }
+  }
+
+  // Reflect the chosen file's name in its label.
+  rungsEl.addEventListener('change', function (e) {
+    const input = e.target.closest('.pt-file-input');
+    if (!input) return;
+    const label = input.closest('.pt-file-label').querySelector('.pt-file-text');
+    label.textContent = input.files && input.files[0] ? input.files[0].name : 'Choose a file…';
+  });
+
   rungsEl.addEventListener('click', async function (e) {
-    // Mark / un-mark a rung
-    const mark = e.target.closest('.pt-mark');
-    if (mark) {
-      const rung = mark.closest('.pt-rung');
-      const slug = rung.dataset.slug;
-      const wasMade = rung.classList.contains('pt-rung--made');
-      mark.disabled = true;
-      // optimistic UI
-      if (wasMade) {
-        rung.classList.remove('pt-rung--made');
-      } else {
-        rung.classList.add('pt-rung--made');
-        rungBurst(rung);
+    // Complete a rung — upload a file and/or paste a link (at least one)
+    const complete = e.target.closest('.pt-complete-btn');
+    if (complete) {
+      const rung = complete.closest('.pt-rung');
+      const form = rung.querySelector('.pt-mark-form');
+      const fileInput = form.querySelector('.pt-file-input');
+      const linkInput = form.querySelector('.pt-link-input');
+      const errEl = form.querySelector('.pt-mark-error');
+      const file = fileInput.files && fileInput.files[0];
+      const link = linkInput.value.trim();
+      errEl.hidden = true;
+      if (!file && !link) {
+        errEl.textContent = 'Add a file or a link to complete this one.';
+        errEl.hidden = false;
+        return;
       }
-      updateProgress(currentDone());
+      const fd = new FormData();
+      fd.append('slug', rung.dataset.slug);
+      if (file) fd.append('file', file);
+      if (link) fd.append('link', link);
+      complete.disabled = true;
+      const label = complete.textContent;
+      complete.textContent = 'Saving…';
       try {
-        await post('/api/propagation-table/' + (wasMade ? 'unmark' : 'mark'), { slug });
-      } catch (err) {
-        rung.classList.toggle('pt-rung--made', wasMade); // revert
+        const data = await postForm('/api/propagation-table/mark', fd);
+        rung.classList.add('pt-rung--made');
+        setMadeLinks(rung, data.fileName, data.link);
+        rungBurst(rung);
         updateProgress(currentDone());
-        alert("Couldn't save that just now. Please try again.");
+      } catch (err) {
+        errEl.textContent = err.message || "Couldn't save that just now. Please try again.";
+        errEl.hidden = false;
       } finally {
-        mark.disabled = false;
+        complete.disabled = false;
+        complete.textContent = label;
       }
+      return;
+    }
+
+    // Undo — un-complete a rung
+    const undo = e.target.closest('.pt-undo');
+    if (undo) {
+      const rung = undo.closest('.pt-rung');
+      undo.disabled = true;
+      try {
+        await post('/api/propagation-table/unmark', { slug: rung.dataset.slug });
+        rung.classList.remove('pt-rung--made');
+        const form = rung.querySelector('.pt-mark-form');
+        form.querySelector('.pt-file-input').value = '';
+        form.querySelector('.pt-file-label .pt-file-text').textContent = 'Choose a file…';
+        form.querySelector('.pt-link-input').value = '';
+        updateProgress(currentDone());
+      } catch (err) { alert("Couldn't undo that. Please try again."); }
+      finally { undo.disabled = false; }
       return;
     }
 

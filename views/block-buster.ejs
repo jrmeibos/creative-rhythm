@@ -33,22 +33,27 @@
           <span class="bb-eyebrow">Your unstuck toolkit</span>
           <h1 class="bb-title">The Creative Block Buster</h1>
           <p class="bb-subtitle">
-            Name what's in the way, and find a way through it. Pick the block that
-            fits — or search for what you're feeling — then open it. Add your own
-            ways through as you learn what works, so this becomes your toolkit,
-            not just mine.
+            First, name what is feeling sticky today. Then, find the block that
+            fits in the list below. You'll find suggestions through each block to
+            try and navigate through. But nobody knows better than you! Add your
+            own blocks as well as your own ways through. As you learn what works,
+            this becomes a refined toolkit of your own creation. Return here when
+            you feel stuck.
           </p>
         </div>
         <img class="bb-header-art" src="/images/block-buster.svg"
              alt="A tumbling tower of wooden building blocks" width="150" height="191">
       </header>
 
-      <!-- Busted tally -->
-      <p class="bb-tally" id="bb-tally" <% if (!bustedCount) { %>hidden<% } %>>
-        <span class="bb-tally-burst" aria-hidden="true">💥</span>
-        You've busted <strong id="bb-tally-count"><%= bustedCount %></strong>
-        <span id="bb-tally-noun"><%= bustedCount === 1 ? 'block' : 'blocks' %></span> so far. Keep going.
-      </p>
+      <!-- Busted tally + Breakthroughs log link -->
+      <div class="bb-tally-row">
+        <p class="bb-tally" id="bb-tally" <% if (!bustedCount) { %>hidden<% } %>>
+          <span class="bb-tally-burst" aria-hidden="true">💥</span>
+          You've busted <strong id="bb-tally-count"><%= bustedCount %></strong>
+          <span id="bb-tally-noun"><%= bustedCount === 1 ? 'block' : 'blocks' %></span> so far. Keep going.
+        </p>
+        <a href="/block-buster/breakthroughs" class="bb-breakthroughs-link">See your Breakthroughs →</a>
+      </div>
 
       <!-- Search -->
       <div class="bb-search">
@@ -133,34 +138,51 @@
                   </button>
 
                   <div class="bb-block-body" hidden>
+                    <!-- Minimal busted state (full detail lives in Breakthroughs) -->
                     <div class="bb-busted-banner">
-                      <span class="bb-busted-banner-text">
-                        💥 You busted this block<% if (b.busted && b.bustedWith) { %> with: <em class="bb-busted-with"><%= b.bustedWith %></em><% } %>
-                      </span>
+                      <span class="bb-busted-banner-text">💥 You busted this block.</span>
+                      <a href="/block-buster/breakthroughs" class="bb-busted-link">See it in your Breakthroughs →</a>
                       <button type="button" class="bb-unbust-btn">Bring it back</button>
                     </div>
 
-                    <p class="bb-then-label">Ways through <span class="bb-then-hint">— check one off when it works</span></p>
-                    <ul class="bb-options">
-                      <% b.defaultOptions.forEach(function(opt) { %>
-                        <li class="bb-option bb-option--default">
-                          <button type="button" class="bb-try" title="I tried this — it worked" aria-label="I tried this — bust the block"></button>
-                          <span class="bb-option-text"><%= opt %></span>
-                        </li>
-                      <% }); %>
-                      <% b.addedOptions.forEach(function(opt) { %>
-                        <li class="bb-option bb-option--mine" data-option-id="<%= opt.id %>">
-                          <button type="button" class="bb-try" title="I tried this — it worked" aria-label="I tried this — bust the block"></button>
-                          <span class="bb-option-text"><%= opt.text %></span>
-                          <button type="button" class="bb-option-remove bb-delete-option" title="Remove this" aria-label="Remove this">×</button>
-                        </li>
-                      <% }); %>
-                    </ul>
+                    <div class="bb-tryflow">
+                      <!-- Step 1 · pick a way through to try -->
+                      <div class="bb-options-wrap">
+                        <p class="bb-then-label">Ways through <span class="bb-then-hint">— pick one to try</span></p>
+                        <ul class="bb-options">
+                          <% b.defaultOptions.forEach(function(opt) { %>
+                            <li class="bb-option bb-option--default">
+                              <span class="bb-option-text"><%= opt %></span>
+                              <button type="button" class="bb-try">Try this</button>
+                            </li>
+                          <% }); %>
+                          <% b.addedOptions.forEach(function(opt) { %>
+                            <li class="bb-option bb-option--mine" data-option-id="<%= opt.id %>">
+                              <span class="bb-option-text"><%= opt.text %></span>
+                              <button type="button" class="bb-try">Try this</button>
+                              <button type="button" class="bb-option-remove bb-delete-option" title="Remove this" aria-label="Remove this">×</button>
+                            </li>
+                          <% }); %>
+                        </ul>
 
-                    <form class="bb-add-option">
-                      <input type="text" class="bb-add-option-input" placeholder="Add your own way through…" maxlength="300" autocomplete="off">
-                      <button type="submit" class="bb-add-option-btn">Add</button>
-                    </form>
+                        <form class="bb-add-option">
+                          <input type="text" class="bb-add-option-input" placeholder="Add your own way through…" maxlength="300" autocomplete="off">
+                          <button type="submit" class="bb-add-option-btn">Add</button>
+                        </form>
+                      </div>
+
+                      <!-- Step 2 · reflect, then complete -->
+                      <div class="bb-reflect" hidden>
+                        <button type="button" class="bb-reflect-back">← Back to ways through</button>
+                        <p class="bb-reflect-chosen">You're trying: <span class="bb-reflect-chosen-text"></span></p>
+                        <label class="bb-reflect-label">
+                          How did it go? <span class="bb-reflect-optional">optional, but worth writing</span>
+                        </label>
+                        <textarea class="bb-reflect-input" rows="4" maxlength="2000"
+                                  placeholder="Write about how this way through worked for you…"></textarea>
+                        <button type="button" class="bb-reflect-complete">Complete — bust this block 💥</button>
+                      </div>
+                    </div>
 
                     <div class="bb-block-manage">
                       <% if (b.isCustom) { %>

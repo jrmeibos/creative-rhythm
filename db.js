@@ -137,6 +137,7 @@ db.exec(`
     rung_slug TEXT NOT NULL,
     note TEXT,
     published_url TEXT,
+    file_path TEXT,
     made_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (user_id, rung_slug),
     FOREIGN KEY (user_id) REFERENCES users(id)
@@ -450,6 +451,20 @@ db.exec(`
   if (bbBlockCols.length && !bbBlockCols.includes('category')) {
     db.exec("ALTER TABLE block_buster_blocks ADD COLUMN category TEXT");
     console.log('✓ Migrated: added category column to block_buster_blocks');
+  }
+  // Reflection column on busted blocks — students write how a way through went
+  // when they complete it, collected in the Breakthroughs log.
+  const bbBustedCols = db.prepare("PRAGMA table_info(block_buster_busted)").all().map(r => r.name);
+  if (bbBustedCols.length && !bbBustedCols.includes('reflection')) {
+    db.exec("ALTER TABLE block_buster_busted ADD COLUMN reflection TEXT");
+    console.log('✓ Migrated: added reflection column to block_buster_busted');
+  }
+  // file_path on propagation_makes — students complete a rung by uploading the
+  // thing they made (or pasting a link).
+  const propCols = db.prepare("PRAGMA table_info(propagation_makes)").all().map(r => r.name);
+  if (propCols.length && !propCols.includes('file_path')) {
+    db.exec("ALTER TABLE propagation_makes ADD COLUMN file_path TEXT");
+    console.log('✓ Migrated: added file_path column to propagation_makes');
   }
   // Per-user course start date for multi-cohort support. NULL means "fall
   // back to the global settings.course_start_date" so existing students keep
@@ -1957,20 +1972,31 @@ module.exports = {
   // Busted blocks for a student, as a Map(block_key → { option_text, busted_at }).
   getBustedBlocks(userId) {
     const rows = db.prepare(
-      'SELECT block_key, option_text, busted_at FROM block_buster_busted WHERE user_id = ?'
+      'SELECT block_key, option_text, reflection, busted_at FROM block_buster_busted WHERE user_id = ?'
     ).all(userId);
     const map = new Map();
-    for (const r of rows) map.set(r.block_key, { option_text: r.option_text, busted_at: r.busted_at });
+    for (const r of rows) map.set(r.block_key, { option_text: r.option_text, reflection: r.reflection, busted_at: r.busted_at });
     return map;
   },
-  // Mark a block busted (idempotent). Records which way through worked.
-  bustBlock(userId, blockKey, optionText) {
+  // All of a student's busted blocks, newest first — the Breakthroughs log.
+  // Block titles are resolved by the caller (built-ins live in lib, custom in
+  // block_buster_blocks).
+  getBreakthroughs(userId) {
+    return db.prepare(
+      `SELECT block_key, option_text, reflection, busted_at
+         FROM block_buster_busted WHERE user_id = ?
+        ORDER BY busted_at DESC, rowid DESC`
+    ).all(userId);
+  },
+  // Mark a block busted (idempotent). Records which way through worked and the
+  // student's reflection on how it went.
+  bustBlock(userId, blockKey, optionText, reflection) {
     db.prepare(
-      `INSERT INTO block_buster_busted (user_id, block_key, option_text)
-       VALUES (?, ?, ?)
+      `INSERT INTO block_buster_busted (user_id, block_key, option_text, reflection)
+       VALUES (?, ?, ?, ?)
        ON CONFLICT(user_id, block_key)
-       DO UPDATE SET option_text = excluded.option_text, busted_at = CURRENT_TIMESTAMP`
-    ).run(userId, String(blockKey), optionText ? String(optionText) : null);
+       DO UPDATE SET option_text = excluded.option_text, reflection = excluded.reflection, busted_at = CURRENT_TIMESTAMP`
+    ).run(userId, String(blockKey), optionText ? String(optionText) : null, reflection ? String(reflection) : null);
   },
   // Un-bust a block (bring it back).
   unbustBlock(userId, blockKey) {
@@ -1980,22 +2006,26 @@ module.exports = {
   },
 
   // ── The Propagation Table (Summer challenge) ────────────────────────────
-  // Rungs a student has marked "made", as a Map(rung_slug → { made_at }).
+  // Rungs a student has marked "made", as a Map(rung_slug → { file_path, published_url, made_at }).
   getPropagationMakes(userId) {
     const rows = db.prepare(
-      'SELECT rung_slug, note, published_url, made_at FROM propagation_makes WHERE user_id = ?'
+      'SELECT rung_slug, note, published_url, file_path, made_at FROM propagation_makes WHERE user_id = ?'
     ).all(userId);
     const map = new Map();
-    for (const r of rows) map.set(r.rung_slug, { note: r.note, published_url: r.published_url, made_at: r.made_at });
+    for (const r of rows) map.set(r.rung_slug, {
+      note: r.note, published_url: r.published_url, file_path: r.file_path, made_at: r.made_at,
+    });
     return map;
   },
-  markPropagationRung(userId, rungSlug, note, publishedUrl) {
+  markPropagationRung(userId, rungSlug, note, publishedUrl, filePath) {
     db.prepare(
-      `INSERT INTO propagation_makes (user_id, rung_slug, note, published_url)
-       VALUES (?, ?, ?, ?)
+      `INSERT INTO propagation_makes (user_id, rung_slug, note, published_url, file_path)
+       VALUES (?, ?, ?, ?, ?)
        ON CONFLICT(user_id, rung_slug)
-       DO UPDATE SET note = excluded.note, published_url = excluded.published_url, made_at = CURRENT_TIMESTAMP`
-    ).run(userId, String(rungSlug), note ? String(note) : null, publishedUrl ? String(publishedUrl) : null);
+       DO UPDATE SET note = excluded.note, published_url = excluded.published_url,
+                     file_path = excluded.file_path, made_at = CURRENT_TIMESTAMP`
+    ).run(userId, String(rungSlug), note ? String(note) : null,
+      publishedUrl ? String(publishedUrl) : null, filePath ? String(filePath) : null);
   },
   unmarkPropagationRung(userId, rungSlug) {
     return db.prepare(

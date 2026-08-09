@@ -122,6 +122,17 @@
   font-family: var(--font-body);
 }
 .pt-rung-head:hover { background: rgba(246, 201, 92, 0.06); }
+.pt-rung-num {
+  flex-shrink: 0;
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  font-weight: 400;
+  width: 1.3rem;
+  text-align: center;
+  color: color-mix(in srgb, var(--color-apricity) 60%, var(--color-ink-stained));
+}
+.pt-rung--made .pt-rung-num { color: var(--color-understory); }
+.pt-rung--boss .pt-rung-num { color: var(--color-apricity); }
 .pt-rung-emoji {
   flex-shrink: 0;
   font-size: 1.4rem;
@@ -173,7 +184,7 @@
 .pt-rung-head[aria-expanded="true"] .pt-rung-chevron { transform: rotate(90deg); }
 
 .pt-rung-body {
-  padding: 0.25rem 1.15rem 1.2rem 4.45rem;
+  padding: 0.25rem 1.25rem 1.3rem 1.25rem;
   border-top: 1px solid rgba(112, 92, 108, 0.08);
 }
 .pt-guide p {
@@ -186,32 +197,69 @@
 }
 .pt-guide p:first-child { margin-top: 0.9rem; }
 
-/* mark-as-made toggle */
-.pt-mark {
-  margin-top: 1.1rem;
-  font-family: var(--font-body);
-  font-size: 0.88rem;
-  font-weight: 400;
-  color: var(--color-blank-page);
-  background: var(--color-understory);
-  border: none;
-  border-radius: 999px;
-  padding: 0.55rem 1.3rem;
-  cursor: pointer;
+/* Complete step — upload a file and/or paste a link */
+.pt-complete { margin-top: 1.2rem; }
+
+/* Made state (shown once complete) */
+.pt-made-state { display: none; align-items: center; flex-wrap: wrap; gap: 0.75rem; }
+.pt-rung--made .pt-made-state { display: flex; }
+.pt-rung--made .pt-mark-form { display: none; }
+.pt-made-label {
+  font-family: var(--font-body); font-size: 0.9rem; font-weight: 600;
+  color: var(--color-understory);
+}
+.pt-made-file, .pt-made-link {
+  font-family: var(--font-body); font-size: 0.85rem; font-weight: 500;
+  color: var(--color-bloem); text-decoration: none;
+}
+.pt-made-file:hover, .pt-made-link:hover { text-decoration: underline; }
+.pt-made-file[hidden], .pt-made-link[hidden] { display: none; }
+.pt-undo {
+  margin-left: auto;
+  font-family: var(--font-body); font-size: 0.8rem;
+  color: rgba(16, 15, 16, 0.5); background: none; border: none; cursor: pointer;
+  padding: 0.2rem 0.4rem; border-radius: 6px; transition: color 0.15s, background 0.15s;
+}
+.pt-undo:hover { color: var(--color-bloem); background: rgba(112, 92, 108, 0.06); }
+
+/* Completion form */
+.pt-mark-hint {
+  font-family: var(--font-body); font-size: 0.85rem; font-weight: 300;
+  color: rgba(16, 15, 16, 0.6); margin: 0 0 0.7rem;
+}
+.pt-mark-inputs { display: flex; align-items: center; flex-wrap: wrap; gap: 0.6rem; }
+.pt-file-label {
+  position: relative;
+  display: inline-flex; align-items: center; gap: 0.4rem;
+  font-family: var(--font-body); font-size: 0.85rem; font-weight: 500;
+  color: var(--color-understory); background: #fff;
+  border: 1px solid color-mix(in srgb, var(--color-understory) 40%, #fff);
+  border-radius: 999px; padding: 0.45rem 1rem; cursor: pointer;
+  transition: background 0.15s;
+}
+.pt-file-label:hover { background: color-mix(in srgb, var(--color-understory) 10%, #fff); }
+.pt-file-input { position: absolute; inset: 0; opacity: 0; width: 100%; cursor: pointer; }
+.pt-file-text { max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pt-or { font-family: var(--font-body); font-size: 0.8rem; color: rgba(16, 15, 16, 0.42); }
+.pt-link-input {
+  flex: 1; min-width: 180px;
+  font-family: var(--font-body); font-size: 0.88rem;
+  padding: 0.5rem 0.8rem; border: 1px solid rgba(112, 92, 108, 0.28);
+  border-radius: 10px; background: #fff; color: var(--color-ink-stained);
+}
+.pt-link-input:focus { outline: none; border-color: var(--color-understory); box-shadow: 0 0 0 3px rgba(118, 133, 108, 0.15); }
+.pt-mark-error { font-family: var(--font-body); font-size: 0.82rem; color: #a3432f; margin: 0.6rem 0 0; }
+.pt-mark-error[hidden] { display: none; }
+.pt-complete-btn {
+  margin-top: 0.9rem;
+  font-family: var(--font-body); font-size: 0.9rem; font-weight: 500;
+  color: var(--color-blank-page); background: var(--color-understory);
+  border: none; border-radius: 999px; padding: 0.55rem 1.4rem; cursor: pointer;
   transition: background 0.15s, transform 0.12s;
 }
-.pt-mark:hover { background: #5f6d56; }
-.pt-mark:active { transform: translateY(1px); }
-.pt-mark:disabled { opacity: 0.6; cursor: default; }
-.pt-mark .pt-mark-done { display: none; }
-.pt-rung--made .pt-mark {
-  background: #fff;
-  color: var(--color-understory);
-  border: 1px solid color-mix(in srgb, var(--color-understory) 45%, #fff);
-}
-.pt-rung--made .pt-mark:hover { background: color-mix(in srgb, var(--color-understory) 10%, #fff); }
-.pt-rung--made .pt-mark .pt-mark-do { display: none; }
-.pt-rung--made .pt-mark .pt-mark-done { display: inline; }
+.pt-complete-btn:hover { background: #5f6d56; }
+.pt-complete-btn:active { transform: translateY(1px); }
+.pt-complete-btn:disabled { opacity: 0.6; cursor: default; }
 
 /* celebration shards (spawned from JS) */
 .pt-shard {

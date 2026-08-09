@@ -55,6 +55,34 @@ const upload = multer({
   }
 });
 
+// Propagation Table uploads — students complete a rung by uploading the thing
+// they made (image or video). Lives on the Railway volume in production; served
+// only through the auth + ownership route below (never express.static in prod).
+const PROPAGATION_DIR = process.env.NODE_ENV === 'production'
+  ? '/data/propagation'
+  : path.join(__dirname, 'public', 'uploads', 'propagation');
+fs.mkdirSync(PROPAGATION_DIR, { recursive: true });
+
+const PROPAGATION_UPLOAD_TYPES = [
+  'image/jpeg', 'image/png', 'image/gif', 'image/webp',
+  'video/mp4', 'video/quicktime', 'video/webm',
+];
+const propagationUpload = multer({
+  storage: multer.diskStorage({
+    destination: PROPAGATION_DIR,
+    filename: (req, file, cb) => {
+      const ext = (path.extname(file.originalname).toLowerCase() || '').slice(0, 10);
+      const token = require('crypto').randomBytes(6).toString('hex');
+      cb(null, `prop-${req.session.user.id}-${Date.now()}-${token}${ext}`);
+    }
+  }),
+  limits: { fileSize: 50 * 1024 * 1024 },
+  fileFilter: (_, file, cb) => {
+    if (PROPAGATION_UPLOAD_TYPES.includes(file.mimetype)) cb(null, true);
+    else cb(new Error('Please upload an image or a video (JPG, PNG, GIF, WebP, MP4, MOV, or WebM).'));
+  }
+});
+
 const TIMEZONES = [
   { value: 'America/New_York',    label: 'Eastern Time (ET)' },
   { value: 'America/Chicago',     label: 'Central Time (CT)' },
@@ -3326,11 +3354,16 @@ const splitParas = (s) => (s || '').split(/\n\s*\n/).map(x => x.trim()).filter(B
 
 app.get('/summer/propagation-table', requireAuth, (req, res) => {
   const made = db.getPropagationMakes(req.session.user.id);
-  const rungs = PROPAGATION_RUNGS.map(r => ({
-    ...r,
-    paragraphs: splitParas(r.guide),
-    made: made.has(r.slug),
-  }));
+  const rungs = PROPAGATION_RUNGS.map(r => {
+    const m = made.get(r.slug);
+    return {
+      ...r,
+      paragraphs: splitParas(r.guide),
+      made: !!m,
+      fileName: m ? m.file_path : null,
+      link: m ? m.published_url : null,
+    };
+  });
   res.render('propagation-table', {
     title: 'The Propagation Table',
     page: 'summer',
@@ -3343,20 +3376,66 @@ app.get('/summer/propagation-table', requireAuth, (req, res) => {
   });
 });
 
+// Complete a rung by uploading a file and/or pasting a link (at least one).
+// Multipart: field `file` (optional), fields `slug` + `link`.
 app.post('/api/propagation-table/mark', requireAuth, requireFullCourse, (req, res) => {
-  const { slug, note, url } = req.body || {};
-  if (!PROPAGATION_SLUGS.includes(slug)) return res.status(400).json({ error: 'Unknown rung.' });
-  db.markPropagationRung(req.session.user.id, slug,
-    note ? String(note).slice(0, 400) : null,
-    url ? String(url).slice(0, 500) : null);
-  res.json({ ok: true, doneCount: db.getPropagationMakes(req.session.user.id).size, total: PROPAGATION_SLUGS.length });
+  propagationUpload.single('file')(req, res, err => {
+    if (err) return res.status(400).json({ error: err.message });
+    const userId = req.session.user.id;
+    const { slug, link } = req.body || {};
+    const cleanupUpload = () => { if (req.file) fs.unlink(req.file.path, () => {}); };
+
+    if (!PROPAGATION_SLUGS.includes(slug)) { cleanupUpload(); return res.status(400).json({ error: 'Unknown rung.' }); }
+    const fileName = req.file ? req.file.filename : null;
+    const linkVal = link && String(link).trim() ? String(link).trim().slice(0, 500) : null;
+    if (!fileName && !linkVal) { cleanupUpload(); return res.status(400).json({ error: 'Add a file or a link to complete this one.' }); }
+
+    // Replacing a previous upload? Remove the old file so it doesn't orphan.
+    const prev = db.getPropagationMakes(userId).get(slug);
+    if (prev && prev.file_path && prev.file_path !== fileName) {
+      fs.unlink(path.join(PROPAGATION_DIR, path.basename(prev.file_path)), () => {});
+    }
+    db.markPropagationRung(userId, slug, null, linkVal, fileName);
+    res.json({ ok: true, fileName, link: linkVal, doneCount: db.getPropagationMakes(userId).size, total: PROPAGATION_SLUGS.length });
+  });
 });
 
 app.post('/api/propagation-table/unmark', requireAuth, requireFullCourse, (req, res) => {
   const { slug } = req.body || {};
   if (!PROPAGATION_SLUGS.includes(slug)) return res.status(400).json({ error: 'Unknown rung.' });
-  db.unmarkPropagationRung(req.session.user.id, slug);
-  res.json({ ok: true, doneCount: db.getPropagationMakes(req.session.user.id).size, total: PROPAGATION_SLUGS.length });
+  const userId = req.session.user.id;
+  const prev = db.getPropagationMakes(userId).get(slug);
+  if (prev && prev.file_path) {
+    fs.unlink(path.join(PROPAGATION_DIR, path.basename(prev.file_path)), () => {});
+  }
+  db.unmarkPropagationRung(userId, slug);
+  res.json({ ok: true, doneCount: db.getPropagationMakes(userId).size, total: PROPAGATION_SLUGS.length });
+});
+
+// Serve a student's own propagation upload — auth + ownership + traversal guard.
+app.get('/propagation-file/:filename', requireAuth, (req, res) => {
+  const filename = req.params.filename;
+  if (filename.includes('..') || filename.includes('/') || filename.includes('\\')) {
+    return res.status(400).send('Bad request');
+  }
+  // Ownership: the requester must have a make row pointing at this file.
+  const owns = [...db.getPropagationMakes(req.session.user.id).values()].some(m => m.file_path === filename);
+  if (!owns) return res.status(404).send('Not found');
+
+  const filepath = path.join(PROPAGATION_DIR, filename);
+  if (!filepath.startsWith(path.resolve(PROPAGATION_DIR))) return res.status(400).send('Bad request');
+  fs.access(filepath, fs.constants.R_OK, err => {
+    if (err) return res.status(404).send('Not found');
+    const ext = path.extname(filename).toLowerCase();
+    const contentType = {
+      '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png',
+      '.gif': 'image/gif', '.webp': 'image/webp',
+      '.mp4': 'video/mp4', '.mov': 'video/quicktime', '.webm': 'video/webm',
+    }[ext] || 'application/octet-stream';
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Cache-Control', 'private, max-age=300');
+    fs.createReadStream(filepath).pipe(res);
+  });
 });
 
 // Record a format-idea for a Cultivate cutting. Body:
@@ -3769,10 +3848,11 @@ app.post('/api/block-buster/hide', requireAuth, (req, res) => {
 
 // Bust a block — a way through worked. optionText records which one.
 app.post('/api/block-buster/bust', requireAuth, (req, res) => {
-  const { blockKey, optionText } = req.body || {};
+  const { blockKey, optionText, reflection } = req.body || {};
   if (!blockKey || !String(blockKey).trim()) return res.status(400).json({ error: 'Missing block.' });
   const text = optionText ? String(optionText).slice(0, 400) : null;
-  db.bustBlock(req.session.user.id, String(blockKey).trim(), text);
+  const reflect = reflection ? String(reflection).slice(0, 2000) : null;
+  db.bustBlock(req.session.user.id, String(blockKey).trim(), text, reflect);
   res.json({ ok: true, bustedCount: db.getBustedBlocks(req.session.user.id).size });
 });
 
@@ -3782,6 +3862,33 @@ app.post('/api/block-buster/unbust', requireAuth, (req, res) => {
   if (!blockKey || !String(blockKey).trim()) return res.status(400).json({ error: 'Missing block.' });
   db.unbustBlock(req.session.user.id, String(blockKey).trim());
   res.json({ ok: true, bustedCount: db.getBustedBlocks(req.session.user.id).size });
+});
+
+// Breakthroughs — the running log of blocks a student has busted, the way
+// through they tried, and what they wrote about how it went. Block titles are
+// resolved here (built-ins from lib, custom from block_buster_blocks).
+app.get('/block-buster/breakthroughs', requireAuth, (req, res) => {
+  const userId = req.session.user.id;
+  const titleByKey = new Map();
+  const catByKey = new Map();
+  CREATIVE_BLOCK_CATEGORIES.forEach(cat => {
+    cat.blocks.forEach(b => { titleByKey.set(b.slug, b.title); catByKey.set(b.slug, cat.name); });
+  });
+  db.getCustomBlocks(userId).forEach(c => { titleByKey.set('custom-' + c.id, c.title); });
+
+  const breakthroughs = db.getBreakthroughs(userId).map(r => ({
+    title: titleByKey.get(r.block_key) || 'A block you added',
+    category: catByKey.get(r.block_key) || null,
+    optionText: r.option_text,
+    reflection: r.reflection,
+    bustedAt: r.busted_at,
+  }));
+
+  res.render('breakthroughs', {
+    title: 'Your Breakthroughs',
+    page: 'resources',
+    breakthroughs,
+  });
 });
 
 // ─── Watch Yourself — Spring+ only ─────────────────────────────────────────

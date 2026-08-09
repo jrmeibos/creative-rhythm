@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <%- include('partials/head') %>
+  <link rel="stylesheet" href="/css/dashboard.css">
+  <link rel="stylesheet" href="/css/block-buster.css">
+</head>
+<body class="app-body">
+  <div class="app-layout">
+    <%- include('partials/sidebar') %>
+    <main class="main-content">
+
+      <a href="/block-buster" class="cm-back-link" style="display:inline-block; margin: 1.5rem 0 1rem;">← Back to the Block Buster</a>
+
+      <header class="brk-header">
+        <span class="bb-eyebrow">The Creative Block Buster</span>
+        <h1 class="bb-title">Your Breakthroughs</h1>
+        <p class="bb-subtitle">
+          Every block you've busted, the way through that worked, and what you
+          noticed about it. A record of your own hard-won wisdom — come back when
+          you're stuck and remember what got you moving.
+        </p>
+      </header>
+
+      <% if (breakthroughs.length === 0) { %>
+
+        <div class="brk-empty">
+          <p class="brk-empty-headline">No breakthroughs yet.</p>
+          <p class="brk-empty-body">
+            When a way through works, pick it in the
+            <a href="/block-buster">Block Buster</a>, write how it went, and hit
+            <strong>Complete</strong> — it'll live here.
+          </p>
+        </div>
+
+      <% } else { %>
+
+        <ul class="brk-list">
+          <% breakthroughs.forEach(function (b) {
+               const d = b.bustedAt ? new Date(String(b.bustedAt).replace(' ', 'T')) : null;
+               const dateLabel = d && !isNaN(d)
+                 ? d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+                 : '';
+          %>
+            <li class="brk-card">
+              <div class="brk-card-head">
+                <span class="brk-block-title"><%= b.title %></span>
+                <% if (b.category) { %><span class="brk-cat"><%= b.category %></span><% } %>
+              </div>
+              <% if (b.optionText) { %>
+                <p class="brk-worked">
+                  <span class="brk-worked-label">What worked</span>
+                  <span class="brk-worked-text"><%= b.optionText %></span>
+                </p>
+              <% } %>
+              <% if (b.reflection) { %>
+                <p class="brk-reflection"><%= b.reflection %></p>
+              <% } else { %>
+                <p class="brk-reflection brk-reflection--empty">No note added — just a win worth counting.</p>
+              <% } %>
+              <% if (dateLabel) { %><span class="brk-date"><%= dateLabel %></span><% } %>
+            </li>
+          <% }); %>
+        </ul>
+
+      <% } %>
+
+    </main>
+  </div>
+</body>
+</html>

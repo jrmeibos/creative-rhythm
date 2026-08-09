@@ -45,24 +45,30 @@
     tallyNounEl.textContent = n === 1 ? 'block' : 'blocks';
     tallyEl.hidden = n === 0;
   }
-  function applyBusted(block, optionText) {
+  // Reflection step (step 2): show the chosen way through + a field, hide the
+  // options list. Reset returns to the options list.
+  function openReflect(block, optionText) {
+    const chosen = block.querySelector('.bb-reflect-chosen-text');
+    if (chosen) chosen.textContent = optionText;
+    block.querySelector('.bb-options-wrap').hidden = true;
+    const reflect = block.querySelector('.bb-reflect');
+    reflect.hidden = false;
+    const input = reflect.querySelector('.bb-reflect-input');
+    if (input) { input.value = ''; input.focus(); }
+  }
+  function resetReflect(block) {
+    const reflect = block.querySelector('.bb-reflect');
+    if (reflect) reflect.hidden = true;
+    const wrap = block.querySelector('.bb-options-wrap');
+    if (wrap) wrap.hidden = false;
+  }
+  function applyBusted(block) {
     block.classList.add('bb-block--busted');
-    const span = block.querySelector('.bb-busted-banner-text');
-    if (span) {
-      span.textContent = '💥 You busted this block';
-      if (optionText) {
-        span.append(' with: ');
-        const em = document.createElement('em');
-        em.className = 'bb-busted-with';
-        em.textContent = optionText;
-        span.appendChild(em);
-      }
-    }
+    resetReflect(block); // leave a clean options view for if they un-bust
   }
   function clearBusted(block) {
     block.classList.remove('bb-block--busted');
-    const span = block.querySelector('.bb-busted-banner-text');
-    if (span) span.textContent = '💥 You busted this block';
+    resetReflect(block);
   }
 
   // Confetti-ish burst of block-colored shards from a point (viewport coords).
@@ -94,7 +100,7 @@
     }
   }
 
-  async function bustBlock(block, optionText) {
+  async function bustBlock(block, optionText, reflection) {
     if (block.classList.contains('bb-block--busted')) return;
     const catColor = getComputedStyle(block).getPropertyValue('--cat').trim() || '#705C6C';
     const collapseDelay = reduceMotion() ? 0 : 700;
@@ -105,7 +111,7 @@
       block.classList.add('bb-block--bursting');
       setTimeout(() => block.classList.remove('bb-block--bursting'), 520);
     }
-    applyBusted(block, optionText);
+    applyBusted(block);
     updateTally(+1);
     // collapse after the burst so it reads as "busted, done"
     setTimeout(() => {
@@ -114,7 +120,11 @@
     }, collapseDelay);
 
     try {
-      await post('/api/block-buster/bust', { blockKey: block.dataset.key, optionText: optionText || '' });
+      await post('/api/block-buster/bust', {
+        blockKey: block.dataset.key,
+        optionText: optionText || '',
+        reflection: reflection || '',
+      });
     } catch (err) {
       clearBusted(block);
       updateTally(-1);
@@ -174,12 +184,30 @@
 
   // ── Accordion open/close + all click actions ────────────────────────────
   categoriesEl.addEventListener('click', async function (e) {
-    // Check off a way through → bust the block
+    // Step 1 — "Try this" on a way through → open the reflection step
     const tryBtn = e.target.closest('.bb-try');
     if (tryBtn) {
       const block = tryBtn.closest('.bb-block');
-      const opt = tryBtn.parentElement.querySelector('.bb-option-text');
-      bustBlock(block, opt ? opt.textContent.trim() : '');
+      const opt = tryBtn.closest('.bb-option').querySelector('.bb-option-text');
+      openReflect(block, opt ? opt.textContent.trim() : '');
+      return;
+    }
+
+    // Back out of the reflection step → return to the ways through
+    const backBtn = e.target.closest('.bb-reflect-back');
+    if (backBtn) {
+      resetReflect(backBtn.closest('.bb-block'));
+      return;
+    }
+
+    // Step 2 — "Complete" → save the reflection and bust the block
+    const completeBtn = e.target.closest('.bb-reflect-complete');
+    if (completeBtn) {
+      const block = completeBtn.closest('.bb-block');
+      const reflect = block.querySelector('.bb-reflect');
+      const optionText = reflect.querySelector('.bb-reflect-chosen-text').textContent.trim();
+      const reflection = reflect.querySelector('.bb-reflect-input').value.trim();
+      bustBlock(block, optionText, reflection);
       return;
     }
 
@@ -287,8 +315,8 @@
       li.className = 'bb-option bb-option--mine';
       li.dataset.optionId = data.id;
       li.innerHTML =
-        '<button type="button" class="bb-try" title="I tried this — it worked" aria-label="I tried this — bust the block"></button>' +
         '<span class="bb-option-text">' + esc(text) + '</span>' +
+        '<button type="button" class="bb-try">Try this</button>' +
         '<button type="button" class="bb-option-remove bb-delete-option" title="Remove this" aria-label="Remove this">×</button>';
       block.querySelector('.bb-options').appendChild(li);
       input.value = '';
@@ -379,15 +407,27 @@
         '</button>' +
         '<div class="bb-block-body">' +
           '<div class="bb-busted-banner">' +
-            '<span class="bb-busted-banner-text">💥 You busted this block</span>' +
+            '<span class="bb-busted-banner-text">💥 You busted this block.</span>' +
+            '<a href="/block-buster/breakthroughs" class="bb-busted-link">See it in your Breakthroughs →</a>' +
             '<button type="button" class="bb-unbust-btn">Bring it back</button>' +
           '</div>' +
-          '<p class="bb-then-label">Ways through <span class="bb-then-hint">— check one off when it works</span></p>' +
-          '<ul class="bb-options"></ul>' +
-          '<form class="bb-add-option">' +
-            '<input type="text" class="bb-add-option-input" placeholder="Add your own way through…" maxlength="300" autocomplete="off">' +
-            '<button type="submit" class="bb-add-option-btn">Add</button>' +
-          '</form>' +
+          '<div class="bb-tryflow">' +
+            '<div class="bb-options-wrap">' +
+              '<p class="bb-then-label">Ways through <span class="bb-then-hint">— pick one to try</span></p>' +
+              '<ul class="bb-options"></ul>' +
+              '<form class="bb-add-option">' +
+                '<input type="text" class="bb-add-option-input" placeholder="Add your own way through…" maxlength="300" autocomplete="off">' +
+                '<button type="submit" class="bb-add-option-btn">Add</button>' +
+              '</form>' +
+            '</div>' +
+            '<div class="bb-reflect" hidden>' +
+              '<button type="button" class="bb-reflect-back">← Back to ways through</button>' +
+              '<p class="bb-reflect-chosen">You\'re trying: <span class="bb-reflect-chosen-text"></span></p>' +
+              '<label class="bb-reflect-label">How did it go? <span class="bb-reflect-optional">optional, but worth writing</span></label>' +
+              '<textarea class="bb-reflect-input" rows="4" maxlength="2000" placeholder="Write about how this way through worked for you…"></textarea>' +
+              '<button type="button" class="bb-reflect-complete">Complete — bust this block 💥</button>' +
+            '</div>' +
+          '</div>' +
           '<div class="bb-block-manage"><button type="button" class="bb-icon-btn bb-delete-block">Delete this block</button></div>' +
         '</div>';
       holder.appendChild(div);

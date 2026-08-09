@@ -45,6 +45,7 @@
           <div class="pt-rung <%= r.made ? 'pt-rung--made' : '' %> <%= r.boss ? 'pt-rung--boss' : '' %>"
                data-slug="<%= r.slug %>">
             <button type="button" class="pt-rung-head" aria-expanded="false">
+              <span class="pt-rung-num" aria-hidden="true"><%= i + 1 %></span>
               <span class="pt-rung-emoji" aria-hidden="true"><%= r.emoji %></span>
               <span class="pt-rung-titles">
                 <span class="pt-rung-title"><%= r.title %></span>
@@ -62,10 +63,31 @@
               <div class="pt-guide">
                 <% r.paragraphs.forEach(function (p) { %><p><%= p %></p><% }); %>
               </div>
-              <button type="button" class="pt-mark">
-                <span class="pt-mark-do">Mark as made</span>
-                <span class="pt-mark-done">Made ✓ — tap to undo</span>
-              </button>
+
+              <!-- Complete by adding what you made — a file or a link -->
+              <div class="pt-complete">
+                <div class="pt-made-state">
+                  <span class="pt-made-label">Made ✓</span>
+                  <a class="pt-made-file" target="_blank" rel="noopener"
+                     <% if (r.fileName) { %>href="/propagation-file/<%= encodeURIComponent(r.fileName) %>"<% } else { %>hidden<% } %>>View your upload ↗</a>
+                  <a class="pt-made-link" target="_blank" rel="noopener noreferrer"
+                     <% if (r.link) { %>href="<%= r.link %>"<% } else { %>hidden<% } %>>Open your link ↗</a>
+                  <button type="button" class="pt-undo">Undo</button>
+                </div>
+                <form class="pt-mark-form" enctype="multipart/form-data">
+                  <p class="pt-mark-hint">Mark this complete by adding what you made — a file or a link.</p>
+                  <div class="pt-mark-inputs">
+                    <label class="pt-file-label">
+                      <input type="file" class="pt-file-input" accept="image/*,video/*">
+                      <span class="pt-file-text">Choose a file…</span>
+                    </label>
+                    <span class="pt-or">or</span>
+                    <input type="url" class="pt-link-input" placeholder="Paste a link">
+                  </div>
+                  <p class="pt-mark-error" hidden></p>
+                  <button type="button" class="pt-complete-btn">Complete 💥</button>
+                </form>
+              </div>
             </div>
           </div>
         <% }); %>
