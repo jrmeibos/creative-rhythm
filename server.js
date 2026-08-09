@@ -3779,7 +3779,7 @@ app.get('/block-buster', requireAuth, (req, res) => {
   const added  = db.getAddedOptionsByBlock(userId);  // Map(key → [{id,text}])
   const hidden = db.getHiddenBlockKeys(userId);       // Set(key)
   const custom = db.getCustomBlocks(userId);          // [{id,title,category}]
-  const busted = db.getBustedBlocks(userId);          // Map(key → {option_text, busted_at})
+  const bustCounts = db.getBustCountsByBlock(userId); // Map(key → times busted)
 
   // Group custom blocks by category slug so we can append them under the
   // matching built-in category. Anything with an unknown/blank category
@@ -3796,8 +3796,7 @@ app.get('/block-buster', requireAuth, (req, res) => {
     defaultOptions,
     addedOptions: added.get(key) || [],
     hidden:       hidden.has(key),
-    busted:       busted.has(key),
-    bustedWith:   busted.get(key) ? busted.get(key).option_text : null,
+    bustCount:    bustCounts.get(key) || 0,
   });
 
   const categories = CREATIVE_BLOCK_CATEGORIES.map(cat => {
@@ -3817,7 +3816,7 @@ app.get('/block-buster', requireAuth, (req, res) => {
     title: 'The Creative Block Buster',
     page:  'resources',
     categories,
-    bustedCount: busted.size,
+    bustedCount: db.getBustTotal(userId),
   });
 });
 
@@ -3863,22 +3862,23 @@ app.post('/api/block-buster/hide', requireAuth, (req, res) => {
   res.json({ ok: true });
 });
 
-// Bust a block — a way through worked. optionText records which one.
+// Bust a block — logs a NEW breakthrough every time (a block can be busted
+// repeatedly). optionText + reflection record this particular breakthrough.
 app.post('/api/block-buster/bust', requireAuth, (req, res) => {
   const { blockKey, optionText, reflection } = req.body || {};
   if (!blockKey || !String(blockKey).trim()) return res.status(400).json({ error: 'Missing block.' });
   const text = optionText ? String(optionText).slice(0, 400) : null;
   const reflect = reflection ? String(reflection).slice(0, 2000) : null;
-  db.bustBlock(req.session.user.id, String(blockKey).trim(), text, reflect);
-  res.json({ ok: true, bustedCount: db.getBustedBlocks(req.session.user.id).size });
+  const { count } = db.bustBlock(req.session.user.id, String(blockKey).trim(), text, reflect);
+  res.json({ ok: true, bustCount: count, total: db.getBustTotal(req.session.user.id) });
 });
 
-// Un-bust a block (bring it back).
-app.post('/api/block-buster/unbust', requireAuth, (req, res) => {
-  const { blockKey } = req.body || {};
-  if (!blockKey || !String(blockKey).trim()) return res.status(400).json({ error: 'Missing block.' });
-  db.unbustBlock(req.session.user.id, String(blockKey).trim());
-  res.json({ ok: true, bustedCount: db.getBustedBlocks(req.session.user.id).size });
+// Delete one breakthrough from the log (from the Breakthroughs page).
+app.post('/api/block-buster/breakthrough/:id/delete', requireAuth, (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (!Number.isInteger(id)) return res.status(400).json({ error: 'Invalid entry.' });
+  db.deleteBreakthrough(req.session.user.id, id);
+  res.json({ ok: true, total: db.getBustTotal(req.session.user.id) });
 });
 
 // Breakthroughs — the running log of blocks a student has busted, the way
@@ -3894,6 +3894,7 @@ app.get('/block-buster/breakthroughs', requireAuth, (req, res) => {
   db.getCustomBlocks(userId).forEach(c => { titleByKey.set('custom-' + c.id, c.title); });
 
   const breakthroughs = db.getBreakthroughs(userId).map(r => ({
+    id: r.id,
     title: titleByKey.get(r.block_key) || 'A block you added',
     category: catByKey.get(r.block_key) || null,
     optionText: r.option_text,

@@ -42,7 +42,8 @@
                  ? d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
                  : '';
           %>
-            <li class="brk-card">
+            <li class="brk-card" data-id="<%= b.id %>">
+              <button type="button" class="brk-delete" title="Remove this breakthrough" aria-label="Remove this breakthrough">×</button>
               <div class="brk-card-head">
                 <span class="brk-block-title"><%= b.title %></span>
                 <% if (b.category) { %><span class="brk-cat"><%= b.category %></span><% } %>
@@ -67,5 +68,25 @@
 
     </main>
   </div>
+  <script>
+    (function () {
+      var list = document.querySelector('.brk-list');
+      if (!list) return;
+      list.addEventListener('click', function (e) {
+        var btn = e.target.closest('.brk-delete');
+        if (!btn) return;
+        var card = btn.closest('.brk-card');
+        if (!confirm('Remove this breakthrough from your log?')) return;
+        btn.disabled = true;
+        fetch('/api/block-buster/breakthrough/' + card.dataset.id + '/delete', { method: 'POST' })
+          .then(function (r) { if (!r.ok) throw new Error(); return r.json(); })
+          .then(function () {
+            card.remove();
+            if (!list.querySelector('.brk-card')) location.reload();
+          })
+          .catch(function () { btn.disabled = false; alert("Couldn't remove that. Please try again."); });
+      });
+    })();
+  </script>
 </body>
 </html>

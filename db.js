@@ -117,15 +117,17 @@ db.exec(`
     PRIMARY KEY (user_id, block_key),
     FOREIGN KEY (user_id) REFERENCES users(id)
   );
-  -- Blocks a student has "busted" (tried a way through and it worked). One row
-  -- per user+block; option_text records which way through did it, for a little
-  -- record of what works for them.
+  -- Every time a student busts a block (works a way through), it logs a NEW
+  -- row here — a block can be busted many times, since real blocks recur.
+  -- option_text + reflection record that particular breakthrough. Older installs
+  -- had a UNIQUE (user_id, block_key) shape; migrated to this log below.
   CREATE TABLE IF NOT EXISTS block_buster_busted (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER NOT NULL,
     block_key TEXT NOT NULL,
     option_text TEXT,
+    reflection TEXT,
     busted_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (user_id, block_key),
     FOREIGN KEY (user_id) REFERENCES users(id)
   );
   -- The Propagation Table (Summer challenge): one row per rung a student has
@@ -459,6 +461,29 @@ db.exec(`
     db.exec("ALTER TABLE block_buster_busted ADD COLUMN reflection TEXT");
     console.log('✓ Migrated: added reflection column to block_buster_busted');
   }
+  // Old shape had UNIQUE (user_id, block_key) so a block could only be busted
+  // once. Rebuild as an id-keyed log so blocks can be busted repeatedly,
+  // preserving existing rows as the first breakthrough for each.
+  const bbBustedInfo = db.prepare("PRAGMA table_info(block_buster_busted)").all();
+  if (bbBustedInfo.length && !bbBustedInfo.some(c => c.name === 'id')) {
+    db.exec(`
+      CREATE TABLE block_buster_busted_new (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        block_key TEXT NOT NULL,
+        option_text TEXT,
+        reflection TEXT,
+        busted_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id)
+      );
+      INSERT INTO block_buster_busted_new (user_id, block_key, option_text, reflection, busted_at)
+        SELECT user_id, block_key, option_text, reflection, busted_at FROM block_buster_busted;
+      DROP TABLE block_buster_busted;
+      ALTER TABLE block_buster_busted_new RENAME TO block_buster_busted;
+    `);
+    console.log('✓ Migrated: block_buster_busted is now a repeatable log (added id)');
+  }
+  db.exec("CREATE INDEX IF NOT EXISTS idx_bbb_user ON block_buster_busted (user_id)");
   // file_path on propagation_makes — students complete a rung by uploading the
   // thing they made (or pasting a link).
   const propCols = db.prepare("PRAGMA table_info(propagation_makes)").all().map(r => r.name);
@@ -1969,40 +1994,46 @@ module.exports = {
     }
   },
 
-  // Busted blocks for a student, as a Map(block_key → { option_text, busted_at }).
-  getBustedBlocks(userId) {
+  // How many times each block has been busted, as a Map(block_key → count).
+  getBustCountsByBlock(userId) {
     const rows = db.prepare(
-      'SELECT block_key, option_text, reflection, busted_at FROM block_buster_busted WHERE user_id = ?'
+      'SELECT block_key, COUNT(*) AS n FROM block_buster_busted WHERE user_id = ? GROUP BY block_key'
     ).all(userId);
     const map = new Map();
-    for (const r of rows) map.set(r.block_key, { option_text: r.option_text, reflection: r.reflection, busted_at: r.busted_at });
+    for (const r of rows) map.set(r.block_key, r.n);
     return map;
   },
-  // All of a student's busted blocks, newest first — the Breakthroughs log.
+  // Total breakthroughs across all blocks (drives the tally).
+  getBustTotal(userId) {
+    return db.prepare('SELECT COUNT(*) AS n FROM block_buster_busted WHERE user_id = ?').get(userId).n;
+  },
+  // All of a student's breakthroughs, newest first — the Breakthroughs log.
   // Block titles are resolved by the caller (built-ins live in lib, custom in
   // block_buster_blocks).
   getBreakthroughs(userId) {
     return db.prepare(
-      `SELECT block_key, option_text, reflection, busted_at
+      `SELECT id, block_key, option_text, reflection, busted_at
          FROM block_buster_busted WHERE user_id = ?
-        ORDER BY busted_at DESC, rowid DESC`
+        ORDER BY busted_at DESC, id DESC`
     ).all(userId);
   },
-  // Mark a block busted (idempotent). Records which way through worked and the
-  // student's reflection on how it went.
+  // Log a NEW breakthrough — a block can be busted any number of times.
+  // Returns the new row's id and this block's running count.
   bustBlock(userId, blockKey, optionText, reflection) {
-    db.prepare(
+    const info = db.prepare(
       `INSERT INTO block_buster_busted (user_id, block_key, option_text, reflection)
-       VALUES (?, ?, ?, ?)
-       ON CONFLICT(user_id, block_key)
-       DO UPDATE SET option_text = excluded.option_text, reflection = excluded.reflection, busted_at = CURRENT_TIMESTAMP`
+       VALUES (?, ?, ?, ?)`
     ).run(userId, String(blockKey), optionText ? String(optionText) : null, reflection ? String(reflection) : null);
+    const count = db.prepare(
+      'SELECT COUNT(*) AS n FROM block_buster_busted WHERE user_id = ? AND block_key = ?'
+    ).get(userId, String(blockKey)).n;
+    return { id: info.lastInsertRowid, count };
   },
-  // Un-bust a block (bring it back).
-  unbustBlock(userId, blockKey) {
+  // Delete one breakthrough entry from the log (ownership enforced in WHERE).
+  deleteBreakthrough(userId, id) {
     return db.prepare(
-      'DELETE FROM block_buster_busted WHERE user_id = ? AND block_key = ?'
-    ).run(userId, String(blockKey)).changes;
+      'DELETE FROM block_buster_busted WHERE id = ? AND user_id = ?'
+    ).run(id, userId).changes;
   },
 
   // ── The Propagation Table (Summer challenge) ────────────────────────────

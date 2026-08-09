@@ -37,13 +37,19 @@
   const reduceMotion = () =>
     window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-  // ── Bust / un-bust a block ──────────────────────────────────────────────
-  function updateTally(delta) {
-    let n = (parseInt(tallyCountEl.textContent, 10) || 0) + delta;
-    if (n < 0) n = 0;
-    tallyCountEl.textContent = n;
-    tallyNounEl.textContent = n === 1 ? 'block' : 'blocks';
-    tallyEl.hidden = n === 0;
+  // ── Bust a block (repeatable — each bust logs a new breakthrough) ────────
+  // Total-breakthroughs tally, set to the server's authoritative count.
+  function setTally(total) {
+    tallyCountEl.textContent = total;
+    tallyNounEl.textContent = total === 1 ? 'breakthrough' : 'breakthroughs';
+    tallyEl.hidden = total === 0;
+  }
+  // Per-block "busted N×" badge.
+  function setBustCount(block, n) {
+    const badge = block.querySelector('.bb-bust-count');
+    if (!badge) return;
+    badge.querySelector('.bb-bust-count-n').textContent = n;
+    badge.hidden = n < 1;
   }
   // Reflection step (step 2): show the chosen way through + a field, hide the
   // options list. Reset returns to the options list.
@@ -61,14 +67,6 @@
     if (reflect) reflect.hidden = true;
     const wrap = block.querySelector('.bb-options-wrap');
     if (wrap) wrap.hidden = false;
-  }
-  function applyBusted(block) {
-    block.classList.add('bb-block--busted');
-    resetReflect(block); // leave a clean options view for if they un-bust
-  }
-  function clearBusted(block) {
-    block.classList.remove('bb-block--busted');
-    resetReflect(block);
   }
 
   // Confetti-ish burst of block-colored shards from a point (viewport coords).
@@ -101,33 +99,26 @@
   }
 
   async function bustBlock(block, optionText, reflection) {
-    if (block.classList.contains('bb-block--busted')) return;
     const catColor = getComputedStyle(block).getPropertyValue('--cat').trim() || '#705C6C';
-    const collapseDelay = reduceMotion() ? 0 : 700;
 
+    // Optimistic celebration — the block is never "locked", so it stays usable.
     if (!reduceMotion()) {
       const r = block.getBoundingClientRect();
       burst(r.left + r.width / 2, r.top + r.height / 2, catColor);
       block.classList.add('bb-block--bursting');
       setTimeout(() => block.classList.remove('bb-block--bursting'), 520);
     }
-    applyBusted(block);
-    updateTally(+1);
-    // collapse after the burst so it reads as "busted, done"
-    setTimeout(() => {
-      block.querySelector('.bb-block-trigger').setAttribute('aria-expanded', 'false');
-      block.querySelector('.bb-block-body').hidden = true;
-    }, collapseDelay);
 
     try {
-      await post('/api/block-buster/bust', {
+      const data = await post('/api/block-buster/bust', {
         blockKey: block.dataset.key,
         optionText: optionText || '',
         reflection: reflection || '',
       });
+      setBustCount(block, data.bustCount);
+      setTally(data.total);
+      resetReflect(block); // back to the ways-through, ready to bust again
     } catch (err) {
-      clearBusted(block);
-      updateTally(-1);
       alert("Couldn't save that just now. Please try again.");
     }
   }
@@ -208,20 +199,6 @@
       const optionText = reflect.querySelector('.bb-reflect-chosen-text').textContent.trim();
       const reflection = reflect.querySelector('.bb-reflect-input').value.trim();
       bustBlock(block, optionText, reflection);
-      return;
-    }
-
-    // Bring a busted block back
-    const unbustBtn = e.target.closest('.bb-unbust-btn');
-    if (unbustBtn) {
-      const block = unbustBtn.closest('.bb-block');
-      unbustBtn.disabled = true;
-      try {
-        await post('/api/block-buster/unbust', { blockKey: block.dataset.key });
-        clearBusted(block);
-        updateTally(-1);
-      } catch (err) { alert("Couldn't bring it back. Please try again."); }
-      finally { unbustBtn.disabled = false; }
       return;
     }
 
@@ -400,17 +377,12 @@
       div.innerHTML =
         '<button type="button" class="bb-block-trigger" aria-expanded="true">' +
           '<span class="bb-block-title">' + esc(title) + ' <span class="bb-yours-tag">yours</span></span>' +
-          '<span class="bb-busted-badge" aria-hidden="true">💥 Busted</span>' +
+          '<span class="bb-bust-count" title="Times you\'ve busted this block" hidden>💥 busted <span class="bb-bust-count-n">0</span>×</span>' +
           '<span class="bb-block-chevron" aria-hidden="true">' +
             '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"></polyline></svg>' +
           '</span>' +
         '</button>' +
         '<div class="bb-block-body">' +
-          '<div class="bb-busted-banner">' +
-            '<span class="bb-busted-banner-text">💥 You busted this block.</span>' +
-            '<a href="/block-buster/breakthroughs" class="bb-busted-link">See it in your Breakthroughs →</a>' +
-            '<button type="button" class="bb-unbust-btn">Bring it back</button>' +
-          '</div>' +
           '<div class="bb-tryflow">' +
             '<div class="bb-options-wrap">' +
               '<p class="bb-then-label">Ways through <span class="bb-then-hint">— pick one to try</span></p>' +
