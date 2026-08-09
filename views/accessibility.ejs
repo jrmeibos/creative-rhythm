@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <%- include('partials/head') %>
+  <style>
+    .legal-body { background: var(--color-pearl); min-height: 100vh; }
+    .legal-page { max-width: 720px; margin: 0 auto; padding: 2.5rem 1.5rem 5rem; }
+    .legal-back {
+      display: inline-block; font-family: var(--font-body); font-size: 0.85rem;
+      font-weight: 400; color: var(--color-bloem); text-decoration: none; margin-bottom: 2rem;
+    }
+    .legal-back:hover { opacity: 0.7; }
+    .legal-title {
+      font-family: var(--font-display); font-size: 2.4rem; font-weight: 400;
+      color: var(--color-ink-stained); margin: 0 0 0.4rem; line-height: 1.12;
+    }
+    .legal-updated {
+      font-family: var(--font-body); font-size: 0.85rem; font-weight: 300;
+      color: rgba(16, 15, 16, 0.55); margin: 0 0 2.25rem;
+    }
+    .legal-page h2 {
+      font-family: var(--font-display); font-size: 1.4rem; font-weight: 400;
+      color: var(--color-ink-stained); margin: 2.5rem 0 0.75rem; line-height: 1.2;
+    }
+    .legal-page h3 {
+      font-family: var(--font-body); font-size: 0.98rem; font-weight: 700;
+      color: var(--color-ink-stained); margin: 1.5rem 0 0.4rem;
+    }
+    .legal-page p, .legal-page li {
+      font-family: var(--font-body); font-size: 1rem; font-weight: 300;
+      line-height: 1.7; color: rgba(16, 15, 16, 0.82);
+    }
+    .legal-page p { margin: 0 0 1rem; }
+    .legal-page ul { margin: 0 0 1rem; padding-left: 1.35rem; }
+    .legal-page li { margin-bottom: 0.5rem; }
+    .legal-page a { color: var(--color-bloem); text-underline-offset: 2px; }
+    .legal-footer {
+      margin-top: 3rem; padding-top: 1.5rem; border-top: 1px solid rgba(112, 92, 108, 0.15);
+      font-family: var(--font-body); font-size: 0.85rem; font-weight: 300; color: rgba(16, 15, 16, 0.5);
+    }
+    @media (max-width: 560px) { .legal-title { font-size: 1.9rem; } }
+  </style>
+</head>
+<body class="legal-body">
+  <main class="legal-page">
+    <a href="/" class="legal-back">← Back</a>
+
+    <h1 class="legal-title">Accessibility Statement</h1>
+    <p class="legal-updated">Last updated: August 9, 2026</p>
+
+    <p>
+      The Creative's Garden, run by The Meibos Touch (Julia Meibos), is committed to being
+      usable by as many people as possible, including people who use assistive technologies.
+      This is a small, growing platform, and accessibility is something we keep working on
+      rather than treat as finished.
+    </p>
+
+    <h2>What we aim for</h2>
+    <p>
+      We aim to meet the Web Content Accessibility Guidelines (WCAG) 2.1 at Level AA as our
+      standard. We don't claim perfect conformance yet, but it's the target we build toward.
+    </p>
+
+    <h2>What we've done</h2>
+    <p>
+      Some of the steps we've taken to make the platform more accessible:
+    </p>
+    <ul>
+      <li>Structured pages with meaningful, semantic HTML and headings.</li>
+      <li>Support for keyboard navigation, with visible focus styles on interactive elements.</li>
+      <li>Labels and descriptive text for buttons, links, and form fields.</li>
+      <li>Attention to color contrast for body text against its background.</li>
+      <li>Respect for the "reduce motion" setting — animations (like the block-buster and
+        propagation celebrations) are softened or turned off when your device requests it.</li>
+      <li>Responsive layouts that adapt to phones, tablets, and desktops, and to text
+        resizing and zoom.</li>
+      <li>Alternative text on meaningful images, and decorative images marked so screen
+        readers can skip them.</li>
+    </ul>
+
+    <h2>Known limitations</h2>
+    <p>
+      We're honest that some areas aren't fully there yet. As we add features quickly, a few
+      interactive elements, illustrations, or newer sections may not yet meet our standard.
+      If you hit a barrier, we'd genuinely like to know so we can fix it.
+    </p>
+
+    <h2>Tell us about a problem</h2>
+    <p>
+      If you have trouble using any part of The Creative's Garden, or you need something in a
+      different format, please email
+      <a href="mailto:julia@meibostouch.com">julia@meibostouch.com</a>. Let us know the page
+      or feature, what happened, and the device or assistive technology you were using if you
+      can. We take this seriously and will do our best to help and to improve.
+    </p>
+
+    <h2>Updates</h2>
+    <p>
+      We'll revisit this statement as the platform grows and as we make improvements, and
+      we'll update the "last updated" date above.
+    </p>
+
+    <p class="legal-footer">
+      The Creative's Garden — a content creation course by The Meibos Touch.
+    </p>
+  </main>
+</body>
+</html>

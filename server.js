@@ -448,6 +448,8 @@ app.get('/signup', (req, res) => {
 
 // Legal pages — public, no auth (must be viewable by anyone, incl. logged out).
 app.get('/privacy', (req, res) => res.render('privacy', { title: 'Privacy Policy' }));
+app.get('/terms', (req, res) => res.render('terms', { title: 'Terms of Service' }));
+app.get('/accessibility', (req, res) => res.render('accessibility', { title: 'Accessibility Statement' }));
 
 // ─── Video (Cloudflare Stream) ─────────────────────────────────────────────
 // Mint a one-time direct-upload URL. The browser uploads the file straight to
