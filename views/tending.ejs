@@ -136,6 +136,26 @@
           </button>
         </div>
 
+        <!-- Backlog list: when more than one week is waiting, let the student
+             jump to any of them instead of only the oldest. -->
+        <% if (pendingWeeks && pendingWeeks.length > 1) { %>
+          <nav class="tending-week-nav" aria-label="Weeks waiting to review">
+            <span class="tending-week-nav-label">Waiting to review</span>
+            <ul class="tending-week-list">
+              <% pendingWeeks.forEach(function (w) { %>
+                <li>
+                  <a href="/tending?week=<%= w.week %><%= ahead ? '&ahead=' + ahead : '' %>"
+                     class="tending-week-chip<%= w.week === reviewWeek ? ' tending-week-chip--active' : '' %>"
+                     <%= w.week === reviewWeek ? 'aria-current="true"' : '' %>>
+                    Week <%= w.week %>
+                    <span class="tending-week-chip-count"><%= w.count %></span>
+                  </a>
+                </li>
+              <% }); %>
+            </ul>
+          </nav>
+        <% } %>
+
         <ul class="tending-cards" data-tending-cards>
           <% queue.forEach(function (item) {
                const c = item.cutting;

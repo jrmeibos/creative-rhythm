@@ -2952,6 +2952,34 @@ module.exports = {
     return minWeek;
   },
 
+  // Every recording-week (1..maxReviewable) that still has uncurated cuttings,
+  // as [{ week, count }] ascending. Powers the /tending backlog list, which
+  // lets a student who has fallen behind jump to any waiting week instead of
+  // being served only the oldest one. maxReviewable = effectiveCurrent - 3,
+  // matching getTendingReviewWeek's buffer so the list and the default pick
+  // stay in agreement. Returns [] before Tending opens or when nothing waits.
+  getTendingPendingWeeks(userId, maxReviewable, courseStartDate) {
+    if (!courseStartDate || !maxReviewable || maxReviewable < 1) return [];
+    const rows = db.prepare(`
+      SELECT c.recorded_date
+      FROM cuttings c
+      WHERE c.user_id = ?
+        AND NOT EXISTS (
+          SELECT 1 FROM cutting_curations cc WHERE cc.cutting_id = c.id
+        )
+    `).all(userId);
+
+    const counts = new Map();
+    for (const r of rows) {
+      const wk = this._cuttingWeekNumber(r.recorded_date, courseStartDate);
+      if (wk === null || wk > maxReviewable) continue;
+      counts.set(wk, (counts.get(wk) || 0) + 1);
+    }
+    return [...counts.entries()]
+      .map(([week, count]) => ({ week, count }))
+      .sort((a, b) => a.week - b.week);
+  },
+
   // Build the Tending queue for a session:
   //   A) all uncurated cuttings whose recording-week == reviewWeek
   //   B) all cuttings whose latest curation is return_later AND

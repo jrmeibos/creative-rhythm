@@ -3130,8 +3130,19 @@ app.get('/tending', requireAuth, (req, res) => {
   // Capped so a stray URL can't push into the future.
   const ahead = Math.max(0, Math.min(3, parseInt(req.query.ahead, 10) || 0));
   const effectiveCurrent = currentCourseWeek + ahead;
+  const maxReviewable = effectiveCurrent - 3;
 
-  const reviewWeek = db.getTendingReviewWeek(user.id, effectiveCurrent, courseStartDate);
+  // Every backlog week still holding uncurated cuttings, as [{week, count}].
+  // Drives the "waiting to review" list so a behind student can jump around.
+  const pendingWeeks = db.getTendingPendingWeeks(user.id, maxReviewable, courseStartDate);
+
+  // Default queue = the oldest waiting week. A student can override it with
+  // ?week=N, but only to a week that actually has cuttings waiting (guards
+  // against a stray/stale URL pointing at an empty or future week).
+  const requestedWeek = parseInt(req.query.week, 10);
+  const reviewWeek = pendingWeeks.some(w => w.week === requestedWeek)
+    ? requestedWeek
+    : db.getTendingReviewWeek(user.id, effectiveCurrent, courseStartDate);
   const todayStr   = toLocalDateString(getNow(user));
   const queue      = db.getTendingQueue(user.id, reviewWeek, courseStartDate, todayStr);
   const counts     = db.getTendingDestinationCounts(user.id);
@@ -3154,6 +3165,7 @@ app.get('/tending', requireAuth, (req, res) => {
     showIntro,
     ahead,
     hasMorePending,
+    pendingWeeks,
   });
 });
 
