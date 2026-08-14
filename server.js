@@ -659,7 +659,11 @@ function buildDayviewPayload(user, rawDay, courseStart) {
   }
 
   const dayInfo            = getCourseDayForDate(user, viewed, courseStart);
-  const viewedSeason       = dayInfo.season;
+  // Past the 12-week curriculum getCurricularSeason() is null. Fall back to the
+  // student's chosen season so the day-view keeps reflecting their current
+  // focus (learner-chooses evergreen mode) rather than dropping the season row.
+  // Weeks 1-12 keep the curricular season exactly as before.
+  const viewedSeason       = dayInfo.season || user.current_season || null;
   const viewedSeasonLabel  = getCurricularSeasonLabel(viewedSeason);
   const viewedSeasonPrompt = getSeasonPrompt(viewedSeason);
   const dayCuttings        = db.getCuttingsForUserOnDate(user.id, viewed);

@@ -38,7 +38,10 @@
             <% if (trialComplete) { %>
               <span class="integration-badge">Trial complete</span>
             <% } else if (weekNumber > courseLengthWeeks) { %>
-              <span class="integration-badge">Course complete</span> · <%= weekLabel %>
+              <%# Past the 12-week curriculum: keep the week counter climbing so
+                  the practice stays evergreen instead of dead-ending at a
+                  "Course complete" badge. %>
+              Week <%= weekNumber %> · <%= weekLabel %>
             <% } else if (weekNumber >= 1) { %>
               Week <%= weekNumber %> of <%= courseLengthWeeks %> · <%= weekLabel %>
             <% } else { %>
