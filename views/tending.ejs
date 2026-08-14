@@ -21,6 +21,11 @@
         <button type="button" class="tending-learn-more-toggle" data-tending-learn-more>
           Learn more
         </button>
+        <div class="tending-header-actions">
+          <button type="button" class="tending-log-btn" data-tending-log-open>
+            + Log a missing recording
+          </button>
+        </div>
       </header>
 
       <!-- ── Persistent "Learn more" panel (collapsed by default) ──────────── -->
@@ -314,6 +319,37 @@
     </div>
   </div>
 
+  <!-- ── Log a missing recording modal ───────────────────────────────── -->
+  <!-- If a recording never got logged, it never surfaces here to review.
+       This adds it after the fact: pick the day it's from + jot what you
+       remember, then it joins the queue for its recording-week. -->
+  <div class="tending-pause-modal" data-tending-log-modal hidden>
+    <div class="tending-pause-inner tending-log-inner" role="dialog" aria-labelledby="tending-log-title">
+      <h2 class="tending-pause-title" id="tending-log-title">Log a missing recording</h2>
+      <p class="tending-pause-body">
+        Found a recording you never logged? Add it here — pick the day it's
+        from and jot what you remember. It'll join your cuttings to review.
+      </p>
+      <label class="tending-pause-label" for="tending-log-date">What day was it recorded?</label>
+      <input type="date" id="tending-log-date" class="tending-log-date"
+             min="<%= courseStartDate %>" max="<%= todayStr %>" value="<%= todayStr %>">
+      <% cuttingPrompts.forEach(function (p) { %>
+        <div class="recording-reflect-field">
+          <label class="recording-reflect-q" for="tending-log-<%= p.key %>"><%= p.label %></label>
+          <% if (p.help) { %><p class="recording-reflect-help"><%= p.help %></p><% } %>
+          <textarea id="tending-log-<%= p.key %>"
+                    class="recording-reflect-textarea tending-log-textarea"
+                    data-cutting-key="<%= p.key %>" rows="3"></textarea>
+        </div>
+      <% }); %>
+      <p class="tending-log-error" data-tending-log-error hidden></p>
+      <div class="tending-pause-actions">
+        <button type="button" class="tending-pause-cancel" data-tending-log-cancel>Cancel</button>
+        <button type="button" class="tending-pause-confirm" data-tending-log-save>Save recording</button>
+      </div>
+    </div>
+  </div>
+
   <script>
     (function () {
       // ── First-time intro overlay ─────────────────────────────────────────
@@ -415,6 +451,71 @@
               // Land back on the dashboard regardless of whether the log
               // wrote successfully — the student's intent was to leave.
               window.location.href = '/dashboard';
+            });
+        });
+      }
+
+      // ── Log a missing recording modal ────────────────────────────────────
+      var logOpen      = document.querySelector('[data-tending-log-open]');
+      var logModal     = document.querySelector('[data-tending-log-modal]');
+      var logCancel    = document.querySelector('[data-tending-log-cancel]');
+      var logSave      = document.querySelector('[data-tending-log-save]');
+      var logDate      = document.getElementById('tending-log-date');
+      var logError     = document.querySelector('[data-tending-log-error]');
+      var logTextareas = logModal ? logModal.querySelectorAll('.tending-log-textarea') : [];
+
+      function closeLogModal() {
+        if (!logModal) return;
+        logModal.setAttribute('hidden', '');
+        if (logError) logError.hidden = true;
+        if (logSave) logSave.disabled = false;
+      }
+      function showLogError(msg) {
+        if (logError) { logError.textContent = msg; logError.hidden = false; }
+      }
+      if (logOpen && logModal) {
+        logOpen.addEventListener('click', function () {
+          logModal.removeAttribute('hidden');
+          if (logError) logError.hidden = true;
+          if (logSave) logSave.disabled = false;
+          if (logDate) setTimeout(function () { logDate.focus(); }, 30);
+        });
+      }
+      if (logCancel) logCancel.addEventListener('click', closeLogModal);
+      if (logSave && logModal) {
+        logSave.addEventListener('click', function () {
+          var date = logDate ? logDate.value : '';
+          if (!date) { showLogError('Pick the day this recording is from.'); return; }
+          var payload = { recorded_date: date };
+          var anyFilled = false;
+          logTextareas.forEach(function (t) {
+            var v = t.value.trim();
+            payload[t.dataset.cuttingKey] = v;
+            if (v) anyFilled = true;
+          });
+          if (!anyFilled) { showLogError('Add a note or two so there’s something to review later.'); return; }
+          logSave.disabled = true;
+          if (logError) logError.hidden = true;
+          fetch('/dashboard/cutting', {
+            method:      'POST',
+            credentials: 'same-origin',
+            headers:     { 'Content-Type': 'application/json' },
+            body:        JSON.stringify(payload),
+          }).then(function (r) { return r.json().then(function (d) { return { r: r, d: d }; }); })
+            .then(function (o) {
+              if (!o.r.ok || !o.d || o.d.saved === false) {
+                showLogError((o.d && o.d.error) || 'Could not save. Try again.');
+                logSave.disabled = false;
+                return;
+              }
+              // Reload so the new cutting lands in its review week and the
+              // "waiting to review" list / counts refresh. Recordings from the
+              // last three weeks sit in the settling buffer and surface later.
+              window.location.reload();
+            })
+            .catch(function () {
+              showLogError('Network error. Try again.');
+              logSave.disabled = false;
             });
         });
       }

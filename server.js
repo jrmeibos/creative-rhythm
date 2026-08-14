@@ -3190,6 +3190,8 @@ app.get('/tending', requireAuth, (req, res) => {
     ahead,
     hasMorePending,
     pendingWeeks,
+    courseStartDate,
+    todayStr,
   });
 });
 

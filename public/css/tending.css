@@ -569,6 +569,58 @@
   border-color: var(--color-bloem);
   box-shadow: 0 0 0 3px rgba(112, 92, 108, 0.12);
 }
+
+/* ── "Log a missing recording" button + modal ──────────────────────────── */
+.tending-header-actions {
+  margin-top: 1.1rem;
+}
+.tending-log-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  color: var(--color-bloem);
+  background: transparent;
+  border: 1px solid var(--color-bloem);
+  border-radius: var(--radius-md);
+  padding: 0.5rem 0.95rem;
+  cursor: pointer;
+  transition: var(--transition);
+}
+.tending-log-btn:hover {
+  background: var(--color-bloem);
+  color: #fff;
+}
+/* Taller than the pause modal (date + three fields) — let it scroll on short
+   viewports instead of running off-screen. */
+.tending-log-inner {
+  max-width: 32rem;
+  max-height: calc(100vh - 3rem);
+  overflow-y: auto;
+}
+.tending-log-date {
+  width: 100%;
+  padding: 0.6rem 0.85rem;
+  border: 1px solid rgba(16, 15, 16, 0.18);
+  border-radius: var(--radius-md);
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+  color: var(--color-ink-stained);
+  background: var(--color-blank-page);
+  margin-bottom: 1.1rem;
+}
+.tending-log-date:focus {
+  outline: none;
+  border-color: var(--color-bloem);
+  box-shadow: 0 0 0 3px rgba(112, 92, 108, 0.12);
+}
+.tending-log-error {
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  color: #b3261e;
+  margin-top: 0.75rem;
+}
 .tending-pause-actions {
   display: flex;
   justify-content: flex-end;
