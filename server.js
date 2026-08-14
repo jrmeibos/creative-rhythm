@@ -1730,16 +1730,21 @@ const WEEKLY_MEETINGS = {
 
 app.get('/calendar', requireAuth, (req, res) => {
   const userId               = req.session.user.id;
-  const courseCurrentWeekStart = getCurrentCourseWeek(req.session.user).weekStart;
+  const courseWeekInfo         = getCurrentCourseWeek(req.session.user);
+  const courseCurrentWeekStart = courseWeekInfo.weekStart;
   const currentWeekStart     = courseCurrentWeekStart;
   const courseStartDate      = db.getUserCourseStartDate(req.session.user) || currentWeekStart;
   const courseLengthWeeks    = getCourseLengthWeeks(req.session.user);
 
-  // Calendar always shows the full 12 weeks. Weeks beyond the student's
-  // paid access get rendered as locked/greyed tiles that link to /upgrade.
-  // This keeps the shape of the journey consistent and previews what's
-  // available with an upgrade.
-  const weekStarts           = generateCourseWeeks(courseStartDate, 12);
+  // Trials show a fixed 12-week grid: weeks beyond their paid access render as
+  // locked tiles linking to /upgrade, previewing what the full course unlocks.
+  // Full-course students who pass week 12 are evergreen — the grid keeps
+  // growing to their current week instead of stranding them at 12.
+  const currentWeekNumber    = courseWeekInfo.weekNumber;
+  const isTrial              = courseLengthWeeks < 12;
+  const isEvergreen          = !isTrial && typeof currentWeekNumber === 'number' && currentWeekNumber > 12;
+  const gridWeeks            = isTrial ? 12 : Math.max(12, currentWeekNumber || 12);
+  const weekStarts           = generateCourseWeeks(courseStartDate, gridWeeks);
   const allGoalsRaw          = db.getGoalsForWeeks(userId, weekStarts);
   const reflectionsRaw       = db.getWeeklyReflections(userId, weekStarts);
   const cats                 = ['curiosity', 'create', 'share', 'connect'];
@@ -1756,7 +1761,14 @@ app.get('/calendar', requireAuth, (req, res) => {
 
   const weeks = weekStarts.map((weekStart, idx) => {
     const weekNum = idx + 1;
-    const isLocked = weekNum > courseLengthWeeks;
+    // Locks are a trial-only, upgrade-funnel concept. A full-course student
+    // has paid for everything, so their weeks past 12 are never locked.
+    const isLocked = isTrial && weekNum > courseLengthWeeks;
+    // Ordinal names only cover weeks 1-12; evergreen weeks fall back to a plain
+    // number ("Week 13"). Past the curriculum the season is the student's chosen
+    // one (matches the dashboard), so tiles stay colored instead of going blank.
+    const weekName = 'Week ' + (WEEK_ORDINALS[idx] || weekNum);
+    const tileSeason = getCurricularSeason(weekNum) || req.session.user.current_season || null;
 
     // Locked weeks skip the goals/reflections/season computation — nothing
     // to render inside the tile. We still emit a stub so the view can
@@ -1766,7 +1778,7 @@ app.get('/calendar', requireAuth, (req, res) => {
         weekStart,
         weekIndex:         idx,
         weekNum,
-        weekName:          'Week ' + WEEK_ORDINALS[idx],
+        weekName,
         dateRange:         formatDateRangeShort(weekStart),
         isLocked:          true,
         isCurrentWeek:     false,
@@ -1793,7 +1805,7 @@ app.get('/calendar', requireAuth, (req, res) => {
       goalsExist[cat] = !!(gd.items && gd.items.length > 0);
     }
     const allGoalsSet   = cats.every(cat => goalsExist[cat]);
-    const curricularSeason = getCurricularSeason(weekNum);
+    const curricularSeason = tileSeason;
     const curricularSeasonLabel = getCurricularSeasonLabel(curricularSeason);
     const meetingDef = WEEKLY_MEETINGS[weekNum] || null;
     // Only show the meeting label if this student's tier includes that
@@ -1803,7 +1815,7 @@ app.get('/calendar', requireAuth, (req, res) => {
       weekStart,
       weekIndex:          idx,
       weekNum,
-      weekName:           'Week ' + WEEK_ORDINALS[idx],
+      weekName,
       dateRange:          formatDateRangeShort(weekStart),
       isLocked:           false,
       isCurrentWeek:      weekStart === currentWeekStart,
@@ -1822,7 +1834,9 @@ app.get('/calendar', requireAuth, (req, res) => {
   });
 
   res.render('calendar', {
-    title:                'Your 12-Week Journey',
+    title:                isEvergreen ? 'Your Journey' : 'Your 12-Week Journey',
+    pageHeading:          isEvergreen ? 'Your Journey' : 'Your 12-Week Journey',
+    isEvergreen,
     page:                 'calendar',
     weeks,
     currentWeekStart,

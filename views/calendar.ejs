@@ -14,7 +14,7 @@
 
       <header class="cal-page-header">
         <div>
-          <h1 class="cal-page-title">Your 12-Week Journey</h1>
+          <h1 class="cal-page-title"><%= typeof pageHeading !== 'undefined' ? pageHeading : 'Your 12-Week Journey' %></h1>
           <p class="cal-page-sub">
             Plan ahead, reflect back, tend the garden.
             <% if (hasLockedWeeks) { %>
