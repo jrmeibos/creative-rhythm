@@ -1177,6 +1177,24 @@ db.exec(`
     console.log('✓ Migrated: Wiped goal data — V2 model resets all goals; users will re-plant after Lesson 1');
   }
 
+  // Evergreen backfill: cuttings logged past the 12-week curriculum were
+  // stamped with a NULL season, because getCurricularSeason() only spans
+  // weeks 1-12. Now that logging falls back to the student's chosen season,
+  // repair the existing orphans by setting each to its owner's current_season
+  // so they group correctly in Cultivate and on community cards. One-time and
+  // flag-guarded; the UPDATE only touches NULL seasons, so a re-run is a no-op.
+  const seasonBackfillFlag = db.prepare("SELECT value FROM settings WHERE key='cuttings_null_season_backfilled'").get();
+  if (!seasonBackfillFlag) {
+    const r = db.prepare(`
+      UPDATE cuttings
+      SET season = (SELECT current_season FROM users WHERE users.id = cuttings.user_id)
+      WHERE season IS NULL
+        AND (SELECT current_season FROM users WHERE users.id = cuttings.user_id) IS NOT NULL
+    `).run();
+    db.prepare("INSERT OR IGNORE INTO settings (key, value) VALUES ('cuttings_null_season_backfilled', 'true')").run();
+    console.log(`✓ Migrated: backfilled ${r.changes} null-season cutting(s) to owner's current_season`);
+  }
+
   // Backfill notification_log for existing students.
   //
   // Without this, when the admin-milestone trigger code rolls out, the first

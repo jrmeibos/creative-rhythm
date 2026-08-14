@@ -868,11 +868,17 @@ app.post('/dashboard/cutting', requireAuth, (req, res) => {
       return res.status(400).json({ error: 'recorded_date is in the future.' });
     }
     recordedDate = rawRecorded;
-    season = seasonForRecordedDate(rawRecorded, courseStart);
+    // Past the 12-week curriculum, getCurricularSeason() (via
+    // seasonForRecordedDate) returns null. Fall back to the student's chosen
+    // season so evergreen recordings still carry one. Weeks 1-12 keep the
+    // curricular season exactly as before.
+    season = seasonForRecordedDate(rawRecorded, courseStart)
+      || res.locals.effectiveSeason || req.session.user.current_season || null;
     isBackdated = rawRecorded !== today;
   } else {
     recordedDate = today;
-    season = getCurricularSeason(getCurrentCourseWeek(req.session.user).weekNumber);
+    season = getCurricularSeason(getCurrentCourseWeek(req.session.user).weekNumber)
+      || res.locals.effectiveSeason || req.session.user.current_season || null;
     isBackdated = false;
   }
 
