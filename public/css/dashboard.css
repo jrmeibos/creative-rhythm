@@ -3236,3 +3236,63 @@ button.mid-card-cta {
   line-height: 1.5;
   white-space: pre-wrap;
 }
+
+/* ── Garden tabs — shared See / Tend / Make / Share bar across the four
+   cutting-lifecycle windows. Season-gated: locked tabs show "Opens in …". */
+.garden-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0 0 1.5rem;
+}
+.garden-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.5rem 0.95rem;
+  border-radius: 999px;
+  border: 1px solid rgba(16, 15, 16, 0.14);
+  background: var(--color-blank-page);
+  color: var(--color-ink-stained);
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  font-weight: 500;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background 0.14s ease, border-color 0.14s ease, color 0.14s ease;
+}
+.garden-tab:hover:not(.garden-tab--locked):not(.is-active) {
+  border-color: var(--color-bloem);
+  color: var(--color-bloem);
+}
+.garden-tab.is-active {
+  background: var(--color-bloem);
+  border-color: var(--color-bloem);
+  color: #fff;
+}
+.garden-tab-emoji { font-size: 0.95rem; line-height: 1; }
+.garden-tab-label { line-height: 1; }
+.garden-tab--locked {
+  opacity: 0.6;
+  cursor: default;
+  background: transparent;
+  border-style: dashed;
+}
+.garden-tab-lock {
+  font-size: 0.72rem;
+  font-weight: 400;
+  opacity: 0.85;
+  margin-left: 0.1rem;
+  padding-left: 0.5rem;
+  border-left: 1px solid rgba(16, 15, 16, 0.18);
+}
+@media (max-width: 640px) {
+  .garden-tabs {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 0.3rem;
+  }
+  .garden-tab { flex: 0 0 auto; }
+  .garden-tab-lock { display: none; }
+}

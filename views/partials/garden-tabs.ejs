@@ -1,0 +1,33 @@
+<%# Season-gated tab bar for the cutting lifecycle: See -> Tend -> Make ->
+    Share. Rendered at the top of all four windows so they read as one place.
+    Unlock flags come from the effective-season middleware (res.locals):
+      showTending (Spring+), showSummer (Summer+), showAutumn (Autumn).
+    The caller passes gardenTab = 'see' | 'tend' | 'make' | 'share'. Locked
+    tabs stay visible with an "Opens in <Season>" hint (progression map). %>
+<%
+  const _active = (typeof gardenTab !== 'undefined') ? gardenTab : null;
+  const _tabs = [
+    { key: 'see',   emoji: '🌿', label: 'See cuttings',    href: '/greenhouse/cuttings',          unlocked: true,                 opensIn: null },
+    { key: 'tend',  emoji: '🪴', label: 'Tend cuttings',   href: '/tending',                      unlocked: !!locals.showTending, opensIn: 'Spring' },
+    { key: 'make',  emoji: '✂️', label: 'Make something',  href: '/greenhouse/propagation-table', unlocked: !!locals.showSummer,  opensIn: 'Summer' },
+    { key: 'share', emoji: '💐', label: 'Share the bounty', href: '/grove',                       unlocked: !!locals.showAutumn,  opensIn: 'Autumn' },
+  ];
+%>
+<nav class="garden-tabs" aria-label="Your cuttings">
+  <% _tabs.forEach(function (t) { %>
+    <% if (t.unlocked) { %>
+      <a href="<%= t.href %>"
+         class="garden-tab <%= t.key === _active ? 'is-active' : '' %>"
+         <%= t.key === _active ? 'aria-current="page"' : '' %>>
+        <span class="garden-tab-emoji" aria-hidden="true"><%= t.emoji %></span>
+        <span class="garden-tab-label"><%= t.label %></span>
+      </a>
+    <% } else { %>
+      <span class="garden-tab garden-tab--locked" aria-disabled="true">
+        <span class="garden-tab-emoji" aria-hidden="true">🔒</span>
+        <span class="garden-tab-label"><%= t.label %></span>
+        <span class="garden-tab-lock">Opens in <%= t.opensIn %></span>
+      </span>
+    <% } %>
+  <% }); %>
+</nav>
