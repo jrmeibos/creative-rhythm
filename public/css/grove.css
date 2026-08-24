@@ -151,6 +151,11 @@
   height: 90px;
   margin: -6px auto 0;
   pointer-events: none;
+  --bq-scale: 1;
+}
+@media (max-width: 1179px) {
+  /* Flowers shrink ~480->380px here, so the per-flower stem offset shrinks too. */
+  .grove-bouquet-stem-ends-layer { --bq-scale: 0.79; }
 }
 .grove-bouquet-stem-end {
   position: absolute;
@@ -159,11 +164,28 @@
   width: 3px;
   background: var(--color-understory);
   border-radius: 2px;
-  transform: translateX(calc(-50% + var(--dx, 0px)))
-             rotate(calc(-1 * var(--tilt, 0deg)));
+  /* Sit under the flower's actual stem: its horizontal jitter (--dx) plus the
+     per-flower stem-base offset (--stem-cx), mirrored by --flip and scaled to
+     the current bouquet size, then continue the flower's lean (also mirrored). */
+  transform: translateX(calc(-50% + var(--dx, 0px) + var(--stem-cx, 0px) * var(--flip, 1) * var(--bq-scale, 1)))
+             rotate(calc(var(--tilt, 0deg) * var(--flip, 1)));
   transform-origin: top center;
   opacity: 0.8;
 }
+/* Per-flower stem-base offsets (px at desktop size), measured from each flower
+   illustration so the poking-out stem lines up with its bloom above the tie. */
+.grove-bouquet-stem-end[data-variant="01"] { --stem-cx: -27px; }
+.grove-bouquet-stem-end[data-variant="02"] { --stem-cx:  -3px; }
+.grove-bouquet-stem-end[data-variant="03"] { --stem-cx: -15px; }
+.grove-bouquet-stem-end[data-variant="04"] { --stem-cx:   4px; }
+.grove-bouquet-stem-end[data-variant="05"] { --stem-cx:  -6px; }
+.grove-bouquet-stem-end[data-variant="06"] { --stem-cx:   5px; }
+.grove-bouquet-stem-end[data-variant="07"] { --stem-cx:  -1px; }
+.grove-bouquet-stem-end[data-variant="08"] { --stem-cx:   2px; }
+.grove-bouquet-stem-end[data-variant="09"] { --stem-cx:  -3px; }
+.grove-bouquet-stem-end[data-variant="10"] { --stem-cx:  20px; }
+.grove-bouquet-stem-end[data-variant="11"] { --stem-cx: -44px; }
+.grove-bouquet-stem-end[data-variant="12"] { --stem-cx:  -7px; }
 
 .grove-bouquet-caption {
   margin-top: 1rem;

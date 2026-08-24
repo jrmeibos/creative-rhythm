@@ -63,15 +63,10 @@
                   // distribute evenly within the fan.
                   const fanRange = 30; // total degrees, split symmetrically
                   const fanStep  = fanRange / Math.max(stemCount - 1, 1);
-                  // How wide the stem ends spread across the tied bottom.
-                  // Capped at 34px total so even at high stem counts the
-                  // bunch stays inside the wrap's narrow tied portion.
-                  const endSpread    = Math.min(34, 3 * stemCount);
-                  const endSpreadStep = endSpread / Math.max(stemCount - 1, 1);
-                  // Precompute per-stem layout so the flower up top and the
-                  // matching stem-end below the wrap share the same tilt/dx.
-                  // Also track how many times each variant has appeared so
-                  // even occurrences render mirrored — repeats look distinct.
+                  // Precompute per-stem layout. The stem-end below the wrap
+                  // reuses the flower's dx/tilt/flip/variant and CSS offsets it
+                  // (--stem-cx per variant) so it sits under the flower's actual
+                  // stem. Track variant repeats so even occurrences mirror.
                   var variantCounts = {};
                   var stemLayouts = stemEntries.map(function (e, i) {
                     var variant = e.stem_variant || (((e.make_id * 7) % 12) + 1);
@@ -80,14 +75,11 @@
                     var occurrence = variantCounts[vKey];
                     var baseTilt = (i - (stemCount - 1) / 2) * fanStep;
                     var tiltJitter = ((e.make_id * 11) % 5) - 2;
-                    var endDxBase = (i - (stemCount - 1) / 2) * endSpreadStep;
-                    var endDxJitter = ((e.make_id * 5) % 5) - 2;
                     return {
                       entry:   e,
                       variant: vKey.padStart(2, '0'),
                       tilt:    Math.round(baseTilt + tiltJitter),
                       dx:      ((e.make_id * 7) % 7) - 3,
-                      endDx:   Math.round(endDxBase + endDxJitter),
                       zi:      stemCount - i,
                       endLen:  55 + ((e.make_id * 13) % 20),  // 55-74px
                       flip:    (occurrence % 2 === 0) ? -1 : 1,
@@ -120,7 +112,8 @@
               <div class="grove-bouquet-stem-ends-layer" aria-hidden="true">
                 <% stemLayouts.forEach(function (L) { %>
                   <span class="grove-bouquet-stem-end"
-                        style="--dx: <%= L.endDx %>px; --tilt: <%= L.tilt %>deg; height: <%= L.endLen %>px;"></span>
+                        data-variant="<%= L.variant %>"
+                        style="--dx: <%= L.dx %>px; --tilt: <%= L.tilt %>deg; --flip: <%= L.flip %>; height: <%= L.endLen %>px;"></span>
                 <% }); %>
               </div>
             <% } %>
