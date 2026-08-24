@@ -31,101 +31,76 @@
 
   <% } else { %>
 
-    <ul class="summer-cuttings">
-      <% cuttings.forEach(function (c) {
-           const dateLabel = c.recorded_date
-             ? new Date(c.recorded_date + 'T00:00:00').toLocaleDateString('en-US', {
-                 weekday: 'long', month: 'long', day: 'numeric',
-               })
-             : '';
-           const existing = makesByCutting.get(c.id) || [];
-      %>
-        <li class="summer-cutting" data-cutting-id="<%= c.id %>">
-          <div class="summer-cutting-date"><%= dateLabel %></div>
+    <%
+      // Split the Cultivate pile so finished cuttings don't clutter the
+      // working list. "Made" = has at least one idea marked created.
+      const readyCuttings = [];
+      const madeCuttings  = [];
+      cuttings.forEach(function (c) {
+        const ex = makesByCutting.get(c.id) || [];
+        (ex.some(function (m) { return m.created; }) ? madeCuttings : readyCuttings).push(c);
+      });
+    %>
 
-          <div class="summer-cutting-body">
-            <% if (c.talked_about) { %>
-              <p class="summer-cutting-field"><%= c.talked_about %></p>
-            <% } %>
-            <% if (c.takeaway) { %>
-              <p class="summer-cutting-takeaway"><%= c.takeaway %></p>
-            <% } %>
-          </div>
+    <% if (readyCuttings.length > 0) { %>
+      <ul class="summer-cuttings">
+        <% readyCuttings.forEach(function (c) { %>
+          <%- include('cultivated-cutting', { c: c, existing: (makesByCutting.get(c.id) || []), formats: formats }) %>
+        <% }); %>
+      </ul>
+    <% } else { %>
+      <div class="summer-empty">
+        <p class="summer-empty-headline">You've made something from all of them.</p>
+        <p class="summer-empty-body">
+          Everything in your Cultivate pile has been turned into something —
+          nice work. New cuttings you mark 🪴 <strong>Cultivate</strong> in
+          <a href="/tending">Tending</a> will show up here to make.
+        </p>
+      </div>
+    <% } %>
 
-          <% if (existing.length > 0) { %>
-            <div class="summer-cutting-existing">
-              <span class="summer-cutting-existing-label">Format ideas</span>
-              <% existing.forEach(function (m) { %>
-                <span class="summer-existing-chip <%= m.created ? 'is-created' : '' %>"
-                      data-make-id="<%= m.id %>">
-                  <button type="button" class="summer-existing-chip-toggle"
-                          data-summer-toggle data-make-id="<%= m.id %>"
-                          data-created="<%= m.created ? '1' : '0' %>"
-                          aria-pressed="<%= m.created ? 'true' : 'false' %>"
-                          title="<%= m.created ? 'Marked as created — click to unmark' : 'Not yet created — click to mark created' %>">
-                    <span class="summer-existing-chip-check" aria-hidden="true"><%= m.created ? '✓' : '○' %></span>
-                    <span class="summer-existing-chip-emoji" aria-hidden="true"><%= m.format_emoji || '🌿' %></span>
-                    <span class="summer-existing-chip-name"><%= m.format_name %></span>
-                  </button>
-                  <button type="button" class="summer-existing-chip-remove"
-                          data-summer-remove data-make-id="<%= m.id %>"
-                          data-name="<%= m.format_name %>"
-                          aria-label="Delete this format idea">×</button>
-                </span>
-              <% }); %>
-            </div>
-          <% } %>
-
-          <button type="button" class="summer-make-btn"
-                  data-summer-make data-cutting-id="<%= c.id %>">
-            + Add a format idea
-          </button>
-
-          <!-- Inline picker (hidden until "+ Add a format idea" clicked) -->
-          <div class="summer-make-picker" hidden data-summer-make-picker="<%= c.id %>">
-            <label class="summer-make-picker-created">
-              <input type="checkbox" data-summer-make-created>
-              <span>I've already created this one</span>
-            </label>
-
-            <p class="summer-make-picker-help">
-              Pick a format, add a note if you like, then Save.
-            </p>
-            <div class="summer-format-grid">
-              <% formats.forEach(function (f) { %>
-                <button type="button" class="summer-format-chip"
-                        data-summer-format="<%= f.id %>">
-                  <span class="summer-format-chip-emoji" aria-hidden="true"><%= f.emoji || '🌿' %></span>
-                  <span class="summer-format-chip-name"><%= f.name %></span>
-                </button>
-              <% }); %>
-            </div>
-
-            <label class="summer-make-picker-label" for="summer-note-<%= c.id %>">
-              Note about this idea (optional)
-            </label>
-            <textarea class="summer-make-picker-note"
-                      id="summer-note-<%= c.id %>"
-                      rows="2"
-                      placeholder="Anything to remember about how you'd shape this."></textarea>
-
-            <div class="summer-make-picker-footer">
-              <p class="summer-make-picker-error" hidden></p>
-              <button type="button" class="summer-make-picker-cancel"
-                      data-summer-make-cancel>Cancel</button>
-              <button type="button" class="summer-make-picker-save"
-                      data-summer-make-save disabled>Save idea</button>
-            </div>
-          </div>
-        </li>
-      <% }); %>
-    </ul>
+    <% if (madeCuttings.length > 0) { %>
+      <section class="summer-made-section">
+        <h3 class="summer-made-title">
+          Already made <span class="summer-made-count"><%= madeCuttings.length %></span>
+        </h3>
+        <p class="summer-made-intro">
+          These have been turned into something and are tucked out of the way.
+          You can still add more ideas, or unmark one to bring it back up.
+        </p>
+        <ul class="summer-cuttings summer-cuttings--made">
+          <% madeCuttings.forEach(function (c) { %>
+            <%- include('cultivated-cutting', { c: c, existing: (makesByCutting.get(c.id) || []), formats: formats }) %>
+          <% }); %>
+        </ul>
+      </section>
+    <% } %>
 
   <% } %>
 </section>
 
 <script>
   (function () {
+    // Save is allowed with a format OR just a note — enable it whenever either
+    // is present, so an idea can be jotted before a format is chosen.
+    function updateSaveState(picker) {
+      const saveTarget = picker.querySelector('[data-summer-make-save]');
+      if (!saveTarget) return;
+      const hasFormat = !!picker.querySelector('.summer-format-chip.is-selected');
+      const ta = picker.querySelector('.summer-make-picker-note');
+      const hasNote = !!(ta && ta.value.trim());
+      saveTarget.disabled = !(hasFormat || hasNote);
+    }
+
+    // Typing a note (with no format picked) should enable Save too.
+    document.addEventListener('input', function (e) {
+      const ta = e.target.closest('.summer-make-picker-note');
+      if (ta) {
+        const picker = ta.closest('[data-summer-make-picker]');
+        if (picker) updateSaveState(picker);
+      }
+    });
+
     // Open / close inline pickers + save / toggle / delete format ideas.
     // Delegated on document so cuttings added later still work.
     document.addEventListener('click', function (e) {
@@ -135,6 +110,7 @@
         const picker = document.querySelector('[data-summer-make-picker="' + id + '"]');
         if (picker) {
           picker.hidden = false;
+          updateSaveState(picker);
           const ta = picker.querySelector('.summer-make-picker-note');
           if (ta) ta.focus();
         }
@@ -163,27 +139,27 @@
           fmtBtn.classList.add('is-selected');
           fmtBtn.setAttribute('aria-pressed', 'true');
         }
-        const saveTarget = picker.querySelector('[data-summer-make-save]');
-        if (saveTarget) saveTarget.disabled = !picker.querySelector('.summer-format-chip.is-selected');
+        updateSaveState(picker);
         const errEl = picker.querySelector('.summer-make-picker-error');
         if (errEl) errEl.hidden = true;
         return;
       }
 
-      // Save the selected format + note as a new format idea.
+      // Save the selected format + note as an idea. A format is optional — a
+      // note on its own saves a formatless "No format yet" idea.
       const saveBtn = e.target.closest('[data-summer-make-save]');
       if (saveBtn) {
         const picker    = saveBtn.closest('[data-summer-make-picker]');
         const cuttingId = picker.getAttribute('data-summer-make-picker');
         const selected  = picker.querySelector('.summer-format-chip.is-selected');
-        const errEl     = picker.querySelector('.summer-make-picker-error');
-        if (!selected) {
-          if (errEl) { errEl.textContent = 'Pick a format first.'; errEl.hidden = false; }
-          return;
-        }
-        const formatId  = selected.getAttribute('data-summer-format');
         const ta        = picker.querySelector('.summer-make-picker-note');
         const note      = ta ? ta.value.trim() : '';
+        const errEl     = picker.querySelector('.summer-make-picker-error');
+        if (!selected && !note) {
+          if (errEl) { errEl.textContent = 'Pick a format or add a note.'; errEl.hidden = false; }
+          return;
+        }
+        const formatId  = selected ? selected.getAttribute('data-summer-format') : null;
         const createdCb = picker.querySelector('[data-summer-make-created]');
         const created   = createdCb ? !!createdCb.checked : false;
         saveBtn.disabled = true;

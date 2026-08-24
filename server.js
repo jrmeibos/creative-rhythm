@@ -3504,19 +3504,34 @@ app.post('/summer/make/:cuttingId', requireAuth, (req, res) => {
     return res.status(400).json({ error: 'Invalid cutting id.' });
   }
   const { formatId, note, created } = req.body || {};
+  const noteTrim = (typeof note === 'string' ? note.trim() : '');
   const fid = parseInt(formatId, 10);
-  if (!Number.isInteger(fid) || fid <= 0) {
-    return res.status(400).json({ error: 'Invalid format id.' });
-  }
+  const hasFormat = Number.isInteger(fid) && fid > 0;
+
   // Ownership + eligibility checks — only Cultivate cuttings the student
   // owns can be posted against. Ineligible cases (Sit-with, Compost,
   // other user's cutting) return 403 rather than silently succeeding.
   if (!db.isCuttingCultivateForUser(cuttingId, req.session.user.id)) {
     return res.status(403).json({ error: 'Cutting is not in your Cultivate pile.' });
   }
-  const format = db.getFormatById(fid, req.session.user.id);
-  if (!format) {
-    return res.status(400).json({ error: 'Format not found.' });
+
+  let format;
+  if (hasFormat) {
+    format = db.getFormatById(fid, req.session.user.id);
+    if (!format) {
+      return res.status(400).json({ error: 'Format not found.' });
+    }
+  } else {
+    // No format chosen — save it as a formatless idea, but only if there's a
+    // note to remember it by (otherwise there's nothing to save). Points at
+    // the reserved "No format yet" format so the FK stays valid.
+    if (!noteTrim) {
+      return res.status(400).json({ error: 'Add a note or pick a format.' });
+    }
+    format = db.getUnassignedFormat();
+    if (!format) {
+      return res.status(500).json({ error: 'Could not save idea. Try again.' });
+    }
   }
   const isCreated = created === true || created === 1 || created === '1';
   const makeId = db.recordCuttingMake(

@@ -1587,22 +1587,41 @@ function seedContentFormats() {
   const existing = db.prepare(
     'SELECT COUNT(*) AS c FROM content_formats WHERE user_id IS NULL'
   ).get().c;
-  if (existing > 0) return;
-  const ins = db.prepare(`
-    INSERT INTO content_formats
-      (user_id, slug, name, emoji, description, detail_content, position)
-    VALUES (NULL, ?, ?, ?, ?, ?, ?)
-  `);
-  BUILTIN_CONTENT_FORMATS.forEach((f, i) => {
-    // Placeholder detail — plain paragraphs, blank line between them. Julia
-    // will replace with real "how to repurpose" guidance later. Keep it
-    // simple: no markdown parser needed, the view splits on \n\n.
-    const detail =
-      `${f.description}\n\n` +
-      `How to repurpose a cutting into this format — coming soon.`;
-    ins.run(f.slug, f.name, f.emoji, f.description, detail, i);
-  });
-  console.log(`✓ Seeded ${BUILTIN_CONTENT_FORMATS.length} built-in content formats`);
+  if (existing === 0) {
+    const ins = db.prepare(`
+      INSERT INTO content_formats
+        (user_id, slug, name, emoji, description, detail_content, position)
+      VALUES (NULL, ?, ?, ?, ?, ?, ?)
+    `);
+    BUILTIN_CONTENT_FORMATS.forEach((f, i) => {
+      // Placeholder detail — plain paragraphs, blank line between them. Julia
+      // will replace with real "how to repurpose" guidance later. Keep it
+      // simple: no markdown parser needed, the view splits on \n\n.
+      const detail =
+        `${f.description}\n\n` +
+        `How to repurpose a cutting into this format — coming soon.`;
+      ins.run(f.slug, f.name, f.emoji, f.description, detail, i);
+    });
+    console.log(`✓ Seeded ${BUILTIN_CONTENT_FORMATS.length} built-in content formats`);
+  }
+
+  // Reserved "No format yet" format. Formatless idea saves (someone jots a
+  // note before deciding on a format) point at this so cutting_makes.format_id
+  // stays a valid, non-null FK. Hidden from the picker via getFormatsForUser.
+  // Added after the original seed, so ensure it on every boot (idempotent by
+  // slug) rather than only on a fresh DB.
+  const unassigned = db.prepare(
+    "SELECT id FROM content_formats WHERE user_id IS NULL AND slug = 'unassigned'"
+  ).get();
+  if (!unassigned) {
+    db.prepare(`
+      INSERT INTO content_formats
+        (user_id, slug, name, emoji, description, detail_content, position)
+      VALUES (NULL, 'unassigned', 'No format yet', '💭',
+              'An idea saved before choosing a format.', '', 999)
+    `).run();
+    console.log('✓ Seeded reserved "No format yet" format');
+  }
 }
 
 // Each init call wrapped so a failure (often caused by an upstream migration
@@ -3177,8 +3196,17 @@ module.exports = {
       FROM content_formats
       WHERE (user_id IS NULL OR user_id = ?)
         AND archived = 0
+        AND slug != 'unassigned'
       ORDER BY (user_id IS NULL) DESC, position ASC, id ASC
     `).all(userId);
+  },
+
+  // The reserved "No format yet" format that formatless idea saves point at.
+  // Returns null if it somehow isn't seeded (route treats that as an error).
+  getUnassignedFormat() {
+    return db.prepare(
+      "SELECT id, slug, name, emoji FROM content_formats WHERE user_id IS NULL AND slug = 'unassigned'"
+    ).get() || null;
   },
 
   // Look up a single format by id. Ownership check: built-ins (user_id

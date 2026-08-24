@@ -1,0 +1,93 @@
+<%# One Cultivate cutting card. Locals: c (cutting), existing (its makes),
+    formats (pickable formats). Shared by the "to make" and "already made"
+    sections of the Cultivated Ideas list so both render identically. %>
+<%
+  const dateLabel = c.recorded_date
+    ? new Date(c.recorded_date + 'T00:00:00').toLocaleDateString('en-US', {
+        weekday: 'long', month: 'long', day: 'numeric',
+      })
+    : '';
+%>
+<li class="summer-cutting" data-cutting-id="<%= c.id %>">
+  <div class="summer-cutting-date"><%= dateLabel %></div>
+
+  <div class="summer-cutting-body">
+    <% if (c.talked_about) { %>
+      <p class="summer-cutting-field"><%= c.talked_about %></p>
+    <% } %>
+    <% if (c.takeaway) { %>
+      <p class="summer-cutting-takeaway"><%= c.takeaway %></p>
+    <% } %>
+  </div>
+
+  <% if (existing.length > 0) { %>
+    <div class="summer-cutting-existing">
+      <span class="summer-cutting-existing-label">Format ideas</span>
+      <% existing.forEach(function (m) { %>
+        <%# A formatless idea (no format chosen) points at the reserved
+            "unassigned" format — show its note as the label instead. %>
+        <% const isUnassigned = m.format_slug === 'unassigned'; %>
+        <% const noteText = (m.note && m.note.trim()) ? m.note.trim() : ''; %>
+        <% const chipLabel = isUnassigned ? (noteText ? (noteText.length > 42 ? noteText.slice(0, 42) + '…' : noteText) : 'Idea') : m.format_name; %>
+        <span class="summer-existing-chip <%= m.created ? 'is-created' : '' %> <%= isUnassigned ? 'summer-existing-chip--idea' : '' %>"
+              data-make-id="<%= m.id %>">
+          <button type="button" class="summer-existing-chip-toggle"
+                  data-summer-toggle data-make-id="<%= m.id %>"
+                  data-created="<%= m.created ? '1' : '0' %>"
+                  aria-pressed="<%= m.created ? 'true' : 'false' %>"
+                  title="<%= m.created ? 'Made — click to unmark' : 'Not yet made — click to mark made' %>">
+            <span class="summer-existing-chip-check" aria-hidden="true"><%= m.created ? '✓' : '○' %></span>
+            <span class="summer-existing-chip-emoji" aria-hidden="true"><%= m.format_emoji || '🌿' %></span>
+            <span class="summer-existing-chip-name" <% if (isUnassigned && noteText) { %>title="<%= noteText %>"<% } %>><%= chipLabel %></span>
+          </button>
+          <button type="button" class="summer-existing-chip-remove"
+                  data-summer-remove data-make-id="<%= m.id %>"
+                  data-name="<%= isUnassigned ? 'this idea' : m.format_name %>"
+                  aria-label="Delete this format idea">×</button>
+        </span>
+      <% }); %>
+    </div>
+  <% } %>
+
+  <button type="button" class="summer-make-btn"
+          data-summer-make data-cutting-id="<%= c.id %>">
+    + Add a format idea
+  </button>
+
+  <!-- Inline picker (hidden until "+ Add a format idea" clicked) -->
+  <div class="summer-make-picker" hidden data-summer-make-picker="<%= c.id %>">
+    <label class="summer-make-picker-created">
+      <input type="checkbox" data-summer-make-created>
+      <span>I've already created this one</span>
+    </label>
+
+    <p class="summer-make-picker-help">
+      Pick a format, or just jot a note — then Save.
+    </p>
+    <div class="summer-format-grid">
+      <% formats.forEach(function (f) { %>
+        <button type="button" class="summer-format-chip"
+                data-summer-format="<%= f.id %>">
+          <span class="summer-format-chip-emoji" aria-hidden="true"><%= f.emoji || '🌿' %></span>
+          <span class="summer-format-chip-name"><%= f.name %></span>
+        </button>
+      <% }); %>
+    </div>
+
+    <label class="summer-make-picker-label" for="summer-note-<%= c.id %>">
+      Note about this idea (optional)
+    </label>
+    <textarea class="summer-make-picker-note"
+              id="summer-note-<%= c.id %>"
+              rows="2"
+              placeholder="Anything to remember about how you'd shape this."></textarea>
+
+    <div class="summer-make-picker-footer">
+      <p class="summer-make-picker-error" hidden></p>
+      <button type="button" class="summer-make-picker-cancel"
+              data-summer-make-cancel>Cancel</button>
+      <button type="button" class="summer-make-picker-save"
+              data-summer-make-save disabled>Save idea</button>
+    </div>
+  </div>
+</li>
