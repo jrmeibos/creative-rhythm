@@ -141,52 +141,6 @@
   .grove-bouquet-stem[src$="stem-12.svg"] { height: 214px; bottom: 166px; }
   .grove-bouquet-stem[src$="stem-01.svg"] { height: 285px; bottom: 95px; }
 }
-/* Stem ends poking out below the tied bottom of the wrap. Each end
-   shares the same --dx and --tilt as its matching flower stem above,
-   but the tilt is negated so the line continues in the same axis
-   through the tie point. Layer is wide enough for the fan to spread. */
-.grove-bouquet-stem-ends-layer {
-  position: relative;
-  width: 200px;
-  height: 90px;
-  margin: -6px auto 0;
-  pointer-events: none;
-  --bq-scale: 1;
-}
-@media (max-width: 1179px) {
-  /* Flowers shrink ~480->380px here, so the per-flower stem offset shrinks too. */
-  .grove-bouquet-stem-ends-layer { --bq-scale: 0.79; }
-}
-.grove-bouquet-stem-end {
-  position: absolute;
-  top: 0;
-  left: 50%;
-  width: 3px;
-  background: var(--color-understory);
-  border-radius: 2px;
-  /* Sit under the flower's actual stem: its horizontal jitter (--dx) plus the
-     per-flower stem-base offset (--stem-cx), mirrored by --flip and scaled to
-     the current bouquet size, then continue the flower's lean (also mirrored). */
-  transform: translateX(calc(-50% + var(--dx, 0px) + var(--stem-cx, 0px) * var(--flip, 1) * var(--bq-scale, 1)))
-             rotate(calc(var(--tilt, 0deg) * var(--flip, 1)));
-  transform-origin: top center;
-  opacity: 0.8;
-}
-/* Per-flower stem-base offsets (px at desktop size), measured from each flower
-   illustration so the poking-out stem lines up with its bloom above the tie. */
-.grove-bouquet-stem-end[data-variant="01"] { --stem-cx: -27px; }
-.grove-bouquet-stem-end[data-variant="02"] { --stem-cx:  -3px; }
-.grove-bouquet-stem-end[data-variant="03"] { --stem-cx: -15px; }
-.grove-bouquet-stem-end[data-variant="04"] { --stem-cx:   4px; }
-.grove-bouquet-stem-end[data-variant="05"] { --stem-cx:  -6px; }
-.grove-bouquet-stem-end[data-variant="06"] { --stem-cx:   5px; }
-.grove-bouquet-stem-end[data-variant="07"] { --stem-cx:  -1px; }
-.grove-bouquet-stem-end[data-variant="08"] { --stem-cx:   2px; }
-.grove-bouquet-stem-end[data-variant="09"] { --stem-cx:  -3px; }
-.grove-bouquet-stem-end[data-variant="10"] { --stem-cx:  20px; }
-.grove-bouquet-stem-end[data-variant="11"] { --stem-cx: -44px; }
-.grove-bouquet-stem-end[data-variant="12"] { --stem-cx:  -7px; }
-
 .grove-bouquet-caption {
   margin-top: 1rem;
   font-family: var(--font-body);
