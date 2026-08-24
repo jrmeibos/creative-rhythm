@@ -1,0 +1,210 @@
+<%# One Grove entry (a created make). Locals: e (entry row), linksByMake
+    (Map make_id -> links), communityDiscordUrl. Shared by the "on deck",
+    "already shared", and "just for you" sections so all render identically. %>
+<%
+  const dateLabel = e.recorded_date
+    ? new Date(e.recorded_date + 'T00:00:00').toLocaleDateString('en-US', {
+        weekday: 'long', month: 'long', day: 'numeric',
+      })
+    : '';
+  const madeAtLabel = e.made_at
+    ? new Date(e.made_at.replace(' ', 'T') + 'Z').toLocaleDateString('en-US', {
+        month: 'short', day: 'numeric', year: 'numeric',
+      })
+    : '';
+  const entryLinks = linksByMake.get(e.make_id) || [];
+%>
+<li class="grove-entry <%= e.just_for_me ? 'is-just-for-me' : '' %>"
+    data-make-id="<%= e.make_id %>">
+  <div class="grove-entry-header">
+    <span class="grove-entry-format">
+      <span aria-hidden="true"><%= e.format_emoji || '🌿' %></span>
+      <%= e.format_name %>
+    </span>
+    <span class="grove-entry-date">Made <%= madeAtLabel %></span>
+  </div>
+
+  <div class="grove-entry-cutting">
+    <div class="grove-entry-cutting-date"><%= dateLabel %></div>
+    <% if (e.talked_about) { %>
+      <p class="grove-entry-cutting-line"><%= e.talked_about %></p>
+    <% } %>
+    <% if (e.takeaway) { %>
+      <p class="grove-entry-cutting-takeaway"><%= e.takeaway %></p>
+    <% } %>
+  </div>
+
+  <!-- ── Just-for-me toggle ─────────────────────────────── -->
+  <div class="grove-entry-jfm-row">
+    <button type="button"
+            class="grove-entry-jfm-btn <%= e.just_for_me ? 'is-on' : '' %>"
+            data-grove-jfm data-make-id="<%= e.make_id %>"
+            data-value="<%= e.just_for_me ? '1' : '0' %>"
+            aria-pressed="<%= e.just_for_me ? 'true' : 'false' %>">
+      <span class="grove-entry-jfm-check" aria-hidden="true"><%= e.just_for_me ? '✓' : '○' %></span>
+      Just for me
+    </button>
+    <% if (e.just_for_me) { %>
+      <span class="grove-entry-jfm-note">Nothing to share — this one's yours.</span>
+    <% } %>
+  </div>
+
+  <!-- ── Published links (hidden when just-for-me) ─────── -->
+  <div class="grove-entry-links <%= e.just_for_me ? 'is-disabled' : '' %>">
+    <div class="grove-entry-links-header">
+      <span class="grove-entry-links-label">Shared publicly</span>
+    </div>
+
+    <% if (entryLinks.length > 0) { %>
+      <ul class="grove-entry-links-list">
+        <% entryLinks.forEach(function (l) { %>
+          <li class="grove-entry-link-item" data-link-id="<%= l.id %>">
+            <div class="grove-entry-link">
+              <% if (l.label) { %>
+                <span class="grove-entry-link-label"><%= l.label %></span>
+              <% } %>
+              <a href="<%= l.url %>" target="_blank" rel="noopener" class="grove-entry-link-url">
+                <%= l.url %>
+              </a>
+              <button type="button" class="grove-entry-link-remove"
+                      data-grove-link-remove data-link-id="<%= l.id %>"
+                      aria-label="Remove this link">×</button>
+            </div>
+          </li>
+        <% }); %>
+      </ul>
+    <% } %>
+
+    <!-- Add-link form -->
+    <button type="button" class="grove-entry-link-add-btn"
+            data-grove-link-open data-make-id="<%= e.make_id %>"
+            <%= e.just_for_me ? 'disabled' : '' %>>
+      + Add a link
+    </button>
+
+    <form class="grove-entry-link-form" hidden
+          data-grove-link-form="<%= e.make_id %>" onsubmit="return false">
+      <div class="grove-entry-link-form-row">
+        <label class="grove-entry-link-field grove-entry-link-field--label">
+          <span class="grove-entry-link-field-hint">Platform (optional)</span>
+          <input type="text" name="label" maxlength="40" placeholder="Instagram, LinkedIn…">
+        </label>
+        <label class="grove-entry-link-field grove-entry-link-field--url">
+          <span class="grove-entry-link-field-hint">Link to your post</span>
+          <input type="url" name="url" required placeholder="https://…">
+        </label>
+      </div>
+      <div class="grove-entry-link-form-actions">
+        <button type="button" class="grove-entry-link-form-cancel"
+                data-grove-link-cancel>Cancel</button>
+        <button type="button" class="grove-entry-link-form-save"
+                data-grove-link-save>Save link</button>
+        <p class="grove-entry-link-form-error" hidden></p>
+      </div>
+    </form>
+  </div>
+
+  <!-- ── Shared with the cohort (via Discord) — hidden when
+       just-for-me. Optional discord_url deep-links back to
+       the post the student made in the cohort's Discord. -->
+  <div class="grove-entry-cohort <%= e.just_for_me ? 'is-disabled' : '' %>">
+    <div class="grove-entry-cohort-header">
+      <span class="grove-entry-cohort-label">Shared with the cohort</span>
+    </div>
+
+    <% if (e.cohort_shared) { %>
+      <%
+        const cohortAtLabel = e.cohort_shared_at
+          ? new Date(e.cohort_shared_at.replace(' ', 'T') + 'Z').toLocaleDateString('en-US', {
+              month: 'short', day: 'numeric', year: 'numeric',
+            })
+          : '';
+      %>
+      <div class="grove-entry-cohort-view">
+        <span class="grove-entry-cohort-pill" aria-hidden="true">🎉</span>
+        <span class="grove-entry-cohort-body">
+          Shared with the cohort<% if (cohortAtLabel) { %> on <%= cohortAtLabel %><% } %>.
+          <% if (e.discord_url) { %>
+            <a href="<%= e.discord_url %>" target="_blank" rel="noopener"
+               class="grove-entry-cohort-url">View on Discord →</a>
+          <% } %>
+        </span>
+        <button type="button" class="grove-entry-cohort-edit-btn"
+                data-grove-cohort-open data-make-id="<%= e.make_id %>">Edit</button>
+        <button type="button" class="grove-entry-cohort-undo-btn"
+                data-grove-cohort-undo data-make-id="<%= e.make_id %>"
+                aria-label="Un-share from the cohort">Undo</button>
+      </div>
+    <% } else { %>
+      <button type="button" class="grove-entry-cohort-add-btn"
+              data-grove-cohort-open data-make-id="<%= e.make_id %>"
+              <%= e.just_for_me ? 'disabled' : '' %>>
+        + Share with the cohort
+      </button>
+    <% } %>
+
+    <form class="grove-entry-cohort-form" hidden
+          data-grove-cohort-form="<%= e.make_id %>" onsubmit="return false">
+      <p class="grove-entry-cohort-form-hint">
+        <% if (locals.communityDiscordUrl) { %>
+          Head to <a href="<%= locals.communityDiscordUrl %>" target="_blank" rel="noopener">the cohort Discord</a>
+          and post your creation. Then paste the message link
+          here (optional — you can add it later).
+        <% } else { %>
+          Head to Discord and post your creation. Then paste the
+          message link here (optional — you can add it later).
+        <% } %>
+      </p>
+      <label class="grove-entry-cohort-field">
+        <span class="grove-entry-cohort-field-hint">Discord message link (optional)</span>
+        <input type="url" name="discord_url" placeholder="https://discord.com/channels/…"
+               value="<%= e.discord_url || '' %>">
+      </label>
+      <div class="grove-entry-cohort-form-actions">
+        <button type="button" class="grove-entry-cohort-form-cancel"
+                data-grove-cohort-cancel>Cancel</button>
+        <button type="button" class="grove-entry-cohort-form-save"
+                data-grove-cohort-save data-make-id="<%= e.make_id %>">
+          <%= e.cohort_shared ? 'Save' : 'Mark as shared' %>
+        </button>
+        <p class="grove-entry-cohort-form-error" hidden></p>
+      </div>
+    </form>
+  </div>
+
+  <!-- ── Per-entry share reflection ("what was it like to share this?") ── -->
+  <div class="grove-entry-share-note-row">
+    <% if (e.share_note) { %>
+      <div class="grove-entry-share-note-view" data-grove-share-view="<%= e.make_id %>">
+        <p class="grove-entry-share-note-label">Notes to self</p>
+        <p class="grove-entry-share-note-body"><%= e.share_note %></p>
+        <button type="button" class="grove-entry-share-note-edit-btn"
+                data-grove-share-open data-make-id="<%= e.make_id %>">Edit</button>
+      </div>
+    <% } else { %>
+      <button type="button" class="grove-entry-share-note-add-btn"
+              data-grove-share-open data-make-id="<%= e.make_id %>">
+        + Add a note (optional)
+      </button>
+    <% } %>
+
+    <form class="grove-entry-share-note-form" hidden
+          data-grove-share-form="<%= e.make_id %>" onsubmit="return false">
+      <label class="grove-entry-share-note-field-label" for="grove-share-note-<%= e.make_id %>">
+        What was it like to share this? (optional)
+      </label>
+      <textarea class="grove-entry-share-note-textarea"
+                id="grove-share-note-<%= e.make_id %>"
+                data-share-note-input
+                rows="3"
+                placeholder="Anything you'd like to note for yourself later."><%= e.share_note || '' %></textarea>
+      <div class="grove-entry-share-note-actions">
+        <button type="button" class="grove-entry-share-note-cancel"
+                data-grove-share-cancel>Cancel</button>
+        <button type="button" class="grove-entry-share-note-save"
+                data-grove-share-save data-make-id="<%= e.make_id %>">Save</button>
+        <p class="grove-entry-share-note-error" hidden></p>
+      </div>
+    </form>
+  </div>
+</li>

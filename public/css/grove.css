@@ -270,6 +270,59 @@
   gap: 1rem;
 }
 
+/* ── Sections: On deck / Already shared / Just for you ─────────────────── */
+.grove-section {
+  margin-bottom: 2.25rem;
+}
+.grove-section--shared,
+.grove-section--jfm {
+  margin-top: 2.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid rgba(112, 92, 108, 0.18);
+}
+.grove-section-title {
+  font-family: var(--font-display);
+  font-size: 1.35rem;
+  color: var(--color-ink-stained);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.3rem;
+}
+.grove-section-count {
+  font-family: var(--font-body);
+  font-size: 0.78rem;
+  font-weight: 600;
+  background: rgba(118, 133, 108, 0.18);
+  color: var(--color-ink-stained);
+  border-radius: 999px;
+  padding: 0.08rem 0.6rem;
+}
+.grove-section-intro {
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  color: var(--color-ink-stained);
+  opacity: 0.65;
+  line-height: 1.5;
+  margin: 0;
+}
+.grove-section-empty {
+  font-family: var(--font-body);
+  color: var(--color-ink-stained);
+  opacity: 0.6;
+  padding: 1rem 0 0.25rem;
+}
+/* Shared + private cards read as "settled" — gently receded until hovered. */
+.grove-section--shared .grove-entry,
+.grove-section--jfm .grove-entry {
+  opacity: 0.78;
+  transition: opacity 0.15s ease;
+}
+.grove-section--shared .grove-entry:hover,
+.grove-section--jfm .grove-entry:hover {
+  opacity: 1;
+}
+
 .grove-entry {
   background: var(--color-blank-page);
   border-radius: var(--radius-lg);
