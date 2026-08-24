@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <%- include('partials/head') %>
+  <link rel="stylesheet" href="/css/dashboard.css">
+  <link rel="stylesheet" href="/css/workbench.css">
+</head>
+<body class="app-body">
+  <div class="app-layout">
+    <%- include('partials/sidebar') %>
+    <main class="main-content" id="main">
+
+      <header class="wb-header">
+        <span class="wb-eyebrow">Your Workbench</span>
+        <h1 class="wb-title">Everything you're making</h1>
+        <p class="wb-intro">
+          From spark to shared — one place to see it all. Ideas become footage,
+          footage becomes content, content goes out into the world.
+        </p>
+        <p class="wb-links">
+          <a href="/greenhouse/propagation-table" class="wb-link">Make something →</a>
+          <span class="wb-links-sep" aria-hidden="true"> · </span>
+          <a href="/grove" class="wb-link">Share the Bounty →</a>
+        </p>
+      </header>
+
+      <%
+        function fmtShort(d) {
+          return d ? new Date(d + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '';
+        }
+      %>
+
+      <div class="wb-board">
+
+        <!-- 💡 Ideas -->
+        <section class="wb-col wb-col--ideas">
+          <header class="wb-col-head">
+            <h2 class="wb-col-title">💡 Ideas</h2>
+            <span class="wb-col-count"><%= ideas.length %></span>
+          </header>
+          <p class="wb-col-sub">Want to make — not filmed yet.</p>
+          <div class="wb-cards">
+            <% if (ideas.length === 0) { %>
+              <p class="wb-empty">Nothing here yet.</p>
+            <% } else { ideas.forEach(function (idea) { %>
+              <a class="wb-card" href="/greenhouse/propagation-table#cultivated-ideas">
+                <% if (idea.title) { %><p class="wb-card-title"><%= idea.title %></p><% } %>
+                <% if (idea.note) { %><p class="wb-card-note"><%= idea.note %></p><% } %>
+              </a>
+            <% }); } %>
+          </div>
+        </section>
+
+        <!-- 🎬 To edit -->
+        <section class="wb-col wb-col--edit">
+          <header class="wb-col-head">
+            <h2 class="wb-col-title">🎬 To edit</h2>
+            <span class="wb-col-count"><%= toEdit.length %></span>
+          </header>
+          <p class="wb-col-sub">Filmed, waiting to become content.</p>
+          <div class="wb-cards">
+            <% if (toEdit.length === 0) { %>
+              <p class="wb-empty">Nothing here yet.</p>
+            <% } else { toEdit.forEach(function (c) {
+                 const isBonus = c.kind === 'bonus';
+                 const label = isBonus ? (c.title || 'Bonus recording') : (fmtShort(c.recorded_date) || 'Recording');
+            %>
+              <a class="wb-card" href="/greenhouse/propagation-table#cultivated-ideas">
+                <span class="wb-card-tag <%= isBonus ? 'wb-tag--bonus' : 'wb-tag--daily' %>"><%= isBonus ? 'Bonus' : 'Daily' %></span>
+                <p class="wb-card-title"><%= label %></p>
+                <% if (c.talked_about) { %><p class="wb-card-note"><%= c.talked_about %></p><% } %>
+              </a>
+            <% }); } %>
+          </div>
+        </section>
+
+        <!-- 📤 To share -->
+        <section class="wb-col wb-col--share">
+          <header class="wb-col-head">
+            <h2 class="wb-col-title">📤 To share</h2>
+            <span class="wb-col-count"><%= toShare.length %></span>
+          </header>
+          <p class="wb-col-sub">Made — ready to go out.</p>
+          <div class="wb-cards">
+            <% if (toShare.length === 0) { %>
+              <p class="wb-empty">Nothing on deck.</p>
+            <% } else { toShare.forEach(function (e) { %>
+              <a class="wb-card" href="/grove">
+                <p class="wb-card-title"><span aria-hidden="true"><%= e.format_emoji || '🌿' %></span> <%= e.format_name %></p>
+                <% if (e.talked_about) { %><p class="wb-card-note"><%= e.talked_about %></p><% } %>
+              </a>
+            <% }); } %>
+          </div>
+        </section>
+
+        <!-- ✅ Shared -->
+        <section class="wb-col wb-col--done">
+          <header class="wb-col-head">
+            <h2 class="wb-col-title">✅ Shared</h2>
+            <span class="wb-col-count"><%= shared.length %></span>
+          </header>
+          <p class="wb-col-sub">Out in the world.</p>
+          <div class="wb-cards">
+            <% if (shared.length === 0) { %>
+              <p class="wb-empty">Nothing shared yet.</p>
+            <% } else { shared.forEach(function (e) {
+                 const ls = linksByMake.get(e.make_id) || [];
+            %>
+              <a class="wb-card" href="/grove">
+                <p class="wb-card-title"><span aria-hidden="true"><%= e.format_emoji || '🌿' %></span> <%= e.format_name %></p>
+                <% if (ls.length) { %>
+                  <p class="wb-card-note"><%= ls[0].label || ls[0].url %></p>
+                <% } else if (e.cohort_shared) { %>
+                  <p class="wb-card-note">Shared with the cohort</p>
+                <% } %>
+              </a>
+            <% }); } %>
+          </div>
+        </section>
+
+      </div>
+    </main>
+  </div>
+</body>
+</html>

@@ -1,0 +1,154 @@
+/* ─── The Workbench board — Ideas / To edit / To share / Shared ─────────── */
+
+.wb-header {
+  padding: 1.5rem 0 1rem;
+}
+.wb-eyebrow {
+  font-family: var(--font-body);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--color-bloem);
+}
+.wb-title {
+  font-family: var(--font-display);
+  font-size: 2.5rem;
+  color: var(--color-ink-stained);
+  margin: 0.3rem 0 0.4rem;
+  line-height: 1.1;
+}
+.wb-intro {
+  font-family: var(--font-body);
+  color: var(--color-ink-stained);
+  opacity: 0.75;
+  max-width: 44rem;
+  line-height: 1.55;
+}
+.wb-links { margin-top: 0.6rem; }
+.wb-link {
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  color: var(--color-bloem);
+  text-decoration: none;
+  border-bottom: 1px solid currentColor;
+  padding-bottom: 1px;
+}
+.wb-link:hover { color: var(--color-bloem-mid); }
+.wb-links-sep { color: rgba(16, 15, 16, 0.35); }
+
+/* Board: four columns. Wide → even grid; narrow → horizontal scroll. */
+.wb-board {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1rem;
+  margin: 1.5rem 0 3rem;
+  align-items: start;
+}
+@media (max-width: 900px) {
+  .wb-board {
+    grid-auto-flow: column;
+    grid-auto-columns: 80%;
+    grid-template-columns: none;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 0.5rem;
+    scroll-snap-type: x proximity;
+  }
+  .wb-col { scroll-snap-align: start; }
+}
+
+.wb-col {
+  background: var(--color-new-growth);
+  border-radius: var(--radius-lg);
+  padding: 0.9rem 0.85rem 1rem;
+  min-width: 0;
+}
+.wb-col-head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.wb-col-title {
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  font-weight: 400;
+  color: var(--color-ink-stained);
+  margin: 0;
+}
+.wb-col-count {
+  font-family: var(--font-body);
+  font-size: 0.75rem;
+  font-weight: 700;
+  background: rgba(112, 92, 108, 0.16);
+  color: var(--color-bloem-mid);
+  border-radius: 999px;
+  padding: 0.06rem 0.55rem;
+}
+.wb-col-sub {
+  font-family: var(--font-body);
+  font-size: 0.8rem;
+  color: var(--color-ink-stained);
+  opacity: 0.6;
+  line-height: 1.4;
+  margin: 0.2rem 0 0.75rem;
+}
+.wb-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+.wb-empty {
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  color: var(--color-ink-stained);
+  opacity: 0.45;
+  font-style: italic;
+  margin: 0.2rem 0;
+}
+.wb-card {
+  display: block;
+  background: var(--color-blank-page);
+  border-radius: var(--radius-md);
+  padding: 0.7rem 0.8rem;
+  text-decoration: none;
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+.wb-card:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(16, 15, 16, 0.1);
+}
+.wb-card-tag {
+  display: inline-block;
+  font-family: var(--font-body);
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  border-radius: 999px;
+  padding: 0.08rem 0.5rem;
+  margin-bottom: 0.35rem;
+}
+.wb-tag--bonus { background: rgba(112, 92, 108, 0.16); color: var(--color-bloem); }
+.wb-tag--daily { background: rgba(118, 133, 108, 0.18); color: var(--color-understory); }
+.wb-card-title {
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--color-ink-stained);
+  line-height: 1.35;
+  margin: 0;
+}
+.wb-card-note {
+  font-family: var(--font-body);
+  font-size: 0.82rem;
+  color: var(--color-ink-stained);
+  opacity: 0.68;
+  line-height: 1.4;
+  margin: 0.25rem 0 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}

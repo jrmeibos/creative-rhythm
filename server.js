@@ -3442,6 +3442,43 @@ app.get('/greenhouse/propagation-table', requireAuth, requireMakingSeason, (req,
   });
 });
 
+// The Workbench board — one overview of the whole production funnel:
+// Ideas -> To edit -> To share -> Shared. A read-through of data that already
+// lives across the Make tab (ideas + cultivate pile) and the Grove (shares);
+// each card links to where you act on it.
+app.get('/workbench', requireAuth, requireMakingSeason, (req, res) => {
+  const userId = req.session.user.id;
+
+  // 💡 Ideas — want to make, not filmed yet.
+  const ideas = db.getContentIdeas(userId);
+
+  // 🎬 To edit — Cultivate cuttings (daily + bonus) with nothing made yet.
+  const makes = db.getMakesForUser(userId);
+  const madeCuttingIds = new Set(makes.filter(m => m.created).map(m => m.cutting_id));
+  const toEdit = db.getCuttingsForUser(userId)
+    .filter(c => c.tending_category === 'keep_growing' && !madeCuttingIds.has(c.id));
+
+  // 📤 To share / ✅ Shared — created makes, split by whether they're out yet.
+  const groveEntries = db.getGroveEntries(userId);
+  const links = db.getMakeLinksForUser(userId);
+  const linksByMake = new Map();
+  for (const l of links) {
+    if (!linksByMake.has(l.make_id)) linksByMake.set(l.make_id, []);
+    linksByMake.get(l.make_id).push(l);
+  }
+  const isShared = (e) => (linksByMake.get(e.make_id) || []).length > 0 || !!e.cohort_shared;
+  const toShare = groveEntries.filter(e => !e.just_for_me && !isShared(e));
+  const shared  = groveEntries.filter(e => isShared(e));
+
+  res.render('workbench', {
+    title: 'Your Workbench',
+    page: 'greenhouse',
+    gardenTab: 'workbench',   // highlights "Your Cuttings" in the sidebar
+    user: req.session.user,
+    ideas, toEdit, toShare, shared, linksByMake,
+  });
+});
+
 // The Propagation Table moved from Summer into The Greenhouse — keep the old
 // URL working for anyone who bookmarked it.
 app.get('/summer/propagation-table', requireAuth, (req, res) => {
