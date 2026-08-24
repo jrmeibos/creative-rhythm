@@ -70,7 +70,6 @@
           <img src="/images/greenhouse/greenhouse-roof-3.svg" alt="" class="plant-svg" />
         </div>
       </section>
-      <%- include('partials/greenhouse-cuttings-section') %>
       <% } %>
 
       <section class="dash-section">
@@ -109,15 +108,8 @@
         <% } %>
       </section>
 
-      <!-- Seasonal sections (Spring+). Each self-hides in Winter. -->
-      <%- include('partials/greenhouse-autumn-section') %>
-      <%- include('partials/greenhouse-summer-section') %>
-      <%- include('partials/greenhouse-tending-section') %>
-
-      <!-- Your Cuttings — at the bottom outside Winter (Winter surfaces it up top). -->
-      <% if (!isWinterLocked) { %>
-      <%- include('partials/greenhouse-cuttings-section') %>
-      <% } %>
+      <!-- The cutting lifecycle now lives in one hub — link to it. -->
+      <%- include('partials/greenhouse-propagation-link') %>
 
       <% } else { %>
       <!-- ══ TENDING STATE ════════════════════════════════════════════════ -->
@@ -312,19 +304,8 @@
         </div>
       </section>
 
-      <!-- Ordered newest-seasonal first — matches the beds-empty block. -->
-
-      <!-- ── Share the Bounty — Autumn only (self-hides otherwise) ─────── -->
-      <%- include('partials/greenhouse-autumn-section') %>
-
-      <!-- ── Make Something — Summer+ only (self-hides pre-Summer) ────── -->
-      <%- include('partials/greenhouse-summer-section') %>
-
-      <!-- ── Tend Your Cuttings — Spring+ only (self-hides pre-Spring) ────── -->
-      <%- include('partials/greenhouse-tending-section') %>
-
-      <!-- ── Your Cuttings — always visible after welcome ────────────── -->
-      <%- include('partials/greenhouse-cuttings-section') %>
+      <!-- The cutting lifecycle now lives in one hub — link to it. -->
+      <%- include('partials/greenhouse-propagation-link') %>
 
       <!-- ── Growth Check: Then & Now — the completed reflection, now at the
            bottom of the page (was above the goals). Self-hides when !closing. -->

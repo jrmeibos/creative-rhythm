@@ -126,7 +126,8 @@
             Resources
           </a>
         </li>
-        <li class="sidebar-nav-item <%= page === 'greenhouse' ? 'active' : '' %>">
+        <% var inPropTable = !!locals.gardenTab; %>
+        <li class="sidebar-nav-item <%= (page === 'greenhouse' && !inPropTable) ? 'active' : '' %>">
           <a href="/greenhouse">
             <svg width="17" height="17" viewBox="0 0 17 17" fill="none" aria-hidden="true">
               <path d="M8.5 15V7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
@@ -136,6 +137,11 @@
             </svg>
             The Greenhouse
           </a>
+          <ul class="sidebar-subnav">
+            <li class="sidebar-subnav-item <%= inPropTable ? 'active' : '' %>">
+              <a href="/propagation-table">The Propagation Table</a>
+            </li>
+          </ul>
         </li>
         <% if (user.role === 'admin') { %>
         <li class="sidebar-nav-divider"></li>

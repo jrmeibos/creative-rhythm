@@ -148,6 +148,34 @@
   opacity: 1;
 }
 
+/* Sub-nav — nested items (e.g. The Propagation Table under The Greenhouse). */
+.sidebar-subnav {
+  list-style: none;
+  margin: 0.1rem 0 0.2rem;
+  padding: 0;
+}
+.sidebar-subnav-item a {
+  display: flex;
+  align-items: center;
+  padding: 0.45rem 1.5rem 0.45rem 2.9rem;
+  text-decoration: none;
+  font-size: 0.82rem;
+  font-weight: 300;
+  color: rgba(242, 238, 227, 0.6);
+  transition: background var(--transition), color var(--transition);
+  border-left: 3px solid transparent;
+}
+.sidebar-subnav-item a:hover {
+  background: var(--color-bloem-hover);
+  color: var(--color-pearl);
+}
+.sidebar-subnav-item.active a {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--color-pearl);
+  font-weight: 700;
+  border-left-color: var(--color-understory);
+}
+
 /* Category accents on active state */
 .sidebar-nav-item.goals-nav.active a,
 .sidebar-nav-item.goals-nav a:hover {

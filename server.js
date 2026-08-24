@@ -2614,6 +2614,7 @@ app.get('/greenhouse/cuttings', requireAuth, (req, res) => {
   res.render('greenhouse-cuttings', {
     title: 'Cuttings',
     page: 'greenhouse',
+    gardenTab: 'see',
     user: req.session.user,
     totalCount,                    // total before filtering — for the page-level empty state
     filteredCount: cuttings.length, // after filtering — for the empty-filter state
@@ -3181,6 +3182,7 @@ app.get('/tending', requireAuth, (req, res) => {
   res.render('tending', {
     title: 'Tending',
     page: 'tending',
+    gardenTab: 'tend',
     user,
     currentCourseWeek,
     reviewWeek,
@@ -3394,6 +3396,18 @@ app.get('/summer/format/:slug', requireAuth, (req, res) => {
 const PROPAGATION_SLUGS = PROPAGATION_RUNGS.map(r => r.slug);
 const splitParas = (s) => (s || '').split(/\n\s*\n/).map(x => x.trim()).filter(Boolean);
 
+// The Propagation Table hub — a single entry that lands on the season-
+// appropriate window: Spring → Tend, Summer → Make, Autumn → Share,
+// Winter/other → See cuttings (always available). effectiveSeason is set by
+// the effective-season middleware, so this is just a smart redirect.
+app.get('/propagation-table', requireAuth, (req, res) => {
+  const season = res.locals.effectiveSeason;
+  if (season === 'autumn') return res.redirect('/grove');
+  if (season === 'summer') return res.redirect('/greenhouse/propagation-table');
+  if (season === 'spring') return res.redirect('/tending');
+  return res.redirect('/greenhouse/cuttings');
+});
+
 // Lives in The Greenhouse's Summer/Autumn making seasons (see requireMakingSeason).
 // The 7-rung challenge up top, then the "Cultivated Ideas" pile at the bottom.
 app.get('/greenhouse/propagation-table', requireAuth, requireMakingSeason, (req, res) => {
@@ -3413,6 +3427,7 @@ app.get('/greenhouse/propagation-table', requireAuth, requireMakingSeason, (req,
   res.render('propagation-table', {
     title: 'The Propagation Table',
     page: 'greenhouse',
+    gardenTab: 'make',
     user: req.session.user,
     rungs,
     introParagraphs: splitParas(PROPAGATION_INTRO),
@@ -3588,6 +3603,7 @@ app.get('/grove', requireAuth, (req, res) => {
   res.render('grove', {
     title: 'Share the Bounty',
     page: 'grove',
+    gardenTab: 'share',
     user: req.session.user,
     entries,
     linksByMake,
