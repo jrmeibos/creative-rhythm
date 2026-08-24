@@ -3291,7 +3291,8 @@ function loadCultivatedIdeas(userId) {
     if (!makesByCutting.has(m.cutting_id)) makesByCutting.set(m.cutting_id, []);
     makesByCutting.get(m.cutting_id).push(m);
   }
-  return { cuttings, formats, makesByCutting };
+  const contentIdeas = db.getContentIdeas(userId);
+  return { cuttings, formats, makesByCutting, contentIdeas };
 }
 
 // Manage custom formats — student-created + editable + archivable.
@@ -3423,7 +3424,7 @@ app.get('/greenhouse/propagation-table', requireAuth, requireMakingSeason, (req,
       link: m ? m.published_url : null,
     };
   });
-  const { cuttings, formats, makesByCutting } = loadCultivatedIdeas(userId);
+  const { cuttings, formats, makesByCutting, contentIdeas } = loadCultivatedIdeas(userId);
   res.render('propagation-table', {
     title: 'Make something',
     page: 'greenhouse',
@@ -3437,6 +3438,7 @@ app.get('/greenhouse/propagation-table', requireAuth, requireMakingSeason, (req,
     cuttings,
     formats,
     makesByCutting,
+    contentIdeas,
   });
 });
 
@@ -3529,6 +3531,35 @@ app.post('/summer/bonus', requireAuth, requireMakingSeason, (req, res) => {
     console.error('createBonusRecording failed:', e);
     return res.status(500).json({ error: 'Could not save. Try again.' });
   }
+});
+
+// Content ideas — the top of the workbench funnel (want to make, not filmed).
+// Add an idea: { title, note }.
+app.post('/summer/ideas', requireAuth, requireMakingSeason, (req, res) => {
+  const { title, note } = req.body || {};
+  const t = (typeof title === 'string' ? title.trim() : '');
+  const n = (typeof note  === 'string' ? note.trim()  : '');
+  if (!t && !n) return res.status(400).json({ error: 'Add a title or a note.' });
+  const id = db.createContentIdea(req.session.user.id, t, n);
+  return res.json({ ok: true, id });
+});
+// Mark an idea as filmed → promote it to a Bonus Recording on the to-edit pile.
+app.post('/summer/ideas/:id/filmed', requireAuth, requireMakingSeason, (req, res) => {
+  const ideaId = parseInt(req.params.id, 10);
+  if (!Number.isInteger(ideaId) || ideaId <= 0) return res.status(400).json({ error: 'Invalid idea id.' });
+  const user   = req.session.user;
+  const season = res.locals.effectiveSeason || user.current_season || null;
+  const today  = toLocalDateString(getNow(user));
+  const cuttingId = db.promoteIdeaToBonus(ideaId, user.id, season, today);
+  if (!cuttingId) return res.status(404).json({ error: 'Idea not found.' });
+  return res.json({ ok: true, cuttingId });
+});
+// Delete an idea.
+app.post('/summer/ideas/:id/delete', requireAuth, requireMakingSeason, (req, res) => {
+  const ideaId = parseInt(req.params.id, 10);
+  if (!Number.isInteger(ideaId) || ideaId <= 0) return res.status(400).json({ error: 'Invalid idea id.' });
+  db.deleteContentIdea(ideaId, req.session.user.id);
+  return res.json({ ok: true });
 });
 
 // Record a format-idea for a Cultivate cutting. Body:

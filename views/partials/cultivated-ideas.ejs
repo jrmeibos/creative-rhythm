@@ -18,6 +18,55 @@
     </p>
   </header>
 
+  <!-- Ideas — things you want to make (no footage yet). "Mark as filmed"
+       promotes an idea into a Bonus Recording on the to-edit pile. -->
+  <div class="workbench-ideas">
+    <div class="workbench-ideas-head">
+      <h3 class="workbench-ideas-title">💡 Ideas — things you want to make</h3>
+      <button type="button" class="workbench-idea-add-btn" data-idea-open>+ Add an idea</button>
+    </div>
+
+    <div class="workbench-idea-form" hidden data-idea-form>
+      <label class="summer-bonus-label" for="idea-title">Title</label>
+      <input type="text" id="idea-title" class="summer-bonus-input" maxlength="120"
+             placeholder="e.g. A video on batching a week of content">
+      <label class="summer-bonus-label" for="idea-note">
+        Note <span class="summer-bonus-optional">(optional)</span>
+      </label>
+      <textarea id="idea-note" class="summer-bonus-textarea" rows="2"
+                placeholder="Anything to remember about this idea."></textarea>
+      <p class="summer-bonus-error" data-idea-error hidden></p>
+      <div class="summer-bonus-actions">
+        <button type="button" class="summer-make-picker-cancel" data-idea-cancel>Cancel</button>
+        <button type="button" class="summer-make-picker-save" data-idea-save>Add idea</button>
+      </div>
+    </div>
+
+    <% if (contentIdeas && contentIdeas.length > 0) { %>
+      <ul class="workbench-idea-list">
+        <% contentIdeas.forEach(function (idea) { %>
+          <li class="workbench-idea" data-idea-id="<%= idea.id %>">
+            <div class="workbench-idea-body">
+              <% if (idea.title) { %><p class="workbench-idea-title"><%= idea.title %></p><% } %>
+              <% if (idea.note) { %><p class="workbench-idea-note"><%= idea.note %></p><% } %>
+            </div>
+            <div class="workbench-idea-actions">
+              <button type="button" class="workbench-idea-filmed"
+                      data-idea-filmed data-idea-id="<%= idea.id %>">Mark as filmed → to edit</button>
+              <button type="button" class="workbench-idea-remove"
+                      data-idea-remove data-idea-id="<%= idea.id %>"
+                      data-title="<%= idea.title || 'this idea' %>" aria-label="Delete idea">×</button>
+            </div>
+          </li>
+        <% }); %>
+      </ul>
+    <% } else { %>
+      <p class="workbench-ideas-empty">
+        Nothing here yet — jot down anything you want to create so it doesn't get lost.
+      </p>
+    <% } %>
+  </div>
+
   <!-- Add a Bonus Recording — something filmed outside the daily practice —
        straight to the to-edit pile below (skips Tending). -->
   <div class="summer-bonus">
@@ -169,6 +218,72 @@
           if (errEl) { errEl.textContent = 'Could not save. Try again.'; errEl.hidden = false; }
           bonusSave.disabled = false;
         });
+        return;
+      }
+
+      // ── Ideas (want to make, not filmed yet) ───────────────────────────
+      const ideaOpen = e.target.closest('[data-idea-open]');
+      if (ideaOpen) {
+        const form = document.querySelector('[data-idea-form]');
+        if (form) { form.hidden = false; ideaOpen.hidden = true; const t = document.getElementById('idea-title'); if (t) t.focus(); }
+        return;
+      }
+      const ideaCancel = e.target.closest('[data-idea-cancel]');
+      if (ideaCancel) {
+        const form = document.querySelector('[data-idea-form]');
+        const openBtn2 = document.querySelector('[data-idea-open]');
+        if (form) form.hidden = true;
+        if (openBtn2) openBtn2.hidden = false;
+        return;
+      }
+      const ideaSave = e.target.closest('[data-idea-save]');
+      if (ideaSave) {
+        const title = (document.getElementById('idea-title') || {}).value || '';
+        const note  = (document.getElementById('idea-note')  || {}).value || '';
+        const errEl = document.querySelector('[data-idea-error]');
+        if (!title.trim() && !note.trim()) {
+          if (errEl) { errEl.textContent = 'Add a title or a note.'; errEl.hidden = false; }
+          return;
+        }
+        ideaSave.disabled = true;
+        if (errEl) errEl.hidden = true;
+        fetch('/summer/ideas', {
+          method: 'POST', credentials: 'same-origin',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ title: title.trim(), note: note.trim() }),
+        }).then(function (r) {
+          if (!r.ok) throw new Error('save failed');
+          window.location.reload();
+        }).catch(function () {
+          if (errEl) { errEl.textContent = 'Could not save. Try again.'; errEl.hidden = false; }
+          ideaSave.disabled = false;
+        });
+        return;
+      }
+      const ideaFilmed = e.target.closest('[data-idea-filmed]');
+      if (ideaFilmed) {
+        const id = ideaFilmed.getAttribute('data-idea-id');
+        ideaFilmed.disabled = true;
+        fetch('/summer/ideas/' + encodeURIComponent(id) + '/filmed', {
+          method: 'POST', credentials: 'same-origin',
+        }).then(function (r) {
+          if (!r.ok) throw new Error();
+          window.location.reload();
+        }).catch(function () { ideaFilmed.disabled = false; alert('Could not update. Try again.'); });
+        return;
+      }
+      const ideaRemove = e.target.closest('[data-idea-remove]');
+      if (ideaRemove) {
+        const id = ideaRemove.getAttribute('data-idea-id');
+        const title = ideaRemove.getAttribute('data-title') || 'this idea';
+        if (!confirm('Delete "' + title + '"?')) return;
+        ideaRemove.disabled = true;
+        fetch('/summer/ideas/' + encodeURIComponent(id) + '/delete', {
+          method: 'POST', credentials: 'same-origin',
+        }).then(function (r) {
+          if (!r.ok) throw new Error();
+          window.location.reload();
+        }).catch(function () { ideaRemove.disabled = false; alert('Could not delete. Try again.'); });
         return;
       }
 

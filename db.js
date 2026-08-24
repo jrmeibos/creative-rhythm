@@ -955,6 +955,22 @@ db.exec(`
     CREATE INDEX IF NOT EXISTS idx_cutting_makes_format  ON cutting_makes (format_id);
   `);
 
+  // Content ideas — the top of the workbench funnel: things you want to make
+  // but haven't filmed yet (no recording). "Mark as filmed" promotes an idea
+  // into a Bonus Recording on the to-edit pile. Deliberately its own table so
+  // idea-with-no-footage never touches the practice's cuttings/Tending flow.
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS content_ideas (
+      id         INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id    INTEGER NOT NULL,
+      title      TEXT,
+      note       TEXT,
+      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (user_id) REFERENCES users(id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_content_ideas_user ON content_ideas (user_id);
+  `);
+
   // Guarded add of the created flag for existing installs — new rows land
   // as ideas (0) by default. Backfill leaves any pre-existing rows at 0;
   // there are no such rows in production (Summer just shipped), so this
@@ -2854,6 +2870,30 @@ module.exports = {
       try { db.exec('ROLLBACK'); } catch (_) {}
       throw e;
     }
+  },
+
+  // ── Content ideas (want-to-make, not filmed yet) ────────────────────────
+  getContentIdeas(userId) {
+    return db.prepare(
+      'SELECT id, title, note, created_at FROM content_ideas WHERE user_id = ? ORDER BY created_at DESC, id DESC'
+    ).all(userId);
+  },
+  createContentIdea(userId, title, note) {
+    return db.prepare(
+      'INSERT INTO content_ideas (user_id, title, note) VALUES (?, ?, ?)'
+    ).run(userId, (title || '').trim() || null, (note || '').trim() || null).lastInsertRowid;
+  },
+  deleteContentIdea(ideaId, userId) {
+    return db.prepare('DELETE FROM content_ideas WHERE id = ? AND user_id = ?').run(ideaId, userId).changes;
+  },
+  // "Mark as filmed" — turn an idea into a Bonus Recording on the to-edit pile
+  // and remove the idea. Returns the new cutting id, or null if not owned.
+  promoteIdeaToBonus(ideaId, userId, season, recordedDate) {
+    const idea = db.prepare('SELECT title, note FROM content_ideas WHERE id = ? AND user_id = ?').get(ideaId, userId);
+    if (!idea) return null;
+    const cuttingId = this.createBonusRecording(userId, idea.title, idea.note, season, recordedDate);
+    db.prepare('DELETE FROM content_ideas WHERE id = ? AND user_id = ?').run(ideaId, userId);
+    return cuttingId;
   },
 
   // Does this Stream video belong to this user? Gate for minting playback
