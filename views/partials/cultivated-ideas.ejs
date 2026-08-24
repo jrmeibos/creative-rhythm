@@ -89,7 +89,7 @@
             </label>
 
             <p class="summer-make-picker-help">
-              Add a note below (optional) and pick a format — the click saves it.
+              Pick a format, add a note if you like, then Save.
             </p>
             <div class="summer-format-grid">
               <% formats.forEach(function (f) { %>
@@ -110,9 +110,11 @@
                       placeholder="Anything to remember about how you'd shape this."></textarea>
 
             <div class="summer-make-picker-footer">
+              <p class="summer-make-picker-error" hidden></p>
               <button type="button" class="summer-make-picker-cancel"
                       data-summer-make-cancel>Cancel</button>
-              <p class="summer-make-picker-error" hidden></p>
+              <button type="button" class="summer-make-picker-save"
+                      data-summer-make-save disabled>Save idea</button>
             </div>
           </div>
         </li>
@@ -146,16 +148,45 @@
         return;
       }
 
+      // Selecting a format highlights it and enables Save — it no longer saves
+      // on click. An explicit Save button commits, so a typed note is never
+      // lost and there's an obvious way to finish.
       const fmtBtn = e.target.closest('[data-summer-format]');
       if (fmtBtn) {
-        const picker    = fmtBtn.closest('[data-summer-make-picker]');
+        const picker = fmtBtn.closest('[data-summer-make-picker]');
+        const wasSelected = fmtBtn.classList.contains('is-selected');
+        picker.querySelectorAll('.summer-format-chip').forEach(function (b) {
+          b.classList.remove('is-selected');
+          b.setAttribute('aria-pressed', 'false');
+        });
+        if (!wasSelected) {
+          fmtBtn.classList.add('is-selected');
+          fmtBtn.setAttribute('aria-pressed', 'true');
+        }
+        const saveTarget = picker.querySelector('[data-summer-make-save]');
+        if (saveTarget) saveTarget.disabled = !picker.querySelector('.summer-format-chip.is-selected');
+        const errEl = picker.querySelector('.summer-make-picker-error');
+        if (errEl) errEl.hidden = true;
+        return;
+      }
+
+      // Save the selected format + note as a new format idea.
+      const saveBtn = e.target.closest('[data-summer-make-save]');
+      if (saveBtn) {
+        const picker    = saveBtn.closest('[data-summer-make-picker]');
         const cuttingId = picker.getAttribute('data-summer-make-picker');
-        const formatId  = fmtBtn.getAttribute('data-summer-format');
+        const selected  = picker.querySelector('.summer-format-chip.is-selected');
+        const errEl     = picker.querySelector('.summer-make-picker-error');
+        if (!selected) {
+          if (errEl) { errEl.textContent = 'Pick a format first.'; errEl.hidden = false; }
+          return;
+        }
+        const formatId  = selected.getAttribute('data-summer-format');
         const ta        = picker.querySelector('.summer-make-picker-note');
         const note      = ta ? ta.value.trim() : '';
         const createdCb = picker.querySelector('[data-summer-make-created]');
         const created   = createdCb ? !!createdCb.checked : false;
-        const errEl     = picker.querySelector('.summer-make-picker-error');
+        saveBtn.disabled = true;
         picker.querySelectorAll('.summer-format-chip').forEach(function (b) { b.disabled = true; });
 
         fetch('/summer/make/' + encodeURIComponent(cuttingId), {
@@ -168,6 +199,7 @@
           window.location.reload();
         }).catch(function () {
           if (errEl) { errEl.textContent = 'Could not save. Try again.'; errEl.hidden = false; }
+          saveBtn.disabled = false;
           picker.querySelectorAll('.summer-format-chip').forEach(function (b) { b.disabled = false; });
         });
         return;

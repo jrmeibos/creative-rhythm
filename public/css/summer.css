@@ -314,6 +314,14 @@
   opacity: 0.55;
   cursor: default;
 }
+.summer-format-chip.is-selected {
+  border-color: var(--color-bloem);
+  background: var(--color-bloem);
+  color: #fff;
+}
+.summer-format-chip.is-selected:disabled {
+  opacity: 1;
+}
 .summer-format-chip-emoji {
   font-size: 0.95rem;
   line-height: 1;
@@ -349,6 +357,25 @@
   font-size: 0.82rem;
   margin: 0;
   flex: 1 1 auto;
+}
+.summer-make-picker-save {
+  background: var(--color-bloem);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-md);
+  padding: 0.5rem 1.15rem;
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.12s ease, opacity 0.12s ease;
+}
+.summer-make-picker-save:hover:not(:disabled) {
+  background: var(--color-bloem-mid);
+}
+.summer-make-picker-save:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
 /* ── Per-format detail page (/summer/format/:slug) ───────────────────── */
