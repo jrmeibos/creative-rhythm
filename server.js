@@ -3508,6 +3508,29 @@ app.get('/propagation-file/:filename', requireAuth, (req, res) => {
   });
 });
 
+// Add a "bonus" recording — something filmed outside the daily practice —
+// straight onto the workbench "to edit" pile. Body: { title, note }. Creates
+// a bonus cutting + an immediate keep_growing curation so it appears in
+// Cultivated Ideas, skipping the practice's Tending review.
+app.post('/summer/bonus', requireAuth, requireMakingSeason, (req, res) => {
+  const { title, note } = req.body || {};
+  const t = (typeof title === 'string' ? title.trim() : '');
+  const n = (typeof note  === 'string' ? note.trim()  : '');
+  if (!t && !n) {
+    return res.status(400).json({ error: 'Add a title or a note.' });
+  }
+  const user   = req.session.user;
+  const season = res.locals.effectiveSeason || user.current_season || null;
+  const today  = toLocalDateString(getNow(user));
+  try {
+    const id = db.createBonusRecording(user.id, t, n, season, today);
+    return res.json({ ok: true, id });
+  } catch (e) {
+    console.error('createBonusRecording failed:', e);
+    return res.status(500).json({ error: 'Could not save. Try again.' });
+  }
+});
+
 // Record a format-idea for a Cultivate cutting. Body:
 //   { formatId, note, created }
 // `created` is optional — default 0 = still an idea, 1 = already made.

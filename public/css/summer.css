@@ -697,3 +697,103 @@
   margin: 0;
   flex: 1 1 auto;
 }
+
+/* ── Bonus recording (footage filmed outside the daily practice) ────────── */
+.summer-bonus {
+  margin: 0 0 1.5rem;
+}
+.summer-bonus-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  color: var(--color-bloem);
+  background: transparent;
+  border: 1px dashed var(--color-bloem);
+  border-radius: var(--radius-md);
+  padding: 0.55rem 1rem;
+  cursor: pointer;
+  transition: background 0.14s ease, color 0.14s ease;
+}
+.summer-bonus-btn:hover {
+  background: var(--color-bloem);
+  color: #fff;
+}
+.summer-bonus-form {
+  background: var(--color-blank-page);
+  border: 1px solid rgba(112, 92, 108, 0.2);
+  border-radius: var(--radius-lg);
+  padding: 1.1rem 1.25rem;
+  box-shadow: var(--shadow-sm);
+}
+.summer-bonus-form[hidden] { display: none; }
+.summer-bonus-help {
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  color: var(--color-ink-stained);
+  opacity: 0.75;
+  line-height: 1.5;
+  margin: 0 0 0.9rem;
+}
+.summer-bonus-label {
+  display: block;
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--color-ink-stained);
+  margin: 0.6rem 0 0.3rem;
+}
+.summer-bonus-optional { font-weight: 400; opacity: 0.55; }
+.summer-bonus-input,
+.summer-bonus-textarea {
+  width: 100%;
+  padding: 0.55rem 0.8rem;
+  border: 1px solid rgba(16, 15, 16, 0.18);
+  border-radius: var(--radius-md);
+  font-family: var(--font-body);
+  font-size: 0.92rem;
+  color: var(--color-ink-stained);
+  background: white;
+}
+.summer-bonus-input:focus,
+.summer-bonus-textarea:focus {
+  outline: none;
+  border-color: var(--color-bloem);
+  box-shadow: 0 0 0 3px rgba(112, 92, 108, 0.12);
+}
+.summer-bonus-error {
+  color: #b13a3a;
+  font-family: var(--font-body);
+  font-size: 0.82rem;
+  margin: 0.6rem 0 0;
+}
+.summer-bonus-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 0.7rem;
+  margin-top: 1rem;
+}
+
+/* Bonus recording card in the to-edit pile */
+.summer-cutting--bonus {
+  border-left: 3px solid var(--color-bloem);
+}
+.summer-cutting-kind {
+  font-family: var(--font-body);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-bloem);
+  margin-bottom: 0.35rem;
+}
+.summer-cutting-title {
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  font-weight: 400;
+  color: var(--color-ink-stained);
+  line-height: 1.2;
+  margin: 0 0 0.5rem;
+}

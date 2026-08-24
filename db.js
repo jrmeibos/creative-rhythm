@@ -799,6 +799,18 @@ db.exec(`
     db.exec("ALTER TABLE cuttings ADD COLUMN edited INTEGER DEFAULT 0");
     console.log('✓ Migrated: added edited to cuttings');
   }
+  // Recording kind: 'daily' = a daily-practice recording (the default, and what
+  // every existing row is); 'bonus' = an intentional recording made outside the
+  // practice, logged straight to the workbench "to edit". `title` names bonus
+  // recordings (daily ones are identified by their date).
+  if (!cuttingCols2.includes('kind')) {
+    db.exec("ALTER TABLE cuttings ADD COLUMN kind TEXT DEFAULT 'daily'");
+    console.log('✓ Migrated: added kind to cuttings');
+  }
+  if (!cuttingCols2.includes('title')) {
+    db.exec("ALTER TABLE cuttings ADD COLUMN title TEXT");
+    console.log('✓ Migrated: added title to cuttings');
+  }
 
   // Tending: the Gardener's weekly review of past cuttings. Unlocks in Spring
   // (Week 4+). Each curation event is a row (history-preserving) so a cutting
@@ -2813,6 +2825,37 @@ module.exports = {
     );
   },
 
+  // Create a "bonus" recording — something filmed outside the daily practice —
+  // and drop it straight onto the workbench "to edit" pile by giving it an
+  // immediate keep_growing curation. That skips the practice's Tending review
+  // (which only surfaces uncurated daily recordings). title names it; note is
+  // free text (what it is / where the footage lives). Returns the cutting id.
+  createBonusRecording(userId, title, note, season, recordedDate) {
+    db.exec('BEGIN');
+    try {
+      const id = db.prepare(`
+        INSERT INTO cuttings
+          (user_id, kind, title, season, recorded_date, talked_about, watched)
+        VALUES (?, 'bonus', ?, ?, ?, ?, 1)
+      `).run(
+        userId,
+        (title || '').trim() || null,
+        season || null,
+        recordedDate || null,
+        (note || '').trim() || null
+      ).lastInsertRowid;
+      db.prepare(`
+        INSERT INTO cutting_curations (cutting_id, user_id, category)
+        VALUES (?, ?, 'keep_growing')
+      `).run(id, userId);
+      db.exec('COMMIT');
+      return id;
+    } catch (e) {
+      try { db.exec('ROLLBACK'); } catch (_) {}
+      throw e;
+    }
+  },
+
   // Does this Stream video belong to this user? Gate for minting playback
   // tokens — without this check, any signed-in user could request a token for
   // someone else's private recording.
@@ -2843,7 +2886,7 @@ module.exports = {
     return db.prepare(
       `SELECT c.id, c.created_at, c.recorded_date, c.season, c.prompt,
               c.reflection_text, c.talked_about, c.how_it_felt, c.takeaway,
-              c.watched, c.edited,
+              c.watched, c.edited, c.kind, c.title,
               latest.category        AS tending_category,
               latest.reflection_text AS tending_reflection,
               latest.curated_at      AS tending_curated_at

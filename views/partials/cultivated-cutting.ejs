@@ -7,9 +7,15 @@
         weekday: 'long', month: 'long', day: 'numeric',
       })
     : '';
+  const isBonus = c.kind === 'bonus';
 %>
-<li class="summer-cutting" data-cutting-id="<%= c.id %>">
-  <div class="summer-cutting-date"><%= dateLabel %></div>
+<li class="summer-cutting <%= isBonus ? 'summer-cutting--bonus' : '' %>" data-cutting-id="<%= c.id %>">
+  <% if (isBonus) { %>
+    <div class="summer-cutting-kind">🎬 Bonus Recording</div>
+    <% if (c.title) { %><h3 class="summer-cutting-title"><%= c.title %></h3><% } %>
+  <% } else { %>
+    <div class="summer-cutting-date"><%= dateLabel %></div>
+  <% } %>
 
   <div class="summer-cutting-body">
     <% if (c.talked_about) { %>

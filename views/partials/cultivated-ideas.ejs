@@ -18,6 +18,34 @@
     </p>
   </header>
 
+  <!-- Add a Bonus Recording — something filmed outside the daily practice —
+       straight to the to-edit pile below (skips Tending). -->
+  <div class="summer-bonus">
+    <button type="button" class="summer-bonus-btn" data-bonus-open>
+      + Add footage to edit
+    </button>
+    <div class="summer-bonus-form" hidden data-bonus-form>
+      <p class="summer-bonus-help">
+        A <strong>Bonus Recording</strong> — something you filmed outside the
+        daily practice. It lands in your to-edit pile below, ready to make and
+        share.
+      </p>
+      <label class="summer-bonus-label" for="bonus-title">Title</label>
+      <input type="text" id="bonus-title" class="summer-bonus-input" maxlength="120"
+             placeholder="e.g. What to Do When You Don't Know What You Want to Do">
+      <label class="summer-bonus-label" for="bonus-note">
+        Note <span class="summer-bonus-optional">(what it is, where the footage lives…)</span>
+      </label>
+      <textarea id="bonus-note" class="summer-bonus-textarea" rows="2"
+                placeholder="Filmed on the big camera — footage on the SD card."></textarea>
+      <p class="summer-bonus-error" data-bonus-error hidden></p>
+      <div class="summer-bonus-actions">
+        <button type="button" class="summer-make-picker-cancel" data-bonus-cancel>Cancel</button>
+        <button type="button" class="summer-make-picker-save" data-bonus-save>Add to workbench</button>
+      </div>
+    </div>
+  </div>
+
   <% if (cuttings.length === 0) { %>
 
     <div class="summer-empty">
@@ -104,6 +132,46 @@
     // Open / close inline pickers + save / toggle / delete format ideas.
     // Delegated on document so cuttings added later still work.
     document.addEventListener('click', function (e) {
+      // ── Bonus recording (footage filmed outside the practice) ──────────
+      const bonusOpen = e.target.closest('[data-bonus-open]');
+      if (bonusOpen) {
+        const form = document.querySelector('[data-bonus-form]');
+        if (form) { form.hidden = false; bonusOpen.hidden = true; const t = document.getElementById('bonus-title'); if (t) t.focus(); }
+        return;
+      }
+      const bonusCancel = e.target.closest('[data-bonus-cancel]');
+      if (bonusCancel) {
+        const form = document.querySelector('[data-bonus-form]');
+        const openBtn2 = document.querySelector('[data-bonus-open]');
+        if (form) form.hidden = true;
+        if (openBtn2) openBtn2.hidden = false;
+        return;
+      }
+      const bonusSave = e.target.closest('[data-bonus-save]');
+      if (bonusSave) {
+        const title = (document.getElementById('bonus-title') || {}).value || '';
+        const note  = (document.getElementById('bonus-note')  || {}).value || '';
+        const errEl = document.querySelector('[data-bonus-error]');
+        if (!title.trim() && !note.trim()) {
+          if (errEl) { errEl.textContent = 'Add a title or a note.'; errEl.hidden = false; }
+          return;
+        }
+        bonusSave.disabled = true;
+        if (errEl) errEl.hidden = true;
+        fetch('/summer/bonus', {
+          method: 'POST', credentials: 'same-origin',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ title: title.trim(), note: note.trim() }),
+        }).then(function (r) {
+          if (!r.ok) throw new Error('save failed');
+          window.location.reload();
+        }).catch(function () {
+          if (errEl) { errEl.textContent = 'Could not save. Try again.'; errEl.hidden = false; }
+          bonusSave.disabled = false;
+        });
+        return;
+      }
+
       const openBtn = e.target.closest('[data-summer-make]');
       if (openBtn) {
         const id = openBtn.getAttribute('data-cutting-id');
