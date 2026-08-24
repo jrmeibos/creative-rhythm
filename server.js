@@ -3425,7 +3425,7 @@ app.get('/greenhouse/propagation-table', requireAuth, requireMakingSeason, (req,
   });
   const { cuttings, formats, makesByCutting } = loadCultivatedIdeas(userId);
   res.render('propagation-table', {
-    title: 'The Propagation Table',
+    title: 'Make something',
     page: 'greenhouse',
     gardenTab: 'make',
     user: req.session.user,
