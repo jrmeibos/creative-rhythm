@@ -3,6 +3,7 @@
     than letting EJS throw a ReferenceError that 500s the whole page. %>
 <% var page = locals.page || ''; %>
 <% var inPropTable = !!locals.gardenTab; %>
+<% var isPaidUser = user && (user.role === 'admin' || (user.course_length_weeks || 12) >= 12); %>
 <!-- Hamburger toggle — hidden on desktop, shown at ≤900px. Kept outside the
      <aside> so it stays fixed even when the drawer is closed. Tapping toggles
      the drawer; Escape / backdrop / nav-link click closes it. -->
@@ -90,6 +91,18 @@
             Your Cuttings
           </a>
         </li>
+        <% if (isPaidUser) { %>
+        <li class="sidebar-nav-item <%= page === 'plot' ? 'active' : '' %>">
+          <a href="/workbench">
+            <svg width="17" height="17" viewBox="0 0 17 17" fill="none" aria-hidden="true">
+              <rect x="1.5" y="2.5" width="3.6" height="12" rx="1" stroke="currentColor" stroke-width="1.5"/>
+              <rect x="6.7" y="2.5" width="3.6" height="8" rx="1" stroke="currentColor" stroke-width="1.5"/>
+              <rect x="11.9" y="2.5" width="3.6" height="10" rx="1" stroke="currentColor" stroke-width="1.5"/>
+            </svg>
+            The Plot
+          </a>
+        </li>
+        <% } %>
         <li class="sidebar-nav-item goals-nav <%= page === 'goals' ? 'active' : '' %>">
           <a href="/weekly-intentions">
             <svg width="17" height="17" viewBox="0 0 17 17" fill="none" aria-hidden="true">

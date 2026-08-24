@@ -3448,7 +3448,7 @@ app.get('/greenhouse/propagation-table', requireAuth, requireMakingSeason, (req,
 // Ideas -> To edit -> To share -> Shared. A read-through of data that already
 // lives across the Make tab (ideas + cultivate pile) and the Grove (shares);
 // each card links to where you act on it.
-app.get('/workbench', requireAuth, requireMakingSeason, (req, res) => {
+app.get('/workbench', requireAuth, requireFullCourse, (req, res) => {
   const userId = req.session.user.id;
 
   // 💡 Ideas — want to make, not filmed yet.
@@ -3473,9 +3473,8 @@ app.get('/workbench', requireAuth, requireMakingSeason, (req, res) => {
   const shared  = groveEntries.filter(e => isShared(e));
 
   res.render('workbench', {
-    title: 'Your Workbench',
-    page: 'greenhouse',
-    gardenTab: 'workbench',   // highlights "Your Cuttings" in the sidebar
+    title: 'The Plot',
+    page: 'plot',            // highlights the "The Plot" sidebar item
     user: req.session.user,
     ideas, toEdit, toShare, shared, linksByMake,
   });
