@@ -37,6 +37,14 @@
       </label>
       <textarea id="idea-note" class="summer-bonus-textarea" rows="2"
                 placeholder="Anything to remember about this idea."></textarea>
+      <p class="summer-bonus-label">What do you already have for it?</p>
+      <div class="idea-materials" data-idea-materials>
+        <label class="idea-material"><input type="checkbox" value="writing"> <span>✍️ Writing / journal</span></label>
+        <label class="idea-material"><input type="checkbox" value="audio"> <span>🎙️ Voice note</span></label>
+        <label class="idea-material"><input type="checkbox" value="photos"> <span>📷 Photos</span></label>
+        <label class="idea-material"><input type="checkbox" value="video"> <span>🎥 Video</span></label>
+      </div>
+      <p class="idea-capture-nothing">Leave all unchecked if it's just an idea for now.</p>
       <p class="summer-bonus-error" data-idea-error hidden></p>
       <div class="summer-bonus-actions">
         <button type="button" class="summer-make-picker-cancel" data-idea-cancel>Cancel</button>
@@ -51,10 +59,11 @@
             <div class="workbench-idea-body">
               <% if (idea.title) { %><p class="workbench-idea-title"><%= idea.title %></p><% } %>
               <% if (idea.note) { %><p class="workbench-idea-note"><%= idea.note %></p><% } %>
+              <%- include('idea-material-chips', { materials: idea.materials }) %>
             </div>
             <div class="workbench-idea-actions">
               <button type="button" class="workbench-idea-filmed"
-                      data-idea-filmed data-idea-id="<%= idea.id %>">Mark as filmed → to edit</button>
+                      data-idea-filmed data-idea-id="<%= idea.id %>">Ready to make →</button>
               <button type="button" class="workbench-idea-remove"
                       data-idea-remove data-idea-id="<%= idea.id %>"
                       data-title="<%= idea.title || 'this idea' %>" aria-label="Delete idea">×</button>
@@ -247,12 +256,14 @@
           if (errEl) { errEl.textContent = 'Add a title or a note.'; errEl.hidden = false; }
           return;
         }
+        var materials = [];
+        document.querySelectorAll('[data-idea-materials] input:checked').forEach(function (c) { materials.push(c.value); });
         ideaSave.disabled = true;
         if (errEl) errEl.hidden = true;
         fetch('/summer/ideas', {
           method: 'POST', credentials: 'same-origin',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ title: title.trim(), note: note.trim() }),
+          body: JSON.stringify({ title: title.trim(), note: note.trim(), materials: materials }),
         }).then(function (r) {
           if (!r.ok) throw new Error('save failed');
           window.location.reload();

@@ -812,6 +812,8 @@ app.get('/dashboard', requireAuth, (req, res) => {
     springCardVisible,
     summerCardVisible,
     fallCardVisible,
+    // Full-course students get the workbench idea-capture on the dashboard.
+    canJotIdea: !isTrial,
   });
 });
 
@@ -3570,18 +3572,31 @@ app.post('/summer/bonus', requireAuth, requireMakingSeason, (req, res) => {
   }
 });
 
-// Content ideas — the top of the workbench funnel (want to make, not filmed).
-// Add an idea: { title, note }.
-app.post('/summer/ideas', requireAuth, requireMakingSeason, (req, res) => {
-  const { title, note } = req.body || {};
+// Content ideas — the top of the workbench funnel. Not season-gated (an idea
+// can strike any time, incl. from the dashboard); the /summer mount still
+// requires the full course. Body: { title, note, materials }. materials is an
+// array or CSV of what already exists: writing | audio | photos | video.
+const IDEA_MATERIALS = ['writing', 'audio', 'photos', 'video'];
+function normalizeMaterials(raw) {
+  const list = Array.isArray(raw) ? raw : String(raw || '').split(',');
+  const seen = [];
+  for (const m of list) {
+    const key = String(m).trim().toLowerCase();
+    if (IDEA_MATERIALS.includes(key) && !seen.includes(key)) seen.push(key);
+  }
+  return seen.join(',');
+}
+app.post('/summer/ideas', requireAuth, (req, res) => {
+  const { title, note, materials } = req.body || {};
   const t = (typeof title === 'string' ? title.trim() : '');
   const n = (typeof note  === 'string' ? note.trim()  : '');
   if (!t && !n) return res.status(400).json({ error: 'Add a title or a note.' });
-  const id = db.createContentIdea(req.session.user.id, t, n);
+  const id = db.createContentIdea(req.session.user.id, t, n, normalizeMaterials(materials));
   return res.json({ ok: true, id });
 });
-// Mark an idea as filmed → promote it to a Bonus Recording on the to-edit pile.
-app.post('/summer/ideas/:id/filmed', requireAuth, requireMakingSeason, (req, res) => {
+// Mark an idea as ready to work on → promote it to a Bonus Recording on the
+// to-edit pile.
+app.post('/summer/ideas/:id/filmed', requireAuth, (req, res) => {
   const ideaId = parseInt(req.params.id, 10);
   if (!Number.isInteger(ideaId) || ideaId <= 0) return res.status(400).json({ error: 'Invalid idea id.' });
   const user   = req.session.user;
@@ -3592,7 +3607,7 @@ app.post('/summer/ideas/:id/filmed', requireAuth, requireMakingSeason, (req, res
   return res.json({ ok: true, cuttingId });
 });
 // Delete an idea.
-app.post('/summer/ideas/:id/delete', requireAuth, requireMakingSeason, (req, res) => {
+app.post('/summer/ideas/:id/delete', requireAuth, (req, res) => {
   const ideaId = parseInt(req.params.id, 10);
   if (!Number.isInteger(ideaId) || ideaId <= 0) return res.status(400).json({ error: 'Invalid idea id.' });
   db.deleteContentIdea(ideaId, req.session.user.id);

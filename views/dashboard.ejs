@@ -260,6 +260,108 @@
         </div>
       </section>
 
+      <% if (canJotIdea) { %>
+      <!-- Quick idea capture — distinct from today's recording. Ideas land on
+           the Workbench, and may already have material (writing, a voice note,
+           photos, video) or none at all. -->
+      <section class="dash-section">
+        <div class="idea-capture" data-idea-capture>
+          <button type="button" class="idea-capture-open" data-idea-capture-open>
+            <span class="idea-capture-open-emoji" aria-hidden="true">💡</span>
+            Jot an idea
+            <span class="idea-capture-open-hint">— something you want to make (not today's recording)</span>
+          </button>
+
+          <div class="idea-capture-form" hidden data-idea-capture-form>
+            <p class="idea-capture-help">
+              This goes to your <a href="/workbench">Workbench</a>, separate from
+              your daily recording. It doesn't have to be filmed — note what you
+              already have, if anything.
+            </p>
+            <label class="idea-capture-label" for="dash-idea-title">Title</label>
+            <input type="text" id="dash-idea-title" class="idea-capture-input" maxlength="120"
+                   placeholder="e.g. Show my new branding in a carousel post">
+            <label class="idea-capture-label" for="dash-idea-note">
+              Note <span class="idea-capture-optional">(optional)</span>
+            </label>
+            <textarea id="dash-idea-note" class="idea-capture-textarea" rows="2"
+                      placeholder="Anything to remember about this idea."></textarea>
+
+            <p class="idea-capture-label">What do you already have for it?</p>
+            <div class="idea-materials">
+              <label class="idea-material"><input type="checkbox" value="writing"> <span>✍️ Writing / journal</span></label>
+              <label class="idea-material"><input type="checkbox" value="audio"> <span>🎙️ Voice note</span></label>
+              <label class="idea-material"><input type="checkbox" value="photos"> <span>📷 Photos</span></label>
+              <label class="idea-material"><input type="checkbox" value="video"> <span>🎥 Video</span></label>
+            </div>
+            <p class="idea-capture-nothing">Leave all unchecked if it's just an idea for now.</p>
+
+            <p class="idea-capture-error" data-idea-capture-error hidden></p>
+            <div class="idea-capture-actions">
+              <span class="idea-capture-saved" data-idea-capture-saved hidden>Saved to your Workbench ✓</span>
+              <button type="button" class="idea-capture-cancel" data-idea-capture-cancel>Cancel</button>
+              <button type="button" class="idea-capture-save" data-idea-capture-save>Add idea</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <script>
+        (function () {
+          var wrap   = document.querySelector('[data-idea-capture]');
+          if (!wrap) return;
+          var openBtn = wrap.querySelector('[data-idea-capture-open]');
+          var form    = wrap.querySelector('[data-idea-capture-form]');
+          var cancel  = wrap.querySelector('[data-idea-capture-cancel]');
+          var save    = wrap.querySelector('[data-idea-capture-save]');
+          var errEl   = wrap.querySelector('[data-idea-capture-error]');
+          var savedEl = wrap.querySelector('[data-idea-capture-saved]');
+          var titleEl = wrap.querySelector('#dash-idea-title');
+          var noteEl  = wrap.querySelector('#dash-idea-note');
+
+          function reset() {
+            titleEl.value = ''; noteEl.value = '';
+            wrap.querySelectorAll('.idea-material input').forEach(function (c) { c.checked = false; });
+            if (errEl) errEl.hidden = true;
+            save.disabled = false;
+          }
+          openBtn.addEventListener('click', function () {
+            form.hidden = false; openBtn.hidden = true;
+            if (savedEl) savedEl.hidden = true;
+            titleEl.focus();
+          });
+          cancel.addEventListener('click', function () {
+            form.hidden = true; openBtn.hidden = false; reset();
+          });
+          save.addEventListener('click', function () {
+            var title = titleEl.value.trim();
+            var note  = noteEl.value.trim();
+            if (!title && !note) {
+              if (errEl) { errEl.textContent = 'Add a title or a note.'; errEl.hidden = false; }
+              return;
+            }
+            var materials = [];
+            wrap.querySelectorAll('.idea-material input:checked').forEach(function (c) { materials.push(c.value); });
+            save.disabled = true;
+            if (errEl) errEl.hidden = true;
+            fetch('/summer/ideas', {
+              method: 'POST', credentials: 'same-origin',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ title: title, note: note, materials: materials }),
+            }).then(function (r) {
+              if (!r.ok) throw new Error('save failed');
+              reset();
+              form.hidden = true; openBtn.hidden = false;
+              if (savedEl) { savedEl.hidden = false; setTimeout(function () { savedEl.hidden = true; }, 3500); }
+            }).catch(function () {
+              if (errEl) { errEl.textContent = 'Could not save. Try again.'; errEl.hidden = false; }
+              save.disabled = false;
+            });
+          });
+        })();
+      </script>
+      <% } %>
+
       <style>
         /* Day-view module — scoped via .dayview- prefix to avoid collisions
            with the legacy recording-card classes (which the day-view reuses

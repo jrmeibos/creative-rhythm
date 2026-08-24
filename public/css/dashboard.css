@@ -3296,3 +3296,162 @@ button.mid-card-cta {
   .garden-tab { flex: 0 0 auto; }
   .garden-tab-lock { display: none; }
 }
+
+/* ── Dashboard idea capture (💡 Jot an idea → Workbench) ────────────────── */
+.idea-capture {
+  background: var(--color-new-growth);
+  border-radius: var(--radius-lg);
+  padding: 0.35rem;
+}
+.idea-capture-open {
+  width: 100%;
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  background: transparent;
+  border: none;
+  padding: 0.85rem 1rem;
+  font-family: var(--font-body);
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--color-ink-stained);
+  cursor: pointer;
+  text-align: left;
+  border-radius: var(--radius-md);
+  transition: background 0.14s ease;
+}
+.idea-capture-open:hover { background: rgba(255, 255, 255, 0.5); }
+.idea-capture-open-emoji { font-size: 1.05rem; }
+.idea-capture-open-hint {
+  font-weight: 300;
+  font-size: 0.85rem;
+  opacity: 0.6;
+}
+.idea-capture-form {
+  background: var(--color-blank-page);
+  border-radius: var(--radius-md);
+  padding: 1.1rem 1.25rem;
+}
+.idea-capture-form[hidden] { display: none; }
+.idea-capture-help {
+  font-family: var(--font-body);
+  font-size: 0.88rem;
+  color: var(--color-ink-stained);
+  opacity: 0.75;
+  line-height: 1.5;
+  margin: 0 0 0.9rem;
+}
+.idea-capture-help a { color: var(--color-bloem); }
+.idea-capture-label {
+  display: block;
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--color-ink-stained);
+  margin: 0.7rem 0 0.35rem;
+}
+.idea-capture-optional { font-weight: 400; opacity: 0.55; }
+.idea-capture-input,
+.idea-capture-textarea {
+  width: 100%;
+  padding: 0.55rem 0.8rem;
+  border: 1px solid rgba(16, 15, 16, 0.18);
+  border-radius: var(--radius-md);
+  font-family: var(--font-body);
+  font-size: 0.92rem;
+  color: var(--color-ink-stained);
+  background: white;
+}
+.idea-capture-input:focus,
+.idea-capture-textarea:focus {
+  outline: none;
+  border-color: var(--color-bloem);
+  box-shadow: 0 0 0 3px rgba(112, 92, 108, 0.12);
+}
+.idea-materials {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 0.9rem;
+}
+.idea-material {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  color: var(--color-ink-stained);
+  cursor: pointer;
+}
+.idea-material input { accent-color: var(--color-bloem); }
+.idea-capture-nothing {
+  font-family: var(--font-body);
+  font-size: 0.8rem;
+  color: var(--color-ink-stained);
+  opacity: 0.55;
+  margin: 0.5rem 0 0;
+}
+.idea-capture-error {
+  color: #b13a3a;
+  font-family: var(--font-body);
+  font-size: 0.82rem;
+  margin: 0.7rem 0 0;
+}
+.idea-capture-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.7rem;
+  margin-top: 1rem;
+}
+.idea-capture-saved {
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  color: var(--color-understory);
+  margin-right: auto;
+}
+.idea-capture-cancel {
+  background: transparent;
+  border: none;
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  color: rgba(16, 15, 16, 0.55);
+  cursor: pointer;
+}
+.idea-capture-cancel:hover { color: var(--color-bloem); }
+.idea-capture-save {
+  background: var(--color-bloem);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-md);
+  padding: 0.5rem 1.15rem;
+  font-family: var(--font-body);
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.12s ease, opacity 0.12s ease;
+}
+.idea-capture-save:hover { background: var(--color-bloem-mid); }
+.idea-capture-save:disabled { opacity: 0.5; cursor: default; }
+
+/* ── Idea material chips (what already exists for an idea) ──────────────── */
+.idea-mats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  margin-top: 0.4rem;
+}
+.idea-mat {
+  font-family: var(--font-body);
+  font-size: 0.72rem;
+  color: var(--color-ink-stained);
+  background: rgba(118, 133, 108, 0.16);
+  border-radius: 999px;
+  padding: 0.1rem 0.5rem;
+  white-space: nowrap;
+}
+.idea-mat--none {
+  background: transparent;
+  border: 1px dashed rgba(16, 15, 16, 0.2);
+  opacity: 0.7;
+}

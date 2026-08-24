@@ -1,0 +1,13 @@
+<%# Material chips for an idea — what raw material already exists. Local:
+    `materials` (CSV of writing|audio|photos|video). None = "just an idea". %>
+<%
+  var _mats = (materials || '').split(',').map(function (s) { return s.trim(); }).filter(Boolean);
+  var _map = { writing: '✍️ Writing', audio: '🎙️ Voice note', photos: '📷 Photos', video: '🎥 Video' };
+%>
+<div class="idea-mats">
+  <% if (_mats.length === 0) { %>
+    <span class="idea-mat idea-mat--none">💭 Just an idea</span>
+  <% } else { _mats.forEach(function (m) { if (_map[m]) { %>
+    <span class="idea-mat"><%= _map[m] %></span>
+  <% } }); } %>
+</div>

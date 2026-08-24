@@ -965,11 +965,20 @@ db.exec(`
       user_id    INTEGER NOT NULL,
       title      TEXT,
       note       TEXT,
+      materials  TEXT,
       created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (user_id) REFERENCES users(id)
     );
     CREATE INDEX IF NOT EXISTS idx_content_ideas_user ON content_ideas (user_id);
   `);
+  // `materials` — what raw material already exists for an idea, as a CSV of
+  // any of: writing, audio, photos, video. Empty/null = just an idea, nothing
+  // tied to it yet. Guarded add for DBs that created the table before this.
+  const ideaCols = db.prepare("PRAGMA table_info(content_ideas)").all().map(r => r.name);
+  if (!ideaCols.includes('materials')) {
+    db.exec("ALTER TABLE content_ideas ADD COLUMN materials TEXT");
+    console.log('✓ Migrated: added materials to content_ideas');
+  }
 
   // Guarded add of the created flag for existing installs — new rows land
   // as ideas (0) by default. Backfill leaves any pre-existing rows at 0;
@@ -2872,16 +2881,23 @@ module.exports = {
     }
   },
 
-  // ── Content ideas (want-to-make, not filmed yet) ────────────────────────
+  // ── Content ideas (want-to-make; may already have material, or none) ─────
   getContentIdeas(userId) {
     return db.prepare(
-      'SELECT id, title, note, created_at FROM content_ideas WHERE user_id = ? ORDER BY created_at DESC, id DESC'
+      'SELECT id, title, note, materials, created_at FROM content_ideas WHERE user_id = ? ORDER BY created_at DESC, id DESC'
     ).all(userId);
   },
-  createContentIdea(userId, title, note) {
+  // materials: CSV string of any of writing|audio|photos|video (already
+  // validated/normalised by the caller); '' or null = just an idea.
+  createContentIdea(userId, title, note, materials) {
     return db.prepare(
-      'INSERT INTO content_ideas (user_id, title, note) VALUES (?, ?, ?)'
-    ).run(userId, (title || '').trim() || null, (note || '').trim() || null).lastInsertRowid;
+      'INSERT INTO content_ideas (user_id, title, note, materials) VALUES (?, ?, ?, ?)'
+    ).run(
+      userId,
+      (title || '').trim() || null,
+      (note || '').trim() || null,
+      (materials || '').trim() || null
+    ).lastInsertRowid;
   },
   deleteContentIdea(ideaId, userId) {
     return db.prepare('DELETE FROM content_ideas WHERE id = ? AND user_id = ?').run(ideaId, userId).changes;

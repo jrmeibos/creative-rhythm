@@ -46,6 +46,7 @@
               <a class="wb-card" href="/greenhouse/propagation-table#cultivated-ideas">
                 <% if (idea.title) { %><p class="wb-card-title"><%= idea.title %></p><% } %>
                 <% if (idea.note) { %><p class="wb-card-note"><%= idea.note %></p><% } %>
+                <%- include('partials/idea-material-chips', { materials: idea.materials }) %>
               </a>
             <% }); } %>
           </div>
