@@ -198,6 +198,7 @@ app.use((req, res, next) => {
       s.current_season      = fresh.current_season || null;
       s.profile_photo       = fresh.profile_photo || null;
       s.course_start_date   = fresh.course_start_date || null;
+      s.challenge_payment_status = fresh.challenge_payment_status || null;
     }
   }
   next();
@@ -784,11 +785,20 @@ app.get('/dashboard', requireAuth, (req, res) => {
     };
   }
 
+  // Refund-progress tracker for paid-challenge students (beta cohort). Only
+  // computed for accounts that actually paid the challenge; everyone else
+  // (free/pilot/legacy) gets null and sees no card.
+  const chStatus = req.session.user.challenge_payment_status;
+  const challenge = (chStatus === 'paid' || chStatus === 'refunded')
+    ? Object.assign({ status: chStatus }, db.getChallengeCompletion(req.session.user))
+    : null;
+
   res.render('dashboard', {
     title: 'Dashboard',
     page: 'dashboard',
     greeting: getGreeting(req.session.user),
     upgradeBanner,
+    challenge,
     weekStart,
     weekNumber,
     weekLabel: formatWeekLabel(weekStart),
@@ -4401,6 +4411,7 @@ app.get('/admin', requireAdmin, (req, res) => {
     title: 'Admin', page: 'admin',
     users, lessons, resources, lessonStats, lessonHomework, courseStartDate,
     recordingSummary, enrollments,
+    challengeParticipants: db.getChallengeParticipants(),
     harvestUnlocked, midcourseUnlocked, upgradeMode,
     midcourseUnlockDate, closingUnlockDate,
     simulatedToday,

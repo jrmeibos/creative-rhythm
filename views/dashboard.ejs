@@ -59,6 +59,46 @@
         <% } %>
       </header>
 
+      <%# Refund-progress tracker — shown only to paid-challenge (beta) students. %>
+      <% if (locals.challenge) { %>
+        <% const ch = challenge; %>
+        <section class="ch-refund <%= ch.qualifies ? 'ch-refund--won' : '' %>">
+          <div class="ch-refund-head">
+            <h2 class="ch-refund-title">
+              <% if (ch.status === 'refunded') { %>Your $299 has been refunded ✓
+              <% } else if (ch.qualifies) { %>You've earned your $299 back 🎉
+              <% } else { %>Earn your $299 back<% } %>
+            </h2>
+            <p class="ch-refund-sub">
+              <% if (ch.status === 'refunded') { %>
+                Thank you for finishing the challenge — and for your honest feedback.
+              <% } else if (ch.qualifies) { %>
+                You've hit the mark. Keep going to the finish, and I'll refund your challenge fee once the three weeks wrap.
+              <% } else { %>
+                Record on at least <%= ch.refundThreshold %> of the <%= ch.totalDays %> days and share your honest feedback at the end, and your $299 is fully refunded.
+              <% } %>
+            </p>
+          </div>
+
+          <% if (ch.status !== 'refunded') { %>
+            <div class="ch-refund-bar" role="img" aria-label="<%= ch.daysRecorded %> of <%= ch.totalDays %> days recorded">
+              <div class="ch-refund-bar-fill" style="width: <%= Math.min(100, Math.round(ch.daysRecorded / ch.totalDays * 100)) %>%"></div>
+            </div>
+            <p class="ch-refund-count"><strong><%= ch.daysRecorded %></strong> of <%= ch.totalDays %> days recorded</p>
+            <ul class="ch-refund-reqs">
+              <li class="<%= ch.daysRecorded >= ch.refundThreshold ? 'is-done' : '' %>">
+                <span class="ch-refund-check" aria-hidden="true"><%= ch.daysRecorded >= ch.refundThreshold ? '✓' : '○' %></span>
+                <span>Record on at least <%= ch.refundThreshold %> days<% if (ch.daysRecorded < ch.refundThreshold) { %> <span class="ch-refund-remain">— <%= ch.refundThreshold - ch.daysRecorded %> to go</span><% } %></span>
+              </li>
+              <li class="<%= ch.feedbackSubmitted ? 'is-done' : '' %>">
+                <span class="ch-refund-check" aria-hidden="true"><%= ch.feedbackSubmitted ? '✓' : '○' %></span>
+                <span>Share your honest feedback<% if (!ch.feedbackSubmitted) { %> <span class="ch-refund-remain">— at the end of the challenge</span><% } %></span>
+              </li>
+            </ul>
+          <% } %>
+        </section>
+      <% } %>
+
       <!-- Day-view: per-day topic + reflection with back/forward day nav.
            Markup lives in views/partials/day-view.ejs (one source for both
            the full-page render and the GET /dashboard/day fragment). The

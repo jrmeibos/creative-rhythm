@@ -3455,3 +3455,78 @@ button.mid-card-cta {
   border: 1px dashed rgba(16, 15, 16, 0.2);
   opacity: 0.7;
 }
+
+/* ─── Challenge refund tracker (paid beta students) ───────────────────────── */
+.ch-refund {
+  background: var(--color-new-growth);
+  border: 1px solid rgba(118, 133, 108, 0.35);
+  border-radius: 16px;
+  padding: 1.35rem 1.5rem;
+  margin: 0 0 1.75rem;
+}
+.ch-refund--won {
+  background: color-mix(in srgb, var(--color-apricity) 22%, var(--color-blank-page));
+  border-color: rgba(246, 201, 92, 0.6);
+}
+.ch-refund-head { margin-bottom: 1rem; }
+.ch-refund-title {
+  font-family: var(--font-display);
+  font-size: 1.3rem;
+  font-weight: 400;
+  color: var(--color-ink-stained);
+  margin: 0 0 0.3rem;
+}
+.ch-refund-sub {
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  font-weight: 300;
+  line-height: 1.55;
+  color: rgba(16, 15, 16, 0.7);
+  margin: 0;
+}
+.ch-refund-bar {
+  height: 12px;
+  border-radius: 999px;
+  background: rgba(16, 15, 16, 0.08);
+  overflow: hidden;
+  margin: 0 0 0.5rem;
+}
+.ch-refund-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--color-understory);
+  transition: width 0.4s ease;
+}
+.ch-refund--won .ch-refund-bar-fill { background: var(--color-apricity); }
+.ch-refund-count {
+  font-family: var(--font-body);
+  font-size: 0.82rem;
+  color: rgba(16, 15, 16, 0.6);
+  margin: 0 0 0.9rem;
+}
+.ch-refund-count strong { color: var(--color-ink-stained); font-weight: 700; }
+.ch-refund-reqs {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.ch-refund-reqs li {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  font-weight: 300;
+  color: rgba(16, 15, 16, 0.75);
+}
+.ch-refund-reqs li.is-done { color: var(--color-ink-stained); }
+.ch-refund-check {
+  flex-shrink: 0;
+  color: rgba(16, 15, 16, 0.3);
+  font-weight: 700;
+}
+.ch-refund-reqs li.is-done .ch-refund-check { color: var(--color-understory); }
+.ch-refund-remain { color: rgba(16, 15, 16, 0.45); font-style: italic; }

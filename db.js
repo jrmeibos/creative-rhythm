@@ -1716,7 +1716,7 @@ module.exports = {
   },
 
   getUserById(id) {
-    return db.prepare('SELECT id, name, email, role, avatar_initial, current_season, profile_photo, course_start_date, course_length_weeks, enrollment_tier, community_goals_public FROM users WHERE id = ?').get(id);
+    return db.prepare('SELECT id, name, email, role, avatar_initial, current_season, profile_photo, course_start_date, course_length_weeks, enrollment_tier, community_goals_public, challenge_payment_status FROM users WHERE id = ?').get(id);
   },
 
   // ─── Per-user course start date ───────────────────────────────────────────
@@ -1743,20 +1743,22 @@ module.exports = {
     ).run(status || null, userId);
   },
 
-  // Completion toward the "finish it and get refunded" offer: distinct days
-  // with a recording inside the challenge window + whether the closing
-  // feedback was submitted. Threshold is every day of the run (length*7).
-  // `qualifies` uses that strict bar for now — easy to loosen later.
+  // Completion toward the "finish it and get refunded" offer. `totalDays` is
+  // the full run (length*7 = 21 for the 3-week challenge). `refundThreshold`
+  // is the bar to earn the refund — Julia allows 3 days of grace, so 18/21.
+  // Refund = hit the threshold of recording days AND submit closing feedback.
+  CHALLENGE_GRACE_DAYS: 3,
   getChallengeCompletion(user) {
     const start = user && user.course_start_date;
     const weeks = (user && user.course_length_weeks) || 3;
-    const requiredDays = weeks * 7;
+    const totalDays = weeks * 7;
+    const refundThreshold = Math.max(1, totalDays - this.CHALLENGE_GRACE_DAYS);
     if (!start) {
-      return { requiredDays, daysRecorded: 0, feedbackSubmitted: false, qualifies: false };
+      return { totalDays, refundThreshold, daysRecorded: 0, feedbackSubmitted: false, qualifies: false };
     }
     const startD = new Date(start + 'T00:00:00');
     const endD = new Date(startD);
-    endD.setDate(endD.getDate() + requiredDays - 1);
+    endD.setDate(endD.getDate() + totalDays - 1);
     const endStr = endD.toISOString().split('T')[0];
     const row = db.prepare(
       `SELECT COUNT(DISTINCT recorded_date) AS days
@@ -1766,11 +1768,32 @@ module.exports = {
     const daysRecorded = (row && row.days) || 0;
     const feedbackSubmitted = this.hasTrialClosingBeenSubmittedByUser(user.id);
     return {
-      requiredDays,
+      totalDays,
+      refundThreshold,
       daysRecorded,
       feedbackSubmitted,
-      qualifies: daysRecorded >= requiredDays && feedbackSubmitted,
+      qualifies: daysRecorded >= refundThreshold && feedbackSubmitted,
     };
+  },
+
+  // All paid-challenge accounts with their completion, for the admin refund
+  // view. Ordered by qualifies-first so who's owed a refund floats to the top.
+  getChallengeParticipants() {
+    const rows = db.prepare(
+      `SELECT id, name, email, avatar_initial, course_start_date, course_length_weeks,
+              challenge_payment_status
+         FROM users
+        WHERE challenge_payment_status IN ('paid', 'refunded')
+        ORDER BY name ASC`
+    ).all();
+    return rows.map(u => ({
+      id: u.id,
+      name: u.name,
+      email: u.email,
+      avatar_initial: u.avatar_initial,
+      status: u.challenge_payment_status,
+      completion: this.getChallengeCompletion(u),
+    }));
   },
 
   // Trial students get a shorter clamp (typically 3). Server-side accessor

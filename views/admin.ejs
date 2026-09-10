@@ -144,6 +144,69 @@
         </div>
       </section>
 
+      <!-- ── Challenge refunds ────────────────────────────────────────────── -->
+      <% if (challengeParticipants && challengeParticipants.length) { %>
+      <section class="dash-section" id="section-challenge-refunds">
+        <div class="dash-section-header">
+          <h2 class="dash-section-title">3-Week Challenge — Refunds</h2>
+          <div class="admin-section-actions">
+            <span class="admin-count"><%= challengeParticipants.filter(p => p.completion.qualifies).length %> qualify</span>
+          </div>
+        </div>
+        <div class="admin-card" style="overflow-x:auto">
+          <table class="admin-assess-table">
+            <thead>
+              <tr>
+                <th>Gardener</th>
+                <th>Days recorded</th>
+                <th>Feedback</th>
+                <th>Refund</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% for (const p of challengeParticipants) { %>
+                <% const c = p.completion; %>
+                <tr>
+                  <td class="assess-name-cell">
+                    <div class="sidebar-avatar" style="width:28px;height:28px;font-size:0.75rem;flex-shrink:0;display:inline-flex">
+                      <%= p.avatar_initial || p.name.charAt(0) %>
+                    </div>
+                    <%= p.name %>
+                  </td>
+                  <td>
+                    <span class="assess-status <%= c.daysRecorded >= c.refundThreshold ? 'assess-status--done' : 'assess-status--partial' %>">
+                      <%= c.daysRecorded %> / <%= c.totalDays %>
+                    </span>
+                    <span class="admin-field-hint">(needs <%= c.refundThreshold %>)</span>
+                  </td>
+                  <td>
+                    <% if (c.feedbackSubmitted) { %>
+                      <span class="assess-status assess-status--done">✓ Given</span>
+                    <% } else { %>
+                      <span class="assess-status assess-status--pending">Not yet</span>
+                    <% } %>
+                  </td>
+                  <td>
+                    <% if (p.status === 'refunded') { %>
+                      <span class="assess-status assess-status--done">Refunded ✓</span>
+                    <% } else if (c.qualifies) { %>
+                      <span class="admin-unlock-badge admin-unlock-badge--on">Owed — refund in Stripe</span>
+                    <% } else { %>
+                      <span class="assess-status assess-status--pending">Not yet</span>
+                    <% } %>
+                  </td>
+                </tr>
+              <% } %>
+            </tbody>
+          </table>
+          <p class="admin-field-hint" style="margin-top:0.6rem">
+            Qualifying = recorded on at least the threshold number of days <strong>and</strong> submitted closing feedback.
+            You issue the actual refunds in Stripe; mark someone "refunded" by setting their status once done.
+          </p>
+        </div>
+      </section>
+      <% } %>
+
       <!-- ── Lessons ──────────────────────────────────────────────────────── -->
       <section class="dash-section" id="section-lessons">
         <div class="dash-section-header">
