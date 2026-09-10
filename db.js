@@ -447,6 +447,14 @@ db.exec(`
     db.exec("ALTER TABLE users ADD COLUMN notes TEXT");
     console.log('✓ Migrated: added notes column to users');
   }
+  // Beta challenge payment status. NULL = not a paid-challenge account
+  // (free / pilot / legacy). 'pending' = signed up but hasn't paid the $299
+  // yet; 'paid' = access granted; 'refunded' = completed + refunded. Drives
+  // the signup paywall and the refund-progress tracker.
+  if (!userCols.includes('challenge_payment_status')) {
+    db.exec("ALTER TABLE users ADD COLUMN challenge_payment_status TEXT");
+    console.log('✓ Migrated: added challenge_payment_status column to users');
+  }
   // Block Buster custom blocks gained a `category` column when the resource
   // was reorganized into categories. Guarded add for DBs created before that.
   const bbBlockCols = db.prepare("PRAGMA table_info(block_buster_blocks)").all().map(r => r.name);
@@ -1726,6 +1734,43 @@ module.exports = {
     return db.prepare(
       'UPDATE users SET course_start_date = ? WHERE id = ?'
     ).run(dateString || null, userId);
+  },
+
+  // ── Beta challenge: payment + refund-completion ─────────────────────────
+  setChallengePaymentStatus(userId, status) {
+    return db.prepare(
+      'UPDATE users SET challenge_payment_status = ? WHERE id = ?'
+    ).run(status || null, userId);
+  },
+
+  // Completion toward the "finish it and get refunded" offer: distinct days
+  // with a recording inside the challenge window + whether the closing
+  // feedback was submitted. Threshold is every day of the run (length*7).
+  // `qualifies` uses that strict bar for now — easy to loosen later.
+  getChallengeCompletion(user) {
+    const start = user && user.course_start_date;
+    const weeks = (user && user.course_length_weeks) || 3;
+    const requiredDays = weeks * 7;
+    if (!start) {
+      return { requiredDays, daysRecorded: 0, feedbackSubmitted: false, qualifies: false };
+    }
+    const startD = new Date(start + 'T00:00:00');
+    const endD = new Date(startD);
+    endD.setDate(endD.getDate() + requiredDays - 1);
+    const endStr = endD.toISOString().split('T')[0];
+    const row = db.prepare(
+      `SELECT COUNT(DISTINCT recorded_date) AS days
+         FROM cuttings
+        WHERE user_id = ? AND recorded_date >= ? AND recorded_date <= ?`
+    ).get(user.id, start, endStr);
+    const daysRecorded = (row && row.days) || 0;
+    const feedbackSubmitted = this.hasTrialClosingBeenSubmittedByUser(user.id);
+    return {
+      requiredDays,
+      daysRecorded,
+      feedbackSubmitted,
+      qualifies: daysRecorded >= requiredDays && feedbackSubmitted,
+    };
   },
 
   // Trial students get a shorter clamp (typically 3). Server-side accessor
