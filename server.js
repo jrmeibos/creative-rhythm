@@ -4504,10 +4504,23 @@ app.get('/admin', requireAdmin, (req, res) => {
     stripeMode: STRIPE.getMode(),
   };
 
+  // The current offering is the paid 3-week challenge. Net revenue = paid
+  // students × the fee (refunded students paid then got it back → net 0).
+  const chCounts = db.getChallengeStatusCounts();
+  const challengeStats = {
+    paid:        chCounts.paid,
+    pending:     chCounts.pending,
+    refunded:    chCounts.refunded,
+    priceLabel:  STRIPE.formatPrice(STRIPE.getChallengePriceCents()),
+    netRevenueLabel: STRIPE.formatPrice(chCounts.paid * STRIPE.getChallengePriceCents()),
+    stripeConfigured: STRIPE.isConfigured(),
+    stripeMode: STRIPE.getMode(),
+  };
+
   res.render('admin', {
     title: 'Admin', page: 'admin',
     users, lessons, resources, lessonStats, lessonHomework, courseStartDate,
-    recordingSummary, enrollments,
+    recordingSummary, enrollments, challengeStats,
     challengeParticipants: db.getChallengeParticipants(),
     harvestUnlocked, midcourseUnlocked, upgradeMode,
     midcourseUnlockDate, closingUnlockDate,

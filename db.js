@@ -1796,6 +1796,19 @@ module.exports = {
     }));
   },
 
+  // Headline counts for the admin challenge overview: how many students have
+  // paid, are still pending (signed up, not paid), or have been refunded.
+  getChallengeStatusCounts() {
+    const row = db.prepare(
+      `SELECT
+         SUM(CASE WHEN challenge_payment_status = 'paid'     THEN 1 ELSE 0 END) AS paid,
+         SUM(CASE WHEN challenge_payment_status = 'pending'  THEN 1 ELSE 0 END) AS pending,
+         SUM(CASE WHEN challenge_payment_status = 'refunded' THEN 1 ELSE 0 END) AS refunded
+       FROM users WHERE role = 'student'`
+    ).get();
+    return { paid: row.paid || 0, pending: row.pending || 0, refunded: row.refunded || 0 };
+  },
+
   // Trial students get a shorter clamp (typically 3). Server-side accessor
   // mirrors getUserCourseStartDate: fall back to the column default of 12
   // if anything goes wrong, so a missing/null value can never produce a

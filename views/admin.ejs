@@ -77,7 +77,7 @@
                 <%= u.role === 'admin' ? 'Curator' : 'Gardener' %>
               </span>
               <% if (typeof u.course_length_weeks === 'number' && u.course_length_weeks < 12) { %>
-                <span class="admin-lesson-tag" title="<%= u.course_length_weeks %>-week trial cohort">Trial · <%= u.course_length_weeks %>w</span>
+                <span class="admin-lesson-tag" title="<%= u.course_length_weeks %>-week challenge cohort"><%= u.course_length_weeks %>w Challenge</span>
               <% } %>
               <% if (u.enrollment_tier) {
                 const tierLabels = { solo: 'Grow Solo', community: 'Grow in Community', coaching: 'Grow with Me' };
@@ -105,54 +105,73 @@
         </div>
       </section>
 
-      <!-- ── Enrollments ──────────────────────────────────────────────────── -->
-      <section class="dash-section" id="section-enrollments">
+      <!-- ── The 3-Week Challenge (the current offering) ──────────────────── -->
+      <section class="dash-section" id="section-challenge">
         <div class="dash-section-header">
-          <h2 class="dash-section-title">Enrollments</h2>
+          <h2 class="dash-section-title">The 3-Week Challenge</h2>
           <div class="admin-section-actions">
-            <span class="admin-count"><%= enrollments.paidCount %> paid · <%= enrollments.freeCount %> free</span>
+            <span class="admin-count"><%= challengeStats.paid %> joined · <%= challengeStats.pending %> pending</span>
           </div>
         </div>
+
+        <!-- Overview -->
         <div class="admin-card admin-settings-block">
           <div class="admin-enroll-grid">
-            <% for (const t of enrollments.tiers) { %>
-              <div class="admin-enroll-tier">
-                <span class="admin-enroll-tier-name"><%= t.name %></span>
-                <span class="admin-enroll-tier-price"><%= t.priceLabel %></span>
-                <span class="admin-enroll-tier-count"><%= t.count %> enrolled</span>
-              </div>
-            <% } %>
-            <div class="admin-enroll-tier admin-enroll-tier--free">
-              <span class="admin-enroll-tier-name">Free / Winter</span>
+            <div class="admin-enroll-tier">
+              <span class="admin-enroll-tier-name">Joined</span>
+              <span class="admin-enroll-tier-price"><%= challengeStats.priceLabel %></span>
+              <span class="admin-enroll-tier-count"><%= challengeStats.paid %> paid</span>
+            </div>
+            <div class="admin-enroll-tier">
+              <span class="admin-enroll-tier-name">Pending</span>
               <span class="admin-enroll-tier-price">—</span>
-              <span class="admin-enroll-tier-count"><%= enrollments.freeCount %> gardeners</span>
+              <span class="admin-enroll-tier-count"><%= challengeStats.pending %> not paid yet</span>
+            </div>
+            <div class="admin-enroll-tier">
+              <span class="admin-enroll-tier-name">Refunded</span>
+              <span class="admin-enroll-tier-price">—</span>
+              <span class="admin-enroll-tier-count"><%= challengeStats.refunded %> refunded</span>
             </div>
           </div>
           <div class="admin-enroll-total">
-            <span class="admin-enroll-total-label">Estimated revenue</span>
-            <span class="admin-enroll-total-value"><%= enrollments.revenueLabel %></span>
+            <span class="admin-enroll-total-label">Net revenue (est.)</span>
+            <span class="admin-enroll-total-value"><%= challengeStats.netRevenueLabel %></span>
           </div>
           <p class="admin-field-hint" style="margin-top:0.6rem">
-            Estimated from catalog prices × paid gardeners.
+            Net = paid gardeners × <%= challengeStats.priceLabel %> (refunded students net to zero).
             <strong>Stripe is the source of truth</strong> for exact amounts, refunds, and dates.
-            <% if (enrollments.stripeConfigured) { %>
-              Stripe is connected (<%= enrollments.stripeMode %> mode).
+            <% if (challengeStats.stripeConfigured) { %>
+              Stripe is connected (<%= challengeStats.stripeMode %> mode).
             <% } else { %>
               Stripe is not configured in this environment.
             <% } %>
           </p>
         </div>
-      </section>
 
-      <!-- ── Challenge refunds ────────────────────────────────────────────── -->
-      <% if (challengeParticipants && challengeParticipants.length) { %>
-      <section class="dash-section" id="section-challenge-refunds">
-        <div class="dash-section-header">
-          <h2 class="dash-section-title">3-Week Challenge — Refunds</h2>
-          <div class="admin-section-actions">
-            <span class="admin-count"><%= challengeParticipants.filter(p => p.completion.qualifies).length %> qualify</span>
+        <!-- Full course — parked until it launches -->
+        <details class="admin-collapse" style="margin-top:1rem">
+          <summary class="admin-collapse-summary">Full course (not selling yet)</summary>
+          <div class="admin-card admin-settings-block" style="margin-top:0.6rem">
+            <div class="admin-enroll-grid">
+              <% for (const t of enrollments.tiers) { %>
+                <div class="admin-enroll-tier">
+                  <span class="admin-enroll-tier-name"><%= t.name %></span>
+                  <span class="admin-enroll-tier-price"><%= t.priceLabel %></span>
+                  <span class="admin-enroll-tier-count"><%= t.count %> enrolled</span>
+                </div>
+              <% } %>
+            </div>
+            <p class="admin-field-hint" style="margin-top:0.6rem">
+              The 12-week course isn't on sale during the beta — shown here for when it launches.
+            </p>
           </div>
-        </div>
+        </details>
+
+        <!-- Refund progress -->
+        <% if (challengeParticipants && challengeParticipants.length) { %>
+        <p class="admin-settings-block-label" style="margin:1.25rem 0 0.5rem">Refund progress
+          <span class="admin-count" style="font-weight:400"><%= challengeParticipants.filter(p => p.completion.qualifies).length %> qualify</span>
+        </p>
         <div class="admin-card" style="overflow-x:auto">
           <table class="admin-assess-table">
             <thead>
@@ -204,8 +223,8 @@
             You issue the actual refunds in Stripe; mark someone "refunded" by setting their status once done.
           </p>
         </div>
+        <% } %>
       </section>
-      <% } %>
 
       <!-- ── Lessons ──────────────────────────────────────────────────────── -->
       <section class="dash-section" id="section-lessons">
@@ -607,7 +626,7 @@
       <label class="admin-form-label">Cohort</label>
       <select class="admin-input admin-select" id="add-student-length">
         <option value="12">Full course · 12 weeks</option>
-        <option value="3">Trial · 3 weeks</option>
+        <option value="3">3-week challenge</option>
       </select>
     </div>
     <p class="admin-dialog-error" id="add-student-error" hidden></p>
@@ -644,7 +663,7 @@
       <label class="admin-form-label">Cohort</label>
       <select class="admin-input admin-select" id="edit-student-length">
         <option value="12">Full course · 12 weeks</option>
-        <option value="3">Trial · 3 weeks</option>
+        <option value="3">3-week challenge</option>
       </select>
     </div>
     <div class="admin-form-field">
