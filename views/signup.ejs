@@ -16,15 +16,15 @@
         <img src="/images/brand/The Creative's Garden Icon with Text_1.svg"
              alt="The Creative's Garden" class="sg-logo">
       </a>
-      <p class="sg-eyebrow">Join the free 3-week challenge</p>
+      <p class="sg-eyebrow">The 3-week challenge · Starts October 5</p>
       <h1 class="sg-hero-title">Grow in private.<br>Bloom when you're ready.</h1>
       <p class="sg-hero-sub">
         The Creative's Garden is a content creation course for creatives who want
         to share their work online — but freeze, overthink, or burn out trying.
-        It starts with a three-week challenge to show up in front of a camera once
+        It starts with a three-week experiment: show up in front of a camera once
         every day for three weeks.
       </p>
-      <a href="#signup" class="btn btn-primary sg-hero-cta">Join now →</a>
+      <a href="#signup" class="btn btn-primary sg-hero-cta">Join the challenge →</a>
       <p class="sg-signin-line">
         Already have an account?
         <a href="/<%= returnTo ? '?returnTo=' + encodeURIComponent(returnTo) : '' %>" class="sg-link">Sign in</a>
@@ -47,7 +47,7 @@
       </p>
     </section>
 
-    <!-- ── How the free weeks work ──────────────────────────────────────── -->
+    <!-- ── How the challenge works ──────────────────────────────────────── -->
     <section class="sg-section sg-section--tinted">
       <p class="sg-eyebrow sg-eyebrow--sage">What does it entail?</p>
       <h2 class="sg-section-title">How the three-week challenge works</h2>
@@ -69,27 +69,36 @@
       </p>
     </section>
 
-    <!-- ── What's included, free ────────────────────────────────────────── -->
+    <!-- ── Here's what we'll do ─────────────────────────────────────────── -->
     <section class="sg-section">
-      <h2 class="sg-section-title">What's included, free</h2>
-      <div class="sg-grid">
-        <div class="sg-card">
-          <h3 class="sg-card-title">Three weeks of guided practice</h3>
-          <p>Pre-recorded lessons, so you always have a next step and can move at your own pace.</p>
-        </div>
-        <div class="sg-card">
-          <h3 class="sg-card-title">Your own private platform</h3>
-          <p>A personal login with optional daily prompts, where you log each recording and watch what shifts.</p>
-        </div>
-        <div class="sg-card">
-          <h3 class="sg-card-title">A group Discord</h3>
-          <p>Grow alongside other creatives who know exactly what it's like to struggle to show up online.</p>
-        </div>
-        <div class="sg-card">
-          <h3 class="sg-card-title">Seed Packets</h3>
-          <p>A free resource to map out your curiosities and get clear on what's genuinely yours to say.</p>
-        </div>
-      </div>
+      <h2 class="sg-section-title">Here's what we'll do</h2>
+      <ul class="sg-list sg-list--emoji">
+        <li><span class="sg-emoji" aria-hidden="true">📸</span> Mind-dump to camera daily</li>
+        <li><span class="sg-emoji" aria-hidden="true">💻</span> Weekly group meetings (recorded, if you can't make it live)</li>
+        <li><span class="sg-emoji" aria-hidden="true">✏️</span> A custom platform to track your recordings and progress</li>
+        <li><span class="sg-emoji" aria-hidden="true">📚</span> Optional homework to help you hone in on what to talk about</li>
+        <li><span class="sg-emoji" aria-hidden="true">🙌</span> A group Discord for accountability</li>
+      </ul>
+    </section>
+
+    <!-- ── The deal (price + refund) ────────────────────────────────────── -->
+    <section class="sg-section sg-section--tinted">
+      <p class="sg-eyebrow sg-eyebrow--sage">The deal</p>
+      <h2 class="sg-section-title">It's $299 — and fully refundable</h2>
+      <p class="sg-body">
+        I'm charging for this beta because I know you're more likely to do the
+        work when you've got a little skin in the game.
+      </p>
+      <p class="sg-body">
+        But here's the thing: if you complete the challenge — recording every day
+        (with a little grace: at least 18 of the 21 days) and giving me your honest
+        feedback at the end — <strong>I'll refund every penny.</strong>
+      </p>
+      <p class="sg-body">
+        Why? I'm genuinely curious whether this process works for other people, and
+        you'd be helping me figure out what works and what doesn't. Consider
+        yourself an adorable guinea pig. 🐹😉
+      </p>
     </section>
 
     <!-- ── Signup form ──────────────────────────────────────────────────── -->
@@ -142,7 +151,10 @@
             <input type="hidden" name="returnTo" value="<%= returnTo %>">
           <% } %>
 
-          <button type="submit" class="btn btn-primary btn-full">Enter the garden →</button>
+          <button type="submit" class="btn btn-primary btn-full">Join the challenge →</button>
+          <p class="sg-help" style="text-align:center; margin-top:0.6rem">
+            Next step: a one-time <strong>$299</strong> to hold your spot — fully refundable when you finish. We start October 5.
+          </p>
         </form>
 
         <p class="sg-signin-line">
@@ -152,21 +164,13 @@
       </div>
     </section>
 
-    <!-- ── After the challenge: the full course ─────────────────────────── -->
+    <!-- ── You'd be one of the first ────────────────────────────────────── -->
     <section class="sg-section">
-      <p class="sg-eyebrow sg-eyebrow--sage">After Winter</p>
-      <h2 class="sg-section-title">Where it can grow from here</h2>
-      <p class="sg-body">
-        The free three weeks are <strong>Winter</strong> — the first season of a full
-        12-week journey through Spring, Summer, and Fall. Each season moves you a little
-        closer to sharing: from recording privately, to watching yourself back, to editing,
-        to finally sharing from overflow. You can continue into the full course whenever
-        you're ready (it starts at $397) — but there's no pressure. Winter stands on its own.
-      </p>
       <p class="sg-note">
-        A note of honesty: this is the very first cohort of The Creative's Garden. You'd
-        be one of the first people ever to walk through it, which means your feedback will
-        shape what it becomes — less a polished product, more a collaboration.
+        A note of honesty: this is the very first cohort of The Creative's Garden.
+        You'd be one of the first people ever to walk through it, which means your
+        feedback will genuinely shape what it becomes — less a polished product,
+        more a collaboration. Ready to be a guinea pig? 🐹
       </p>
     </section>
 

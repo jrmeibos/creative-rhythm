@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <%- include('partials/head') %>
+  <link rel="stylesheet" href="/css/login.css">
+  <% if (stripeConfigured) { %>
+  <!-- Stripe.js must load from js.stripe.com (PCI). Only on this page. -->
+  <script src="https://js.stripe.com/v3/"></script>
+  <% } %>
+  <style>
+    .cc-page { max-width: 560px; margin: 0 auto; padding: 2.5rem 1.25rem 4rem; }
+    .cc-logo { display:block; height: 54px; width:auto; margin: 0 auto 1.75rem; }
+    .cc-card {
+      background: var(--color-blank-page);
+      border: 1px solid rgba(112, 92, 108, 0.14);
+      border-radius: 18px;
+      padding: 1.9rem 1.75rem;
+      box-shadow: 0 6px 24px rgba(16, 15, 16, 0.06);
+    }
+    .cc-eyebrow {
+      font-family: var(--font-body); font-size: 0.72rem; font-weight: 700;
+      letter-spacing: 0.14em; text-transform: uppercase; color: var(--color-bloem);
+      margin: 0 0 0.5rem;
+    }
+    .cc-title {
+      font-family: var(--font-display); font-size: 1.7rem; font-weight: 400;
+      color: var(--color-ink-stained); margin: 0 0 0.4rem; line-height: 1.15;
+    }
+    .cc-sub { font-family: var(--font-body); font-size: 0.92rem; font-weight: 300;
+      line-height: 1.55; color: rgba(16,15,16,0.7); margin: 0 0 1.25rem; }
+    .cc-price-row {
+      display: flex; align-items: baseline; gap: 0.5rem;
+      padding: 0.9rem 0; border-top: 1px solid rgba(112,92,108,0.12);
+      border-bottom: 1px solid rgba(112,92,108,0.12); margin-bottom: 1.1rem;
+    }
+    .cc-price { font-family: var(--font-display); font-size: 1.9rem; color: var(--color-ink-stained); }
+    .cc-price-note { font-family: var(--font-body); font-size: 0.85rem; color: rgba(16,15,16,0.6); }
+    .cc-refund {
+      background: color-mix(in srgb, var(--color-apricity) 18%, var(--color-blank-page));
+      border: 1px solid rgba(246,201,92,0.5); border-radius: 12px;
+      padding: 0.85rem 1rem; margin-bottom: 1.4rem;
+      font-family: var(--font-body); font-size: 0.88rem; line-height: 1.5; color: var(--color-ink-stained);
+    }
+    .cc-refund strong { font-weight: 700; }
+    #cc-pay-element { margin-bottom: 1rem; }
+    .cc-error { color: #b3261e; font-family: var(--font-body); font-size: 0.85rem; margin: 0 0 0.85rem; }
+    .cc-note { font-family: var(--font-body); font-size: 0.78rem; color: rgba(16,15,16,0.5); margin: 0.9rem 0 0; text-align:center; }
+    .cc-signout { display:block; text-align:center; margin-top: 1.25rem; font-family: var(--font-body); font-size: 0.82rem; color: rgba(16,15,16,0.5); }
+    .cc-loading { font-family: var(--font-body); font-size: 0.88rem; color: rgba(16,15,16,0.55); padding: 0.5rem 0; }
+  </style>
+</head>
+<body class="login-body">
+  <main class="cc-page">
+    <a href="https://www.meibostouch.com/the-creatives-garden" target="_blank" rel="noopener">
+      <img src="/images/brand/The Creative's Garden Icon with Text_1.svg" alt="The Creative's Garden" class="cc-logo">
+    </a>
+
+    <div class="cc-card">
+      <p class="cc-eyebrow">You're almost in</p>
+      <h1 class="cc-title">Join the 3-Week Challenge</h1>
+      <p class="cc-sub">We start <strong><%= new Date(startDate + 'T00:00:00').toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric' }) %></strong>. Secure your spot below.</p>
+
+      <div class="cc-price-row">
+        <span class="cc-price"><%= priceLabel %></span>
+        <span class="cc-price-note">one-time · to join the beta cohort</span>
+      </div>
+
+      <div class="cc-refund">
+        <strong>Fully refundable.</strong> Record every day (with a little grace — 18 of the 21 days) and share your honest feedback at the end, and I refund every penny.
+      </div>
+
+      <% if (!stripeConfigured) { %>
+        <p class="cc-error">Payments aren't set up in this environment yet. Please reach out to Julia.</p>
+      <% } else { %>
+        <p class="cc-error" id="cc-error" hidden></p>
+        <div id="cc-pay-element"><p class="cc-loading" id="cc-loading">Loading secure checkout…</p></div>
+        <button type="button" class="btn btn-primary btn-full" id="cc-pay-btn" disabled>Pay <%= priceLabel %> &amp; join</button>
+        <p class="cc-note">Secure checkout by Stripe. Your card details never touch our servers.</p>
+      <% } %>
+    </div>
+
+    <a href="/logout" class="cc-signout">Sign out</a>
+  </main>
+
+  <% if (stripeConfigured) { %>
+  <script>
+    (function () {
+      const stripe = Stripe(<%- JSON.stringify(publishableKey) %>);
+      const errEl = document.getElementById('cc-error');
+      const payBtn = document.getElementById('cc-pay-btn');
+      const loading = document.getElementById('cc-loading');
+      let elements = null;
+
+      function showError(msg) { errEl.textContent = msg || 'Something went wrong.'; errEl.hidden = false; }
+
+      async function confirmAndEnter(paymentIntentId) {
+        try {
+          const res = await fetch('/api/challenge/confirm', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ paymentIntentId }),
+          });
+          if (res.ok) { window.location.href = '/onboarding'; return true; }
+        } catch (_) {}
+        return false;
+      }
+
+      // Returning from a redirect-based method (e.g. 3DS)?
+      const params = new URLSearchParams(location.search);
+      const returnedPi = params.get('payment_intent');
+      if (returnedPi) {
+        loading && (loading.textContent = 'Confirming your payment…');
+        confirmAndEnter(returnedPi).then(ok => { if (!ok) showError('We could not confirm your payment. Please try again.'); });
+      }
+
+      // Set up the Payment Element.
+      (async function init() {
+        try {
+          const res = await fetch('/api/challenge/create-payment-intent', { method: 'POST' });
+          const data = await res.json();
+          if (!res.ok) { showError(data.error); if (loading) loading.remove(); return; }
+          elements = stripe.elements({ clientSecret: data.clientSecret, appearance: { theme: 'stripe' } });
+          const paymentElement = elements.create('payment', { layout: 'tabs' });
+          paymentElement.mount('#cc-pay-element');
+          if (loading) loading.remove();
+          payBtn.disabled = false;
+        } catch (err) {
+          showError('Could not load checkout. Please refresh.');
+          if (loading) loading.remove();
+        }
+      })();
+
+      payBtn.addEventListener('click', async function () {
+        if (!elements) return;
+        errEl.hidden = true;
+        payBtn.disabled = true; payBtn.textContent = 'Processing…';
+        const { error, paymentIntent } = await stripe.confirmPayment({
+          elements,
+          confirmParams: { return_url: window.location.origin + '/challenge-checkout' },
+          redirect: 'if_required',
+        });
+        if (error) {
+          showError(error.message);
+          payBtn.disabled = false; payBtn.textContent = 'Pay <%= priceLabel %> & join';
+          return;
+        }
+        if (paymentIntent && paymentIntent.status === 'succeeded') {
+          const ok = await confirmAndEnter(paymentIntent.id);
+          if (!ok) { showError('Payment succeeded but we could not open your account. Please refresh.'); payBtn.disabled = false; payBtn.textContent = 'Pay <%= priceLabel %> & join'; }
+        } else {
+          // processing / requires_action without redirect — send them in;
+          // the webhook will flip them to paid shortly.
+          window.location.href = '/onboarding';
+        }
+      });
+    })();
+  </script>
+  <% } %>
+</body>
+</html>

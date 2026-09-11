@@ -147,6 +147,11 @@ app.use(session({
 // /cohort-share form to link students directly to the channel.
 const COMMUNITY_DISCORD_URL = (process.env.COMMUNITY_DISCORD_URL || '').trim() || null;
 
+// Fixed cohort start for the paid 3-week Winter challenge (beta). Everyone
+// who signs up shares this date so the weekly group meetings + week math line
+// up. Update here when a future cohort starts on a different date.
+const CHALLENGE_START_DATE = '2026-10-05';
+
 app.use((req, res, next) => {
   res.locals.user = req.session.user || null;
   res.locals.communityDiscordUrl = COMMUNITY_DISCORD_URL;
@@ -279,10 +284,34 @@ app.use((req, res, next) => {
   next();
 });
 
-// Onboarding guard — students who haven't completed onboarding can only access onboarding routes
+// Challenge paywall — a student whose payment is still 'pending' can only
+// reach the checkout (and the payment API / legal pages / static assets)
+// until they pay the $299. Runs before the onboarding guard so unpaid
+// accounts land on checkout, not onboarding. Paid/free/legacy (null) and
+// admins pass straight through.
 app.use((req, res, next) => {
   const u = req.session.user;
-  if (u && u.role === 'student' && !u.onboarding_completed) {
+  if (u && u.role === 'student' && u.challenge_payment_status === 'pending') {
+    const p = req.path;
+    const ok = p === '/logout'
+      || p === '/challenge-checkout'
+      || p.startsWith('/api/challenge/')
+      || p === '/webhooks/stripe'
+      || p === '/privacy' || p === '/terms' || p === '/accessibility'
+      || p.startsWith('/css/') || p.startsWith('/js/')
+      || p.startsWith('/images/') || p.startsWith('/fonts/') || p.startsWith('/avatars/');
+    if (!ok) return res.redirect('/challenge-checkout');
+  }
+  next();
+});
+
+// Onboarding guard — students who haven't completed onboarding can only access
+// onboarding routes. Skips 'pending' challenge accounts: the paywall above
+// already holds them at checkout, and forcing onboarding first would create a
+// checkout↔onboarding redirect loop. Onboarding kicks in once they've paid.
+app.use((req, res, next) => {
+  const u = req.session.user;
+  if (u && u.role === 'student' && u.challenge_payment_status !== 'pending' && !u.onboarding_completed) {
     const ok = req.path === '/' || req.path === '/logout'
       || req.path.startsWith('/onboarding')
       || req.path.startsWith('/api/onboarding')
@@ -527,14 +556,13 @@ app.post('/signup', signupLimiter, async (req, res) => {
     const result = db.createUser(name, email, password, 'student');
     const userId = result.lastInsertRowid;
 
-    // Every new self-serve signup starts on the free Winter (3-week) tier.
-    // Course starts today so week 1 is today; timezone is the validated
-    // form value (or the Denver fallback).
+    // Paid 3-week Winter challenge (beta): everyone shares the fixed cohort
+    // start date so the weekly group meetings + timelines line up. The account
+    // is created 'pending' — the paywall holds it at checkout until the $299
+    // is paid, then the webhook/confirm flips it to 'paid'.
     db.setUserCourseLengthWeeks(userId, 3);
-    const todayLocal = new Intl.DateTimeFormat('en-CA', {
-      timeZone: timezone, year: 'numeric', month: '2-digit', day: '2-digit'
-    }).format(new Date());
-    db.setUserCourseStartDate(userId, todayLocal);
+    db.setUserCourseStartDate(userId, CHALLENGE_START_DATE);
+    db.setChallengePaymentStatus(userId, 'pending');
     if (timezone !== 'America/Denver') {
       db.setUserTimezone(userId, timezone);
     }
@@ -545,24 +573,18 @@ app.post('/signup', signupLimiter, async (req, res) => {
       avatar_initial: user.avatar_initial, current_season: null,
       onboarding_completed: false,
       profile_photo: null,
-      // Session carries the validated form timezone directly — getUserById
-      // doesn't SELECT timezone, and waiting for the sidebar beacon meant
-      // the first dashboard render used Denver for everyone.
       timezone,
       course_start_date: user.course_start_date || null,
       course_length_weeks: user.course_length_weeks || 3,
+      challenge_payment_status: 'pending',
     };
     // Sync to Mailchimp — fire-and-forget so it never blocks or breaks signup.
-    // Every registrant gets the "New Registration" tag (triggers the onboarding
-    // Journey); the newsletter tag is added only if they ticked the box.
     const mcTags = [MAILCHIMP_TAG_REGISTERED];
     if (req.body.newsletter) mcTags.push(MAILCHIMP_TAG_NEWSLETTER);
     addContactToMailchimp(email, firstName, lastName, mcTags).catch(() => {});
 
-    // Stash post-onboarding destination (e.g. /upgrade?tier=X when they came
-    // from the pricing page). Consumed by /api/onboarding/complete.
-    if (returnTo) req.session.postOnboardingReturnTo = returnTo;
-    req.session.save(() => res.redirect('/onboarding'));
+    // New paid-challenge signups go to checkout first, not onboarding.
+    req.session.save(() => res.redirect('/challenge-checkout'));
   } catch (err) {
     console.error('[signup] failed:', err);
     return rerender('Sign-up failed. Try again in a moment, or reach out to Julia directly.');
@@ -1198,10 +1220,20 @@ app.post('/webhooks/stripe', async (req, res) => {
     if (event.type === 'payment_intent.succeeded') {
       const pi = event.data.object;
       const userIdStr = pi.metadata && pi.metadata.user_id;
+      const purpose   = pi.metadata && pi.metadata.purpose;
       const tierId    = pi.metadata && pi.metadata.tier;
       const userId = parseInt(userIdStr, 10);
       if (!Number.isFinite(userId)) {
         console.warn('[stripe] payment_intent.succeeded without user_id metadata:', pi.id);
+      } else if (purpose === 'winter-challenge') {
+        // Paid 3-week challenge: grant access. Idempotent — the /confirm
+        // endpoint may have already flipped it; setting 'paid' again is a
+        // no-op, and we never downgrade a 'refunded' account.
+        const user = db.getUserById(userId);
+        if (user && user.challenge_payment_status !== 'refunded') {
+          db.setChallengePaymentStatus(userId, 'paid');
+          console.log(`[stripe] challenge paid: user ${userId} (${user.email}) after ${pi.id}`);
+        }
       } else {
         const user = db.getUserById(userId);
         if (user) {
@@ -1233,6 +1265,71 @@ app.post('/webhooks/stripe', async (req, res) => {
     try { db.exec('ROLLBACK'); } catch (_) {}
     console.error('[stripe] webhook handler failed for', event.id, event.type, ':', err);
     res.status(500).send('handler error — will retry');
+  }
+});
+
+// ─── Challenge checkout ($299 paid 3-week Winter challenge) ─────────────────
+// Reached right after signup while the account is 'pending'. The paywall
+// keeps the account here until payment clears; on success we flip to 'paid'
+// (via /confirm, with the webhook as backstop) and send them to onboarding.
+app.get('/challenge-checkout', requireAuth, (req, res) => {
+  const status = req.session.user.challenge_payment_status;
+  // Only pending accounts belong here. Anyone already paid (or a legacy/free
+  // account) goes to their normal destination.
+  if (status !== 'pending') return res.redirect('/dashboard');
+  res.render('challenge-checkout', {
+    title: 'Join the Challenge',
+    priceLabel: STRIPE.formatPrice(STRIPE.getChallengePriceCents()),
+    startDate: CHALLENGE_START_DATE,
+    stripeConfigured: STRIPE.isConfigured(),
+    publishableKey: STRIPE.getPublishableKey(),
+  });
+});
+
+app.post('/api/challenge/create-payment-intent', requireAuth, async (req, res) => {
+  if (!STRIPE.isConfigured()) return res.status(503).json({ error: 'Payments are not configured yet.' });
+  const dbUser = db.getUserById(req.session.user.id);
+  if (!dbUser) return res.status(404).json({ error: 'User not found.' });
+  if (dbUser.challenge_payment_status !== 'pending') {
+    return res.status(409).json({ error: "You're already in the challenge." });
+  }
+  try {
+    const intent = await STRIPE.createChallengePaymentIntent(dbUser.id, dbUser.email);
+    res.json({
+      ok: true,
+      clientSecret: intent.client_secret,
+      publishableKey: STRIPE.getPublishableKey(),
+    });
+  } catch (err) {
+    console.error('[stripe] challenge createPaymentIntent failed:', err.message);
+    res.status(500).json({ error: 'Could not start checkout. Try again in a moment.' });
+  }
+});
+
+// Called by the client right after Stripe confirms, so access is granted
+// immediately instead of waiting on the webhook. We re-fetch the intent from
+// Stripe (never trust the client) and verify it succeeded + belongs to this
+// user before flipping to 'paid'. The webhook is an idempotent backstop.
+app.post('/api/challenge/confirm', requireAuth, async (req, res) => {
+  if (!STRIPE.isConfigured()) return res.status(503).json({ error: 'Payments are not configured yet.' });
+  const paymentIntentId = (req.body && req.body.paymentIntentId) || '';
+  if (!paymentIntentId) return res.status(400).json({ error: 'Missing payment reference.' });
+  try {
+    const pi = await STRIPE.retrievePaymentIntent(paymentIntentId);
+    const okUser = pi && pi.metadata && parseInt(pi.metadata.user_id, 10) === req.session.user.id;
+    const okPurpose = pi && pi.metadata && pi.metadata.purpose === 'winter-challenge';
+    if (!pi || pi.status !== 'succeeded' || !okUser || !okPurpose) {
+      return res.status(402).json({ error: 'Payment not confirmed yet.' });
+    }
+    const dbUser = db.getUserById(req.session.user.id);
+    if (dbUser && dbUser.challenge_payment_status !== 'refunded') {
+      db.setChallengePaymentStatus(req.session.user.id, 'paid');
+      req.session.user.challenge_payment_status = 'paid';
+    }
+    req.session.save(() => res.json({ ok: true }));
+  } catch (err) {
+    console.error('[stripe] challenge confirm failed:', err.message);
+    res.status(500).json({ error: 'Could not confirm payment. Please refresh.' });
   }
 });
 

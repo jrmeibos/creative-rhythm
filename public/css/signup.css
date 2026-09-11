@@ -296,3 +296,14 @@
   .sg-name-row { grid-template-columns: 1fr; gap: 0; }
   .sg-form-card { padding: 1.75rem 1.35rem; }
 }
+
+/* Emoji scope list (challenge "here's what we'll do") */
+.sg-list--emoji { list-style: none; padding-left: 0; }
+.sg-list--emoji li {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  margin-bottom: 0.6rem;
+  padding-left: 0;
+}
+.sg-emoji { flex-shrink: 0; font-size: 1.1rem; line-height: 1.5; }
