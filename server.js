@@ -1989,28 +1989,30 @@ const ASSESSMENT_QUESTIONS = [
     low: '1 = visibility feels like a threat', high: '10 = visibility feels like home'
   },
   { id: 'q5', type: 'choice', field: 'q5_choice',
-    text: 'How clear are you on what you\'re actually trying to say online?',
+    text: "How clear are you on what's genuinely yours to talk about?",
     choices: [
-      { val: 'A', label: "I'm figuring it out post by post" },
-      { val: 'B', label: 'I have some themes but no real throughline' },
-      { val: 'C', label: "I know my message, I just don't say it consistently" },
-      { val: 'D', label: "I'm building something that feels cohesive" },
-      { val: 'E', label: "I know exactly what I'm here to say — and why it matters" }
+      { val: 'A', label: "No idea — that's part of why I'm here" },
+      { val: 'B', label: 'A few threads, but nothing solid' },
+      { val: 'C', label: "I know it, I just freeze when it's time" },
+      { val: 'D', label: 'Pretty clear, most days' },
+      { val: 'E', label: "Crystal clear — I know what's mine to say" }
     ]
   },
   { id: 'q6', type: 'rating', field: 'q6_rating',
-    text: 'How fully expressed do you feel in what you currently share online?',
-    low: "1 = I'm holding almost everything back", high: '10 = what I share feels truly like me'
+    text: "How fully yourself do you feel when the camera's rolling?",
+    low: '1 = I hold almost everything back', high: "10 = I'm completely myself"
   },
   { id: 'q7', type: 'multi', field: 'q7_choices', max: 2,
-    text: 'What would feel most meaningful to see by the end of this course?',
+    text: 'What would feel most meaningful by the end of these three weeks?',
     choices: [
-      { val: 'A', label: 'Engagement that feels like real connection' },
-      { val: 'B', label: 'Showing up more consistently without burning out' },
-      { val: 'C', label: 'Energy and nervous system wins (posting without dread)' },
-      { val: 'D', label: 'People finding my work and feeling something' },
-      { val: 'E', label: 'Alignment (am I actually saying what I mean?)' },
-      { val: 'F', label: 'Building a community, not just an audience' }
+      { val: 'A', label: "Showing up consistently, even when it's hard" },
+      { val: 'B', label: 'Feeling more at ease on camera' },
+      { val: 'C', label: 'Quieting the inner critic' },
+      { val: 'D', label: 'Reconnecting with why I create' },
+      { val: 'E', label: 'Proving to myself I can follow through' },
+      { val: 'F', label: 'Getting clearer on what I want to say' },
+      { val: 'G', label: 'Richer relationships' },
+      { val: 'H', label: 'A better relationship with myself' }
     ]
   },
   { id: 'q8', type: 'choice', field: 'q8_choice',
@@ -2024,8 +2026,8 @@ const ASSESSMENT_QUESTIONS = [
     ]
   },
   { id: 'q9', type: 'text', field: 'q9_text',
-    text: 'If you could wave a wand, what would your relationship with sharing your work look and feel like at the end of this course?',
-    placeholder: 'Describe the feeling, the freedom, the life...'
+    text: 'If these three weeks go better than you hope, what feels different by the end?',
+    placeholder: 'Describe the shift — the feeling, the freedom...'
   },
   { id: 'q10', type: 'text', field: 'q10_text',
     text: 'What promise are you making to yourself for these 3 weeks?',
