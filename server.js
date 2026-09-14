@@ -155,6 +155,30 @@ const COMMUNITY_DISCORD_URL = (process.env.COMMUNITY_DISCORD_URL || '').trim() |
 // emails/form fields are not sent to Meta.
 const FACEBOOK_PIXEL_ID = (process.env.FACEBOOK_PIXEL_ID || '').trim() || null;
 
+// Consent mode for the Meta Pixel, by region. GDPR/UK-GDPR/ePrivacy require
+// PRIOR consent (opt-in); most of the rest of the world allows opt-out. We
+// resolve this server-side ONLY when a trustworthy country header is present
+// (e.g. Cloudflare's cf-ipcountry) — Railway's edge does not provide one today,
+// so this returns null and the client falls back to a timezone heuristic (see
+// views/partials/fb-pixel.ejs). If a CDN that sets a country header is ever put
+// in front, this takes over automatically with no code change.
+const GDPR_COUNTRIES = new Set([
+  // EU-27
+  'AT','BE','BG','HR','CY','CZ','DK','EE','FI','FR','DE','GR','HU','IE','IT',
+  'LV','LT','LU','MT','NL','PL','PT','RO','SK','SI','ES','SE',
+  // EEA (non-EU) + UK + Switzerland
+  'IS','LI','NO','GB','CH',
+]);
+function pixelConsentMode(req) {
+  const raw = (req.get('cf-ipcountry') || req.get('x-vercel-ip-country') || '')
+    .toUpperCase().trim();
+  if (raw === 'EU') return 'optin';                        // CDN knows EU, not the country
+  if (!/^[A-Z]{2}$/.test(raw) || ['XX', 'T1', 'ZZ', 'AP', 'A1', 'A2'].includes(raw)) {
+    return null;                                           // no reliable signal → client decides
+  }
+  return GDPR_COUNTRIES.has(raw) ? 'optin' : 'optout';
+}
+
 // Fixed cohort start for the paid 3-week Winter challenge (beta). Everyone
 // who signs up shares this date so the weekly group meetings + week math line
 // up. Update here when a future cohort starts on a different date.
@@ -494,7 +518,7 @@ function sanitizeReturnTo(raw) {
 app.get('/signup', (req, res) => {
   const returnTo = sanitizeReturnTo(req.query.returnTo);
   if (req.session.user) return res.redirect(returnTo || '/dashboard');
-  res.render('signup', { error: null, firstName: '', lastName: '', email: '', returnTo, full: challengeIsFull(), facebookPixelId: FACEBOOK_PIXEL_ID });
+  res.render('signup', { error: null, firstName: '', lastName: '', email: '', returnTo, full: challengeIsFull(), facebookPixelId: FACEBOOK_PIXEL_ID, pixelConsentMode: pixelConsentMode(req) });
 });
 
 // Legal pages — public, no auth (must be viewable by anyone, incl. logged out).
@@ -566,11 +590,11 @@ app.post('/signup', signupLimiter, async (req, res) => {
     timezone = 'America/Denver';
   }
 
-  const rerender = (error) => res.render('signup', { error, firstName, lastName, email, returnTo, full: challengeIsFull(), facebookPixelId: FACEBOOK_PIXEL_ID });
+  const rerender = (error) => res.render('signup', { error, firstName, lastName, email, returnTo, full: challengeIsFull(), facebookPixelId: FACEBOOK_PIXEL_ID, pixelConsentMode: pixelConsentMode(req) });
 
   // Capacity gate — no new accounts once the cohort is full.
   if (challengeIsFull()) {
-    return res.render('signup', { error: null, firstName, lastName, email, returnTo, full: true, facebookPixelId: FACEBOOK_PIXEL_ID });
+    return res.render('signup', { error: null, firstName, lastName, email, returnTo, full: true, facebookPixelId: FACEBOOK_PIXEL_ID, pixelConsentMode: pixelConsentMode(req) });
   }
 
   if (!firstName || !lastName || !email || !password) return rerender('Please fill in all fields.');

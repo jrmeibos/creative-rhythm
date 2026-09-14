@@ -1,18 +1,23 @@
 <% if (locals.facebookPixelId) { %>
 <%
-  /* Meta (Facebook) Pixel + consent gate — PUBLIC /signup page ONLY.
+  /* Meta (Facebook) Pixel + geo-aware consent — PUBLIC /signup page ONLY.
 
      Deliberately NOT included from partials/head.ejs: it must never load on
      authenticated app pages, which carry students' sensitive onboarding data.
 
-     GDPR / UK-GDPR / ePrivacy: an advertising pixel needs PRIOR, active
-     consent. So nothing here contacts Meta on load — we render a banner with
-     equally-weighted Accept / Decline, store the choice in localStorage, and
-     only then inject Meta's script. There is intentionally NO <noscript> pixel
-     fallback: it would fetch from Meta before the visitor consented.
+     Two consent modes:
+       - optin  (GDPR/UK/EEA): nothing loads until the visitor clicks Accept.
+       - optout (elsewhere):   the pixel loads on arrival; a notice offers an
+                               easy opt-out.
+     Region resolution: the server sets `pixelConsentMode` when a trustworthy
+     country header exists (none on Railway today, so it is null). When null,
+     the client falls back to a timezone heuristic: America/* and US-Pacific
+     zones get opt-out; EVERYWHERE else — all of Europe/EEA/UK however the zone
+     is spelled, plus anything we cannot classify — defaults to strict opt-in.
 
-     Keep Automatic Advanced Matching OFF in Meta Events Manager so emails /
-     form fields are never sent to Meta. We fire PageView only. */
+     No <noscript> pixel fallback: it would fetch from Meta before any opt-in
+     decision. We fire PageView only; keep Automatic Advanced Matching OFF in
+     Meta Events Manager so emails / form fields are never sent. */
 %>
 <style>
   .cg-consent {
@@ -46,23 +51,31 @@
 
 <div id="cg-consent" class="cg-consent" role="region" aria-label="Cookie consent" hidden>
   <div class="cg-consent-inner">
-    <p class="cg-consent-text">
-      We'd like to use the Meta (Facebook) pixel on this page to see how well our
-      ads work. It's optional — nothing loads unless you say yes. Read our
-      <a href="/privacy">Privacy&nbsp;Policy</a>.
-    </p>
+    <p class="cg-consent-text" id="cg-consent-text"></p>
     <div class="cg-consent-actions">
-      <button type="button" id="cg-consent-decline" class="cg-consent-btn cg-consent-btn--ghost">Decline</button>
-      <button type="button" id="cg-consent-accept"  class="cg-consent-btn cg-consent-btn--solid">Accept</button>
+      <button type="button" id="cg-consent-deny"  class="cg-consent-btn cg-consent-btn--ghost"></button>
+      <button type="button" id="cg-consent-allow" class="cg-consent-btn cg-consent-btn--solid"></button>
     </div>
   </div>
 </div>
 
 <script>
 (function () {
-  var PIXEL_ID = <%- JSON.stringify(String(facebookPixelId)) %>;
+  var PIXEL_ID    = <%- JSON.stringify(String(facebookPixelId)) %>;
+  var SERVER_MODE = <%- JSON.stringify(locals.pixelConsentMode || null) %>;
   var KEY = 'cg_meta_consent_v1';
   var banner = document.getElementById('cg-consent');
+
+  var COPY = {
+    optin: {
+      html: 'We’d like to use the Meta (Facebook) pixel on this page to see how well our ads work. It’s optional — nothing loads unless you say yes. Read our <a href="/privacy">Privacy&nbsp;Policy</a>.',
+      deny: 'Decline', allow: 'Accept'
+    },
+    optout: {
+      html: 'We use the Meta (Facebook) pixel on this page to measure how well our ads work. You can opt out anytime. Read our <a href="/privacy">Privacy&nbsp;Policy</a>.',
+      deny: 'Opt out', allow: 'Got it'
+    }
+  };
 
   function loadPixel() {
     if (window.fbq) return;
@@ -81,36 +94,62 @@
   function get() { try { return localStorage.getItem(KEY); } catch (e) { return null; } }
   function set(v) { try { localStorage.setItem(KEY, v); } catch (e) {} }
 
-  // Decide on load: honor a prior choice; otherwise ask (and load nothing yet).
+  // Region → mode. Server wins when it actually knows the country; otherwise a
+  // timezone heuristic that leans strict (opt-in) whenever unsure.
+  function resolveMode() {
+    if (SERVER_MODE === 'optin' || SERVER_MODE === 'optout') return SERVER_MODE;
+    var tz = '';
+    try { tz = Intl.DateTimeFormat().resolvedOptions().timeZone || ''; }
+    catch (e) { return 'optin'; }
+    if (/^America\//.test(tz) || tz === 'Pacific/Honolulu') return 'optout';
+    return 'optin';
+  }
+  var mode = resolveMode();
+
+  function showBanner() {
+    if (!banner) return;
+    var c = COPY[mode];
+    document.getElementById('cg-consent-text').innerHTML = c.html;
+    document.getElementById('cg-consent-deny').textContent  = c.deny;
+    document.getElementById('cg-consent-allow').textContent = c.allow;
+    banner.hidden = false;
+  }
+
+  // Apply any stored decision first; it always overrides the regional default.
   var choice = get();
   if (choice === 'granted') {
     loadPixel();
-  } else if (choice !== 'denied' && banner) {
-    banner.hidden = false;
+  } else if (choice === 'denied') {
+    /* respect it — load nothing, show nothing */
+  } else {
+    // No decision yet. Opt-out regions load now and offer a way out; opt-in
+    // regions load nothing until the visitor accepts.
+    if (mode === 'optout') loadPixel();
+    showBanner();
   }
 
   function decide(v) {
     set(v);
     if (banner) banner.hidden = true;
     if (v === 'granted') loadPixel();
-    // A decline after the pixel already loaded this session needs no undo:
-    // we only ever fire a single PageView, so there are no further events to
-    // stop. The stored 'denied' keeps it off on every future visit.
+    // A later 'denied' does not need to unload an already-running pixel: we
+    // only ever fire one PageView, so nothing further would be sent anyway.
+    // The stored 'denied' keeps it off on every future visit.
   }
-  var a = document.getElementById('cg-consent-accept');
-  var d = document.getElementById('cg-consent-decline');
-  if (a) a.addEventListener('click', function () { decide('granted'); });
-  if (d) d.addEventListener('click', function () { decide('denied'); });
+  var allow = document.getElementById('cg-consent-allow');
+  var deny  = document.getElementById('cg-consent-deny');
+  if (allow) allow.addEventListener('click', function () { decide('granted'); });
+  if (deny)  deny.addEventListener('click', function () { decide('denied'); });
 
   // Withdraw/change consent from any element marked data-cg-consent-reopen
-  // (e.g. the "Cookie preferences" footer link). Clears the stored choice so
-  // the next page load asks again, and reopens the banner now.
+  // (e.g. the "Cookie preferences" footer link): clear the stored choice and
+  // re-show the banner in the current region's mode.
   document.addEventListener('click', function (e) {
     var t = e.target && e.target.closest ? e.target.closest('[data-cg-consent-reopen]') : null;
     if (!t) return;
     e.preventDefault();
     try { localStorage.removeItem(KEY); } catch (_) {}
-    if (banner) banner.hidden = false;
+    showBanner();
   });
 })();
 </script>
