@@ -110,7 +110,9 @@
         <div class="dash-section-header">
           <h2 class="dash-section-title">The 3-Week Challenge</h2>
           <div class="admin-section-actions">
-            <span class="admin-count"><%= challengeStats.paid %> joined · <%= challengeStats.pending %> pending</span>
+            <span class="admin-count">
+              <%= challengeStats.spotsTaken %> / <%= challengeStats.capacity %> spots filled<% if (challengeStats.spotsLeft === 0) { %> · full<% } else { %> · <%= challengeStats.spotsLeft %> left<% } %>
+            </span>
           </div>
         </div>
 

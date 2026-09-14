@@ -16,7 +16,7 @@
         <img src="/images/brand/The Creative's Garden Icon with Text_1.svg"
              alt="The Creative's Garden" class="sg-logo">
       </a>
-      <p class="sg-eyebrow">The 3-week challenge · Starts October 5</p>
+      <p class="sg-eyebrow">The 3-week challenge · Starts October 5<% if (locals.full) { %> · Full<% } %></p>
       <h1 class="sg-hero-title">Grow in private.<br>Bloom when you're ready.</h1>
       <p class="sg-hero-sub">
         The Creative's Garden is a content creation course for creatives who want
@@ -24,7 +24,11 @@
         It starts with a three-week experiment: show up in front of a camera once
         every day for three weeks.
       </p>
-      <a href="#signup" class="btn btn-primary sg-hero-cta">Join the challenge →</a>
+      <% if (locals.full) { %>
+        <a href="#signup" class="btn btn-primary sg-hero-cta">See the waitlist →</a>
+      <% } else { %>
+        <a href="#signup" class="btn btn-primary sg-hero-cta">Join the challenge →</a>
+      <% } %>
       <p class="sg-signin-line">
         Already have an account?
         <a href="/<%= returnTo ? '?returnTo=' + encodeURIComponent(returnTo) : '' %>" class="sg-link">Sign in</a>
@@ -114,6 +118,14 @@
     <!-- ── Signup form ──────────────────────────────────────────────────── -->
     <section class="sg-section sg-signup" id="signup">
       <div class="sg-form-card">
+        <% if (locals.full) { %>
+          <h2 class="sg-form-title">This cohort is full</h2>
+          <p class="sg-body" style="text-align:center; margin-top:0.5rem">
+            Every spot for the October 5 challenge is spoken for. Want in on the next
+            one? <a href="mailto:julia@meibostouch.com?subject=Creative%27s%20Garden%20waitlist" class="sg-link">Email me to join the waitlist</a>,
+            and I'll reach out the moment a spot opens or the next cohort begins.
+          </p>
+        <% } else { %>
         <h2 class="sg-form-title">Join the three-week challenge</h2>
 
         <% if (error) { %>
@@ -166,6 +178,7 @@
             Next step: a one-time <strong>$299</strong> to hold your spot — fully refundable when you finish. We start October 5.
           </p>
         </form>
+        <% } %>
 
         <p class="sg-signin-line">
           Already have an account?

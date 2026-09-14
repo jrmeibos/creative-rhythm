@@ -152,6 +152,19 @@ const COMMUNITY_DISCORD_URL = (process.env.COMMUNITY_DISCORD_URL || '').trim() |
 // up. Update here when a future cohort starts on a different date.
 const CHALLENGE_START_DATE = '2026-10-05';
 
+// Cap on the beta cohort. A "spot" is a paid seat — pending (signed-up but
+// not yet paid) accounts don't consume one, so a tire-kicker who abandons
+// checkout never blocks a real registrant. Refunded students still count:
+// they joined and did the challenge. Change the number here to resize.
+const CHALLENGE_CAPACITY = 20;
+function challengeSpotsTaken() {
+  const c = db.getChallengeStatusCounts();
+  return (c.paid || 0) + (c.refunded || 0);
+}
+function challengeIsFull() {
+  return challengeSpotsTaken() >= CHALLENGE_CAPACITY;
+}
+
 app.use((req, res, next) => {
   res.locals.user = req.session.user || null;
   res.locals.communityDiscordUrl = COMMUNITY_DISCORD_URL;
@@ -473,7 +486,7 @@ function sanitizeReturnTo(raw) {
 app.get('/signup', (req, res) => {
   const returnTo = sanitizeReturnTo(req.query.returnTo);
   if (req.session.user) return res.redirect(returnTo || '/dashboard');
-  res.render('signup', { error: null, firstName: '', lastName: '', email: '', returnTo });
+  res.render('signup', { error: null, firstName: '', lastName: '', email: '', returnTo, full: challengeIsFull() });
 });
 
 // Legal pages — public, no auth (must be viewable by anyone, incl. logged out).
@@ -545,7 +558,12 @@ app.post('/signup', signupLimiter, async (req, res) => {
     timezone = 'America/Denver';
   }
 
-  const rerender = (error) => res.render('signup', { error, firstName, lastName, email, returnTo });
+  const rerender = (error) => res.render('signup', { error, firstName, lastName, email, returnTo, full: challengeIsFull() });
+
+  // Capacity gate — no new accounts once the cohort is full.
+  if (challengeIsFull()) {
+    return res.render('signup', { error: null, firstName, lastName, email, returnTo, full: true });
+  }
 
   if (!firstName || !lastName || !email || !password) return rerender('Please fill in all fields.');
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return rerender('Please enter a valid email address.');
@@ -1292,6 +1310,11 @@ app.post('/api/challenge/create-payment-intent', requireAuth, async (req, res) =
   if (!dbUser) return res.status(404).json({ error: 'User not found.' });
   if (dbUser.challenge_payment_status !== 'pending') {
     return res.status(409).json({ error: "You're already in the challenge." });
+  }
+  // Capacity gate at the payment step too, so a lingering pending account
+  // can't pay after the cohort filled up.
+  if (challengeIsFull()) {
+    return res.status(409).json({ error: 'The challenge just filled up — no spots are left in this cohort.' });
   }
   try {
     const intent = await STRIPE.createChallengePaymentIntent(dbUser.id, dbUser.email);
@@ -4517,6 +4540,9 @@ app.get('/admin', requireAdmin, (req, res) => {
     netRevenueLabel: STRIPE.formatPrice(chCounts.paid * STRIPE.getChallengePriceCents()),
     stripeConfigured: STRIPE.isConfigured(),
     stripeMode: STRIPE.getMode(),
+    capacity:    CHALLENGE_CAPACITY,
+    spotsTaken:  challengeSpotsTaken(),
+    spotsLeft:   Math.max(0, CHALLENGE_CAPACITY - challengeSpotsTaken()),
   };
 
   res.render('admin', {
