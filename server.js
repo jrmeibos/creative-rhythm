@@ -1226,8 +1226,8 @@ app.post('/webhooks/stripe', async (req, res) => {
   // paid, still on trial, and Stripe's retry hit "already processed". Every
   // DB call below is synchronous (node:sqlite), so no await splits the
   // BEGIN/COMMIT window.
-  db.exec('BEGIN');
   try {
+    db.exec('BEGIN');
     const claimed = db.tryClaimStripeEvent(event.id, event.type);
     if (!claimed) {
       db.exec('COMMIT');

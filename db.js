@@ -4156,6 +4156,17 @@ module.exports = {
     return r.changes > 0;
   },
 
+  // Raw passthrough for explicit transaction control. The module-private
+  // `db` handle has .exec; the exported object did not, so server.js's
+  // db.exec('BEGIN') threw TypeError on every webhook delivery and — being
+  // outside that handler's try block, in Express 4, which ignores async
+  // rejections — hung the request until Stripe timed out. Keep this narrow:
+  // BEGIN/COMMIT/ROLLBACK only. Anything schema- or query-shaped belongs in
+  // its own named method here, not smuggled through exec by a caller.
+  exec(sql) {
+    return db.exec(sql);
+  },
+
   // ─── Backups ───────────────────────────────────────────────────────────────
 
   // Full-database snapshot via VACUUM INTO — safe to run on a live WAL-mode
