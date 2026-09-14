@@ -147,6 +147,14 @@ app.use(session({
 // /cohort-share form to link students directly to the channel.
 const COMMUNITY_DISCORD_URL = (process.env.COMMUNITY_DISCORD_URL || '').trim() || null;
 
+// Meta (Facebook) Pixel ID for ad-conversion tracking. Rendered ONLY on the
+// public /signup landing page (via views/partials/fb-pixel.ejs) — deliberately
+// NEVER passed to any authenticated app route, which carry students' sensitive
+// onboarding data. Off (renders nothing) until FACEBOOK_PIXEL_ID is set on
+// Railway; keep Automatic Advanced Matching OFF in Meta Events Manager so
+// emails/form fields are not sent to Meta.
+const FACEBOOK_PIXEL_ID = (process.env.FACEBOOK_PIXEL_ID || '').trim() || null;
+
 // Fixed cohort start for the paid 3-week Winter challenge (beta). Everyone
 // who signs up shares this date so the weekly group meetings + week math line
 // up. Update here when a future cohort starts on a different date.
@@ -486,7 +494,7 @@ function sanitizeReturnTo(raw) {
 app.get('/signup', (req, res) => {
   const returnTo = sanitizeReturnTo(req.query.returnTo);
   if (req.session.user) return res.redirect(returnTo || '/dashboard');
-  res.render('signup', { error: null, firstName: '', lastName: '', email: '', returnTo, full: challengeIsFull() });
+  res.render('signup', { error: null, firstName: '', lastName: '', email: '', returnTo, full: challengeIsFull(), facebookPixelId: FACEBOOK_PIXEL_ID });
 });
 
 // Legal pages — public, no auth (must be viewable by anyone, incl. logged out).
@@ -558,11 +566,11 @@ app.post('/signup', signupLimiter, async (req, res) => {
     timezone = 'America/Denver';
   }
 
-  const rerender = (error) => res.render('signup', { error, firstName, lastName, email, returnTo, full: challengeIsFull() });
+  const rerender = (error) => res.render('signup', { error, firstName, lastName, email, returnTo, full: challengeIsFull(), facebookPixelId: FACEBOOK_PIXEL_ID });
 
   // Capacity gate — no new accounts once the cohort is full.
   if (challengeIsFull()) {
-    return res.render('signup', { error: null, firstName, lastName, email, returnTo, full: true });
+    return res.render('signup', { error: null, firstName, lastName, email, returnTo, full: true, facebookPixelId: FACEBOOK_PIXEL_ID });
   }
 
   if (!firstName || !lastName || !email || !password) return rerender('Please fill in all fields.');
