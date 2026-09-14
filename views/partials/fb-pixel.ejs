@@ -1,25 +1,117 @@
 <% if (locals.facebookPixelId) { %>
 <%
-  /* Meta (Facebook) Pixel — PUBLIC pages ONLY.
-     Deliberately NOT included from partials/head.ejs: this must never load on
-     authenticated app pages, which carry students' sensitive onboarding data
-     (self-assessments, reflections). Only routes that explicitly pass
-     `facebookPixelId` (currently just /signup) render it. Keep Automatic
-     Advanced Matching OFF in Meta Events Manager so emails / form fields are
-     not sent to Meta. */
+  /* Meta (Facebook) Pixel + consent gate — PUBLIC /signup page ONLY.
+
+     Deliberately NOT included from partials/head.ejs: it must never load on
+     authenticated app pages, which carry students' sensitive onboarding data.
+
+     GDPR / UK-GDPR / ePrivacy: an advertising pixel needs PRIOR, active
+     consent. So nothing here contacts Meta on load — we render a banner with
+     equally-weighted Accept / Decline, store the choice in localStorage, and
+     only then inject Meta's script. There is intentionally NO <noscript> pixel
+     fallback: it would fetch from Meta before the visitor consented.
+
+     Keep Automatic Advanced Matching OFF in Meta Events Manager so emails /
+     form fields are never sent to Meta. We fire PageView only. */
 %>
+<style>
+  .cg-consent {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 9999;
+    background: #FAFAFA; border-top: 1px solid rgba(16,15,16,0.12);
+    box-shadow: 0 -6px 24px rgba(16,15,16,0.08);
+    padding: 1rem 1.1rem; font-size: 0.9rem; color: #100F10;
+  }
+  .cg-consent-inner {
+    max-width: 900px; margin: 0 auto; display: flex; gap: 1rem;
+    align-items: center; justify-content: space-between; flex-wrap: wrap;
+  }
+  .cg-consent-text { margin: 0; flex: 1 1 320px; line-height: 1.5; }
+  .cg-consent-text a { color: #705C6C; text-decoration: underline; }
+  .cg-consent-actions { display: flex; gap: 0.6rem; flex: 0 0 auto; }
+  .cg-consent-btn {
+    font: inherit; cursor: pointer; padding: 0.55rem 1.15rem;
+    border-radius: 999px; border: 1px solid #705C6C; line-height: 1;
+  }
+  .cg-consent-btn--solid { background: #705C6C; color: #FAFAFA; }
+  .cg-consent-btn--solid:hover { background: #574557; border-color: #574557; }
+  .cg-consent-btn--ghost { background: transparent; color: #705C6C; }
+  .cg-consent-btn--ghost:hover { background: rgba(112,92,108,0.08); }
+  .cg-consent-btn:focus-visible { outline: 2px solid #705C6C; outline-offset: 2px; }
+  @media (max-width: 560px) {
+    .cg-consent-inner { justify-content: stretch; }
+    .cg-consent-actions { width: 100%; }
+    .cg-consent-btn { flex: 1 1 0; }
+  }
+</style>
+
+<div id="cg-consent" class="cg-consent" role="region" aria-label="Cookie consent" hidden>
+  <div class="cg-consent-inner">
+    <p class="cg-consent-text">
+      We'd like to use the Meta (Facebook) pixel on this page to see how well our
+      ads work. It's optional — nothing loads unless you say yes. Read our
+      <a href="/privacy">Privacy&nbsp;Policy</a>.
+    </p>
+    <div class="cg-consent-actions">
+      <button type="button" id="cg-consent-decline" class="cg-consent-btn cg-consent-btn--ghost">Decline</button>
+      <button type="button" id="cg-consent-accept"  class="cg-consent-btn cg-consent-btn--solid">Accept</button>
+    </div>
+  </div>
+</div>
+
 <script>
-  !function(f,b,e,v,n,t,s)
-  {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
-  n.callMethod.apply(n,arguments):n.queue.push(arguments)};
-  if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
-  n.queue=[];t=b.createElement(e);t.async=!0;
-  t.src=v;s=b.getElementsByTagName(e)[0];
-  s.parentNode.insertBefore(t,s)}(window, document,'script',
-  'https://connect.facebook.net/en_US/fbevents.js');
-  fbq('init', <%- JSON.stringify(facebookPixelId) %>);
-  fbq('track', 'PageView');
+(function () {
+  var PIXEL_ID = <%- JSON.stringify(String(facebookPixelId)) %>;
+  var KEY = 'cg_meta_consent_v1';
+  var banner = document.getElementById('cg-consent');
+
+  function loadPixel() {
+    if (window.fbq) return;
+    !function(f,b,e,v,n,t,s)
+    {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+    n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+    if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+    n.queue=[];t=b.createElement(e);t.async=!0;
+    t.src=v;s=b.getElementsByTagName(e)[0];
+    s.parentNode.insertBefore(t,s)}(window, document,'script',
+    'https://connect.facebook.net/en_US/fbevents.js');
+    fbq('init', PIXEL_ID);
+    fbq('track', 'PageView');
+  }
+
+  function get() { try { return localStorage.getItem(KEY); } catch (e) { return null; } }
+  function set(v) { try { localStorage.setItem(KEY, v); } catch (e) {} }
+
+  // Decide on load: honor a prior choice; otherwise ask (and load nothing yet).
+  var choice = get();
+  if (choice === 'granted') {
+    loadPixel();
+  } else if (choice !== 'denied' && banner) {
+    banner.hidden = false;
+  }
+
+  function decide(v) {
+    set(v);
+    if (banner) banner.hidden = true;
+    if (v === 'granted') loadPixel();
+    // A decline after the pixel already loaded this session needs no undo:
+    // we only ever fire a single PageView, so there are no further events to
+    // stop. The stored 'denied' keeps it off on every future visit.
+  }
+  var a = document.getElementById('cg-consent-accept');
+  var d = document.getElementById('cg-consent-decline');
+  if (a) a.addEventListener('click', function () { decide('granted'); });
+  if (d) d.addEventListener('click', function () { decide('denied'); });
+
+  // Withdraw/change consent from any element marked data-cg-consent-reopen
+  // (e.g. the "Cookie preferences" footer link). Clears the stored choice so
+  // the next page load asks again, and reopens the banner now.
+  document.addEventListener('click', function (e) {
+    var t = e.target && e.target.closest ? e.target.closest('[data-cg-consent-reopen]') : null;
+    if (!t) return;
+    e.preventDefault();
+    try { localStorage.removeItem(KEY); } catch (_) {}
+    if (banner) banner.hidden = false;
+  });
+})();
 </script>
-<noscript><img height="1" width="1" style="display:none" alt=""
-  src="https://www.facebook.com/tr?id=<%= encodeURIComponent(facebookPixelId) %>&ev=PageView&noscript=1"/></noscript>
 <% } %>
