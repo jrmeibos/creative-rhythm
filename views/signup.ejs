@@ -122,9 +122,22 @@
         <% if (locals.full) { %>
           <h2 class="sg-form-title">This cohort is full</h2>
           <p class="sg-body" style="text-align:center; margin-top:0.5rem">
-            Every spot for the October 5 challenge is spoken for. Want in on the next
-            one? <a href="mailto:julia@meibostouch.com?subject=Creative%27s%20Garden%20waitlist" class="sg-link">Email me to join the waitlist</a>,
-            and I'll reach out the moment a spot opens or the next cohort begins.
+            Every spot for the October 5 challenge is spoken for. Join the waitlist
+            and I'll email you the moment a spot opens or the next cohort begins.
+          </p>
+
+          <form id="waitlist-form" class="sg-form" novalidate style="margin-top:1.25rem">
+            <div class="form-group">
+              <label for="waitlist-email" class="form-label">Email</label>
+              <input type="email" id="waitlist-email" name="email" class="form-input"
+                     placeholder="you@example.com" autocomplete="email" required>
+            </div>
+            <button type="submit" class="btn btn-primary btn-full" id="waitlist-btn">Join the waitlist →</button>
+            <p class="sg-help" id="waitlist-msg" role="status" aria-live="polite" style="text-align:center; margin-top:0.6rem" hidden></p>
+          </form>
+
+          <p class="sg-help" style="text-align:center; margin-top:0.6rem">
+            Prefer email? <a href="mailto:julia@meibostouch.com?subject=Creative%27s%20Garden%20waitlist" class="sg-link">Reach out directly</a>.
           </p>
         <% } else { %>
         <h2 class="sg-form-title">Join the three-week challenge</h2>
@@ -217,6 +230,53 @@
       const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
       if (tz) document.getElementById('timezone').value = tz;
     } catch (_) { /* no-op — server fallback handles it */ }
+  </script>
+
+  <script>
+    // Waitlist form (shown only when the cohort is full). Posts to /api/waitlist,
+    // which tags the contact in Mailchimp. No-op when the form isn't on the page.
+    (function () {
+      var form = document.getElementById('waitlist-form');
+      if (!form) return;
+      var btn   = document.getElementById('waitlist-btn');
+      var input = document.getElementById('waitlist-email');
+      var msg   = document.getElementById('waitlist-msg');
+
+      function show(text, ok) {
+        msg.hidden = false;
+        msg.textContent = text;
+        msg.style.color = ok ? '' : '#b00020';
+      }
+
+      form.addEventListener('submit', function (e) {
+        e.preventDefault();
+        var email = (input.value || '').trim();
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+          show('Please enter a valid email address.', false);
+          return;
+        }
+        btn.disabled = true;
+        fetch('/api/waitlist', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+          body: JSON.stringify({ email: email })
+        })
+          .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, d: d }; }); })
+          .then(function (res) {
+            btn.disabled = false;
+            if (res.ok && res.d && res.d.ok) {
+              form.reset();
+              show('You’re on the list — I’ll be in touch. 🌱', true);
+            } else {
+              show((res.d && res.d.error) || 'Something went wrong — please try again.', false);
+            }
+          })
+          .catch(function () {
+            btn.disabled = false;
+            show('Could not reach the server — please try again.', false);
+          });
+      });
+    })();
   </script>
 
 </body>

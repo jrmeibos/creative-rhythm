@@ -446,6 +446,8 @@ const signupLimiter = rateLimit('signup', 5, 60 * 60 * 1000,
   'Too many sign-up attempts from this connection. Try again in an hour.');
 const forgotLimiter = rateLimit('forgot', 5, 60 * 60 * 1000,
   'Too many reset requests. Try again in an hour, or reach out to Julia directly.');
+const waitlistLimiter = rateLimit('waitlist', 5, 60 * 60 * 1000,
+  'Too many waitlist requests. Try again in a bit, or email julia@meibostouch.com.');
 
 app.get('/', (req, res) => {
   const returnTo = sanitizeReturnTo(req.query.returnTo);
@@ -639,6 +641,24 @@ app.post('/signup', signupLimiter, async (req, res) => {
     console.error('[signup] failed:', err);
     return rerender('Sign-up failed. Try again in a moment, or reach out to Julia directly.');
   }
+});
+
+// Waitlist capture — used by the signup page when the cohort is full. Tags the
+// contact "Garden – Waitlist" in Mailchimp so Julia can reach them when a spot
+// opens or the next cohort starts. Public + rate-limited. If Mailchimp isn't
+// configured we say so plainly so the page can fall back to the mailto link.
+app.post('/api/waitlist', waitlistLimiter, async (req, res) => {
+  const email = (req.body.email || '').trim();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return res.status(400).json({ error: 'Please enter a valid email address.' });
+  }
+  if (!process.env.MAILCHIMP_API_KEY || !MAILCHIMP_SIGNUP.id) {
+    return res.status(503).json({ error: 'The waitlist is not available right now — please email julia@meibostouch.com.' });
+  }
+  // Fire-and-forget so a Mailchimp hiccup never fails the request; the upsert
+  // is idempotent, so a repeat submit just re-confirms the same contact.
+  addContactToMailchimp(email, '', '', [MAILCHIMP_TAG_WAITLIST]).catch(() => {});
+  return res.json({ ok: true });
 });
 
 app.get('/logout', (req, res) => {
@@ -1035,6 +1055,7 @@ const MAILCHIMP_SIGNUP = {
 //     newsletter campaigns can target just them (not every registrant).
 const MAILCHIMP_TAG_REGISTERED = "Garden – New Registration"; // en dash
 const MAILCHIMP_TAG_NEWSLETTER = "Meibos Touch";
+const MAILCHIMP_TAG_WAITLIST   = "Garden – Waitlist"; // en dash — full-cohort waitlist
 
 // Upsert a contact into the Meibos Touch audience via the Mailchimp Marketing
 // API and apply the given tags. Everyone who registers is added as a

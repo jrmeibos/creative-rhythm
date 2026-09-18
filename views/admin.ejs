@@ -457,8 +457,8 @@
             <span class="admin-settings-block-label">Upgrade page (/upgrade)</span>
             <p class="admin-field-hint">
               While the full course is still being built, <code>/upgrade</code> shows a temporary
-              page: the free Winter-season signup + a “coming soon, notify me” form.
-              Flip to <strong>Live pricing</strong> the day you’re ready to take payments —
+              page: the 3-week challenge + a “coming soon, notify me” form for the full course.
+              Flip to <strong>Live pricing</strong> the day you’re ready to sell the full course —
               your real pricing page returns instantly, unchanged.
             </p>
             <div class="admin-unlock-row" style="margin-top:0.5rem">
@@ -671,7 +671,7 @@
     <div class="admin-form-field">
       <label class="admin-form-label">Enrollment tier <span class="admin-form-hint">(gift a paid tier · grants full access)</span></label>
       <select class="admin-input admin-select" id="edit-student-tier">
-        <option value="">None · free / Winter</option>
+        <option value="">None (no tier gifted)</option>
         <% for (const t of enrollments.tiers) { %>
           <option value="<%= t.id %>"><%= t.name %> · <%= t.priceLabel %></option>
         <% } %>
