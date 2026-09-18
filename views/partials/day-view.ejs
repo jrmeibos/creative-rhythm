@@ -97,6 +97,18 @@
             <p class="dayview-video-msg" hidden></p>
           </div>
         <% } %>
+        <% if (c.location) { %>
+          <div class="dayview-field">
+            <p class="dayview-field-label">Where it lives</p>
+            <p class="dayview-field-text"><%= c.location %></p>
+          </div>
+        <% } %>
+        <% if (c.link) { %>
+          <div class="dayview-field">
+            <p class="dayview-field-label">Link</p>
+            <p class="dayview-field-text"><a href="<%= c.link %>" target="_blank" rel="noopener" class="dayview-entry-link"><%= c.link %></a></p>
+          </div>
+        <% } %>
         <% populated.forEach(function (p) { %>
           <div class="dayview-field">
             <p class="dayview-field-label"><%= p.label %></p>
@@ -160,11 +172,11 @@
           <% } %>
         </p>
         <p class="dayview-empty-sub">
-          Record a short video on your phone or camera first. Then log it here.
+          Get something from inside your brain into the world — a video, a voice memo, or some written thoughts. Then log it here.
         </p>
       <% } %>
       <div class="dayview-cta-row">
-        <button type="button" class="recording-card-btn" id="dayview-add-btn">Log today's recording</button>
+        <button type="button" class="recording-card-btn" id="dayview-add-btn">Log today's entry</button>
         <button type="button" class="recording-about-toggle"
                 id="dayview-howto-toggle" aria-controls="dayview-howto-panel"
                 aria-expanded="false">How to do the daily recording ↓</button>
@@ -185,7 +197,7 @@
   </div>
 
   <div class="dayview-form is-hidden" id="dayview-form">
-    <p class="dayview-form-intro">A few notes on the video you just recorded —</p>
+    <p class="dayview-form-intro">A few notes on today's entry —</p>
 
     <%# Video upload for the "+ Log another" case only. When the empty box is on
         screen it owns the upload UI (camera icon) — rendering it in both places
@@ -204,6 +216,33 @@
         <input type="hidden" id="dayview-video-uid" value="">
       </div>
     <% } %>
+    <%# Where the entry lives — asked first, since it frames the rest. Optional.
+        Presets plus the student's own past answers (remembered via datalist),
+        and free text is always allowed, so no medium has to be predicted. %>
+    <div class="recording-reflect-field">
+      <label class="recording-reflect-q" for="dayview-input-location">What kind of entry was it? Where does it live?</label>
+      <p class="recording-reflect-help">So you can find it again later — a video in your camera roll, a voice memo, a page in your notebook, or your own way.</p>
+      <input type="text" id="dayview-input-location" class="recording-reflect-input"
+             list="dayview-location-options" maxlength="60" autocomplete="off"
+             placeholder="e.g. Camera roll, Voice Memos, Notebook…">
+      <datalist id="dayview-location-options">
+        <%
+          const defaultLocs = ['Camera roll', 'Voice Memos', 'Notebook / paper'];
+          const seenLocs = {};
+          (dayview.locationSuggestions || []).concat(defaultLocs).forEach(function (loc) {
+            if (loc && !seenLocs[loc.toLowerCase()]) { seenLocs[loc.toLowerCase()] = 1;
+        %>
+          <option value="<%= loc %>"></option>
+        <% } }); %>
+      </datalist>
+    </div>
+    <div class="recording-reflect-field">
+      <label class="recording-reflect-q" for="dayview-input-link">Link <span class="dayview-video-optional">(optional)</span></label>
+      <p class="recording-reflect-help">If your entry lives online — an unlisted video, a doc, a shared folder.</p>
+      <input type="url" id="dayview-input-link" class="recording-reflect-input"
+             inputmode="url" autocomplete="off" placeholder="https://…">
+    </div>
+
     <% cuttingPrompts.forEach(function (p) { %>
       <div class="recording-reflect-field">
         <label class="recording-reflect-q" for="dayview-input-<%= p.key %>"><%= p.label %></label>

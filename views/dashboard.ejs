@@ -975,6 +975,10 @@
             if (saveBtn)  saveBtn.disabled = false;
             if (clearText) {
               form.querySelectorAll('textarea[data-cutting-key]').forEach(t => { t.value = ''; });
+              const locEl  = form.querySelector('#dayview-input-location');
+              const linkEl = form.querySelector('#dayview-input-link');
+              if (locEl)  locEl.value = '';
+              if (linkEl) linkEl.value = '';
               // Drop any staged video too, so a cancelled entry doesn't silently
               // attach its upload to the next one. Container-scoped — the upload
               // block sits in the empty box, not the form.
@@ -1009,6 +1013,13 @@
             const uidEl = container.querySelector('#dayview-video-uid');
             const videoUid = uidEl ? uidEl.value.trim() : '';
             if (videoUid) { payload.video_uid = videoUid; anyFilled = true; }
+            // Where the entry lives + optional link — either alone logs the day.
+            const locEl  = form.querySelector('#dayview-input-location');
+            const linkEl = form.querySelector('#dayview-input-link');
+            const locVal  = locEl  ? locEl.value.trim()  : '';
+            const linkVal = linkEl ? linkEl.value.trim() : '';
+            if (locVal)  { payload.location = locVal;  anyFilled = true; }
+            if (linkVal) { payload.link     = linkVal; anyFilled = true; }
             if (!anyFilled) { hideForm(true); return; }
             saveBtn.disabled = true;
             try {

@@ -819,6 +819,18 @@ db.exec(`
     db.exec("ALTER TABLE cuttings ADD COLUMN title TEXT");
     console.log('✓ Migrated: added title to cuttings');
   }
+  // Cuttings: how the entry was made / where it lives (e.g. "Camera roll",
+  // "Voice Memos", "Notebook", or the student's own), and an optional link if
+  // the entry lives somewhere online. Both nullable — the entry itself lives
+  // wherever the student made it; these just help them find it again.
+  if (!cuttingCols2.includes('location')) {
+    db.exec("ALTER TABLE cuttings ADD COLUMN location TEXT");
+    console.log('✓ Migrated: added location to cuttings');
+  }
+  if (!cuttingCols2.includes('link')) {
+    db.exec("ALTER TABLE cuttings ADD COLUMN link TEXT");
+    console.log('✓ Migrated: added link to cuttings');
+  }
 
   // Tending: the Gardener's weekly review of past cuttings. Unlocks in Spring
   // (Week 4+). Each curation event is a row (history-preserving) so a cutting
@@ -2916,8 +2928,9 @@ module.exports = {
     return db.prepare(`
       INSERT INTO cuttings
         (user_id, season, prompt, recorded_date,
-         reflection_text, talked_about, how_it_felt, takeaway, video_uid)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+         reflection_text, talked_about, how_it_felt, takeaway, video_uid,
+         location, link)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       userId,
       season || null,
@@ -2927,8 +2940,23 @@ module.exports = {
       fields.talked_about    || null,
       fields.how_it_felt     || null,
       fields.takeaway        || null,
-      videoUid || null
+      videoUid || null,
+      fields.location || null,
+      fields.link     || null
     );
+  },
+
+  // Distinct locations this user has used before, most-recent first — powers
+  // the "where does it live?" suggestions so a student's own words (e.g. "Notes
+  // app") come back as a preset next time. Presets are added client-side.
+  getCuttingLocationsForUser(userId) {
+    return db.prepare(
+      `SELECT location FROM cuttings
+        WHERE user_id = ? AND location IS NOT NULL AND TRIM(location) <> ''
+        GROUP BY location
+        ORDER BY MAX(created_at) DESC
+        LIMIT 12`
+    ).all(userId).map(r => r.location);
   },
 
   // Create a "bonus" recording — something filmed outside the daily practice —
@@ -3087,7 +3115,7 @@ module.exports = {
     return db.prepare(
       `SELECT id, created_at, recorded_date, season, prompt,
               reflection_text, talked_about, how_it_felt, takeaway,
-              watched, edited, video_uid
+              watched, edited, video_uid, location, link
        FROM cuttings WHERE user_id = ? AND recorded_date = ?
        ORDER BY created_at ASC`
     ).all(userId, recordedDate);

@@ -787,6 +787,7 @@ function buildDayviewPayload(user, rawDay, courseStart) {
     aboutText:   viewedSeasonPrompt ? viewedSeasonPrompt.aboutText : null,
     topic:       getDailyPrompt(viewedSeason, dayInfo.dayInSeason),
     cuttings:    dayCuttings,
+    locationSuggestions: db.getCuttingLocationsForUser(user.id),
     prevDate,
     nextDate
   };
@@ -952,6 +953,16 @@ app.post('/dashboard/cutting', requireAuth, (req, res) => {
   const videoUid = (res.locals.canUploadVideo && /^[a-zA-Z0-9]{20,}$/.test(rawVideoUid))
     ? rawVideoUid : null;
   if (videoUid) anyFilled = true;
+
+  // Where the entry lives + an optional link. Either one, on its own, means the
+  // day was logged — a written page noted as "Notebook" counts like any video.
+  const location = typeof body.location === 'string' ? (body.location.trim().slice(0, 60) || null) : null;
+  let link = typeof body.link === 'string' ? body.link.trim().slice(0, 500) : '';
+  if (link && !/^https?:\/\//i.test(link)) link = 'https://' + link;
+  link = link || null;
+  fields.location = location;
+  fields.link = link;
+  if (location || link) anyFilled = true;
 
   if (!anyFilled) {
     return res.json({ saved: false });
