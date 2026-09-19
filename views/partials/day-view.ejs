@@ -103,12 +103,6 @@
             <p class="dayview-field-text"><%= c.location %></p>
           </div>
         <% } %>
-        <% if (c.link) { %>
-          <div class="dayview-field">
-            <p class="dayview-field-label">Link</p>
-            <p class="dayview-field-text"><a href="<%= c.link %>" target="_blank" rel="noopener" class="dayview-entry-link"><%= c.link %></a></p>
-          </div>
-        <% } %>
         <% populated.forEach(function (p) { %>
           <div class="dayview-field">
             <p class="dayview-field-label"><%= p.label %></p>
@@ -216,31 +210,30 @@
         <input type="hidden" id="dayview-video-uid" value="">
       </div>
     <% } %>
-    <%# Where the entry lives — asked first, since it frames the rest. Optional.
-        Presets plus the student's own past answers (remembered via datalist),
-        and free text is always allowed, so no medium has to be predicted. %>
+    <%# Where the entry lives — asked first, since it frames the rest. Compact
+        checkboxes (check any that apply) plus the student's own past answers,
+        remembered, plus "add your own". Optional. %>
     <div class="recording-reflect-field">
-      <label class="recording-reflect-q" for="dayview-input-location">What kind of entry was it? Where does it live?</label>
-      <p class="recording-reflect-help">So you can find it again later — a video in your camera roll, a voice memo, a page in your notebook, or your own way.</p>
-      <input type="text" id="dayview-input-location" class="recording-reflect-input"
-             list="dayview-location-options" maxlength="60" autocomplete="off"
-             placeholder="e.g. Camera roll, Voice Memos, Notebook…">
-      <datalist id="dayview-location-options">
+      <label class="recording-reflect-q">What kind of entry was it? Where does it live?</label>
+      <p class="recording-reflect-help">So you can find it again later.</p>
+      <div class="dv-loc-options" id="dayview-loc-options">
         <%
-          const defaultLocs = ['Camera roll', 'Voice Memos', 'Notebook / paper'];
+          const defaultLocs = ['Camera roll', 'Voice Memos', 'Notebook', 'Notes app'];
           const seenLocs = {};
-          (dayview.locationSuggestions || []).concat(defaultLocs).forEach(function (loc) {
+          defaultLocs.concat(dayview.locationSuggestions || []).forEach(function (loc) {
             if (loc && !seenLocs[loc.toLowerCase()]) { seenLocs[loc.toLowerCase()] = 1;
         %>
-          <option value="<%= loc %>"></option>
+          <label class="dv-loc-check">
+            <input type="checkbox" class="dv-loc-cb" value="<%= loc %>"><span><%= loc %></span>
+          </label>
         <% } }); %>
-      </datalist>
-    </div>
-    <div class="recording-reflect-field">
-      <label class="recording-reflect-q" for="dayview-input-link">Link <span class="dayview-video-optional">(optional)</span></label>
-      <p class="recording-reflect-help">If your entry lives online — an unlisted video, a doc, a shared folder.</p>
-      <input type="url" id="dayview-input-link" class="recording-reflect-input"
-             inputmode="url" autocomplete="off" placeholder="https://…">
+        <button type="button" class="dv-loc-add" id="dayview-loc-add">+ Add your own</button>
+      </div>
+      <div class="dv-loc-addrow" id="dayview-loc-addrow" hidden>
+        <input type="text" id="dayview-loc-custom" class="recording-reflect-input"
+               maxlength="40" autocomplete="off" placeholder="Name your own…">
+        <button type="button" class="recording-card-btn-secondary" id="dayview-loc-customadd">Add</button>
+      </div>
     </div>
 
     <% cuttingPrompts.forEach(function (p) { %>

@@ -2950,13 +2950,24 @@ module.exports = {
   // the "where does it live?" suggestions so a student's own words (e.g. "Notes
   // app") come back as a preset next time. Presets are added client-side.
   getCuttingLocationsForUser(userId) {
-    return db.prepare(
-      `SELECT location FROM cuttings
+    const rows = db.prepare(
+      `SELECT location, MAX(created_at) AS last_used FROM cuttings
         WHERE user_id = ? AND location IS NOT NULL AND TRIM(location) <> ''
         GROUP BY location
-        ORDER BY MAX(created_at) DESC
-        LIMIT 12`
-    ).all(userId).map(r => r.location);
+        ORDER BY last_used DESC
+        LIMIT 40`
+    ).all(userId);
+    // Stored values may join several choices ("Camera roll, Notes app"), so
+    // split back into distinct tokens — that's what the checkbox list wants.
+    const seen = new Set();
+    const tokens = [];
+    for (const r of rows) {
+      for (const part of String(r.location).split(',')) {
+        const v = part.trim();
+        if (v && !seen.has(v.toLowerCase())) { seen.add(v.toLowerCase()); tokens.push(v); }
+      }
+    }
+    return tokens.slice(0, 12);
   },
 
   // Create a "bonus" recording — something filmed outside the daily practice —

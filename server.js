@@ -954,15 +954,12 @@ app.post('/dashboard/cutting', requireAuth, (req, res) => {
     ? rawVideoUid : null;
   if (videoUid) anyFilled = true;
 
-  // Where the entry lives + an optional link. Either one, on its own, means the
-  // day was logged — a written page noted as "Notebook" counts like any video.
-  const location = typeof body.location === 'string' ? (body.location.trim().slice(0, 60) || null) : null;
-  let link = typeof body.link === 'string' ? body.link.trim().slice(0, 500) : '';
-  if (link && !/^https?:\/\//i.test(link)) link = 'https://' + link;
-  link = link || null;
+  // Where the entry lives — one or more checkbox values joined by the client
+  // (e.g. "Camera roll, Notes app"). A location alone means the day was logged:
+  // a written page noted as "Notebook" counts like any video.
+  const location = typeof body.location === 'string' ? (body.location.trim().slice(0, 120) || null) : null;
   fields.location = location;
-  fields.link = link;
-  if (location || link) anyFilled = true;
+  if (location) anyFilled = true;
 
   if (!anyFilled) {
     return res.json({ saved: false });
