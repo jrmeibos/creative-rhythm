@@ -1860,7 +1860,7 @@ module.exports = {
   },
 
   getAllUsers() {
-    return db.prepare('SELECT id, name, email, role, avatar_initial, current_season, profile_photo, community_goals_public, community_season_public, course_start_date, course_length_weeks, enrollment_tier, notes, created_at FROM users ORDER BY role DESC, name ASC').all();
+    return db.prepare('SELECT id, name, email, role, avatar_initial, current_season, profile_photo, community_goals_public, community_season_public, course_start_date, course_length_weeks, enrollment_tier, challenge_payment_status, notes, created_at FROM users ORDER BY role DESC, name ASC').all();
   },
 
   getUserFullProfile(id) {
@@ -3817,6 +3817,7 @@ module.exports = {
         (SELECT COUNT(*) FROM goals WHERE user_id=u.id AND (feeling!='' OR looks_like!='')) as goals_count
       FROM users u
       WHERE u.role = 'student'
+        AND (u.challenge_payment_status IS NULL OR u.challenge_payment_status <> 'pending')
       ORDER BY u.name ASC
     `).all();
   },

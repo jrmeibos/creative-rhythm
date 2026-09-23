@@ -18,13 +18,20 @@
         </div>
       </header>
 
+      <%
+        // Split off challenge signups who never finished the $299 checkout
+        // (challenge_payment_status === 'pending') so the "Gardeners" roster
+        // shows actual students. Pending accounts get their own section below.
+        const pendingSignups = users.filter(u => u.role === 'student' && u.challenge_payment_status === 'pending');
+        const rosterUsers    = users.filter(u => !(u.role === 'student' && u.challenge_payment_status === 'pending'));
+      %>
       <!-- ── Students ─────────────────────────────────────────────────────── -->
       <section class="dash-section" id="section-students">
         <div class="dash-section-header">
           <h2 class="dash-section-title">Gardeners</h2>
           <div class="admin-section-actions">
             <span class="admin-count" id="student-count">
-              <%= users.filter(u => u.role === 'student').length %> enrolled
+              <%= rosterUsers.filter(u => u.role === 'student').length %> enrolled
             </span>
             <button class="admin-add-btn" type="button" onclick="openDialog('dialog-add-student')">
               + Add Gardener
@@ -32,7 +39,7 @@
           </div>
         </div>
         <div class="admin-card" id="student-list">
-          <% for (const u of users) { %>
+          <% for (const u of rosterUsers) { %>
             <% const userStart = u.course_start_date ? String(u.course_start_date).slice(0, 10) : ''; %>
             <div class="admin-user-row" id="user-row-<%= u.id %>">
               <div class="sidebar-avatar" style="width:32px;height:32px;font-size:0.85rem;flex-shrink:0">
@@ -104,6 +111,52 @@
           <% } %>
         </div>
       </section>
+
+      <!-- ── Pending signups (started, never paid) ────────────────────────── -->
+      <% if (pendingSignups.length) { %>
+      <section class="dash-section" id="section-pending">
+        <div class="dash-section-header">
+          <h2 class="dash-section-title">Pending signups</h2>
+          <span class="admin-count"><%= pendingSignups.length %> haven't paid</span>
+        </div>
+        <p class="admin-field-hint" style="margin:0 0 0.9rem">
+          These people created an account but didn't finish the $299 payment, so they're
+          <strong>not in the cohort</strong> and don't take a spot. They can still pay and
+          join until it fills — warm leads worth a nudge, or you can remove them.
+        </p>
+        <div class="admin-card">
+          <% for (const u of pendingSignups) { %>
+            <%
+              let signedUpLabel = '';
+              if (u.created_at) {
+                const c = new Date(String(u.created_at).replace(' ', 'T'));
+                if (!isNaN(c)) {
+                  const days = Math.max(0, Math.floor((Date.now() - c.getTime()) / 86400000));
+                  const dateStr = c.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                  signedUpLabel = 'Signed up ' + dateStr + (days === 0 ? ' · today' : ' · ' + days + 'd ago');
+                }
+              }
+            %>
+            <div class="admin-user-row" id="user-row-<%= u.id %>">
+              <div class="sidebar-avatar" style="width:32px;height:32px;font-size:0.85rem;flex-shrink:0">
+                <%= u.avatar_initial || u.name.charAt(0) %>
+              </div>
+              <div class="admin-user-info">
+                <span class="admin-user-name"><%= u.name %></span>
+                <span class="admin-user-email"><%= u.email %></span>
+                <% if (signedUpLabel) { %><span class="admin-user-activity admin-user-activity--quiet"><%= signedUpLabel %></span><% } %>
+              </div>
+              <span class="admin-lesson-tag" title="Created an account but hasn't paid the $299">Unpaid</span>
+              <div class="admin-row-actions">
+                <a class="admin-btn-icon" title="Email this person" href="mailto:<%= u.email %>?subject=Your%20spot%20in%20The%20Creative%27s%20Garden">✉</a>
+                <button class="admin-btn-icon admin-btn-icon--danger" type="button" title="Delete"
+                  onclick="deleteUser(<%= u.id %>, <%= JSON.stringify(u.name) %>)">✕</button>
+              </div>
+            </div>
+          <% } %>
+        </div>
+      </section>
+      <% } %>
 
       <!-- ── The 3-Week Challenge (the current offering) ──────────────────── -->
       <section class="dash-section" id="section-challenge">
