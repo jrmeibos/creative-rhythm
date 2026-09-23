@@ -830,7 +830,7 @@ details[open] .gh-planted-summary::before { content: '▾  '; }
 
 .gh-bed {
   width: 240px;
-  height: 180px;
+  min-height: 180px;
   flex-shrink: 0;
   border: 1.5px dashed var(--color-bloem);
   border-radius: 12px;
@@ -838,7 +838,7 @@ details[open] .gh-planted-summary::before { content: '▾  '; }
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 1.25rem;
+  padding: 1.5rem 1.25rem 1.25rem;
   box-sizing: border-box;
   position: relative;
 }
