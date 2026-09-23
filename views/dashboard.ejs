@@ -548,6 +548,18 @@
           margin-top: 0;
           justify-content: center;
         }
+        /* Gentle escape hatch — video is the practice, but a low-energy day
+           can still be logged as a voice memo or a few written words. */
+        .dayview-empty-accommodation {
+          font-family: var(--font-body);
+          font-size: 0.8rem;
+          font-weight: 300;
+          line-height: 1.5;
+          color: rgba(16, 15, 16, 0.45);
+          max-width: 24rem;
+          text-align: center;
+          margin: 0.9rem auto 0;
+        }
         .dayview-cta-row {
           margin-top: 1.1rem;
           display: flex;
@@ -827,12 +839,6 @@
             if (e.target.closest('#dayview-add-btn'))    { showForm(); return; }
             if (e.target.closest('#dayview-cancel'))     { hideForm(true); return; }
             if (e.target.closest('#dayview-save'))       { saveReflection(); return; }
-            if (e.target.closest('#dayview-loc-add')) {
-              const row = container.querySelector('#dayview-loc-addrow');
-              if (row) { row.hidden = false; const inp = container.querySelector('#dayview-loc-custom'); if (inp) inp.focus(); }
-              return;
-            }
-            if (e.target.closest('#dayview-loc-customadd')) { addCustomLocation(); return; }
             const playBtn = e.target.closest('[data-video-play]');
             if (playBtn) { playVideo(playBtn); return; }
           });
@@ -841,38 +847,6 @@
           container.addEventListener('change', (e) => {
             if (e.target && e.target.id === 'dayview-video-input') uploadVideo(e.target);
           });
-          // Enter in the "add your own" field commits it, without submitting.
-          container.addEventListener('keydown', (e) => {
-            if (e.target && e.target.id === 'dayview-loc-custom' && e.key === 'Enter') {
-              e.preventDefault(); addCustomLocation();
-            }
-          });
-
-          // Turn a typed "add your own" value into a new, checked option.
-          function addCustomLocation() {
-            const inp    = container.querySelector('#dayview-loc-custom');
-            const opts   = container.querySelector('#dayview-loc-options');
-            const addRow = container.querySelector('#dayview-loc-addrow');
-            const addBtn = container.querySelector('#dayview-loc-add');
-            if (!inp || !opts) return;
-            const name = inp.value.trim();
-            if (!name) return;
-            const existing = Array.from(opts.querySelectorAll('.dv-loc-cb'))
-              .find(cb => cb.value.toLowerCase() === name.toLowerCase());
-            if (existing) {
-              existing.checked = true;
-            } else {
-              const label = document.createElement('label');
-              label.className = 'dv-loc-check';
-              const cb = document.createElement('input');
-              cb.type = 'checkbox'; cb.className = 'dv-loc-cb'; cb.value = name; cb.checked = true;
-              const span = document.createElement('span'); span.textContent = name;
-              label.appendChild(cb); label.appendChild(span);
-              opts.insertBefore(label, addBtn);
-            }
-            inp.value = '';
-            if (addRow) addRow.hidden = true;
-          }
 
           // ─── Video ──────────────────────────────────────────────────────
           function showVideoStatus(msg, isError) {
@@ -1013,11 +987,6 @@
             if (saveBtn)  saveBtn.disabled = false;
             if (clearText) {
               form.querySelectorAll('textarea[data-cutting-key]').forEach(t => { t.value = ''; });
-              form.querySelectorAll('.dv-loc-cb:checked').forEach(cb => { cb.checked = false; });
-              const customInp = form.querySelector('#dayview-loc-custom');
-              const addRow    = form.querySelector('#dayview-loc-addrow');
-              if (customInp) customInp.value = '';
-              if (addRow)    addRow.hidden = true;
               // Drop any staged video too, so a cancelled entry doesn't silently
               // attach its upload to the next one. Container-scoped — the upload
               // block sits in the empty box, not the form.
@@ -1052,13 +1021,6 @@
             const uidEl = container.querySelector('#dayview-video-uid');
             const videoUid = uidEl ? uidEl.value.trim() : '';
             if (videoUid) { payload.video_uid = videoUid; anyFilled = true; }
-            // Where the entry lives — checked options plus any typed-but-not-yet
-            // "added" custom text. A location alone logs the day.
-            const checked = Array.from(form.querySelectorAll('.dv-loc-cb:checked')).map(cb => cb.value);
-            const customInp = form.querySelector('#dayview-loc-custom');
-            if (customInp && customInp.value.trim()) checked.push(customInp.value.trim());
-            const locVal = checked.join(', ');
-            if (locVal) { payload.location = locVal; anyFilled = true; }
             if (!anyFilled) { hideForm(true); return; }
             saveBtn.disabled = true;
             try {

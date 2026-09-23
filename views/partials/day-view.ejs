@@ -97,12 +97,6 @@
             <p class="dayview-video-msg" hidden></p>
           </div>
         <% } %>
-        <% if (c.location) { %>
-          <div class="dayview-field">
-            <p class="dayview-field-label">Where it lives</p>
-            <p class="dayview-field-text"><%= c.location %></p>
-          </div>
-        <% } %>
         <% populated.forEach(function (p) { %>
           <div class="dayview-field">
             <p class="dayview-field-label"><%= p.label %></p>
@@ -160,21 +154,24 @@
         </svg>
         <p class="dayview-empty">
           <% if (dayview.isToday) { %>
-            Recorded a thought? Log it here.
+            Recorded your video? Log it here.
           <% } else { %>
             Nothing logged for this day. You can still add one.
           <% } %>
         </p>
         <p class="dayview-empty-sub">
-          Get something from inside your brain into the world — a video, a voice memo, or some written thoughts. Then log it here.
+          Record a short video on your phone or camera first. Then log it here.
         </p>
       <% } %>
       <div class="dayview-cta-row">
-        <button type="button" class="recording-card-btn" id="dayview-add-btn">Log today's entry</button>
+        <button type="button" class="recording-card-btn" id="dayview-add-btn">Log today's recording</button>
         <button type="button" class="recording-about-toggle"
                 id="dayview-howto-toggle" aria-controls="dayview-howto-panel"
                 aria-expanded="false">How to do the daily recording ↓</button>
       </div>
+      <p class="dayview-empty-accommodation">
+        Low on energy? A voice memo or a few written words still count — don't break the chain.
+      </p>
     </div>
   <% } %>
 
@@ -191,7 +188,7 @@
   </div>
 
   <div class="dayview-form is-hidden" id="dayview-form">
-    <p class="dayview-form-intro">A few notes on today's entry —</p>
+    <p class="dayview-form-intro">A few notes on the video you just recorded —</p>
 
     <%# Video upload for the "+ Log another" case only. When the empty box is on
         screen it owns the upload UI (camera icon) — rendering it in both places
@@ -210,32 +207,6 @@
         <input type="hidden" id="dayview-video-uid" value="">
       </div>
     <% } %>
-    <%# Where the entry lives — asked first, since it frames the rest. Compact
-        checkboxes (check any that apply) plus the student's own past answers,
-        remembered, plus "add your own". Optional. %>
-    <div class="recording-reflect-field">
-      <label class="recording-reflect-q">What kind of entry was it? Where does it live?</label>
-      <p class="recording-reflect-help">So you can find it again later.</p>
-      <div class="dv-loc-options" id="dayview-loc-options">
-        <%
-          const defaultLocs = ['Camera roll', 'Voice Memos', 'Notebook', 'Notes app'];
-          const seenLocs = {};
-          defaultLocs.concat(dayview.locationSuggestions || []).forEach(function (loc) {
-            if (loc && !seenLocs[loc.toLowerCase()]) { seenLocs[loc.toLowerCase()] = 1;
-        %>
-          <label class="dv-loc-check">
-            <input type="checkbox" class="dv-loc-cb" value="<%= loc %>"><span><%= loc %></span>
-          </label>
-        <% } }); %>
-        <button type="button" class="dv-loc-add" id="dayview-loc-add">+ Add your own</button>
-      </div>
-      <div class="dv-loc-addrow" id="dayview-loc-addrow" hidden>
-        <input type="text" id="dayview-loc-custom" class="recording-reflect-input"
-               maxlength="40" autocomplete="off" placeholder="Name your own…">
-        <button type="button" class="recording-card-btn-secondary" id="dayview-loc-customadd">Add</button>
-      </div>
-    </div>
-
     <% cuttingPrompts.forEach(function (p) { %>
       <div class="recording-reflect-field">
         <label class="recording-reflect-q" for="dayview-input-<%= p.key %>"><%= p.label %></label>

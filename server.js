@@ -787,7 +787,6 @@ function buildDayviewPayload(user, rawDay, courseStart) {
     aboutText:   viewedSeasonPrompt ? viewedSeasonPrompt.aboutText : null,
     topic:       getDailyPrompt(viewedSeason, dayInfo.dayInSeason),
     cuttings:    dayCuttings,
-    locationSuggestions: db.getCuttingLocationsForUser(user.id),
     prevDate,
     nextDate
   };
@@ -953,13 +952,6 @@ app.post('/dashboard/cutting', requireAuth, (req, res) => {
   const videoUid = (res.locals.canUploadVideo && /^[a-zA-Z0-9]{20,}$/.test(rawVideoUid))
     ? rawVideoUid : null;
   if (videoUid) anyFilled = true;
-
-  // Where the entry lives — one or more checkbox values joined by the client
-  // (e.g. "Camera roll, Notes app"). A location alone means the day was logged:
-  // a written page noted as "Notebook" counts like any video.
-  const location = typeof body.location === 'string' ? (body.location.trim().slice(0, 120) || null) : null;
-  fields.location = location;
-  if (location) anyFilled = true;
 
   if (!anyFilled) {
     return res.json({ saved: false });
