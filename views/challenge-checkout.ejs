@@ -3,7 +3,7 @@
 <head>
   <%- include('partials/head') %>
   <link rel="stylesheet" href="/css/login.css">
-  <% if (stripeConfigured) { %>
+  <% if (stripeConfigured && !cohortClosed) { %>
   <!-- Stripe.js must load from js.stripe.com (PCI). Only on this page. -->
   <script src="https://js.stripe.com/v3/"></script>
   <% } %>
@@ -55,34 +55,84 @@
       <img src="/images/brand/The Creative's Garden Icon with Text_1.svg" alt="The Creative's Garden" class="cc-logo">
     </a>
 
-    <div class="cc-card">
-      <p class="cc-eyebrow">You're almost in</p>
-      <h1 class="cc-title">Join the 3-Week Challenge</h1>
-      <p class="cc-sub">We start <strong><%= new Date(startDate + 'T00:00:00').toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric' }) %></strong>. Secure your spot below.</p>
-
-      <div class="cc-price-row">
-        <span class="cc-price"><%= priceLabel %></span>
-        <span class="cc-price-note">one-time · to join the beta cohort</span>
+    <% if (cohortClosed) { %>
+      <div class="cc-card">
+        <p class="cc-eyebrow">The Creative's Garden</p>
+        <h1 class="cc-title">Sign-ups are closed</h1>
+        <p class="cc-sub">
+          Enrollment for the <strong><%= new Date(startDate + 'T00:00:00').toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric' }) %></strong>
+          cohort has closed, so checkout isn't available — and you haven't been charged.
+        </p>
+        <p class="cc-sub">
+          Want in on the next one? Add yourself to the waitlist and I'll reach out when the next cohort opens.
+        </p>
+        <button type="button" class="btn btn-primary btn-full" id="cc-waitlist-btn">Join the waitlist</button>
+        <p class="cc-note" id="cc-waitlist-msg" role="status" aria-live="polite" hidden></p>
       </div>
+    <% } else { %>
+      <div class="cc-card">
+        <p class="cc-eyebrow">You're almost in</p>
+        <h1 class="cc-title">Join the 3-Week Challenge</h1>
+        <p class="cc-sub">We start <strong><%= new Date(startDate + 'T00:00:00').toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric' }) %></strong>. Secure your spot below.</p>
 
-      <div class="cc-refund">
-        <strong>Fully refundable.</strong> Record every day (with a little grace — 18 of the 21 days) and share your honest feedback at the end, and I refund every penny.
+        <div class="cc-price-row">
+          <span class="cc-price"><%= priceLabel %></span>
+          <span class="cc-price-note">one-time · to join the beta cohort</span>
+        </div>
+
+        <div class="cc-refund">
+          <strong>Fully refundable.</strong> Record every day (with a little grace — 18 of the 21 days) and share your honest feedback at the end, and I refund every penny.
+        </div>
+
+        <% if (!stripeConfigured) { %>
+          <p class="cc-error">Payments aren't set up in this environment yet. Please reach out to Julia.</p>
+        <% } else { %>
+          <p class="cc-error" id="cc-error" hidden></p>
+          <div id="cc-pay-element"><p class="cc-loading" id="cc-loading">Loading secure checkout…</p></div>
+          <button type="button" class="btn btn-primary btn-full" id="cc-pay-btn" disabled>Pay <%= priceLabel %> &amp; join</button>
+          <p class="cc-note">Secure checkout by Stripe. Your card details never touch our servers.</p>
+        <% } %>
       </div>
-
-      <% if (!stripeConfigured) { %>
-        <p class="cc-error">Payments aren't set up in this environment yet. Please reach out to Julia.</p>
-      <% } else { %>
-        <p class="cc-error" id="cc-error" hidden></p>
-        <div id="cc-pay-element"><p class="cc-loading" id="cc-loading">Loading secure checkout…</p></div>
-        <button type="button" class="btn btn-primary btn-full" id="cc-pay-btn" disabled>Pay <%= priceLabel %> &amp; join</button>
-        <p class="cc-note">Secure checkout by Stripe. Your card details never touch our servers.</p>
-      <% } %>
-    </div>
+    <% } %>
 
     <a href="/logout" class="cc-signout">Sign out</a>
   </main>
 
-  <% if (stripeConfigured) { %>
+  <% if (cohortClosed) { %>
+  <script>
+    (function () {
+      const btn = document.getElementById('cc-waitlist-btn');
+      const msg = document.getElementById('cc-waitlist-msg');
+      const email = <%- JSON.stringify(userEmail || '') %>;
+      if (!btn) return;
+      btn.addEventListener('click', async function () {
+        btn.disabled = true;
+        try {
+          const res = await fetch('/api/waitlist', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+            body: JSON.stringify({ email: email }),
+          });
+          const data = await res.json().catch(() => ({}));
+          if (res.ok && data.ok) {
+            btn.hidden = true;
+            msg.textContent = 'You’re on the list — I’ll be in touch about the next cohort. 🌱';
+          } else {
+            btn.disabled = false;
+            msg.textContent = (data && data.error) || 'Something went wrong — please try again.';
+          }
+          msg.hidden = false;
+        } catch (_) {
+          btn.disabled = false;
+          msg.textContent = 'Could not reach the server — please try again.';
+          msg.hidden = false;
+        }
+      });
+    })();
+  </script>
+  <% } %>
+
+  <% if (stripeConfigured && !cohortClosed) { %>
   <script>
     (function () {
       const stripe = Stripe(<%- JSON.stringify(publishableKey) %>);

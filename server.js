@@ -352,6 +352,7 @@ app.use((req, res, next) => {
     const ok = p === '/logout'
       || p === '/challenge-checkout'
       || p.startsWith('/api/challenge/')
+      || p === '/api/waitlist'
       || p === '/webhooks/stripe'
       || p === '/privacy' || p === '/terms' || p === '/accessibility'
       || p.startsWith('/css/') || p.startsWith('/js/')
@@ -1365,6 +1366,11 @@ app.get('/challenge-checkout', requireAuth, (req, res) => {
     startDate: CHALLENGE_START_DATE,
     stripeConfigured: STRIPE.isConfigured(),
     publishableKey: STRIPE.getPublishableKey(),
+    // When sign-ups are closed (or the cohort filled), a pending account can no
+    // longer pay — show a "closed" state with a waitlist option instead of a
+    // payment form that would just 409.
+    cohortClosed: challengeIsFull(),
+    userEmail: req.session.user.email,
   });
 });
 
