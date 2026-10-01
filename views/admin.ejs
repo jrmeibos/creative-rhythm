@@ -163,6 +163,9 @@
         <div class="dash-section-header">
           <h2 class="dash-section-title">The 3-Week Challenge</h2>
           <div class="admin-section-actions">
+            <% if (challengeStats.signupsClosed) { %>
+              <span class="admin-count" title="New public sign-ups are closed; people are sent to the Mailchimp waitlist. Existing students are unaffected.">🔒 Sign-ups closed · waitlist on</span>
+            <% } %>
             <span class="admin-count">
               <%= challengeStats.spotsTaken %> / <%= challengeStats.capacity %> spots filled<% if (challengeStats.spotsLeft === 0) { %> · full<% } else { %> · <%= challengeStats.spotsLeft %> left<% } %>
             </span>

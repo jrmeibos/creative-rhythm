@@ -189,12 +189,23 @@ const CHALLENGE_START_DATE = '2026-10-05';
 // checkout never blocks a real registrant. Refunded students still count:
 // they joined and did the challenge. Change the number here to resize.
 const CHALLENGE_CAPACITY = 20;
+
+// Master switch to close new sign-ups. When true, the public signup page shows
+// the waitlist state (email → Mailchimp "Garden – Waitlist" tag) and no new
+// accounts or payments are accepted. Existing students are unaffected. Flip to
+// false (and redeploy) to reopen sign-ups for the next cohort.
+const CHALLENGE_SIGNUPS_CLOSED = true;
+
 function challengeSpotsTaken() {
   const c = db.getChallengeStatusCounts();
   return (c.paid || 0) + (c.refunded || 0);
 }
+// Gates the signup page, the signup POST, and payment-intent creation. "Full"
+// here means "no new sign-ups" — either the cap is reached OR sign-ups have
+// been deliberately closed. The admin spots count reads the real numbers
+// separately, so this does not distort it.
 function challengeIsFull() {
-  return challengeSpotsTaken() >= CHALLENGE_CAPACITY;
+  return CHALLENGE_SIGNUPS_CLOSED || challengeSpotsTaken() >= CHALLENGE_CAPACITY;
 }
 
 app.use((req, res, next) => {
@@ -4596,6 +4607,7 @@ app.get('/admin', requireAdmin, (req, res) => {
     capacity:    CHALLENGE_CAPACITY,
     spotsTaken:  challengeSpotsTaken(),
     spotsLeft:   Math.max(0, CHALLENGE_CAPACITY - challengeSpotsTaken()),
+    signupsClosed: CHALLENGE_SIGNUPS_CLOSED,
   };
 
   res.render('admin', {
