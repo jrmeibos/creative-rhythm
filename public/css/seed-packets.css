@@ -1,5 +1,56 @@
 /* ─── Resources page ─────────────────────────────────────────────────────── */
 
+/* Call recordings — embedded group-call videos. */
+.rec-intro {
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  font-weight: 300;
+  color: rgba(16, 15, 16, 0.6);
+  margin: 0.25rem 0 1.1rem;
+}
+.rec-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  max-width: 760px;
+}
+.rec-item {
+  background: var(--color-blank-page);
+  border: 1px solid rgba(112, 92, 108, 0.14);
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 4px 18px rgba(16, 15, 16, 0.05);
+}
+.rec-video {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background: #000;
+}
+.rec-video iframe {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+.rec-meta { padding: 1rem 1.25rem 1.25rem; }
+.rec-title {
+  font-family: var(--font-display);
+  font-size: 1.2rem;
+  font-weight: 400;
+  color: var(--color-ink-stained);
+  margin: 0 0 0.3rem;
+}
+.rec-desc {
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  font-weight: 300;
+  line-height: 1.5;
+  color: rgba(16, 15, 16, 0.7);
+  margin: 0;
+}
+
 .resources-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));

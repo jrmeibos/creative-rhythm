@@ -4138,8 +4138,27 @@ app.post('/api/account/weekly-reminder', requireAuth, (req, res) => {
 
 // ─── Resources ─────────────────────────────────────────────────────────────
 
+// Turn a YouTube/Vimeo share URL into an embeddable player URL, or null if it
+// isn't a recognized video link. Used to render call recordings on /resources.
+function toVideoEmbedUrl(raw) {
+  if (!raw || typeof raw !== 'string') return null;
+  const url = raw.trim();
+  let m = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/|live\/))([A-Za-z0-9_-]{6,})/i);
+  if (m) return 'https://www.youtube.com/embed/' + m[1];
+  m = url.match(/vimeo\.com\/(?:video\/)?(\d{6,})/i);
+  if (m) return 'https://player.vimeo.com/video/' + m[1];
+  return null;
+}
+
 app.get('/resources', requireAuth, (req, res) => {
-  res.render('resources', { title: 'Resources', page: 'resources' });
+  // Call recordings live in the resources table as rows whose url is a video
+  // link (YouTube/Vimeo). Render those as embeds, newest first; any other
+  // resources are left to the page's curated cards.
+  const recordings = db.getAllResources()
+    .map(r => ({ title: r.title, description: r.description, embedUrl: toVideoEmbedUrl(r.url), createdAt: r.created_at }))
+    .filter(r => r.embedUrl)
+    .sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
+  res.render('resources', { title: 'Resources', page: 'resources', recordings });
 });
 
 // ─── The Creative Block Buster ─────────────────────────────────────────────
