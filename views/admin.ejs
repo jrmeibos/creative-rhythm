@@ -165,6 +165,8 @@
           <div class="admin-section-actions">
             <% if (challengeStats.signupsClosed) { %>
               <span class="admin-count" title="New public sign-ups are closed; people are sent to the Mailchimp waitlist. Existing students are unaffected.">🔒 Sign-ups closed · waitlist on</span>
+            <% } else if (challengeStats.signupLastDayLabel) { %>
+              <span class="admin-count" title="Registration is open and auto-closes at midnight Mountain Time after this date.">🟢 Registration open · last day <%= challengeStats.signupLastDayLabel %></span>
             <% } %>
             <span class="admin-count">
               <%= challengeStats.spotsTaken %> / <%= challengeStats.capacity %> spots filled<% if (challengeStats.spotsLeft === 0) { %> · full<% } else { %> · <%= challengeStats.spotsLeft %> left<% } %>

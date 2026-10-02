@@ -190,22 +190,33 @@ const CHALLENGE_START_DATE = '2026-10-05';
 // they joined and did the challenge. Change the number here to resize.
 const CHALLENGE_CAPACITY = 20;
 
-// Master switch to close new sign-ups. When true, the public signup page shows
-// the waitlist state (email → Mailchimp "Garden – Waitlist" tag) and no new
-// accounts or payments are accepted. Existing students are unaffected. Flip to
-// false (and redeploy) to reopen sign-ups for the next cohort.
-const CHALLENGE_SIGNUPS_CLOSED = true;
+// Registration auto-closes at the deadline. Sign-ups are CLOSED once the
+// current Mountain-Time date reaches CHALLENGE_SIGNUP_CLOSE_DATE — so with
+// '2026-10-04' the last day to register is Oct 3 (MT), and it closes at
+// midnight MT ending Oct 3. The public signup page then shows the waitlist
+// state and no new accounts/payments are accepted; existing students are
+// unaffected. Set a future date to reopen/move the deadline, or '' to never
+// close on a schedule (the capacity cap still applies). No redeploy needed on
+// the deadline day — it flips itself.
+const CHALLENGE_SIGNUP_CLOSE_DATE = '2026-10-04';
+function challengeSignupsClosed() {
+  if (!CHALLENGE_SIGNUP_CLOSE_DATE) return false;
+  // Real-world "today" in the course's timezone (Mountain), as YYYY-MM-DD.
+  // Not the per-user time-travel date — this is a real-world deadline.
+  const mtToday = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Denver' });
+  return mtToday >= CHALLENGE_SIGNUP_CLOSE_DATE;
+}
 
 function challengeSpotsTaken() {
   const c = db.getChallengeStatusCounts();
   return (c.paid || 0) + (c.refunded || 0);
 }
 // Gates the signup page, the signup POST, and payment-intent creation. "Full"
-// here means "no new sign-ups" — either the cap is reached OR sign-ups have
-// been deliberately closed. The admin spots count reads the real numbers
+// here means "no new sign-ups" — either the cap is reached OR registration has
+// auto-closed at the deadline. The admin spots count reads the real numbers
 // separately, so this does not distort it.
 function challengeIsFull() {
-  return CHALLENGE_SIGNUPS_CLOSED || challengeSpotsTaken() >= CHALLENGE_CAPACITY;
+  return challengeSignupsClosed() || challengeSpotsTaken() >= CHALLENGE_CAPACITY;
 }
 
 app.use((req, res, next) => {
@@ -4631,7 +4642,15 @@ app.get('/admin', requireAdmin, (req, res) => {
     capacity:    CHALLENGE_CAPACITY,
     spotsTaken:  challengeSpotsTaken(),
     spotsLeft:   Math.max(0, CHALLENGE_CAPACITY - challengeSpotsTaken()),
-    signupsClosed: CHALLENGE_SIGNUPS_CLOSED,
+    signupsClosed: challengeSignupsClosed(),
+    // Last day to register = the day before the close date (it's closed ON the
+    // close date). Null when there's no scheduled deadline.
+    signupLastDayLabel: (function () {
+      if (!CHALLENGE_SIGNUP_CLOSE_DATE) return null;
+      const d = new Date(CHALLENGE_SIGNUP_CLOSE_DATE + 'T00:00:00');
+      d.setDate(d.getDate() - 1);
+      return d.toLocaleDateString('en-US', { month: 'long', day: 'numeric' });
+    })(),
   };
 
   res.render('admin', {
