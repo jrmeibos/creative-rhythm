@@ -973,16 +973,15 @@ app.post('/dashboard/cutting', requireAuth, (req, res) => {
   const courseStart = db.getUserCourseStartDate(req.session.user);
 
   // Resolve recorded_date + season. If client sent a recorded_date, validate
-  // it's a real date string between course_start and today. Otherwise default
-  // to today + current season.
+  // the format and that it isn't in the future. Dates BEFORE course_start are
+  // allowed on purpose: early / pre-launch recordings are preserved and
+  // loggable — they simply don't count toward the refund, which already filters
+  // to recorded_date >= course_start (see db.getChallengeCompletion).
   let recordedDate, season, isBackdated;
   const rawRecorded = typeof body.recorded_date === 'string' ? body.recorded_date.trim() : '';
   if (rawRecorded) {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(rawRecorded)) {
       return res.status(400).json({ error: 'Invalid recorded_date format.' });
-    }
-    if (courseStart && rawRecorded < courseStart) {
-      return res.status(400).json({ error: 'recorded_date is before course start.' });
     }
     if (rawRecorded > today) {
       return res.status(400).json({ error: 'recorded_date is in the future.' });
