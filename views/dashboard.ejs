@@ -59,6 +59,19 @@
         <% } %>
       </header>
 
+      <% if (locals.showCheckinCard) { %>
+      <section class="dash-section">
+        <a href="/check-in" class="ci-prompt">
+          <div class="ci-prompt-text">
+            <p class="ci-prompt-eyebrow">A quick check-in 🌱</p>
+            <h2 class="ci-prompt-title"><%= checkinTitle %> — how's it really going?</h2>
+            <p class="ci-prompt-sub">Five short questions. Your answers shape our first group call.</p>
+          </div>
+          <span class="ci-prompt-cta">Take the check-in →</span>
+        </a>
+      </section>
+      <% } %>
+
       <!-- Day-view: per-day topic + reflection with back/forward day nav.
            Markup lives in views/partials/day-view.ejs (one source for both
            the full-page render and the GET /dashboard/day fragment). The

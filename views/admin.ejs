@@ -376,6 +376,30 @@
         </div>
       </section>
 
+      <!-- ── Five days in — check-in responses ─────────────────────────────── -->
+      <section class="dash-section" id="section-checkins">
+        <div class="dash-section-header">
+          <h2 class="dash-section-title"><%= checkinTitle %> — check-in responses</h2>
+          <span class="admin-count"><%= checkins.length %> in</span>
+        </div>
+        <% if (!checkins.length) { %>
+          <div class="admin-card"><p class="admin-empty">No check-ins yet.</p></div>
+        <% } else { %>
+          <% for (const c of checkins) { %>
+            <div class="admin-card ci-admin-card">
+              <div class="ci-admin-head">
+                <span class="ci-admin-name"><%= c.name %></span>
+                <% if (c.practice_rating) { %><span class="ci-admin-rating">Practice <%= c.practice_rating %>/5</span><% } %>
+              </div>
+              <% if (c.resistance)   { %><p class="ci-admin-q">Resistance</p><p class="ci-admin-a"><%= c.resistance %></p><% } %>
+              <% if (c.surprised)    { %><p class="ci-admin-q">Surprised / felt good</p><p class="ci-admin-a"><%= c.surprised %></p><% } %>
+              <% if (c.self_insight) { %><p class="ci-admin-q">Noticed about themselves</p><p class="ci-admin-a"><%= c.self_insight %></p><% } %>
+              <% if (c.for_the_call) { %><p class="ci-admin-q">For the first call</p><p class="ci-admin-a"><%= c.for_the_call %></p><% } %>
+            </div>
+          <% } %>
+        <% } %>
+      </section>
+
       <!-- ── Student Assessments ──────────────────────────────────────────── -->
       <section class="dash-section" id="section-assessments">
         <div class="dash-section-header">

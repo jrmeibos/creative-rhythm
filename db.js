@@ -1214,6 +1214,25 @@ db.exec(`
     console.log('✓ Migrated: added application to seed_packet_seeds');
   }
 
+  // Mid-challenge check-in — one row per student per check-in (checkin_key).
+  // The Day-5 "Five days in" pulse: a 1-5 feel rating + four short open fields.
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS check_ins (
+      id              INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id         INTEGER NOT NULL,
+      checkin_key     TEXT    NOT NULL,
+      practice_rating INTEGER,
+      resistance      TEXT,
+      surprised       TEXT,
+      self_insight    TEXT,
+      for_the_call    TEXT,
+      created_at      DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at      DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (user_id) REFERENCES users(id)
+    );
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_checkin_user_key ON check_ins(user_id, checkin_key);
+  `);
+
   // Add curricular_season column to lessons (idempotent)
   const hasLessonSeason = db.prepare("PRAGMA table_info(lessons)").all().some(c => c.name === 'curricular_season');
   if (!hasLessonSeason) {
@@ -1819,6 +1838,34 @@ module.exports = {
        FROM users WHERE role = 'student'`
     ).get();
     return { paid: row.paid || 0, pending: row.pending || 0, refunded: row.refunded || 0 };
+  },
+
+  // ── Mid-challenge check-ins (distinct from the weekly-goal saveCheckin) ──
+  getCheckinResponse(userId, key) {
+    return db.prepare('SELECT * FROM check_ins WHERE user_id = ? AND checkin_key = ?').get(userId, key);
+  },
+  saveCheckinResponse(userId, key, f) {
+    return db.prepare(`
+      INSERT INTO check_ins
+        (user_id, checkin_key, practice_rating, resistance, surprised, self_insight, for_the_call, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+      ON CONFLICT(user_id, checkin_key) DO UPDATE SET
+        practice_rating = excluded.practice_rating,
+        resistance      = excluded.resistance,
+        surprised       = excluded.surprised,
+        self_insight    = excluded.self_insight,
+        for_the_call    = excluded.for_the_call,
+        updated_at      = CURRENT_TIMESTAMP
+    `).run(userId, key, f.practice_rating, f.resistance, f.surprised, f.self_insight, f.for_the_call);
+  },
+  // Admin read-out: every response for a check-in, with the student's name/email.
+  getAllCheckinResponses(key) {
+    return db.prepare(`
+      SELECT c.*, u.name, u.email
+        FROM check_ins c JOIN users u ON u.id = c.user_id
+       WHERE c.checkin_key = ?
+       ORDER BY c.updated_at DESC
+    `).all(key);
   },
 
   // Trial students get a shorter clamp (typically 3). Server-side accessor

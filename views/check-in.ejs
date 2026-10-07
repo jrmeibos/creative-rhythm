@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <%- include('partials/head') %>
+  <link rel="stylesheet" href="/css/dashboard.css">
+  <style>
+    .ci-wrap { max-width: 640px; }
+    .ci-intro { font-family: var(--font-body); font-weight: 300; color: rgba(16,15,16,0.72); line-height: 1.6; margin: 0 0 1.9rem; }
+    .ci-saved {
+      background: color-mix(in srgb, var(--color-understory) 16%, var(--color-blank-page));
+      border: 1px solid rgba(118,133,108,0.45); border-radius: 12px;
+      padding: 0.85rem 1.05rem; font-family: var(--font-body); font-size: 0.92rem;
+      line-height: 1.5; color: var(--color-ink-stained); margin: 0 0 1.6rem;
+    }
+    .ci-q { margin-bottom: 1.9rem; }
+    .ci-q-label {
+      display: block; font-family: var(--font-display); font-size: 1.15rem;
+      font-weight: 400; color: var(--color-ink-stained); margin: 0 0 0.7rem; line-height: 1.3;
+    }
+    .ci-scale { display: flex; gap: 0.55rem; flex-wrap: wrap; align-items: center; }
+    .ci-scale-opt { position: relative; }
+    .ci-scale-opt input {
+      position: absolute; inset: 0; opacity: 0; width: 100%; height: 100%; margin: 0; cursor: pointer;
+    }
+    .ci-scale-opt span {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 2.7rem; height: 2.7rem; border: 1.5px solid rgba(112,92,108,0.28);
+      border-radius: 50%; font-family: var(--font-body); font-size: 0.95rem;
+      color: var(--color-ink-stained); transition: background 0.12s, border-color 0.12s, color 0.12s;
+    }
+    .ci-scale-opt:hover span { border-color: var(--color-bloem); }
+    .ci-scale-opt input:checked + span { background: var(--color-bloem); color: #fff; border-color: var(--color-bloem); }
+    .ci-scale-opt input:focus-visible + span { outline: 2px solid var(--color-bloem); outline-offset: 2px; }
+    .ci-scale-ends {
+      display: flex; justify-content: space-between; gap: 1rem;
+      font-size: 0.78rem; color: rgba(16,15,16,0.52); margin-top: 0.5rem; max-width: 18.5rem;
+    }
+    .ci-textarea {
+      width: 100%; background: rgba(112,92,108,0.04); border: 1.5px solid rgba(112,92,108,0.14);
+      border-radius: var(--radius-sm); padding: 0.7rem 0.85rem; font-family: var(--font-body);
+      font-weight: 300; font-size: 0.95rem; color: var(--color-ink-stained); line-height: 1.55;
+      resize: vertical; min-height: 4.5rem; outline: none; transition: border-color 0.15s;
+    }
+    .ci-textarea:focus { border-color: var(--color-bloem); }
+    .ci-submit { margin-top: 0.5rem; }
+  </style>
+</head>
+<body class="app-body">
+  <div class="app-layout">
+    <%- include('partials/sidebar') %>
+    <main class="main-content">
+
+      <a href="/dashboard" class="cm-back-link" style="display:inline-block; margin: 1.5rem 0 1rem;">← Back to dashboard</a>
+
+      <header class="dash-header">
+        <div class="dash-greeting">
+          <h1 class="dash-greeting-text"><%= checkin.title %></h1>
+        </div>
+      </header>
+
+      <section class="dash-section ci-wrap">
+        <% if (locals.saved) { %>
+          <p class="ci-saved">Saved 🌱 Thank you — this genuinely helps me shape our first call. You can come back and update it anytime before then.</p>
+        <% } %>
+
+        <p class="ci-intro"><%= checkin.intro %></p>
+
+        <form action="/check-in" method="POST" novalidate>
+          <div class="ci-q">
+            <span class="ci-q-label">How has the daily practice felt so far?</span>
+            <div class="ci-scale" role="radiogroup" aria-label="How has the daily practice felt so far?">
+              <% for (let n = 1; n <= 5; n++) { %>
+                <label class="ci-scale-opt">
+                  <input type="radio" name="practice_rating" value="<%= n %>"
+                         <%= (existing && existing.practice_rating === n) ? 'checked' : '' %>>
+                  <span><%= n %></span>
+                </label>
+              <% } %>
+            </div>
+            <div class="ci-scale-ends"><span>A real climb</span><span>Easier than I expected</span></div>
+          </div>
+
+          <div class="ci-q">
+            <label class="ci-q-label" for="ci-resistance">Where have you felt resistance?</label>
+            <textarea class="ci-textarea" id="ci-resistance" name="resistance" rows="3"
+                      placeholder="The &ldquo;I&rsquo;ll do it later,&rdquo; the overthinking, not wanting to watch yourself back&hellip;"><%= existing ? (existing.resistance || '') : '' %></textarea>
+          </div>
+
+          <div class="ci-q">
+            <label class="ci-q-label" for="ci-surprised">What's surprised you, or felt good?</label>
+            <textarea class="ci-textarea" id="ci-surprised" name="surprised" rows="3"><%= existing ? (existing.surprised || '') : '' %></textarea>
+          </div>
+
+          <div class="ci-q">
+            <label class="ci-q-label" for="ci-insight">Have you noticed anything about yourself yet?</label>
+            <textarea class="ci-textarea" id="ci-insight" name="self_insight" rows="3"><%= existing ? (existing.self_insight || '') : '' %></textarea>
+          </div>
+
+          <div class="ci-q">
+            <label class="ci-q-label" for="ci-call">Anything you'd love me to cover on our first call?</label>
+            <textarea class="ci-textarea" id="ci-call" name="for_the_call" rows="3"><%= existing ? (existing.for_the_call || '') : '' %></textarea>
+          </div>
+
+          <button type="submit" class="btn btn-primary ci-submit"><%= existing ? 'Update my check-in' : 'Send my check-in →' %></button>
+        </form>
+      </section>
+
+    </main>
+  </div>
+</body>
+</html>

@@ -217,6 +217,15 @@ function challengeIsFull() {
   return challengeSignupsClosed() || challengeSpotsTaken() >= CHALLENGE_CAPACITY;
 }
 
+// Mid-challenge pulse check-in. The dashboard card appears to students once
+// their local date reaches `openDate`; admins can preview /check-in anytime.
+const CHECKIN = {
+  key: 'five-days-in',
+  openDate: '2026-10-10',
+  title: 'Five days in',
+  intro: "How's it really going? No right answers — your honesty just helps me help you.",
+};
+
 app.use((req, res, next) => {
   res.locals.user = req.session.user || null;
   res.locals.communityDiscordUrl = COMMUNITY_DISCORD_URL;
@@ -937,6 +946,12 @@ app.get('/dashboard', requireAuth, (req, res) => {
     fallCardVisible,
     // Full-course students get the workbench idea-capture on the dashboard.
     canJotIdea: !isTrial,
+    // Mid-challenge check-in card — shown to students once the check-in opens,
+    // until they've submitted it.
+    showCheckinCard: req.session.user.role === 'student'
+      && today >= CHECKIN.openDate
+      && !db.getCheckinResponse(userId, CHECKIN.key),
+    checkinTitle: CHECKIN.title,
   });
 });
 
@@ -4170,6 +4185,31 @@ app.get('/resources', requireAuth, (req, res) => {
   res.render('resources', { title: 'Resources', page: 'resources', recordings });
 });
 
+// ─── Mid-challenge check-in ────────────────────────────────────────────────
+app.get('/check-in', requireAuth, (req, res) => {
+  const existing = db.getCheckinResponse(req.session.user.id, CHECKIN.key);
+  res.render('check-in', {
+    title: CHECKIN.title, page: '', user: req.session.user,
+    checkin: CHECKIN, existing, saved: req.query.saved === '1',
+  });
+});
+app.post('/check-in', requireAuth, (req, res) => {
+  const b = req.body || {};
+  const rating = parseInt(b.practice_rating, 10);
+  const clean = (v) => {
+    const s = (typeof v === 'string' ? v.trim() : '').slice(0, 2000);
+    return s || null;
+  };
+  db.saveCheckinResponse(req.session.user.id, CHECKIN.key, {
+    practice_rating: (rating >= 1 && rating <= 5) ? rating : null,
+    resistance:   clean(b.resistance),
+    surprised:    clean(b.surprised),
+    self_insight: clean(b.self_insight),
+    for_the_call: clean(b.for_the_call),
+  });
+  res.redirect('/check-in?saved=1');
+});
+
 // ─── The Creative Block Buster ─────────────────────────────────────────────
 // Open to every student (blocks around getting on camera hit hardest early).
 // Organized as categories → blocks → "ways through." Built-in content comes
@@ -4659,6 +4699,8 @@ app.get('/admin', requireAdmin, (req, res) => {
     users, lessons, resources, lessonStats, lessonHomework, courseStartDate,
     recordingSummary, enrollments, challengeStats,
     challengeParticipants: db.getChallengeParticipants(),
+    checkins: db.getAllCheckinResponses(CHECKIN.key),
+    checkinTitle: CHECKIN.title,
     harvestUnlocked, midcourseUnlocked, upgradeMode,
     midcourseUnlockDate, closingUnlockDate,
     simulatedToday,

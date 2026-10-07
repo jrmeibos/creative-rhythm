@@ -3530,3 +3530,48 @@ button.mid-card-cta {
 }
 .ch-refund-reqs li.is-done .ch-refund-check { color: var(--color-understory); }
 .ch-refund-remain { color: rgba(16, 15, 16, 0.45); font-style: italic; }
+
+/* ── Mid-challenge check-in ─────────────────────────────────────────────── */
+/* Dashboard prompt card */
+.ci-prompt {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 1rem; flex-wrap: wrap; text-decoration: none;
+  background: color-mix(in srgb, var(--color-apricity) 14%, var(--color-blank-page));
+  border: 1px solid color-mix(in srgb, var(--color-apricity) 55%, var(--color-new-growth));
+  border-radius: 16px; padding: 1.1rem 1.3rem;
+  transition: box-shadow 0.15s;
+}
+.ci-prompt:hover { box-shadow: 0 6px 20px rgba(16, 15, 16, 0.07); }
+.ci-prompt-eyebrow {
+  font-family: var(--font-body); font-size: 0.72rem; font-weight: 700;
+  letter-spacing: 0.1em; text-transform: uppercase; color: var(--color-bloem); margin: 0 0 0.3rem;
+}
+.ci-prompt-title {
+  font-family: var(--font-display); font-size: 1.2rem; font-weight: 400;
+  color: var(--color-ink-stained); margin: 0 0 0.25rem;
+}
+.ci-prompt-sub {
+  font-family: var(--font-body); font-size: 0.88rem; font-weight: 300;
+  color: rgba(16, 15, 16, 0.65); margin: 0;
+}
+.ci-prompt-cta {
+  font-family: var(--font-body); font-size: 0.9rem; font-weight: 500;
+  color: var(--color-bloem); white-space: nowrap;
+}
+/* Admin read-out */
+.ci-admin-card { margin-bottom: 0.8rem; }
+.ci-admin-head {
+  display: flex; align-items: baseline; justify-content: space-between;
+  gap: 0.75rem; margin-bottom: 0.4rem;
+}
+.ci-admin-name { font-family: var(--font-body); font-weight: 600; color: var(--color-ink-stained); }
+.ci-admin-rating { font-family: var(--font-body); font-size: 0.82rem; color: var(--color-bloem); white-space: nowrap; }
+.ci-admin-q {
+  font-family: var(--font-body); font-size: 0.72rem; font-weight: 700;
+  letter-spacing: 0.06em; text-transform: uppercase; color: rgba(16, 15, 16, 0.45);
+  margin: 0.6rem 0 0.15rem;
+}
+.ci-admin-a {
+  font-family: var(--font-body); font-size: 0.92rem; font-weight: 300;
+  line-height: 1.5; color: var(--color-ink-stained); margin: 0; white-space: pre-wrap;
+}
