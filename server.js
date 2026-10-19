@@ -2183,7 +2183,7 @@ const TRIAL_CLOSING_QUESTIONS = [
     placeholder: 'Honesty here helps the next round of students.'
   },
   { id: 'tq6', type: 'choice', field: 'q8_choice',
-    text: 'Would you like to continue with the full 12-week Creative’s Garden?',
+    text: 'Would you be interested in continuing on with Spring in the garden?',
     choices: [
       { val: 'A', label: 'Yes — I want to enroll in the full course' },
       { val: 'B', label: "Maybe — I'm interested, tell me more" },
@@ -2354,16 +2354,16 @@ async function notifyAdminOfMidcourseSubmission(submittingUser) {
 // Trial students see this at the end of their 3-week run. Unlocks during
 // week 3 (day 14 onward — mirrors the full course's harvest at day 77).
 // Pilot students never reach this — gated to lengthWeeks < 12.
+// End-of-project feedback opens on this date, measured on the student's own
+// wall clock. Set for the Oct-5 cohort to Oct 24 (the challenge wraps Oct 25).
+// Change here to move the open date.
+const TRIAL_CLOSING_OPEN_DATE = '2026-10-24';
 function isTrialClosingUnlockedFor(user) {
   if (getCourseLengthWeeks(user) >= 12) return false;
-  const courseStart = db.getUserCourseStartDate(user);
-  if (!courseStart) return false;
-  // End-of-project feedback: opens once the full run is complete — day
-  // length*7 (day 21 for the 3-week challenge, i.e. the day after the final
-  // recording day: Oct 26 for an Oct 5 start). getNow (not Date.now) so time
-  // travel can QA it and the boundary lands on the student's wall clock.
-  const daysDiff = Math.floor((getNow(user).getTime() - new Date(courseStart + 'T00:00:00').getTime()) / 86400000);
-  return daysDiff >= getCourseLengthWeeks(user) * 7;
+  if (!db.getUserCourseStartDate(user)) return false; // real challenge accounts only
+  // getNow (not Date.now) so time travel can QA this and the boundary lands on
+  // the student's wall clock, not the server's.
+  return toLocalDateString(getNow(user)) >= TRIAL_CLOSING_OPEN_DATE;
 }
 
 app.get('/trial-closing', requireAuth, (req, res) => {
