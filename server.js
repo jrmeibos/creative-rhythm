@@ -2358,10 +2358,12 @@ function isTrialClosingUnlockedFor(user) {
   if (getCourseLengthWeeks(user) >= 12) return false;
   const courseStart = db.getUserCourseStartDate(user);
   if (!courseStart) return false;
-  // getNow (not Date.now) so time travel can QA this unlock and the day-14
-  // boundary lands on the student's wall clock, not the server's.
+  // End-of-project feedback: opens once the full run is complete — day
+  // length*7 (day 21 for the 3-week challenge, i.e. the day after the final
+  // recording day: Oct 26 for an Oct 5 start). getNow (not Date.now) so time
+  // travel can QA it and the boundary lands on the student's wall clock.
   const daysDiff = Math.floor((getNow(user).getTime() - new Date(courseStart + 'T00:00:00').getTime()) / 86400000);
-  return daysDiff >= (getCourseLengthWeeks(user) - 1) * 7;
+  return daysDiff >= getCourseLengthWeeks(user) * 7;
 }
 
 app.get('/trial-closing', requireAuth, (req, res) => {
