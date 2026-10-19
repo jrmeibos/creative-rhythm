@@ -2185,7 +2185,7 @@ const TRIAL_CLOSING_QUESTIONS = [
   { id: 'tq6', type: 'choice', field: 'q8_choice',
     text: 'Would you be interested in continuing on with Spring in the garden?',
     choices: [
-      { val: 'A', label: 'Yes — I want to enroll in the full course' },
+      { val: 'A', label: 'Yes — I\'d love to continue into Spring' },
       { val: 'B', label: "Maybe — I'm interested, tell me more" },
       { val: 'C', label: 'Not right now — but glad I tried this' },
       { val: 'D', label: 'No thank you' },
