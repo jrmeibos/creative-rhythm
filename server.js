@@ -278,6 +278,7 @@ app.use((req, res, next) => {
       s.profile_photo       = fresh.profile_photo || null;
       s.course_start_date   = fresh.course_start_date || null;
       s.challenge_payment_status = fresh.challenge_payment_status || null;
+      s.cohort_id           = fresh.cohort_id || null;
     }
   }
   next();
@@ -511,6 +512,7 @@ app.post('/login', loginLimiter, async (req, res) => {
     course_start_date: user.course_start_date || null,
     course_length_weeks: user.course_length_weeks || 12,
     enrollment_tier: user.enrollment_tier || null,
+    cohort_id: user.cohort_id || null,
   };
   // Admins never see returnTo, and a non-onboarded student must finish
   // onboarding first (returnTo will fire on the onboarding-complete side).
@@ -915,6 +917,14 @@ app.get('/dashboard', requireAuth, (req, res) => {
     ? Object.assign({ status: chStatus }, db.getChallengeCompletion(req.session.user))
     : null;
 
+  // Self-serve continuation: a trial student whose cohort is comped can move
+  // onto the full 12-week track for free once their challenge is complete.
+  // Drives whether the "trial complete" card offers the free "Continue into the
+  // garden" button or the paid /upgrade link. Future (non-comped) cohorts keep
+  // routing through payment.
+  const contCohort = req.session.user.cohort_id ? db.getCohortById(req.session.user.cohort_id) : null;
+  const canContinueFree = isTrial && !!(contCohort && contCohort.comped);
+
   res.render('dashboard', {
     title: 'Dashboard',
     page: 'dashboard',
@@ -952,7 +962,40 @@ app.get('/dashboard', requireAuth, (req, res) => {
       && today >= CHECKIN.openDate
       && !db.getCheckinResponse(userId, CHECKIN.key),
     checkinTitle: CHECKIN.title,
+    canContinueFree,
   });
+});
+
+// Self-serve continuation into the full garden. A trial student in a COMPED
+// cohort moves onto the 12-week track for free once their challenge is
+// complete; all seasons then open via the existing effective-season machinery
+// (course_length_weeks >= 12). Non-comped cohorts are rejected here — they
+// continue by paying through /upgrade. Idempotent and self-service only.
+app.post('/api/continue', requireAuth, (req, res) => {
+  const user = req.session.user;
+  if (!user || user.role !== 'student') {
+    return res.status(403).json({ error: 'Only gardeners can continue into the garden.' });
+  }
+  if (getCourseLengthWeeks(user) >= 12) {
+    return res.json({ ok: true, already: true }); // already on the full track
+  }
+  const cohort = user.cohort_id ? db.getCohortById(user.cohort_id) : null;
+  if (!cohort || !cohort.comped) {
+    return res.status(403).json({ error: 'This path is for comped cohorts. Please continue via the full-course page.' });
+  }
+  // Mirror the dashboard "trial complete" gate: only after the challenge is done.
+  let weekNumber = null;
+  try { weekNumber = getCurrentCourseWeek(user).weekNumber; } catch (_) {}
+  const done = db.hasTrialClosingBeenSubmittedByUser(user.id)
+    || (typeof weekNumber === 'number' && weekNumber > getCourseLengthWeeks(user));
+  if (!done) {
+    return res.status(400).json({ error: 'You can continue once your challenge is complete.' });
+  }
+  db.setUserCourseLengthWeeks(user.id, 12);
+  user.course_length_weeks = 12; // keep the live session in sync
+  // Save before responding so the next request (the client reload) sees the
+  // upgraded length — same race guard used elsewhere in the app.
+  req.session.save(() => res.json({ ok: true }));
 });
 
 // ─── Day-view fragment endpoint ────────────────────────────────────────────

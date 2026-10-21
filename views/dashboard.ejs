@@ -95,6 +95,16 @@
       <% if (trialComplete) { %>
       <section class="dash-section">
         <div class="mid-card">
+          <% if (locals.canContinueFree) { %>
+          <p class="mid-card-eyebrow">Your challenge is complete 🌿</p>
+          <h2 class="mid-card-title">Ready to keep growing?</h2>
+          <p class="mid-card-body">
+            You've finished the <%= courseLengthWeeks %>-week challenge. If it's felt good, you're
+            welcome to continue on into the garden — Spring, Summer, and Autumn open up, with
+            deeper practice through all four seasons. Your Winter stays right where it is.
+          </p>
+          <button type="button" class="mid-card-cta" onclick="continueIntoGarden(this)">Continue into the garden →</button>
+          <% } else { %>
           <p class="mid-card-eyebrow">Your trial is complete</p>
           <h2 class="mid-card-title">Want to keep going?</h2>
           <p class="mid-card-body">
@@ -103,8 +113,31 @@
             mid-course check-in, harvest reflection, and the remaining seasons.
           </p>
           <a href="/upgrade" class="mid-card-cta">Continue with the full course →</a>
+          <% } %>
         </div>
       </section>
+      <% if (locals.canContinueFree) { %>
+      <script>
+        async function continueIntoGarden(btn) {
+          if (!confirm('Continue into the garden? This opens Spring, Summer, and Autumn — the full four-season practice.')) return;
+          const original = btn ? btn.textContent : '';
+          if (btn) { btn.disabled = true; btn.textContent = 'Opening the garden…'; }
+          try {
+            const res = await fetch('/api/continue', { method: 'POST', headers: { 'Content-Type': 'application/json' } });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) {
+              alert(data.error || 'Could not continue just now — please try again.');
+              if (btn) { btn.disabled = false; btn.textContent = original; }
+              return;
+            }
+            window.location.href = '/dashboard';
+          } catch (e) {
+            alert('Could not continue just now — please try again.');
+            if (btn) { btn.disabled = false; btn.textContent = original; }
+          }
+        }
+      </script>
+      <% } %>
       <% } %>
       <% if (midcourseCardVisible) { %>
       <section class="dash-section">
