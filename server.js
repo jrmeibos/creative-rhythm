@@ -4719,6 +4719,7 @@ app.get('/admin', requireAdmin, (req, res) => {
   res.render('admin', {
     title: 'Admin', page: 'admin',
     users, lessons, resources, lessonStats, lessonHomework, courseStartDate,
+    cohorts: db.getAllCohorts(),
     recordingSummary, enrollments, challengeStats,
     challengeParticipants: db.getChallengeParticipants(),
     checkins: db.getAllCheckinResponses(CHECKIN.key),
@@ -4738,6 +4739,66 @@ app.get('/admin', requireAdmin, (req, res) => {
     // render readable answers (rating low/high, choice labels, etc).
     trialClosingQuestions: TRIAL_CLOSING_QUESTIONS,
   });
+});
+
+// ─── Admin: Cohorts ─────────────────────────────────────────────────────────
+// A cohort is a named group that goes through the course together. These routes
+// back the admin cohort view: create the next cohort, edit one, reassign a
+// student, or remove an empty cohort. Nothing here is student-facing yet.
+const COHORT_STATUSES = ['upcoming', 'active', 'ended'];
+
+app.post('/api/admin/cohorts', requireAdmin, (req, res) => {
+  const { name, startDate, lengthWeeks, status, comped } = req.body || {};
+  if (!name || !String(name).trim()) return res.status(400).json({ error: 'Cohort name is required.' });
+  const r = db.createCohort({
+    name: String(name).trim(),
+    startDate: startDate ? String(startDate).slice(0, 10) : null,
+    lengthWeeks: parseInt(lengthWeeks, 10) || 3,
+    status: COHORT_STATUSES.includes(status) ? status : 'upcoming',
+    comped: comped ? 1 : 0,
+  });
+  res.json({ ok: true, id: r.lastInsertRowid });
+});
+
+app.put('/api/admin/cohorts/:id', requireAdmin, (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (!db.getCohortById(id)) return res.status(404).json({ error: 'Cohort not found.' });
+  const { name, startDate, lengthWeeks, status, comped } = req.body || {};
+  if (name !== undefined && !String(name).trim()) {
+    return res.status(400).json({ error: 'Cohort name cannot be empty.' });
+  }
+  db.updateCohort(id, {
+    name:        name        !== undefined ? String(name).trim() : undefined,
+    startDate:   startDate   !== undefined ? (startDate ? String(startDate).slice(0, 10) : null) : undefined,
+    lengthWeeks: lengthWeeks !== undefined ? (parseInt(lengthWeeks, 10) || 3) : undefined,
+    status:      status      !== undefined ? (COHORT_STATUSES.includes(status) ? status : 'upcoming') : undefined,
+    comped:      comped      !== undefined ? (comped ? 1 : 0) : undefined,
+  });
+  res.json({ ok: true });
+});
+
+app.delete('/api/admin/cohorts/:id', requireAdmin, (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (!db.getCohortById(id)) return res.status(404).json({ error: 'Cohort not found.' });
+  const members = db.getUsersInCohort(id);
+  if (members.length) {
+    return res.status(400).json({ error: `Move or unassign its ${members.length} member(s) first.` });
+  }
+  db.deleteCohort(id);
+  res.json({ ok: true });
+});
+
+// Reassign a single student to a cohort (or null to unassign).
+app.post('/api/admin/users/:id/cohort', requireAdmin, (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (!db.getUserById(id)) return res.status(404).json({ error: 'User not found.' });
+  let { cohortId } = req.body || {};
+  cohortId = (cohortId === null || cohortId === '' || cohortId === undefined) ? null : parseInt(cohortId, 10);
+  if (cohortId !== null && !db.getCohortById(cohortId)) {
+    return res.status(400).json({ error: 'Unknown cohort.' });
+  }
+  db.setUserCohort(id, cohortId);
+  res.json({ ok: true });
 });
 
 // ─── Admin: Quotes ────────────────────────────────────────────────────────

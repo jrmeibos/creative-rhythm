@@ -126,21 +126,8 @@
             Calendar
           </a>
         </li>
-        <%# Lessons are hidden from students during the trial run — not ready yet.
-            Admin-only for now; remove this role guard to show students again. %>
-        <% if (user && user.role === 'admin') { %>
-        <li class="sidebar-nav-item <%= page === 'lessons' ? 'active' : '' %>">
-          <a href="/lessons">
-            <svg width="17" height="17" viewBox="0 0 17 17" fill="none" aria-hidden="true">
-              <path d="M3 3C3 2.45 3.45 2 4 2H14V15H4C3.45 15 3 14.55 3 14V3Z" stroke="currentColor" stroke-width="1.5"/>
-              <path d="M3 13.5C3 12.95 3.45 12.5 4 12.5H14" stroke="currentColor" stroke-width="1.5"/>
-              <line x1="6.5" y1="5.5" x2="11.5" y2="5.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
-              <line x1="6.5" y1="8.5" x2="11.5" y2="8.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
-            </svg>
-            Lessons
-          </a>
-        </li>
-        <% } %>
+        <%# Lessons nav item hidden from the menu for now (Julia's call). The
+            /lessons route still works; restore this block to bring it back. %>
         <li class="sidebar-nav-item <%= page === 'community' ? 'active' : '' %>">
           <a href="/community">
             <svg width="17" height="17" viewBox="0 0 17 17" fill="none" aria-hidden="true">

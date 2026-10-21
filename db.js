@@ -331,6 +331,25 @@ db.exec(`
   );
 `);
 
+// Cohorts: a named group of students who go through the course together, each
+// with its own start date + length. The keystone for per-cohort rooms, tidy
+// admin, and schedule-anchored emails. Students carry a nullable cohort_id
+// (added in migrate() below); nothing reads it yet — it's inert until the admin
+// + rooms phases — so populating it is safe on a live database.
+//   comped = 1 → this whole cohort gets full-garden access without paying
+//                (the pilot group's gift). Inert until the continuation phase.
+db.exec(`
+  CREATE TABLE IF NOT EXISTS cohorts (
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    name         TEXT    NOT NULL,
+    start_date   DATETIME,
+    length_weeks INTEGER DEFAULT 3,
+    status       TEXT    DEFAULT 'active',
+    comped       INTEGER DEFAULT 0,
+    created_at   DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+`);
+
 // Migrate existing databases to add new columns
 (function migrate() {
   try {
@@ -561,6 +580,17 @@ db.exec(`
   if (!userCols.includes('community_season_public')) {
     db.exec("ALTER TABLE users ADD COLUMN community_season_public INTEGER DEFAULT 1");
     console.log('✓ Migrated: added community_season_public column');
+  }
+
+  // Cohort membership. Nullable — NULL means "not assigned to a cohort yet"
+  // (admins, pending/unpaid sign-ups, legacy rows). No inline FK to match the
+  // convention for ALTER-added columns here; integrity is managed in app code
+  // + the admin UI. Nothing reads this column until the admin/rooms phases, so
+  // adding it changes no current behavior.
+  if (!userCols.includes('cohort_id')) {
+    db.exec("ALTER TABLE users ADD COLUMN cohort_id INTEGER");
+    db.exec("CREATE INDEX IF NOT EXISTS idx_users_cohort ON users (cohort_id)");
+    console.log('✓ Migrated: added cohort_id column to users');
   }
 
   // Rebuild self_assessments if it has old column schema
@@ -1733,9 +1763,43 @@ function backfillUserStartDates() {
   }
 }
 
+// One-time seed + backfill for the cohort model. Idempotent:
+//   • Ensures "Cohort 1" (the current live October challenge group) exists,
+//     anchored to the global course start date (falls back to the known
+//     2026-10-05 start), length 3 weeks, comped (pilot group's free access).
+//   • Assigns that cohort to the enrolled challenge students who don't yet
+//     have one: non-admins whose challenge_payment_status is paid/refunded.
+//     Pending/unpaid sign-ups, the test account, and admins stay NULL (not
+//     enrolled) — exactly the pending-vs-enrolled split the admin already makes.
+// Only ever fills NULLs, so re-runs on later boots leave existing assignments
+// alone. Nothing reads cohort_id yet, so this is inert on the live database.
+function seedCohortsAndBackfill() {
+  const COHORT_NAME = 'Cohort 1 · October Challenge';
+  let cohort = db.prepare('SELECT id FROM cohorts WHERE name = ?').get(COHORT_NAME);
+  if (!cohort) {
+    const row = db.prepare("SELECT value FROM settings WHERE key = 'course_start_date'").get();
+    const start = (row && row.value) ? row.value : '2026-10-05';
+    const res = db.prepare(
+      "INSERT INTO cohorts (name, start_date, length_weeks, status, comped) VALUES (?, ?, 3, 'active', 1)"
+    ).run(COHORT_NAME, start);
+    cohort = { id: res.lastInsertRowid };
+    console.log(`✓ Seeded cohort "${COHORT_NAME}" (id=${cohort.id}, start=${start}, comped)`);
+  }
+  const res = db.prepare(`
+    UPDATE users SET cohort_id = ?
+    WHERE cohort_id IS NULL
+      AND role != 'admin'
+      AND challenge_payment_status IN ('paid', 'refunded')
+  `).run(cohort.id);
+  if (res.changes) {
+    console.log(`✓ Backfilled ${res.changes} enrolled student(s) into "${COHORT_NAME}"`);
+  }
+}
+
 safeInit('syncAdminAccount',    syncAdminAccount);
 safeInit('seedDefaultAccounts', seedDefaultAccounts);
 safeInit('backfillUserStartDates', backfillUserStartDates);
+safeInit('seedCohortsAndBackfill',  seedCohortsAndBackfill);
 safeInit('seedLessons',             seedLessons);
 safeInit('seedCourseIntroduction',  seedCourseIntroduction);
 safeInit('seedLesson1Homework',     seedLesson1Homework);
@@ -1747,7 +1811,7 @@ module.exports = {
   },
 
   getUserById(id) {
-    return db.prepare('SELECT id, name, email, role, avatar_initial, current_season, profile_photo, course_start_date, course_length_weeks, enrollment_tier, community_goals_public, challenge_payment_status FROM users WHERE id = ?').get(id);
+    return db.prepare('SELECT id, name, email, role, avatar_initial, current_season, profile_photo, course_start_date, course_length_weeks, enrollment_tier, community_goals_public, challenge_payment_status, cohort_id FROM users WHERE id = ?').get(id);
   },
 
   // ─── Per-user course start date ───────────────────────────────────────────
@@ -1765,6 +1829,58 @@ module.exports = {
     return db.prepare(
       'UPDATE users SET course_start_date = ? WHERE id = ?'
     ).run(dateString || null, userId);
+  },
+
+  // ─── Cohorts ──────────────────────────────────────────────────────────────
+  // A cohort is a named group that goes through the course together. Students
+  // carry a nullable cohort_id. Nothing student-facing reads these yet — they
+  // back the admin grouping, per-cohort rooms, and schedule-anchored emails as
+  // those phases land.
+  getAllCohorts() {
+    return db.prepare(`
+      SELECT c.*,
+             (SELECT COUNT(*) FROM users u WHERE u.cohort_id = c.id) AS member_count
+      FROM cohorts c
+      ORDER BY c.start_date DESC, c.id DESC
+    `).all();
+  },
+
+  getCohortById(id) {
+    return db.prepare('SELECT * FROM cohorts WHERE id = ?').get(id);
+  },
+
+  createCohort({ name, startDate = null, lengthWeeks = 3, status = 'upcoming', comped = 0 }) {
+    return db.prepare(
+      'INSERT INTO cohorts (name, start_date, length_weeks, status, comped) VALUES (?, ?, ?, ?, ?)'
+    ).run(name, startDate, lengthWeeks, status, comped ? 1 : 0);
+  },
+
+  updateCohort(id, { name, startDate, lengthWeeks, status, comped }) {
+    const sets = [];
+    const vals = [];
+    if (name       !== undefined) { sets.push('name = ?');         vals.push(name); }
+    if (startDate  !== undefined) { sets.push('start_date = ?');   vals.push(startDate || null); }
+    if (lengthWeeks!== undefined) { sets.push('length_weeks = ?'); vals.push(lengthWeeks); }
+    if (status     !== undefined) { sets.push('status = ?');       vals.push(status); }
+    if (comped     !== undefined) { sets.push('comped = ?');       vals.push(comped ? 1 : 0); }
+    if (!sets.length) return { changes: 0 };
+    vals.push(id);
+    return db.prepare(`UPDATE cohorts SET ${sets.join(', ')} WHERE id = ?`).run(...vals);
+  },
+
+  setUserCohort(userId, cohortId) {
+    return db.prepare('UPDATE users SET cohort_id = ? WHERE id = ?')
+      .run(cohortId || null, userId);
+  },
+
+  getUsersInCohort(cohortId) {
+    return db.prepare(
+      'SELECT id, name, email, role, avatar_initial, current_season, course_start_date, course_length_weeks, challenge_payment_status FROM users WHERE cohort_id = ? ORDER BY name ASC'
+    ).all(cohortId);
+  },
+
+  deleteCohort(id) {
+    return db.prepare('DELETE FROM cohorts WHERE id = ?').run(id);
   },
 
   // ── Beta challenge: payment + refund-completion ─────────────────────────
@@ -1907,7 +2023,16 @@ module.exports = {
   },
 
   getAllUsers() {
-    return db.prepare('SELECT id, name, email, role, avatar_initial, current_season, profile_photo, community_goals_public, community_season_public, course_start_date, course_length_weeks, enrollment_tier, challenge_payment_status, notes, created_at FROM users ORDER BY role DESC, name ASC').all();
+    return db.prepare(`
+      SELECT u.id, u.name, u.email, u.role, u.avatar_initial, u.current_season,
+             u.profile_photo, u.community_goals_public, u.community_season_public,
+             u.course_start_date, u.course_length_weeks, u.enrollment_tier,
+             u.challenge_payment_status, u.notes, u.created_at,
+             u.cohort_id, c.name AS cohort_name
+      FROM users u
+      LEFT JOIN cohorts c ON c.id = u.cohort_id
+      ORDER BY u.role DESC, u.name ASC
+    `).all();
   },
 
   getUserFullProfile(id) {
