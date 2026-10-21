@@ -2637,6 +2637,26 @@ function toLocalDateString(d) {
   return `${yyyy}-${mm}-${dd}`;
 }
 
+// Civil-date arithmetic on YYYY-MM-DD strings via Date.UTC on the Y/M/D
+// components — immune to the server's timezone and to DST, unlike raw
+// (two-midnights) millisecond subtraction. Both tolerate a trailing time part
+// (course_start_date is a DATETIME column) by reading only the date portion.
+// daysBetweenCivil: whole calendar days from startStr to endStr (negative if
+// endStr is earlier). addDaysCivil: the YYYY-MM-DD n days after startStr.
+function daysBetweenCivil(startStr, endStr) {
+  const toUtc = (s) => {
+    const [y, m, d] = String(s).trim().slice(0, 10).split('-').map(Number);
+    return Date.UTC(y, m - 1, d);
+  };
+  return Math.round((toUtc(endStr) - toUtc(startStr)) / 86400000);
+}
+function addDaysCivil(startStr, n) {
+  const [y, m, d] = String(startStr).trim().slice(0, 10).split('-').map(Number);
+  const t = new Date(Date.UTC(y, m - 1, d + n));
+  const p = (x) => String(x).padStart(2, '0');
+  return `${t.getUTCFullYear()}-${p(t.getUTCMonth() + 1)}-${p(t.getUTCDate())}`;
+}
+
 // Map a backdated recorded_date to the curricular season of its course week.
 // For backdated cuttings the archive/PDF should group by the SEASON the
 // recording belongs to, not the season the row was written in. Returns null
@@ -5459,31 +5479,23 @@ function getCurrentCourseWeek(user, courseStartArg) {
   const courseStartStr = (courseStartArg !== undefined) ? courseStartArg : db.getUserCourseStartDate(user);
   if (!courseStartStr || !courseStartStr.trim()) {
     const ws = getWeekStart(user);
-    const we = new Date(ws + 'T00:00:00');
-    we.setDate(we.getDate() + 6);
-    return { weekNumber: null, weekStart: ws, weekEnd: we.toISOString().split('T')[0] };
+    return { weekNumber: null, weekStart: ws, weekEnd: addDaysCivil(ws, 6) };
   }
 
-  const courseStart = new Date(courseStartStr + 'T00:00:00');
-  const now = getNow(user);
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const daysSinceStart = Math.floor((today - courseStart) / 86400000);
+  // Civil-date day count: today's wall-clock date (user TZ via getNow) minus
+  // course start, as whole calendar days — DST- and server-TZ-immune.
+  const todayStr = toLocalDateString(getNow(user));
+  const daysSinceStart = daysBetweenCivil(courseStartStr, todayStr);
 
   if (daysSinceStart < 0) {
     const ws = getWeekStart(user);
-    const we = new Date(ws + 'T00:00:00');
-    we.setDate(we.getDate() + 6);
-    return { weekNumber: 0, weekStart: ws, weekEnd: we.toISOString().split('T')[0] };
+    return { weekNumber: 0, weekStart: ws, weekEnd: addDaysCivil(ws, 6) };
   }
 
   const weekIndex = Math.floor(daysSinceStart / 7);
   const weekNumber = weekIndex + 1;
-  const weekStart = new Date(courseStart);
-  weekStart.setDate(courseStart.getDate() + weekIndex * 7);
-  const ws = weekStart.toISOString().split('T')[0];
-  const weekEnd = new Date(weekStart);
-  weekEnd.setDate(weekStart.getDate() + 6);
-  return { weekNumber, weekStart: ws, weekEnd: weekEnd.toISOString().split('T')[0] };
+  const weekStart = addDaysCivil(courseStartStr, weekIndex * 7);
+  return { weekNumber, weekStart, weekEnd: addDaysCivil(weekStart, 6) };
 }
 
 // Today's course-day details. Mirrors getCurrentCourseWeek — same getNow(user)
@@ -5502,10 +5514,9 @@ function getCurrentCourseDay(user, courseStartArg) {
     return { dayNumber: null, weekNumber: null, dayInWeek: null,
              dateStr, isPreCourse: false, isPostCourse: false };
   }
-  const courseStart = new Date(courseStartStr + 'T00:00:00');
-  const now = getNow(user);
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const daysSinceStart = Math.floor((today - courseStart) / 86400000);
+  // Civil-date day count against the same wall-clock dateStr used above, so the
+  // day index and the reported date never disagree. DST/server-TZ-immune.
+  const daysSinceStart = daysBetweenCivil(courseStartStr, dateStr);
   if (daysSinceStart < 0) {
     return { dayNumber: 0, weekNumber: 0, dayInWeek: 0,
              dateStr, isPreCourse: true, isPostCourse: false };
@@ -5528,9 +5539,7 @@ function getCourseDayForDate(user, dateStr, courseStartArg) {
   if (!courseStartStr || !dateStr) {
     return { dayNumber: null, season: null, dayInSeason: null };
   }
-  const courseStart = new Date(courseStartStr + 'T00:00:00');
-  const date = new Date(dateStr + 'T00:00:00');
-  const days = Math.floor((date - courseStart) / 86400000);
+  const days = daysBetweenCivil(courseStartStr, dateStr);
   if (days < 0) {
     return { dayNumber: null, season: null, dayInSeason: null };
   }
