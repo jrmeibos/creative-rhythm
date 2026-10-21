@@ -4,25 +4,98 @@
   <%- include('partials/head') %>
   <link rel="stylesheet" href="/css/dashboard.css">
   <link rel="stylesheet" href="/css/community.css">
+  <style>
+    .room-header { display:flex; align-items:flex-start; justify-content:space-between; gap:1rem; flex-wrap:wrap; }
+    .room-cohort-switch { font-family:var(--font-body); font-size:0.9rem; }
+    .room-cohort-switch select { font-family:var(--font-body); padding:0.4rem 0.6rem; border:1.5px solid rgba(112,92,108,0.28); border-radius:var(--radius-sm); background:var(--color-blank-page); color:var(--color-ink-stained); }
+    .room-admin-note { font-family:var(--font-body); font-size:0.88rem; color:rgba(16,15,16,0.6); margin:0 0 0.9rem; }
+
+    .room-tabs { display:flex; gap:0.4rem; border-bottom:1px solid rgba(112,92,108,0.2); margin:0.5rem 0 1.4rem; }
+    .room-tab { appearance:none; background:none; border:none; cursor:pointer; font-family:var(--font-body); font-size:0.95rem; color:rgba(16,15,16,0.55); padding:0.6rem 0.9rem; border-bottom:2px solid transparent; margin-bottom:-1px; }
+    .room-tab.is-active { color:var(--color-bloem); border-bottom-color:var(--color-bloem); font-weight:700; }
+    .room-panel[hidden] { display:none; }
+
+    .room-avatar { display:inline-flex; align-items:center; justify-content:center; border-radius:50%; background:var(--color-curiositys-kiss); color:var(--color-ink-stained); font-family:var(--font-body); font-weight:700; font-size:0.9rem; overflow:hidden; flex-shrink:0; }
+    .room-avatar img { width:100%; height:100%; object-fit:cover; }
+
+    .post-composer, .post-card { background:var(--color-blank-page); border:1px solid rgba(112,92,108,0.16); border-radius:14px; padding:1rem 1.1rem; margin-bottom:1rem; }
+    .post-composer { display:flex; gap:0.75rem; }
+    .post-composer-main { flex:1; }
+    .post-textarea, .comment-input, .reply-input { width:100%; border:1.5px solid rgba(112,92,108,0.18); border-radius:var(--radius-sm); padding:0.6rem 0.75rem; font-family:var(--font-body); font-size:0.95rem; color:var(--color-ink-stained); line-height:1.5; resize:vertical; outline:none; background:rgba(112,92,108,0.03); }
+    .post-textarea:focus, .comment-input:focus, .reply-input:focus { border-color:var(--color-bloem); }
+    .post-composer-actions { display:flex; justify-content:flex-end; margin-top:0.55rem; }
+    .post-btn, .comment-btn, .reply-btn { appearance:none; background:var(--color-bloem); color:#fff; border:none; border-radius:var(--radius-sm); padding:0.5rem 1.1rem; font-family:var(--font-body); font-size:0.9rem; cursor:pointer; }
+    .post-btn:hover, .comment-btn:hover, .reply-btn:hover { background:var(--color-bloem-mid); }
+    .post-btn:disabled { opacity:0.5; cursor:default; }
+
+    .post-head { display:flex; align-items:center; gap:0.6rem; margin-bottom:0.55rem; }
+    .post-author { font-family:var(--font-body); font-weight:700; color:var(--color-ink-stained); font-size:0.95rem; }
+    .post-guide-badge { font-family:var(--font-body); font-size:0.68rem; text-transform:uppercase; letter-spacing:0.05em; background:var(--color-understory); color:#fff; border-radius:999px; padding:0.1rem 0.5rem; }
+    .post-pin-flag { font-size:0.72rem; color:var(--color-bloem); font-family:var(--font-body); }
+    .post-time { font-family:var(--font-body); font-size:0.78rem; color:rgba(16,15,16,0.45); margin-left:auto; }
+    .post-body { font-family:var(--font-body); font-size:0.98rem; line-height:1.6; color:var(--color-ink-stained); white-space:pre-wrap; word-break:break-word; margin:0 0 0.7rem; }
+    .post-body a { color:var(--color-bloem); }
+
+    .post-reactions { display:flex; align-items:center; gap:0.4rem; flex-wrap:wrap; }
+    .react-btn, .comment-toggle, .post-admin-btn { appearance:none; background:none; border:1px solid rgba(112,92,108,0.2); border-radius:999px; padding:0.28rem 0.7rem; font-family:var(--font-body); font-size:0.82rem; color:rgba(16,15,16,0.7); cursor:pointer; }
+    .react-btn.is-on { background:color-mix(in srgb, var(--color-curiositys-kiss) 40%, var(--color-blank-page)); border-color:var(--color-curiositys-kiss); color:var(--color-ink-stained); }
+    .react-btn:hover, .comment-toggle:hover, .post-admin-btn:hover { border-color:var(--color-bloem); }
+    .post-admin-btn { margin-left:0.1rem; }
+    .post-admin-btn--danger:hover { border-color:#c0392b; color:#c0392b; }
+    .post-admin-btn--danger { margin-left:auto; }
+
+    .post-comments { margin-top:0.9rem; border-top:1px solid rgba(112,92,108,0.12); padding-top:0.85rem; }
+    .comment { display:flex; gap:0.55rem; margin-bottom:0.75rem; }
+    .comment--reply { margin-left:2.1rem; }
+    .comment-main { flex:1; }
+    .comment-bubble { background:rgba(112,92,108,0.05); border-radius:12px; padding:0.5rem 0.75rem; }
+    .comment-author { font-family:var(--font-body); font-weight:700; font-size:0.85rem; color:var(--color-ink-stained); }
+    .comment-text { font-family:var(--font-body); font-size:0.9rem; line-height:1.5; color:var(--color-ink-stained); white-space:pre-wrap; word-break:break-word; margin:0.15rem 0 0; }
+    .comment-meta { display:flex; align-items:center; gap:0.7rem; margin:0.25rem 0 0 0.75rem; }
+    .comment-meta button { appearance:none; background:none; border:none; cursor:pointer; font-family:var(--font-body); font-size:0.76rem; color:rgba(16,15,16,0.5); padding:0; }
+    .comment-meta button:hover { color:var(--color-bloem); text-decoration:underline; }
+    .comment-time { font-family:var(--font-body); font-size:0.74rem; color:rgba(16,15,16,0.4); }
+    .reply-box, .comment-composer { margin-top:0.5rem; }
+    .reply-box { margin-left:2.1rem; }
+    .comment-composer { display:flex; gap:0.5rem; align-items:flex-start; margin-top:0.6rem; }
+    .comment-composer .comment-input, .reply-box .reply-input { flex:1; }
+    .reply-box { display:flex; gap:0.5rem; align-items:flex-start; }
+    .reply-box[hidden] { display:none; }
+    .comment-btn, .reply-btn { padding:0.45rem 0.9rem; }
+
+    .room-empty { font-family:var(--font-body); color:rgba(16,15,16,0.55); text-align:center; padding:2rem 1rem; }
+    .room-locked { background:var(--color-blank-page); border:1px solid rgba(112,92,108,0.16); border-radius:14px; padding:2.2rem 1.5rem; text-align:center; max-width:560px; }
+    .room-locked h2 { font-family:var(--font-display); font-weight:400; color:var(--color-ink-stained); margin:0 0 0.6rem; }
+    .room-locked p { font-family:var(--font-body); color:rgba(16,15,16,0.65); line-height:1.6; margin:0; }
+    .room-discord { margin-top:1.6rem; font-family:var(--font-body); font-size:0.88rem; }
+    .room-discord a { color:var(--color-bloem); }
+  </style>
 </head>
 <body class="app-body">
-
   <div class="app-layout">
     <%- include('partials/sidebar') %>
 
     <main class="main-content">
 
-      <header class="comm-header">
+      <header class="comm-header room-header">
         <div>
-          <h1 class="comm-title">Our Community</h1>
-          <% if (!locals.communityLocked) { %>
-            <p class="comm-week-heading">
-              <span class="comm-week-name"><%= weekName %></span>
-              <span class="comm-week-sep">·</span>
-              <span class="comm-week-date"><%= dateRange %></span>
-            </p>
+          <h1 class="comm-title"><% if (cohort) { %><%= cohort.name %><% } else { %>Your cohort room<% } %></h1>
+          <% if (roomOpen && cohort) { %>
+            <p class="comm-week-heading"><span class="comm-week-name">The room</span></p>
           <% } %>
         </div>
+        <% if (viewerIsAdmin && cohorts && cohorts.length) { %>
+          <label class="room-cohort-switch">
+            Viewing:
+            <select id="cohort-switch">
+              <% for (const oc of cohorts) { %>
+                <option value="<%= oc.id %>" <%= oc.id === selectedCohortId ? 'selected' : '' %>>
+                  <%= oc.name %><%= oc.room_open ? '' : ' (closed)' %>
+                </option>
+              <% } %>
+            </select>
+          </label>
+        <% } %>
       </header>
 
       <%
@@ -34,214 +107,260 @@
           connect:   { label: 'Connect',   description: 'Reach out (or in)' }
         };
         const seasonLabel = { spring: 'Spring · Curiosity', summer: 'Summer · Create', autumn: 'Autumn · Share', winter: 'Winter · Connect' };
+        function roomAvatar(initial, photo, size) {
+          const s = size || 40;
+          const style = 'width:' + s + 'px;height:' + s + 'px';
+          if (photo) return '<span class="room-avatar" style="' + style + '"><img src="' + photo + '" alt=""></span>';
+          return '<span class="room-avatar" style="' + style + '">' + (initial || '?') + '</span>';
+        }
       %>
 
-      <% if (members.length === 0) { %>
-        <div class="comm-empty">
-          <p class="comm-empty-icon">○</p>
-          <h2>No members yet</h2>
-          <p>Once gardeners are enrolled, their weekly intentions will appear here.</p>
-        </div>
-      <% } else { %>
-
-        <!-- Member card grid -->
-        <div class="comm-grid" id="comm-grid">
-          <% for (const member of members) { %>
-            <%
-              const showSeason = member.community_season_public && member.current_season;
-            %>
-            <button class="comm-card <%= member.id === currentUserId ? 'comm-card--self' : '' %>"
-                    data-user-id="<%= member.id %>"
-                    data-name="<%= member.name %>"
-                    type="button"
-                    aria-expanded="false">
-
-              <div class="comm-card-avatar<%= showSeason ? ' season-avatar--' + member.current_season : '' %>">
-                <% if (member.profile_photo) { %>
-                  <img src="<%= member.profile_photo %>" class="comm-avatar-photo" alt="">
-                <% } else { %>
-                  <%= member.avatar_initial %>
-                <% } %>
-              </div>
-              <span class="comm-card-name">
-                <%= member.name %><% if (member.id === currentUserId) { %> <span class="comm-card-you">you</span><% } %>
-                <% if (showSeason) { %>
-                  <span class="season-badge" data-tooltip="<%= seasonLabel[member.current_season] %>"><%- include('partials/season-icon', { season: member.current_season, size: 20 }) %></span>
-                <% } %>
-              </span>
-
-              <div class="comm-circles">
-                <% for (const cat of cats) { %>
-                  <% const g = member.goals[cat] || {}; %>
-                  <%
-                    // Circles always show set/completed status — they carry no
-                    // written text (just the generic category label), so a
-                    // private member's progress is still visible while their
-                    // actual intentions stay hidden in the drawer.
-                    const state = g.completed ? 'filled' : g.hasGoal ? 'set' : 'empty';
-                  %>
-                  <div class="comm-circle-wrap">
-                    <div class="comm-circle comm-circle--<%= cat %> comm-circle--<%= state %>"></div>
-                    <span class="comm-circle-label"><%= catMeta[cat].label %></span>
-                  </div>
-                <% } %>
-              </div>
-
-              <!-- One camera per distinct day this user logged a cutting in
-                   the viewed week (multiple recordings on one day = one
-                   camera). Renders nothing for zero days — we surface who
-                   showed up, never absence. The server only passes a number
-                   here; cutting text never reaches this template. The row
-                   carries the aria-label so a screen reader hears the count
-                   once, not N cameras. -->
-              <% if (member.recordedDayCount > 0) { %>
-                <div class="comm-recorded"
-                     role="img"
-                     aria-label="recorded <%= member.recordedDayCount %> day<%= member.recordedDayCount === 1 ? '' : 's' %> this week">
-                  <% for (let i = 0; i < member.recordedDayCount; i++) { %>
-                    <svg class="comm-recorded-icon" width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
-                      <path d="M3.5 6h2L6.5 4.5h5L12.5 6h2a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1h-11a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1z" fill="currentColor"/>
-                      <circle cx="9" cy="10" r="2.3" fill="var(--color-blank-page)"/>
-                      <circle cx="9" cy="10" r="1.1" fill="currentColor"/>
-                    </svg>
-                  <% } %>
-                </div>
-              <% } %>
-
-            </button>
+      <% if (communityLocked) { %>
+        <section class="room-locked">
+          <% if (lockedReason === 'room-closed') { %>
+            <h2>Your room is opening soon 🌱</h2>
+            <p>Your cohort's room isn't open just yet. When it opens, you'll be able to see everyone in your cohort and share how it's going. Hang tight.</p>
+          <% } else if (lockedReason === 'no-cohort') { %>
+            <h2>No room yet</h2>
+            <p>You're not part of a cohort room yet. Once you're placed in one, this is where you'll meet your people.</p>
+          <% } else { %>
+            <h2>No cohorts yet</h2>
+            <p>Create a cohort in the admin panel, then open its room to give its members a place to gather.</p>
           <% } %>
-        </div>
-
-        <!-- Expanded detail drawer -->
-        <div class="comm-drawer" id="comm-drawer" hidden>
-
-          <div class="comm-drawer-header">
-            <div>
-              <h2 class="comm-drawer-name" id="comm-drawer-name"></h2>
-              <p class="comm-drawer-week"><%= dateRange %></p>
-            </div>
-            <button class="comm-drawer-close" id="comm-drawer-close" aria-label="Close">×</button>
-          </div>
-
-          <% for (const member of members) { %>
-            <div class="comm-panel" data-user-id="<%= member.id %>" hidden>
-              <% if (member.role === 'admin') { %>
-                <!-- Curator card — the admin doesn't set weekly intentions;
-                     their panel is a short intro + ways to reach Julia. -->
-                <div class="comm-curator">
-                  <p class="comm-curator-intro">Your guide through The Creative's Garden.</p>
-                  <div class="comm-curator-actions">
-                    <a href="https://www.meibostouch.com/about" target="_blank" rel="noopener"
-                       class="comm-curator-btn comm-curator-btn--primary">Meet Your Curator →</a>
-                    <a href="mailto:julia@meibostouch.com"
-                       class="comm-curator-btn comm-curator-btn--secondary">Contact Julia</a>
-                  </div>
-                </div>
-              <% } else if (!member.community_goals_public) { %>
-                <p class="comm-private-msg">This gardener has chosen to keep their intentions private. 🌿</p>
-              <% } else { %>
-              <% const hasAnyGoals = cats.some(cat => member.goals[cat] && member.goals[cat].hasGoal); %>
-              <% if (!hasAnyGoals) { %>
-                <p class="comm-no-goals">No intentions set for this week yet.</p>
-              <% } else { %>
-                <div class="goals-grid">
-                  <% for (const cat of cats) { %>
-                    <% const g = member.goals[cat] || {}; %>
-                    <div class="goal-card goal-card--<%= cat %> <%= g.completed ? 'is-complete' : '' %>"
-                         data-category="<%= cat %>">
-
-                      <div class="goal-card-header">
-                        <div class="goal-card-header-left">
-                          <span class="goal-card-label"><%= catMeta[cat].label %></span>
-                          <span class="goal-card-desc"><%= catMeta[cat].description %></span>
-                        </div>
-                        <% if (g.completed) { %>
-                          <span class="comm-done-sparkle" aria-label="Completed">✨</span>
-                        <% } %>
-                      </div>
-
-                      <% if (g.hasGoal && g.goalData && g.goalData.items && g.goalData.items.length) { %>
-                        <ul class="comm-checklist">
-                          <% for (const item of g.goalData.items) { %>
-                            <li class="comm-checklist-item <%= item.checked ? 'is-checked' : '' %>">
-                              <span class="comm-checklist-dot <%= item.checked ? 'is-checked' : '' %>"></span>
-                              <span class="comm-checklist-text"><%= item.text %></span>
-                            </li>
-                          <% } %>
-                        </ul>
-                      <% } else { %>
-                        <p class="goal-card-empty"><%= catMeta[cat].description %></p>
-                      <% } %>
-
-                      <% if (g.reflection && g.reflection.trim()) { %>
-                        <div class="goal-card-reflection">
-                          <div class="goal-card-reflection-header">
-                            <span class="goal-card-reflection-label">My reflection</span>
-                          </div>
-                          <div class="goal-card-reflection-preview">
-                            <p class="goal-card-reflection-text"><%= g.reflection %></p>
-                          </div>
-                        </div>
-                      <% } %>
-
-                    </div>
-                  <% } %>
-                </div>
-              <% } %>
-              <% } /* end community_goals_public check */ %>
-            </div>
+          <% if (locals.communityDiscordUrl) { %>
+            <p class="room-discord">Everyone who's done the challenge also gathers on <a href="<%= locals.communityDiscordUrl %>" target="_blank" rel="noopener">Discord →</a></p>
           <% } %>
-
-        </div><!-- .comm-drawer -->
-
-      <% } %>
-
-      <% if (locals.communityLocked) { %>
-        <!-- Trial users don't get a shared cohort — this is the invitation
-             to join the real one, which unlocks with the full course. -->
-        <section class="comm-join">
-          <h2 class="comm-join-title">The garden is better with company</h2>
-          <p class="comm-join-text">
-            The full Creative's Garden is a shared space — everyone's weekly
-            intentions side by side, growing alongside each other. It opens up
-            when you continue into the full course.
-          </p>
-          <a href="/upgrade" class="comm-join-btn">Join the community →</a>
         </section>
       <% } else { %>
 
-        <!-- Week navigation -->
-        <nav class="comm-week-nav" aria-label="Week navigation">
-          <% if (hasPrevWeek) { %>
-            <a href="/community?week=<%= prevWeek %>" class="comm-nav-btn">← Previous Week</a>
-          <% } else { %>
-            <span class="comm-nav-btn comm-nav-btn--disabled">← Previous Week</span>
-          <% } %>
-          <span class="comm-nav-center">
-            <span class="comm-nav-week-name"><%= weekName %></span>
-            <span class="comm-week-sep">·</span>
-            <span class="comm-week-date"><%= dateRange %></span>
-          </span>
-          <% if (hasNextWeek) { %>
-            <a href="/community?week=<%= nextWeek %>" class="comm-nav-btn">Next Week →</a>
-          <% } else { %>
-            <span class="comm-nav-btn comm-nav-btn--disabled">Next Week →</span>
-          <% } %>
+        <nav class="room-tabs" role="tablist">
+          <button class="room-tab is-active" data-tab="feed" role="tab">Feed</button>
+          <button class="room-tab" data-tab="progress" role="tab">Progress</button>
         </nav>
 
-        <!-- ── Join the Conversation on Discord ──────────────────────────
-             Simple callout pointing the cohort to the Discord community.
-             Rendered only when COMMUNITY_DISCORD_URL is configured. Trial
-             users don't see this — the Discord is part of the paid cohort. -->
-        <% if (locals.communityDiscordUrl) { %>
-          <section class="comm-discord-invite">
-            <h2 class="comm-discord-invite-title">Join the Conversation on Discord</h2>
-            <a href="<%= locals.communityDiscordUrl %>" target="_blank" rel="noopener"
-               class="comm-discord-invite-btn">
-              Open Discord →
-            </a>
-          </section>
-        <% } %>
+        <!-- ══ FEED TAB ══ -->
+        <div class="room-panel" id="panel-feed" role="tabpanel">
+          <% if (viewerIsAdmin) { %>
+            <p class="room-admin-note">You're posting as the guide in <strong><%= cohort.name %></strong><%= cohort.room_open ? '' : ' — note: this room is still closed to its members' %>.</p>
+          <% } %>
+
+          <div class="post-composer">
+            <%- roomAvatar(viewer.avatar_initial, viewer.profile_photo, 40) %>
+            <div class="post-composer-main">
+              <textarea id="post-input" class="post-textarea" rows="2" placeholder="Share something with your cohort…"></textarea>
+              <div class="post-composer-actions">
+                <button class="post-btn" id="post-submit" data-cohort-id="<%= selectedCohortId %>">Share</button>
+              </div>
+            </div>
+          </div>
+
+          <div id="post-list">
+            <% if (!posts.length) { %>
+              <p class="room-empty">No posts yet — be the first to say hello. 🌱</p>
+            <% } %>
+            <% for (const post of posts) { %>
+              <article class="post-card" data-post-id="<%= post.id %>">
+                <div class="post-head">
+                  <%- roomAvatar(post.avatar_initial, post.profile_photo, 38) %>
+                  <span class="post-author"><%= post.author_name %></span>
+                  <% if (post.author_role === 'admin') { %><span class="post-guide-badge">Guide</span><% } %>
+                  <% if (post.pinned) { %><span class="post-pin-flag">📌 Pinned</span><% } %>
+                  <time class="post-time" data-ts="<%= post.created_at %>"><%= post.created_at %></time>
+                </div>
+                <p class="post-body"><%= post.content %></p>
+                <div class="post-reactions">
+                  <button class="react-btn <%= post.viewer_hearted ? 'is-on' : '' %>" data-post-id="<%= post.id %>" data-reaction="heart">❤ <span class="react-count"><%= post.heart_count %></span></button>
+                  <button class="react-btn <%= post.viewer_sparked ? 'is-on' : '' %>" data-post-id="<%= post.id %>" data-reaction="spark">✨ <span class="react-count"><%= post.spark_count %></span></button>
+                  <button class="comment-toggle" data-post-id="<%= post.id %>">💬 <span class="comment-count"><%= post.comment_count %></span></button>
+                  <% if (viewerIsAdmin) { %>
+                    <button class="post-admin-btn" data-action="pin" data-post-id="<%= post.id %>" data-pinned="<%= post.pinned ? 1 : 0 %>"><%= post.pinned ? 'Unpin' : 'Pin' %></button>
+                  <% } %>
+                  <% if (viewerIsAdmin || post.user_id === currentUserId) { %>
+                    <button class="post-admin-btn post-admin-btn--danger" data-action="delete-post" data-post-id="<%= post.id %>">Delete</button>
+                  <% } %>
+                </div>
+
+                <div class="post-comments" id="comments-<%= post.id %>" hidden>
+                  <% for (const c of post.comments) { %>
+                    <div class="comment" data-comment-id="<%= c.id %>">
+                      <%- roomAvatar(c.avatar_initial, c.profile_photo, 30) %>
+                      <div class="comment-main">
+                        <div class="comment-bubble">
+                          <span class="comment-author"><%= c.author_name %><% if (c.author_role === 'admin') { %> <span class="post-guide-badge">Guide</span><% } %></span>
+                          <p class="comment-text"><%= c.content %></p>
+                        </div>
+                        <div class="comment-meta">
+                          <time class="comment-time" data-ts="<%= c.created_at %>"><%= c.created_at %></time>
+                          <button data-action="reply-toggle" data-comment-id="<%= c.id %>">Reply</button>
+                          <% if (viewerIsAdmin || c.user_id === currentUserId) { %>
+                            <button data-action="delete-comment" data-comment-id="<%= c.id %>">Delete</button>
+                          <% } %>
+                        </div>
+
+                        <% for (const r of c.replies) { %>
+                          <div class="comment comment--reply" data-comment-id="<%= r.id %>">
+                            <%- roomAvatar(r.avatar_initial, r.profile_photo, 26) %>
+                            <div class="comment-main">
+                              <div class="comment-bubble">
+                                <span class="comment-author"><%= r.author_name %><% if (r.author_role === 'admin') { %> <span class="post-guide-badge">Guide</span><% } %></span>
+                                <p class="comment-text"><%= r.content %></p>
+                              </div>
+                              <div class="comment-meta">
+                                <time class="comment-time" data-ts="<%= r.created_at %>"><%= r.created_at %></time>
+                                <% if (viewerIsAdmin || r.user_id === currentUserId) { %>
+                                  <button data-action="delete-comment" data-comment-id="<%= r.id %>">Delete</button>
+                                <% } %>
+                              </div>
+                            </div>
+                          </div>
+                        <% } %>
+
+                        <div class="reply-box" id="reply-<%= c.id %>" hidden>
+                          <textarea class="reply-input" rows="1" placeholder="Write a reply…"></textarea>
+                          <button class="reply-btn" data-action="reply-submit" data-post-id="<%= post.id %>" data-parent-id="<%= c.id %>">Reply</button>
+                        </div>
+                      </div>
+                    </div>
+                  <% } %>
+
+                  <div class="comment-composer">
+                    <textarea class="comment-input" rows="1" placeholder="Write a comment…"></textarea>
+                    <button class="comment-btn" data-action="comment-submit" data-post-id="<%= post.id %>">Comment</button>
+                  </div>
+                </div>
+              </article>
+            <% } %>
+          </div>
+        </div>
+
+        <!-- ══ PROGRESS TAB ══ -->
+        <div class="room-panel" id="panel-progress" role="tabpanel" hidden>
+          <% if (members.length === 0) { %>
+            <div class="comm-empty">
+              <p class="comm-empty-icon">○</p>
+              <h2>No members yet</h2>
+              <p>Once gardeners are in this cohort, their weekly intentions will appear here.</p>
+            </div>
+          <% } else { %>
+            <div class="comm-grid" id="comm-grid">
+              <% for (const member of members) { %>
+                <% const showSeason = member.community_season_public && member.current_season; %>
+                <button class="comm-card <%= member.id === currentUserId ? 'comm-card--self' : '' %>"
+                        data-user-id="<%= member.id %>" data-name="<%= member.name %>" type="button" aria-expanded="false">
+                  <div class="comm-card-avatar<%= showSeason ? ' season-avatar--' + member.current_season : '' %>">
+                    <% if (member.profile_photo) { %><img src="<%= member.profile_photo %>" class="comm-avatar-photo" alt=""><% } else { %><%= member.avatar_initial %><% } %>
+                  </div>
+                  <span class="comm-card-name">
+                    <%= member.name %><% if (member.id === currentUserId) { %> <span class="comm-card-you">you</span><% } %>
+                    <% if (showSeason) { %><span class="season-badge" data-tooltip="<%= seasonLabel[member.current_season] %>"><%- include('partials/season-icon', { season: member.current_season, size: 20 }) %></span><% } %>
+                  </span>
+                  <div class="comm-circles">
+                    <% for (const cat of cats) { %>
+                      <% const g = member.goals[cat] || {}; %>
+                      <% const state = g.completed ? 'filled' : g.hasGoal ? 'set' : 'empty'; %>
+                      <div class="comm-circle-wrap">
+                        <div class="comm-circle comm-circle--<%= cat %> comm-circle--<%= state %>"></div>
+                        <span class="comm-circle-label"><%= catMeta[cat].label %></span>
+                      </div>
+                    <% } %>
+                  </div>
+                  <% if (member.recordedDayCount > 0) { %>
+                    <div class="comm-recorded" role="img" aria-label="recorded <%= member.recordedDayCount %> day<%= member.recordedDayCount === 1 ? '' : 's' %> this week">
+                      <% for (let i = 0; i < member.recordedDayCount; i++) { %>
+                        <svg class="comm-recorded-icon" width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
+                          <path d="M3.5 6h2L6.5 4.5h5L12.5 6h2a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1h-11a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1z" fill="currentColor"/>
+                          <circle cx="9" cy="10" r="2.3" fill="var(--color-blank-page)"/>
+                          <circle cx="9" cy="10" r="1.1" fill="currentColor"/>
+                        </svg>
+                      <% } %>
+                    </div>
+                  <% } %>
+                </button>
+              <% } %>
+            </div>
+
+            <div class="comm-drawer" id="comm-drawer" hidden>
+              <div class="comm-drawer-header">
+                <div>
+                  <h2 class="comm-drawer-name" id="comm-drawer-name"></h2>
+                  <p class="comm-drawer-week"><%= dateRange %></p>
+                </div>
+                <button class="comm-drawer-close" id="comm-drawer-close" aria-label="Close">×</button>
+              </div>
+              <% for (const member of members) { %>
+                <div class="comm-panel" data-user-id="<%= member.id %>" hidden>
+                  <% if (member.role === 'admin') { %>
+                    <div class="comm-curator">
+                      <p class="comm-curator-intro">Your guide through The Creative's Garden.</p>
+                      <div class="comm-curator-actions">
+                        <a href="https://www.meibostouch.com/about" target="_blank" rel="noopener" class="comm-curator-btn comm-curator-btn--primary">Meet Your Curator →</a>
+                        <a href="mailto:julia@meibostouch.com" class="comm-curator-btn comm-curator-btn--secondary">Contact Julia</a>
+                      </div>
+                    </div>
+                  <% } else if (!member.community_goals_public) { %>
+                    <p class="comm-private-msg">This gardener has chosen to keep their intentions private. 🌿</p>
+                  <% } else { %>
+                    <% const hasAnyGoals = cats.some(cat => member.goals[cat] && member.goals[cat].hasGoal); %>
+                    <% if (!hasAnyGoals) { %>
+                      <p class="comm-no-goals">No intentions set for this week yet.</p>
+                    <% } else { %>
+                      <div class="goals-grid">
+                        <% for (const cat of cats) { %>
+                          <% const g = member.goals[cat] || {}; %>
+                          <div class="goal-card goal-card--<%= cat %> <%= g.completed ? 'is-complete' : '' %>" data-category="<%= cat %>">
+                            <div class="goal-card-header">
+                              <div class="goal-card-header-left">
+                                <span class="goal-card-label"><%= catMeta[cat].label %></span>
+                                <span class="goal-card-desc"><%= catMeta[cat].description %></span>
+                              </div>
+                              <% if (g.completed) { %><span class="comm-done-sparkle" aria-label="Completed">✨</span><% } %>
+                            </div>
+                            <% if (g.hasGoal && g.goalData && g.goalData.items && g.goalData.items.length) { %>
+                              <ul class="comm-checklist">
+                                <% for (const item of g.goalData.items) { %>
+                                  <li class="comm-checklist-item <%= item.checked ? 'is-checked' : '' %>">
+                                    <span class="comm-checklist-dot <%= item.checked ? 'is-checked' : '' %>"></span>
+                                    <span class="comm-checklist-text"><%= item.text %></span>
+                                  </li>
+                                <% } %>
+                              </ul>
+                            <% } else { %>
+                              <p class="goal-card-empty"><%= catMeta[cat].description %></p>
+                            <% } %>
+                            <% if (g.reflection && g.reflection.trim()) { %>
+                              <div class="goal-card-reflection">
+                                <div class="goal-card-reflection-header"><span class="goal-card-reflection-label">My reflection</span></div>
+                                <div class="goal-card-reflection-preview"><p class="goal-card-reflection-text"><%= g.reflection %></p></div>
+                              </div>
+                            <% } %>
+                          </div>
+                        <% } %>
+                      </div>
+                    <% } %>
+                  <% } %>
+                </div>
+              <% } %>
+            </div>
+
+            <nav class="comm-week-nav" aria-label="Week navigation">
+              <% if (hasPrevWeek) { %>
+                <a href="/community?week=<%= prevWeek %><%= viewerIsAdmin && selectedCohortId ? '&cohort=' + selectedCohortId : '' %>#progress" class="comm-nav-btn">← Previous Week</a>
+              <% } else { %>
+                <span class="comm-nav-btn comm-nav-btn--disabled">← Previous Week</span>
+              <% } %>
+              <span class="comm-nav-center">
+                <span class="comm-nav-week-name"><%= weekName %></span>
+                <span class="comm-week-sep">·</span>
+                <span class="comm-week-date"><%= dateRange %></span>
+              </span>
+              <% if (hasNextWeek) { %>
+                <a href="/community?week=<%= nextWeek %><%= viewerIsAdmin && selectedCohortId ? '&cohort=' + selectedCohortId : '' %>#progress" class="comm-nav-btn">Next Week →</a>
+              <% } else { %>
+                <span class="comm-nav-btn comm-nav-btn--disabled">Next Week →</span>
+              <% } %>
+            </nav>
+          <% } %>
+        </div>
 
       <% } %>
 
@@ -249,6 +368,5 @@
   </div>
 
   <script src="/js/community.js"></script>
-
 </body>
 </html>

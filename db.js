@@ -201,6 +201,17 @@ db.exec(`
     UNIQUE(post_id, user_id, reaction_type)
   );
 
+  CREATE TABLE IF NOT EXISTS community_comments (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    post_id INTEGER NOT NULL,
+    user_id INTEGER NOT NULL,
+    parent_comment_id INTEGER,
+    content TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (post_id) REFERENCES community_posts(id),
+    FOREIGN KEY (user_id) REFERENCES users(id)
+  );
+
   CREATE TABLE IF NOT EXISTS settings (
     key TEXT PRIMARY KEY,
     value TEXT NOT NULL DEFAULT ''
@@ -591,6 +602,22 @@ db.exec(`
     db.exec("ALTER TABLE users ADD COLUMN cohort_id INTEGER");
     db.exec("CREATE INDEX IF NOT EXISTS idx_users_cohort ON users (cohort_id)");
     console.log('✓ Migrated: added cohort_id column to users');
+  }
+
+  // Cohort rooms (Phase 4): community posts are scoped to a cohort, and each
+  // cohort's room is opened deliberately (room_open defaults 0 = closed, so
+  // enabling rooms never surprises a live cohort — the admin flips it on).
+  const cpCols = db.prepare("PRAGMA table_info(community_posts)").all().map(r => r.name);
+  if (!cpCols.includes('cohort_id')) {
+    db.exec("ALTER TABLE community_posts ADD COLUMN cohort_id INTEGER");
+    db.exec("CREATE INDEX IF NOT EXISTS idx_community_posts_cohort ON community_posts (cohort_id)");
+    console.log('✓ Migrated: added cohort_id column to community_posts');
+  }
+  db.exec("CREATE INDEX IF NOT EXISTS idx_community_comments_post ON community_comments (post_id)");
+  const cohortCols = db.prepare("PRAGMA table_info(cohorts)").all().map(r => r.name);
+  if (cohortCols.length && !cohortCols.includes('room_open')) {
+    db.exec("ALTER TABLE cohorts ADD COLUMN room_open INTEGER DEFAULT 0");
+    console.log('✓ Migrated: added room_open column to cohorts');
   }
 
   // Rebuild self_assessments if it has old column schema
@@ -1855,7 +1882,7 @@ module.exports = {
     ).run(name, startDate, lengthWeeks, status, comped ? 1 : 0);
   },
 
-  updateCohort(id, { name, startDate, lengthWeeks, status, comped }) {
+  updateCohort(id, { name, startDate, lengthWeeks, status, comped, roomOpen }) {
     const sets = [];
     const vals = [];
     if (name       !== undefined) { sets.push('name = ?');         vals.push(name); }
@@ -1863,6 +1890,7 @@ module.exports = {
     if (lengthWeeks!== undefined) { sets.push('length_weeks = ?'); vals.push(lengthWeeks); }
     if (status     !== undefined) { sets.push('status = ?');       vals.push(status); }
     if (comped     !== undefined) { sets.push('comped = ?');       vals.push(comped ? 1 : 0); }
+    if (roomOpen   !== undefined) { sets.push('room_open = ?');    vals.push(roomOpen ? 1 : 0); }
     if (!sets.length) return { changes: 0 };
     vals.push(id);
     return db.prepare(`UPDATE cohorts SET ${sets.join(', ')} WHERE id = ?`).run(...vals);
@@ -2449,20 +2477,44 @@ module.exports = {
     return grouped;
   },
 
-  getCommunityPosts(limit = 20) {
+  // ─── Cohort room: posts, reactions, comments ───────────────────────────────
+  // Posts are scoped to a cohort (cohort_id). Each returns author info, heart/
+  // spark counts, the viewer's own reaction state, and a comment count.
+  getPostsForCohort(cohortId, viewerId, limit = 200) {
     return db.prepare(`
-      SELECT cp.*, u.name as author_name, u.avatar_initial,
-        (SELECT COUNT(*) FROM community_reactions WHERE post_id = cp.id AND reaction_type = 'heart') as heart_count,
-        (SELECT COUNT(*) FROM community_reactions WHERE post_id = cp.id AND reaction_type = 'spark') as spark_count
+      SELECT cp.id, cp.user_id, cp.content, cp.pinned, cp.created_at, cp.cohort_id,
+             u.name AS author_name, u.avatar_initial, u.profile_photo,
+             u.current_season, u.community_season_public, u.role AS author_role,
+             (SELECT COUNT(*) FROM community_reactions r WHERE r.post_id = cp.id AND r.reaction_type = 'heart') AS heart_count,
+             (SELECT COUNT(*) FROM community_reactions r WHERE r.post_id = cp.id AND r.reaction_type = 'spark') AS spark_count,
+             (SELECT COUNT(*) FROM community_comments c WHERE c.post_id = cp.id) AS comment_count,
+             EXISTS(SELECT 1 FROM community_reactions r WHERE r.post_id = cp.id AND r.user_id = ? AND r.reaction_type = 'heart') AS viewer_hearted,
+             EXISTS(SELECT 1 FROM community_reactions r WHERE r.post_id = cp.id AND r.user_id = ? AND r.reaction_type = 'spark') AS viewer_sparked
       FROM community_posts cp
       JOIN users u ON cp.user_id = u.id
+      WHERE cp.cohort_id = ?
       ORDER BY cp.pinned DESC, cp.created_at DESC
       LIMIT ?
-    `).all(limit);
+    `).all(viewerId, viewerId, cohortId, limit);
   },
 
-  createPost(userId, content, categoryTag) {
-    return db.prepare('INSERT INTO community_posts (user_id, content, category_tag) VALUES (?, ?, ?)').run(userId, content, categoryTag);
+  getPostById(id) {
+    return db.prepare('SELECT * FROM community_posts WHERE id = ?').get(id);
+  },
+
+  createPost(userId, content, cohortId, categoryTag = null) {
+    return db.prepare('INSERT INTO community_posts (user_id, content, cohort_id, category_tag) VALUES (?, ?, ?, ?)')
+      .run(userId, content, cohortId || null, categoryTag);
+  },
+
+  setPostPinned(id, pinned) {
+    return db.prepare('UPDATE community_posts SET pinned = ? WHERE id = ?').run(pinned ? 1 : 0, id);
+  },
+
+  deletePost(id) {
+    db.prepare('DELETE FROM community_reactions WHERE post_id = ?').run(id);
+    db.prepare('DELETE FROM community_comments WHERE post_id = ?').run(id);
+    db.prepare('DELETE FROM community_posts WHERE id = ?').run(id);
   },
 
   toggleReaction(postId, userId, reactionType) {
@@ -2475,6 +2527,36 @@ module.exports = {
       db.prepare('INSERT INTO community_reactions (post_id, user_id, reaction_type) VALUES (?, ?, ?)').run(postId, userId, reactionType);
       return true;
     }
+  },
+
+  // Comments (one level of threading: a comment, or a reply whose
+  // parent_comment_id points at a top-level comment). Returned flat, oldest
+  // first — the route/view groups replies under their parent.
+  getCommentsForPosts(postIds) {
+    if (!postIds || !postIds.length) return [];
+    const placeholders = postIds.map(() => '?').join(',');
+    return db.prepare(`
+      SELECT c.id, c.post_id, c.user_id, c.parent_comment_id, c.content, c.created_at,
+             u.name AS author_name, u.avatar_initial, u.profile_photo, u.role AS author_role
+      FROM community_comments c
+      JOIN users u ON c.user_id = u.id
+      WHERE c.post_id IN (${placeholders})
+      ORDER BY c.created_at ASC
+    `).all(...postIds);
+  },
+
+  getCommentById(id) {
+    return db.prepare('SELECT * FROM community_comments WHERE id = ?').get(id);
+  },
+
+  createComment(postId, userId, content, parentCommentId = null) {
+    return db.prepare('INSERT INTO community_comments (post_id, user_id, parent_comment_id, content) VALUES (?, ?, ?, ?)')
+      .run(postId, userId, parentCommentId || null, content);
+  },
+
+  deleteComment(id) {
+    // Remove the comment and any direct replies to it.
+    db.prepare('DELETE FROM community_comments WHERE id = ? OR parent_comment_id = ?').run(id, id);
   },
 
   getAllResources() {

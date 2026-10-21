@@ -74,13 +74,13 @@
               <div>
                 <span class="admin-user-name" style="font-size:1rem"><%= c.name %></span>
                 <div class="admin-user-email">
-                  <%= fmtCohortStart(c.start_date) %> · <%= c.length_weeks %> weeks · <%= cohortStatusLabel[c.status] || c.status %><% if (c.comped) { %> · <span title="This whole cohort has full access without paying.">comped</span><% } %>
+                  <%= fmtCohortStart(c.start_date) %> · <%= c.length_weeks %> weeks · <%= cohortStatusLabel[c.status] || c.status %><% if (c.comped) { %> · <span title="This whole cohort has full access without paying.">comped</span><% } %> · <span title="Whether members can see their cohort room (feed + progress)."><%= c.room_open ? '🟢 room open' : '🔒 room closed' %></span>
                 </div>
               </div>
               <div class="admin-section-actions">
                 <span class="admin-count"><%= members.length %> member<%= members.length === 1 ? '' : 's' %></span>
                 <button class="admin-btn-icon" type="button" title="Edit cohort"
-                  onclick="openEditCohort(<%= JSON.stringify({ id: c.id, name: c.name, start_date: c.start_date ? String(c.start_date).slice(0,10) : '', length_weeks: c.length_weeks, status: c.status, comped: !!c.comped }) %>)">✎</button>
+                  onclick="openEditCohort(<%= JSON.stringify({ id: c.id, name: c.name, start_date: c.start_date ? String(c.start_date).slice(0,10) : '', length_weeks: c.length_weeks, status: c.status, comped: !!c.comped, room_open: !!c.room_open }) %>)">✎</button>
                 <% if (!members.length) { %>
                   <button class="admin-btn-icon admin-btn-icon--danger" type="button" title="Delete cohort"
                     onclick="deleteCohort(<%= c.id %>, <%= JSON.stringify(c.name) %>)">✕</button>
@@ -865,6 +865,12 @@
         Comped <span class="admin-form-hint">— this whole cohort gets full access without paying</span>
       </label>
     </div>
+    <div class="admin-form-field">
+      <label class="admin-form-label" style="display:flex;align-items:center;gap:0.5rem;cursor:pointer">
+        <input type="checkbox" id="cohort-room-open" style="width:auto">
+        Room open <span class="admin-form-hint">— members can see their cohort room (feed + progress)</span>
+      </label>
+    </div>
     <p class="admin-dialog-error" id="cohort-error" hidden></p>
     <div class="admin-dialog-footer">
       <button class="admin-dialog-cancel" type="button" onclick="closeDialog('dialog-cohort')">Cancel</button>
@@ -1459,6 +1465,7 @@
       document.getElementById('cohort-length').value = '3';
       document.getElementById('cohort-status').value = 'upcoming';
       document.getElementById('cohort-comped').checked = false;
+      document.getElementById('cohort-room-open').checked = false;
       document.getElementById('cohort-error').hidden = true;
       openDialog('dialog-cohort');
     }
@@ -1471,6 +1478,7 @@
       document.getElementById('cohort-length').value = c.length_weeks || 3;
       document.getElementById('cohort-status').value = c.status || 'upcoming';
       document.getElementById('cohort-comped').checked = !!c.comped;
+      document.getElementById('cohort-room-open').checked = !!c.room_open;
       document.getElementById('cohort-error').hidden = true;
       openDialog('dialog-cohort');
     }
@@ -1485,6 +1493,7 @@
         lengthWeeks: parseInt(document.getElementById('cohort-length').value, 10) || 3,
         status:      document.getElementById('cohort-status').value,
         comped:      document.getElementById('cohort-comped').checked,
+        roomOpen:    document.getElementById('cohort-room-open').checked,
       };
       const res = await fetch(id ? `/api/admin/cohorts/${id}` : '/api/admin/cohorts', {
         method:  id ? 'PUT' : 'POST',

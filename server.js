@@ -1871,111 +1871,248 @@ app.post('/api/lessons/:id/complete', requireAuth, (req, res) => {
 
 // ─── Community ─────────────────────────────────────────────────────────────
 
+// A viewer may act in a cohort room when they're the admin (any room) or a
+// student whose own cohort room is open. Posts/comments carry their cohort.
+function canAccessCohortRoom(viewer, cohortId) {
+  if (!viewer) return false;
+  if (viewer.role === 'admin') return true;
+  if (!cohortId || viewer.cohort_id !== cohortId) return false;
+  const cohort = db.getCohortById(cohortId);
+  return !!(cohort && cohort.room_open);
+}
+
 app.get('/community', requireAuth, (req, res) => {
-  const currentWeekStart = getCurrentCourseWeek(req.session.user).weekStart;
-  const courseStartDate  = db.getUserCourseStartDate(req.session.user) || currentWeekStart;
-  const courseLengthWeeks = getCourseLengthWeeks(req.session.user);
-  const weekStarts       = generateCourseWeeks(courseStartDate, courseLengthWeeks);
-  const firstWeek        = weekStarts[0];
-  const lastWeek         = weekStarts[weekStarts.length - 1];
+  const viewer        = req.session.user;
+  const viewerIsAdmin = viewer.role === 'admin';
 
-  // Accessible ceiling: can't exceed current week or final week
-  const accessibleUpTo = currentWeekStart < lastWeek ? currentWeekStart : lastWeek;
+  // Which cohort's room are we showing?
+  //   • Admin: the ?cohort= selection (default: first cohort). Admin can open
+  //     any cohort's room regardless of its room_open flag — oversight view.
+  //   • Student: only their own cohort, and only when its room is open.
+  const cohorts = viewerIsAdmin ? db.getAllCohorts() : [];
+  let cohort = null;
+  if (viewerIsAdmin) {
+    const reqId = parseInt(req.query.cohort, 10);
+    cohort = (Number.isInteger(reqId) && db.getCohortById(reqId)) || cohorts[0] || null;
+  } else if (viewer.cohort_id) {
+    cohort = db.getCohortById(viewer.cohort_id);
+  }
 
-  // Clamp requested week to [firstWeek, accessibleUpTo]
+  const roomOpen        = !!(cohort && (viewerIsAdmin || cohort.room_open));
+  const communityLocked = !roomOpen;
+  let lockedReason = null;
+  if (!roomOpen) {
+    if (viewerIsAdmin) lockedReason = 'no-cohorts';   // admin, no cohorts exist
+    else if (!cohort)  lockedReason = 'no-cohort';    // student not in a cohort
+    else               lockedReason = 'room-closed';  // cohort exists, room shut
+  }
+
+  // ── Progress tab data (the goal-circle grid) ──
+  const currentWeekStart  = getCurrentCourseWeek(viewer).weekStart;
+  const courseStartDate   = db.getUserCourseStartDate(viewer) || currentWeekStart;
+  const courseLengthWeeks = getCourseLengthWeeks(viewer);
+  const weekStarts        = generateCourseWeeks(courseStartDate, courseLengthWeeks);
+  const firstWeek         = weekStarts[0];
+  const lastWeek          = weekStarts[weekStarts.length - 1];
+  const accessibleUpTo    = currentWeekStart < lastWeek ? currentWeekStart : lastWeek;
   let weekStart = req.query.week || currentWeekStart;
-  if (weekStart < firstWeek)     weekStart = firstWeek;
+  if (weekStart < firstWeek)      weekStart = firstWeek;
   if (weekStart > accessibleUpTo) weekStart = accessibleUpTo;
-
-  // Snap to nearest course week that is <= weekStart
   let weekIdx = weekStarts.indexOf(weekStart);
   if (weekIdx === -1) {
     weekIdx = weekStarts.reduce((best, w, i) => (w <= weekStart ? i : best), 0);
     weekStart = weekStarts[weekIdx];
   }
-
   const weekName    = 'Week ' + WEEK_ORDINALS[weekIdx];
   const hasPrevWeek = weekIdx > 0;
   const prevWeek    = hasPrevWeek ? weekStarts[weekIdx - 1] : null;
-  const nextCandidate = weekIdx < 11 ? weekStarts[weekIdx + 1] : null;
+  const nextCandidate = weekIdx < weekStarts.length - 1 ? weekStarts[weekIdx + 1] : null;
   const hasNextWeek = !!(nextCandidate && nextCandidate <= accessibleUpTo);
   const nextWeek    = hasNextWeek ? nextCandidate : null;
 
-  // Community access by tier:
-  //   • Admin  → sees everyone.
-  //   • Paid   → sees the full-course cohort (fellow paid students + admin).
-  //   • Trial  → NOT a shared cohort. Other free signups are strangers, not
-  //              their people, so a trial student sees only themselves plus
-  //              the admin (their guide), with an upsell to unlock the real
-  //              community. communityLocked drives that view state.
-  const viewer        = req.session.user;
-  const viewerIsAdmin = viewer.role === 'admin';
-  const viewerPaid    = (viewer.course_length_weeks || 12) >= 12;
-  const communityLocked = !viewerIsAdmin && !viewerPaid;
-  const allUsers = db.getAllUsers().filter(u => {
-    if (viewerIsAdmin) return true;         // admin sees everyone
-    if (u.role === 'admin') return true;    // everyone sees the admin/guide
-    if (viewerPaid) return (u.course_length_weeks || 12) >= 12;
-    return u.id === viewer.id;              // trial: only themselves
-  });
-  const rows     = db.getAllUsersGoalsForWeek(weekStart);
+  let members = [];
+  if (roomOpen && cohort) {
+    // Roster = the cohort's members + the guide (admins carry no cohort_id).
+    const roster = db.getUsersInCohort(cohort.id);
+    const admins = db.getAllUsers().filter(u => u.role === 'admin');
+    const seen = new Set();
+    const memberUsers = [];
+    for (const u of [...admins, ...roster]) {
+      if (!seen.has(u.id)) { seen.add(u.id); memberUsers.push(u); }
+    }
 
-  const goalsMap = {};
-  for (const row of rows) {
-    if (!goalsMap[row.user_id]) goalsMap[row.user_id] = {};
-    const gd = parseGoalText(row.goal_text);
-    goalsMap[row.user_id][row.category] = {
-      goalData:   gd,
-      hasGoal:    !!(gd.items && gd.items.length > 0),
-      completed:  !!row.completed,
-      reflection: row.reflection || ''
-    };
+    const rows = db.getAllUsersGoalsForWeek(weekStart);
+    const goalsMap = {};
+    for (const row of rows) {
+      if (!goalsMap[row.user_id]) goalsMap[row.user_id] = {};
+      const gd = parseGoalText(row.goal_text);
+      goalsMap[row.user_id][row.category] = {
+        goalData: gd, hasGoal: !!(gd.items && gd.items.length > 0),
+        completed: !!row.completed, reflection: row.reflection || ''
+      };
+    }
+    const weekEndDate = new Date(weekStart + 'T00:00:00');
+    weekEndDate.setDate(weekEndDate.getDate() + 6);
+    const weekEnd = toLocalDateString(weekEndDate);
+    const dayCounts = db.getCuttingDayCountsByUser(weekStart, weekEnd);
+    const weekShareOverrides = db.getWeekSharesForWeek(weekStart);
+
+    members = memberUsers.map(u => ({
+      id: u.id, name: u.name, role: u.role,
+      avatar_initial: u.avatar_initial || u.name.charAt(0),
+      current_season: u.current_season || null,
+      profile_photo: u.profile_photo || null,
+      community_goals_public: weekShareOverrides.has(u.id)
+        ? weekShareOverrides.get(u.id) : (u.community_goals_public !== 0),
+      community_season_public: u.community_season_public !== 0,
+      goals: goalsMap[u.id] || {},
+      recordedDayCount: dayCounts.get(u.id) || 0
+    }));
   }
 
-  // Per-card "recorded N days this week" — one camera per distinct day a
-  // user logged a cutting in the viewed week's range. Derive weekEnd
-  // (weekStart + 6) and pull a count Map keyed by user_id. The template
-  // only sees a number per user (0..7) — no cutting text ever reaches a
-  // public surface even though this is one.
-  const weekEndDate = new Date(weekStart + 'T00:00:00');
-  weekEndDate.setDate(weekEndDate.getDate() + 6);
-  const weekEnd = toLocalDateString(weekEndDate);
-  const dayCounts = db.getCuttingDayCountsByUser(weekStart, weekEnd);
-
-  // Per-week sharing: an explicit override for this week wins; otherwise
-  // fall back to the member's default (community_goals_public).
-  const weekShareOverrides = db.getWeekSharesForWeek(weekStart);
-
-  const members = allUsers.map(u => ({
-    id:                      u.id,
-    name:                    u.name,
-    role:                    u.role,
-    avatar_initial:          u.avatar_initial || u.name.charAt(0),
-    current_season:          u.current_season || null,
-    profile_photo:           u.profile_photo || null,
-    community_goals_public:  weekShareOverrides.has(u.id)
-                               ? weekShareOverrides.get(u.id)
-                               : (u.community_goals_public !== 0),
-    community_season_public: u.community_season_public !== 0,
-    goals:                   goalsMap[u.id] || {},
-    recordedDayCount:        dayCounts.get(u.id) || 0
-  }));
+  // ── Feed tab data (posts + threaded comments) ──
+  let posts = [];
+  if (roomOpen && cohort) {
+    posts = db.getPostsForCohort(cohort.id, viewer.id);
+    const commentRows = posts.length ? db.getCommentsForPosts(posts.map(p => p.id)) : [];
+    const byPost = {};
+    for (const p of posts) byPost[p.id] = { top: [], byId: {} };
+    for (const c of commentRows) {
+      c.replies = [];
+      if (byPost[c.post_id]) byPost[c.post_id].byId[c.id] = c;
+    }
+    for (const c of commentRows) {
+      const bucket = byPost[c.post_id];
+      if (!bucket) continue;
+      if (c.parent_comment_id && bucket.byId[c.parent_comment_id]) {
+        bucket.byId[c.parent_comment_id].replies.push(c);
+      } else {
+        bucket.top.push(c);
+      }
+    }
+    for (const p of posts) p.comments = byPost[p.id] ? byPost[p.id].top : [];
+  }
 
   res.render('community', {
     title: 'Community',
     page:  'community',
+    viewerIsAdmin,
+    cohort,
+    cohorts,
+    selectedCohortId: cohort ? cohort.id : null,
+    roomOpen,
+    communityLocked,
+    lockedReason,
+    posts,
+    members,
     weekStart,
     weekName,
     dateRange:     formatDateRangeShort(weekStart),
-    members,
     prevWeek,
     nextWeek,
     hasPrevWeek,
     hasNextWeek,
     isCurrentWeek: weekStart === currentWeekStart,
-    currentUserId: req.session.user.id,
-    communityLocked
+    currentUserId: viewer.id,
+    viewer: {
+      id: viewer.id,
+      name: viewer.name,
+      avatar_initial: viewer.avatar_initial || viewer.name.charAt(0),
+      profile_photo: viewer.profile_photo || null,
+    },
+    communityDiscordUrl: process.env.COMMUNITY_DISCORD_URL || '',
   });
+});
+
+// ─── Cohort room API — posts, reactions, comments ───────────────────────────
+app.post('/api/community/posts', requireAuth, (req, res) => {
+  const viewer  = req.session.user;
+  const content = (req.body && typeof req.body.content === 'string') ? req.body.content.trim() : '';
+  if (!content) return res.status(400).json({ error: 'Write something first.' });
+  if (content.length > 5000) return res.status(400).json({ error: 'That post is a bit long — keep it under 5000 characters.' });
+
+  let cohortId;
+  if (viewer.role === 'admin') {
+    cohortId = parseInt(req.body.cohortId, 10);
+    if (!Number.isInteger(cohortId) || !db.getCohortById(cohortId)) {
+      return res.status(400).json({ error: 'Pick a cohort to post in.' });
+    }
+  } else {
+    cohortId = viewer.cohort_id;
+    if (!canAccessCohortRoom(viewer, cohortId)) {
+      return res.status(403).json({ error: 'Your cohort room isn’t open yet.' });
+    }
+  }
+  const r = db.createPost(viewer.id, content, cohortId);
+  res.json({ ok: true, id: r.lastInsertRowid });
+});
+
+app.post('/api/community/posts/:id/react', requireAuth, (req, res) => {
+  const post = db.getPostById(parseInt(req.params.id, 10));
+  if (!post) return res.status(404).json({ error: 'Post not found.' });
+  if (!canAccessCohortRoom(req.session.user, post.cohort_id)) {
+    return res.status(403).json({ error: 'This isn’t your room.' });
+  }
+  const type = (req.body && req.body.reaction === 'spark') ? 'spark' : 'heart';
+  const on = db.toggleReaction(post.id, req.session.user.id, type);
+  res.json({ ok: true, on });
+});
+
+app.post('/api/community/posts/:id/comments', requireAuth, (req, res) => {
+  const post = db.getPostById(parseInt(req.params.id, 10));
+  if (!post) return res.status(404).json({ error: 'Post not found.' });
+  if (!canAccessCohortRoom(req.session.user, post.cohort_id)) {
+    return res.status(403).json({ error: 'This isn’t your room.' });
+  }
+  const content = (req.body && typeof req.body.content === 'string') ? req.body.content.trim() : '';
+  if (!content) return res.status(400).json({ error: 'Write a comment first.' });
+  if (content.length > 3000) return res.status(400).json({ error: 'Keep comments under 3000 characters.' });
+
+  let parentId = parseInt(req.body.parentCommentId, 10);
+  if (Number.isInteger(parentId)) {
+    const parent = db.getCommentById(parentId);
+    if (!parent || parent.post_id !== post.id) {
+      return res.status(400).json({ error: 'Invalid reply target.' });
+    }
+    // Flatten to one level: a reply-to-a-reply attaches to the top-level comment.
+    if (parent.parent_comment_id) parentId = parent.parent_comment_id;
+  } else {
+    parentId = null;
+  }
+  const r = db.createComment(post.id, req.session.user.id, content, parentId);
+  res.json({ ok: true, id: r.lastInsertRowid });
+});
+
+app.delete('/api/community/posts/:id', requireAuth, (req, res) => {
+  const post = db.getPostById(parseInt(req.params.id, 10));
+  if (!post) return res.status(404).json({ error: 'Post not found.' });
+  const viewer = req.session.user;
+  const isAuthor = post.user_id === viewer.id;
+  if (!(viewer.role === 'admin' || (isAuthor && canAccessCohortRoom(viewer, post.cohort_id)))) {
+    return res.status(403).json({ error: 'You can only delete your own posts.' });
+  }
+  db.deletePost(post.id);
+  res.json({ ok: true });
+});
+
+app.post('/api/community/posts/:id/pin', requireAdmin, (req, res) => {
+  const post = db.getPostById(parseInt(req.params.id, 10));
+  if (!post) return res.status(404).json({ error: 'Post not found.' });
+  db.setPostPinned(post.id, req.body && req.body.pinned ? 1 : 0);
+  res.json({ ok: true });
+});
+
+app.delete('/api/community/comments/:id', requireAuth, (req, res) => {
+  const comment = db.getCommentById(parseInt(req.params.id, 10));
+  if (!comment) return res.status(404).json({ error: 'Comment not found.' });
+  const viewer = req.session.user;
+  const post = db.getPostById(comment.post_id);
+  const isAuthor = comment.user_id === viewer.id;
+  if (!(viewer.role === 'admin' || (isAuthor && post && canAccessCohortRoom(viewer, post.cohort_id)))) {
+    return res.status(403).json({ error: 'You can only delete your own comments.' });
+  }
+  db.deleteComment(comment.id);
+  res.json({ ok: true });
 });
 
 // ─── Calendar ──────────────────────────────────────────────────────────────
@@ -4806,7 +4943,7 @@ app.post('/api/admin/cohorts', requireAdmin, (req, res) => {
 app.put('/api/admin/cohorts/:id', requireAdmin, (req, res) => {
   const id = parseInt(req.params.id, 10);
   if (!db.getCohortById(id)) return res.status(404).json({ error: 'Cohort not found.' });
-  const { name, startDate, lengthWeeks, status, comped } = req.body || {};
+  const { name, startDate, lengthWeeks, status, comped, roomOpen } = req.body || {};
   if (name !== undefined && !String(name).trim()) {
     return res.status(400).json({ error: 'Cohort name cannot be empty.' });
   }
@@ -4816,6 +4953,7 @@ app.put('/api/admin/cohorts/:id', requireAdmin, (req, res) => {
     lengthWeeks: lengthWeeks !== undefined ? (parseInt(lengthWeeks, 10) || 3) : undefined,
     status:      status      !== undefined ? (COHORT_STATUSES.includes(status) ? status : 'upcoming') : undefined,
     comped:      comped      !== undefined ? (comped ? 1 : 0) : undefined,
+    roomOpen:    roomOpen    !== undefined ? (roomOpen ? 1 : 0) : undefined,
   });
   res.json({ ok: true });
 });
