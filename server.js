@@ -2346,6 +2346,17 @@ const TRIAL_CLOSING_QUESTIONS = [
     mid:  '0 = the same as when I started',
     high: '10 = something has shifted for the better'
   },
+  // tq1a / tq1b mirror the OPENING intake's Q4 and Q6 verbatim (same 1–10
+  // wording, stored in the same q4_rating / q6_rating columns, just on the
+  // trial_closing row) so there's a clean before/after on these two metrics.
+  { id: 'tq1a', type: 'rating', field: 'q4_rating',
+    text: 'How safe do you feel being seen online?',
+    low: '1 = visibility feels like a threat', high: '10 = visibility feels like home'
+  },
+  { id: 'tq1b', type: 'rating', field: 'q6_rating',
+    text: "How fully yourself do you feel when the camera's rolling?",
+    low: '1 = I hold almost everything back', high: "10 = I'm completely myself"
+  },
   { id: 'tq2', type: 'text', field: 'q9_text',
     text: "What's changed for you in these 3 weeks?",
     placeholder: "Is there anything that's different for you now than from when we started? Tell me more."
