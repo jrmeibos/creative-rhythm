@@ -1051,6 +1051,8 @@ app.post('/api/continuation/choose', requireAuth, (req, res) => {
                : null;
   if (!choice) return res.status(400).json({ error: 'Please choose an option.' });
 
+  const prevChoice = user.continuation_choice || null;
+
   db.setContinuationChoice(user.id, choice);
   user.continuation_choice = choice;
 
@@ -1067,6 +1069,24 @@ app.post('/api/continuation/choose', requireAuth, (req, res) => {
     db.setUserCourseLengthWeeks(user.id, 3);
     user.course_length_weeks = 3;
   }
+
+  // Notify Julia (admin only — no participant is emailed) of a *new* decision.
+  // Fire-and-forget: a mail hiccup must never block or fail the member's
+  // choice. Skipped on a no-op re-submit of the same choice.
+  if (choice !== prevChoice) {
+    const changed = prevChoice
+      ? ` (changed from ${prevChoice === 'continue' ? 'staying' : 'refund'})`
+      : '';
+    const subject = choice === 'continue'
+      ? `🌿 ${user.name} is staying in the garden`
+      : `${user.name} chose the refund`;
+    const bodyLine = choice === 'continue'
+      ? `${user.name} just chose to stay in the garden for the next three weeks${changed}. Their full garden is already open — nothing for you to do.`
+      : `${user.name} just chose to take their refund${changed}. When you're ready, issue it in Stripe and mark them "Refunded" in the admin panel.`;
+    sendAdminMilestoneEmail({ studentName: user.name, subject, bodyLine })
+      .catch(err => console.error('[continuation] admin notify failed:', err));
+  }
+
   req.session.save(() => res.json({ ok: true, choice }));
 });
 

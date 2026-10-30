@@ -106,11 +106,10 @@ async function sendAdminMilestoneEmail({ studentName, subject, bodyLine, pdf }) 
   const adminEmail  = process.env.ADMIN_EMAIL || 'julia@meibostouch.com';
   const name        = studentName || 'A student';
 
+  const hasPdf = !!(pdf && pdf.buffer && pdf.filename);
   const text = `Hi Julia,
 
-${bodyLine}
-
-A PDF copy is attached.
+${bodyLine}${hasPdf ? '\n\nA PDF copy is attached.' : ''}
 
 🌿
 The Creative's Garden`;
@@ -133,9 +132,9 @@ The Creative's Garden`;
     <p style="color: #100F10; font-size: 16px; line-height: 1.7; margin: 0 0 20px;">
       ${bodyLine}
     </p>
-    <p style="color: #76856C; font-size: 14px; line-height: 1.6; margin: 0 0 24px; font-style: italic;">
+    ${hasPdf ? `<p style="color: #76856C; font-size: 14px; line-height: 1.6; margin: 0 0 24px; font-style: italic;">
       A PDF copy is attached.
-    </p>
+    </p>` : ''}
     <p style="margin: 32px 0 0; text-align: center;">
       <img src="https://www.creativesgarden.com/images/brand/Favicon_3.png"
            alt="The Creative's Garden"
@@ -155,7 +154,7 @@ The Creative's Garden`;
     html,
   };
 
-  if (pdf && pdf.buffer && pdf.filename) {
+  if (hasPdf) {
     payload.attachments = [{
       filename: pdf.filename,
       content: pdf.buffer.toString('base64'),
