@@ -620,6 +620,16 @@ db.exec(`
     console.log('✓ Migrated: added room_open column to cohorts');
   }
 
+  // End-of-challenge refund-vs-continue choice. null = undecided, 'continue'
+  // (staying — garden flipped open) or 'refund' (wants the refund; Julia issues
+  // it in Stripe). Just records the decision; no money moves here.
+  const userColsCont = db.prepare("PRAGMA table_info(users)").all().map(r => r.name);
+  if (!userColsCont.includes('continuation_choice')) {
+    db.exec("ALTER TABLE users ADD COLUMN continuation_choice TEXT");
+    db.exec("ALTER TABLE users ADD COLUMN continuation_choice_at DATETIME");
+    console.log('✓ Migrated: added continuation_choice columns to users');
+  }
+
   // Rebuild self_assessments if it has old column schema
   const saCols = db.prepare("PRAGMA table_info(self_assessments)").all().map(r => r.name);
   if (saCols.length > 0 && saCols.includes('q1_rating')) {
@@ -1838,7 +1848,7 @@ module.exports = {
   },
 
   getUserById(id) {
-    return db.prepare('SELECT id, name, email, role, avatar_initial, current_season, profile_photo, course_start_date, course_length_weeks, enrollment_tier, community_goals_public, challenge_payment_status, cohort_id FROM users WHERE id = ?').get(id);
+    return db.prepare('SELECT id, name, email, role, avatar_initial, current_season, profile_photo, course_start_date, course_length_weeks, enrollment_tier, community_goals_public, challenge_payment_status, cohort_id, continuation_choice FROM users WHERE id = ?').get(id);
   },
 
   // ─── Per-user course start date ───────────────────────────────────────────
@@ -1903,12 +1913,19 @@ module.exports = {
 
   getUsersInCohort(cohortId) {
     return db.prepare(
-      'SELECT id, name, email, role, avatar_initial, current_season, course_start_date, course_length_weeks, challenge_payment_status FROM users WHERE cohort_id = ? ORDER BY name ASC'
+      'SELECT id, name, email, role, avatar_initial, current_season, course_start_date, course_length_weeks, challenge_payment_status, continuation_choice FROM users WHERE cohort_id = ? ORDER BY name ASC'
     ).all(cohortId);
   },
 
   deleteCohort(id) {
     return db.prepare('DELETE FROM cohorts WHERE id = ?').run(id);
+  },
+
+  // End-of-challenge refund-vs-continue choice (records the decision only).
+  setContinuationChoice(userId, choice) {
+    return db.prepare(
+      "UPDATE users SET continuation_choice = ?, continuation_choice_at = CURRENT_TIMESTAMP WHERE id = ?"
+    ).run(choice || null, userId);
   },
 
   // ── Beta challenge: payment + refund-completion ─────────────────────────
@@ -2056,7 +2073,7 @@ module.exports = {
              u.profile_photo, u.community_goals_public, u.community_season_public,
              u.course_start_date, u.course_length_weeks, u.enrollment_tier,
              u.challenge_payment_status, u.notes, u.created_at,
-             u.cohort_id, c.name AS cohort_name
+             u.cohort_id, u.continuation_choice, c.name AS cohort_name
       FROM users u
       LEFT JOIN cohorts c ON c.id = u.cohort_id
       ORDER BY u.role DESC, u.name ASC

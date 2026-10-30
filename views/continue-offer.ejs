@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <%- include('partials/head') %>
+  <link rel="stylesheet" href="/css/dashboard.css">
+  <style>
+    .offer-body { background: var(--color-pearl); min-height: 100vh; }
+    .offer-wrap { max-width: 640px; margin: 0 auto; padding: 2.5rem 1.25rem 4rem; }
+    .offer-back { display: inline-block; font-family: var(--font-body); font-size: 0.85rem; color: rgba(16,15,16,0.5); text-decoration: none; margin-bottom: 1.75rem; }
+    .offer-back:hover { color: var(--color-bloem); }
+    .offer-card { background: var(--color-blank-page); border: 1px solid rgba(112,92,108,0.16); border-radius: 18px; padding: 2.25rem 2rem; }
+    .offer-h1 { font-family: var(--font-display); font-weight: 400; font-size: 1.9rem; color: var(--color-ink-stained); margin: 0 0 1.1rem; line-height: 1.2; }
+    .offer-p { font-family: var(--font-body); font-weight: 300; font-size: 1.02rem; line-height: 1.68; color: var(--color-ink-stained); margin: 0 0 1.15rem; }
+    .offer-invite { font-weight: 400; }
+    .offer-list { list-style: none; margin: 1.4rem 0; padding: 0; }
+    .offer-list li { position: relative; padding: 0 0 0 1.5rem; margin: 0 0 1rem; font-family: var(--font-body); font-weight: 300; font-size: 1rem; line-height: 1.6; color: var(--color-ink-stained); }
+    .offer-list li::before { content: "🌱"; position: absolute; left: 0; top: 0; font-size: 0.9rem; }
+    .offer-list b { font-weight: 700; }
+    .offer-actions { display: flex; flex-wrap: wrap; gap: 0.85rem; margin: 2rem 0 1rem; }
+    .offer-btn { appearance: none; border: none; cursor: pointer; font-family: var(--font-body); font-size: 0.98rem; padding: 0.85rem 1.4rem; border-radius: 10px; }
+    .offer-btn--stay { background: var(--color-bloem); color: #fff; }
+    .offer-btn--stay:hover { background: var(--color-bloem-mid); }
+    .offer-btn--refund { background: transparent; color: var(--color-ink-stained); border: 1.5px solid rgba(112,92,108,0.3); }
+    .offer-btn--refund:hover { border-color: var(--color-bloem); }
+    .offer-btn:disabled { opacity: 0.5; cursor: default; }
+    .offer-deadline { font-family: var(--font-body); font-size: 0.92rem; color: rgba(16,15,16,0.6); margin: 0.5rem 0 0; }
+    .offer-confirm-eyebrow { font-family: var(--font-body); font-size: 0.8rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--color-understory); margin: 0 0 0.6rem; font-weight: 700; }
+    .offer-change { background: none; border: none; cursor: pointer; font-family: var(--font-body); font-size: 0.9rem; color: var(--color-bloem); text-decoration: underline; padding: 0; margin-top: 1.4rem; }
+    .offer-error { color: #c0392b; font-family: var(--font-body); font-size: 0.9rem; margin: 0.8rem 0 0; }
+  </style>
+</head>
+<body class="app-body offer-body">
+  <main class="offer-wrap">
+    <a href="/dashboard" class="offer-back">← Back to the garden</a>
+
+    <div class="offer-card">
+      <% if (choice === 'continue') { %>
+        <p class="offer-confirm-eyebrow">You're staying 🌿</p>
+        <h1 class="offer-h1">I'm so glad you're in.</h1>
+        <p class="offer-p">Your garden is open — all the seasons are yours now. We begin together <strong><%= startLabel %></strong>, and I'll be in touch with the details soon.</p>
+        <p class="offer-p">Changed your heart before <%= decideBy %>? That's okay too.</p>
+        <button class="offer-change" data-choice="refund">Actually, I'd like my refund</button>
+        <p class="offer-error" id="offer-error" hidden></p>
+
+      <% } else if (choice === 'refund') { %>
+        <p class="offer-confirm-eyebrow">Refund noted</p>
+        <h1 class="offer-h1">Thank you, truly.</h1>
+        <p class="offer-p">I've noted that you'd like your refund — I'll take care of it on my end. It was a genuine joy to have you in this experiment, and I hope our paths cross again.</p>
+        <p class="offer-p">Changed your mind before <%= decideBy %>? The door's still open.</p>
+        <button class="offer-change" data-choice="continue">Actually, I'd like to stay in the garden</button>
+        <p class="offer-error" id="offer-error" hidden></p>
+
+      <% } else { %>
+        <h1 class="offer-h1">You kept your promise.</h1>
+        <p class="offer-p">All ten of you went through this experiment with me, start to finish. I'm so excited to be offering the $299 registration fee back to everyone.</p>
+        <p class="offer-p offer-invite">However, if you're curious to see what you can actually do with the recordings you've made these past three weeks, I'd love to invite you to stay in the garden.</p>
+        <p class="offer-p">Instead of taking your refund, you'd get three more weeks with me (and whoever else decides to stay). Together, we will look at what you've been capturing and start figuring out how to shape and share it.</p>
+        <p class="offer-p" style="margin-bottom:0.4rem;">That includes:</p>
+        <ul class="offer-list">
+          <li><b>The rest of the garden, open to you.</b> So far, we have only recorded. Now, every creation season unlocks, so you have what you need to turn those recordings into something you can share.</li>
+          <li><b>Three more weeks of community.</b> We'd keep meeting and workshopping together, side by side.</li>
+          <li><b>A one-on-one call with me.</b> Just us, to work through your unique visibility blocks and where you'd like to go.</li>
+        </ul>
+        <p class="offer-p">I genuinely wish that I could keep ALL of you, but please know there is no pressure with this offer. The three weeks you have already given this process have already been so helpful. Thank you for joining this experiment.</p>
+
+        <div class="offer-actions">
+          <button class="offer-btn offer-btn--stay" data-choice="continue">Stay in the garden</button>
+          <button class="offer-btn offer-btn--refund" data-choice="refund">I'll take my refund, please!</button>
+        </div>
+        <p class="offer-deadline">Decide by <strong><%= decideBy %></strong>. If you're in, we begin together <strong><%= startLabel %></strong>. 🌿</p>
+        <p class="offer-error" id="offer-error" hidden></p>
+      <% } %>
+    </div>
+  </main>
+
+  <script>
+    document.querySelectorAll('[data-choice]').forEach(function (btn) {
+      btn.addEventListener('click', async function () {
+        const choice = btn.getAttribute('data-choice');
+        if (choice === 'refund' && !confirm('Just checking — you’d like your refund instead of staying? You can change this until the deadline.')) return;
+        document.querySelectorAll('[data-choice]').forEach(b => b.disabled = true);
+        try {
+          const res = await fetch('/api/continuation/choose', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ choice })
+          });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok) throw new Error(data.error || 'Something went wrong — please try again.');
+          window.location.href = '/continue-offer';
+        } catch (e) {
+          const err = document.getElementById('offer-error');
+          if (err) { err.textContent = e.message; err.hidden = false; }
+          document.querySelectorAll('[data-choice]').forEach(b => b.disabled = false);
+        }
+      });
+    });
+  </script>
+</body>
+</html>

@@ -97,6 +97,8 @@
                   </div>
                   <% if (m.challenge_payment_status === 'refunded') { %><span class="admin-lesson-tag" title="Paid then refunded on completion">Refunded</span>
                   <% } else if (m.challenge_payment_status === 'paid') { %><span class="admin-lesson-tag" title="Paid the challenge fee">Paid</span><% } %>
+                  <% if (m.continuation_choice === 'continue') { %><span class="admin-lesson-tag" title="Chose to stay in the garden">🌿 Staying</span>
+                  <% } else if (m.continuation_choice === 'refund') { %><span class="admin-lesson-tag" title="Chose the refund — issue it in Stripe">Wants refund</span><% } %>
                   <select class="admin-input admin-select" style="width:auto;max-width:230px" onchange="assignCohort(<%= m.id %>, this.value)">
                     <option value="">— Unassigned</option>
                     <% for (const oc of cohortList) { %>
@@ -646,6 +648,40 @@
                 <span class="admin-unlock-badge <%= harvestUnlocked ? 'admin-unlock-badge--on' : 'admin-unlock-badge--off' %>">
                   <%= harvestUnlocked ? '✓ Unlocked' : 'Locked' %>
                 </span>
+              </div>
+            </div>
+          </div>
+
+          <!-- End-of-challenge refund / continue offer -->
+          <div class="admin-settings-block">
+            <span class="admin-settings-block-label">Refund &amp; continue offer</span>
+            <p class="admin-field-hint">
+              Opens the <code>/continue-offer</code> page (and a dashboard card) to your paid
+              challenge members, where each person privately chooses their <strong>refund</strong>
+              or to <strong>stay in the garden</strong>. Flip it on after your final call, then send
+              them the link. It auto-closes after the <strong>Nov 3</strong> deadline. Staying opens
+              their full garden; you issue any refunds in Stripe.
+            </p>
+            <div class="admin-unlock-row" style="margin-top:0.5rem">
+              <div>
+                <strong>Currently: <%= continuationOfferOpen ? 'Open to members' : 'Closed' %></strong>
+                <span class="admin-unlock-hint">
+                  <% if (continuationOfferOpen) { %>
+                    Members can see it and choose. Preview: <a href="/continue-offer" target="_blank" rel="noopener">/continue-offer</a>
+                  <% } else { %>
+                    Hidden from everyone until you open it.
+                  <% } %>
+                </span>
+              </div>
+              <div style="display:flex;align-items:center;gap:0.6rem">
+                <span class="admin-unlock-badge <%= continuationOfferOpen ? 'admin-unlock-badge--on' : 'admin-unlock-badge--off' %>">
+                  <%= continuationOfferOpen ? '✓ Open' : 'Closed' %>
+                </span>
+                <% if (continuationOfferOpen) { %>
+                  <button type="button" class="admin-btn-sm" onclick="setFlag('continuation_offer_open', 'false')">Close offer</button>
+                <% } else { %>
+                  <button type="button" class="admin-btn-sm" onclick="setFlag('continuation_offer_open', 'true')">Open offer</button>
+                <% } %>
               </div>
             </div>
           </div>

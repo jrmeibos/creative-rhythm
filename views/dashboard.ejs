@@ -78,6 +78,28 @@
            outer #dayview-container is persistent — it stays in the DOM
            across day-to-day fetch-and-swap, and is what the inline
            controller below delegates events from. -->
+      <% if (locals.continuationOfferCardVisible) { %>
+      <section class="dash-section">
+        <div class="mid-card">
+          <% if (continuationChoice === 'continue') { %>
+            <p class="mid-card-eyebrow">You're staying 🌿</p>
+            <h2 class="mid-card-title">Your garden is open</h2>
+            <p class="mid-card-body">So glad you're continuing. All the seasons are yours now — we begin together November 5th.</p>
+            <a href="/continue-offer" class="mid-card-cta">View the details →</a>
+          <% } else if (continuationChoice === 'refund') { %>
+            <p class="mid-card-eyebrow">Refund noted</p>
+            <h2 class="mid-card-title">Thank you for these three weeks</h2>
+            <p class="mid-card-body">Your refund is on its way. Changed your mind? The door's still open until November 3rd.</p>
+            <a href="/continue-offer" class="mid-card-cta">See your options →</a>
+          <% } else { %>
+            <p class="mid-card-eyebrow">A note from Julia 🌿</p>
+            <h2 class="mid-card-title">Your refund is ready — and there's an invitation inside</h2>
+            <p class="mid-card-body">You kept your promise, so your $299 is yours to take back. Before you decide, I'd love you to read one more invitation.</p>
+            <a href="/continue-offer" class="mid-card-cta">See your invitation →</a>
+          <% } %>
+        </div>
+      </section>
+      <% } %>
       <% if (trialClosingCardVisible) { %>
       <section class="dash-section">
         <div class="mid-card" data-banner-key="trial_closing">
@@ -92,7 +114,7 @@
         </div>
       </section>
       <% } %>
-      <% if (trialComplete) { %>
+      <% if (trialComplete && !locals.continuationOfferCardVisible) { %>
       <section class="dash-section">
         <div class="mid-card">
           <% if (locals.canContinueFree) { %>

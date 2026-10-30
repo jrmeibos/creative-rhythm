@@ -279,6 +279,7 @@ app.use((req, res, next) => {
       s.course_start_date   = fresh.course_start_date || null;
       s.challenge_payment_status = fresh.challenge_payment_status || null;
       s.cohort_id           = fresh.cohort_id || null;
+      s.continuation_choice = fresh.continuation_choice || null;
     }
   }
   next();
@@ -925,6 +926,11 @@ app.get('/dashboard', requireAuth, (req, res) => {
   const contCohort = req.session.user.cohort_id ? db.getCohortById(req.session.user.cohort_id) : null;
   const canContinueFree = isTrial && !!(contCohort && contCohort.comped);
 
+  // End-of-challenge refund-vs-continue offer card. When it's live for this
+  // member it replaces the generic "trial complete / keep going" card.
+  const continuationOfferCardVisible = isContinuationOfferOpenFor(req.session.user)
+    && !hiddenBanners.has('continuation_offer');
+
   res.render('dashboard', {
     title: 'Dashboard',
     page: 'dashboard',
@@ -963,6 +969,8 @@ app.get('/dashboard', requireAuth, (req, res) => {
       && !db.getCheckinResponse(userId, CHECKIN.key),
     checkinTitle: CHECKIN.title,
     canContinueFree,
+    continuationOfferCardVisible,
+    continuationChoice: req.session.user.continuation_choice || null,
   });
 });
 
@@ -996,6 +1004,70 @@ app.post('/api/continue', requireAuth, (req, res) => {
   // Save before responding so the next request (the client reload) sees the
   // upgraded length — same race guard used elsewhere in the app.
   req.session.save(() => res.json({ ok: true }));
+});
+
+// ─── End-of-challenge refund-vs-continue offer ──────────────────────────────
+// At the end of the challenge every member is refund-eligible. Instead of the
+// refund they can "stay in the garden" — keep the $299 they already paid and
+// continue. This only RECORDS the choice (and opens the garden for stayers);
+// Julia issues any actual refunds in Stripe. Gated behind an admin toggle
+// (continuation_offer_open, default off) and a hard decision deadline.
+const CONTINUATION_DECIDE_BY   = '2026-11-03';   // last day to choose (inclusive)
+const CONTINUATION_START_LABEL = 'November 5th';
+
+function isContinuationOfferOpen() {
+  return db.getSetting('continuation_offer_open') === 'true';
+}
+// A member may use the offer when it's toggled open, we're on/before the
+// deadline (their wall clock), and they're a refund-eligible challenge grad
+// (paid + in a cohort). Admins never see it.
+function isContinuationOfferOpenFor(user) {
+  if (!user || user.role !== 'student') return false;
+  if (!isContinuationOfferOpen()) return false;
+  if (!user.cohort_id) return false;
+  if (user.challenge_payment_status !== 'paid') return false;
+  return toLocalDateString(getNow(user)) <= CONTINUATION_DECIDE_BY;
+}
+
+app.get('/continue-offer', requireAuth, (req, res) => {
+  const user = req.session.user;
+  if (user.role === 'admin') return res.redirect('/dashboard');
+  if (!isContinuationOfferOpenFor(user)) return res.redirect('/dashboard');
+  res.render('continue-offer', {
+    title: 'An invitation', page: '',
+    choice: user.continuation_choice || null,
+    decideBy: new Date(CONTINUATION_DECIDE_BY + 'T00:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric' }),
+    startLabel: CONTINUATION_START_LABEL,
+  });
+});
+
+app.post('/api/continuation/choose', requireAuth, (req, res) => {
+  const user = req.session.user;
+  if (!isContinuationOfferOpenFor(user)) {
+    return res.status(403).json({ error: 'This offer isn’t open for you.' });
+  }
+  const choice = (req.body && req.body.choice === 'continue') ? 'continue'
+               : (req.body && req.body.choice === 'refund')   ? 'refund'
+               : null;
+  if (!choice) return res.status(400).json({ error: 'Please choose an option.' });
+
+  db.setContinuationChoice(user.id, choice);
+  user.continuation_choice = choice;
+
+  if (choice === 'continue') {
+    // Stay in the garden → open the full course (the same flip as the
+    // continuation engine). They keep the $299 already paid; no new charge.
+    if (getCourseLengthWeeks(user) < 12) {
+      db.setUserCourseLengthWeeks(user.id, 12);
+      user.course_length_weeks = 12;
+    }
+  } else if (getCourseLengthWeeks(user) >= 12) {
+    // Changed their mind to refund after staying → close the garden back to the
+    // trial track until Julia processes the refund.
+    db.setUserCourseLengthWeeks(user.id, 3);
+    user.course_length_weeks = 3;
+  }
+  req.session.save(() => res.json({ ok: true, choice }));
 });
 
 // ─── Day-view fragment endpoint ────────────────────────────────────────────
@@ -4800,6 +4872,7 @@ app.get('/admin', requireAdmin, (req, res) => {
   const harvestUnlocked    = db.getSetting('harvest_unlocked') === 'true';
   const midcourseUnlocked  = db.getSetting('midcourse_unlocked') === 'true';
   const upgradeMode        = db.getSetting('upgrade_mode') || 'coming_soon';
+  const continuationOfferOpen = db.getSetting('continuation_offer_open') === 'true';
   const simulatedToday     = db.getSetting('simulated_today') || null;
   const studentAssessments = db.getAllStudentAssessmentStatus();
 
@@ -4916,6 +4989,7 @@ app.get('/admin', requireAdmin, (req, res) => {
     checkins: db.getAllCheckinResponses(CHECKIN.key),
     checkinTitle: CHECKIN.title,
     harvestUnlocked, midcourseUnlocked, upgradeMode,
+    continuationOfferOpen,
     midcourseUnlockDate, closingUnlockDate,
     simulatedToday,
     studentAssessments,
@@ -5224,7 +5298,7 @@ app.get('/admin/seed-packets-export/:userId', requireAdmin, (req, res) => {
 
 app.post('/api/admin/settings', requireAdmin, (req, res) => {
   const { key, value } = req.body;
-  const allowed = ['harvest_unlocked', 'midcourse_unlocked', 'simulated_today', 'upgrade_mode'];
+  const allowed = ['harvest_unlocked', 'midcourse_unlocked', 'simulated_today', 'upgrade_mode', 'continuation_offer_open'];
   if (!allowed.includes(key)) return res.status(400).json({ error: 'Invalid key' });
   // upgrade_mode is a two-state switch — normalize anything unexpected to the
   // safe 'coming_soon' state so the unfinished pricing page can't leak.
