@@ -3,6 +3,26 @@
 <head>
   <%- include('partials/head') %>
   <link rel="stylesheet" href="/css/dashboard.css">
+  <style>
+    /* Admin tabbed layout (Overview / Cohorts / People / Course) */
+    .admin-tabnav{display:flex;gap:.2rem;flex-wrap:wrap;margin:0 0 1.75rem;border-bottom:1px solid rgba(112,92,108,0.18)}
+    .admin-tab{appearance:none;border:none;background:none;font:inherit;font-size:.95rem;color:var(--color-ink-stained);opacity:.5;padding:.6rem .9rem;border-bottom:2px solid transparent;margin-bottom:-1px;cursor:pointer}
+    .admin-tab:hover{opacity:.85}
+    .admin-tab[aria-current="true"]{opacity:1;color:var(--color-bloem);border-bottom-color:var(--color-bloem)}
+    section[data-tab][hidden]{display:none}
+    .admin-desk{display:grid;grid-template-columns:repeat(2,1fr);gap:1rem}
+    @media(max-width:820px){.admin-desk{grid-template-columns:1fr}}
+    .admin-desk-card{background:var(--color-blank-page);border:1px solid rgba(112,92,108,0.16);border-radius:14px;padding:1.1rem 1.2rem}
+    .admin-desk-card h3{font:inherit;font-size:1rem;font-weight:500;margin:0 0 .9rem;display:flex;align-items:center;gap:.4rem}
+    .admin-tally{display:flex;gap:1.6rem;flex-wrap:wrap}
+    .admin-tally .n{font-family:'Goldage',Georgia,serif;font-size:2rem;line-height:1}
+    .admin-tally .l{font-size:.78rem;color:rgba(16,15,16,.56);margin-top:.15rem}
+    .admin-desk-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:.5rem}
+    .admin-desk-row{display:flex;align-items:center;gap:.6rem;padding:.5rem .6rem;border-radius:9px;background:var(--color-pearl)}
+    .admin-desk-row .grow{flex:1 1 auto;min-width:0}
+    .admin-desk-note{font-size:.75rem;color:rgba(16,15,16,.42);margin:.85rem 0 0}
+    .admin-desk-empty{color:rgba(16,15,16,.42);font-size:.88rem;font-style:italic;padding:.3rem .2rem}
+  </style>
 </head>
 <body class="app-body">
 
@@ -17,6 +37,13 @@
           <p class="dash-week-label">Platform settings and management</p>
         </div>
       </header>
+
+      <nav class="admin-tabnav" aria-label="Admin sections">
+        <button class="admin-tab" type="button" data-tab="overview" aria-current="true">Overview</button>
+        <button class="admin-tab" type="button" data-tab="cohorts">Cohorts</button>
+        <button class="admin-tab" type="button" data-tab="people">People</button>
+        <button class="admin-tab" type="button" data-tab="course">Course</button>
+      </nav>
 
       <%
         // Split off challenge signups who never finished the $299 checkout
@@ -51,7 +78,47 @@
             : 'Starts ' + d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
         };
       %>
-      <section class="dash-section" id="section-cohorts">
+      <!-- ── Overview · action desk ───────────────────────────────────────── -->
+      <%
+        const paidStudents  = studentUsers.filter(u => u.challenge_payment_status === 'paid');
+        const stayingList   = studentUsers.filter(u => u.continuation_choice === 'continue');
+        const refundList    = studentUsers.filter(u => u.continuation_choice === 'refund');
+        const decidingList  = paidStudents.filter(u => u.cohort_id && !u.continuation_choice);
+      %>
+      <section class="dash-section" data-tab="overview">
+        <div class="dash-section-header">
+          <h2 class="dash-section-title">What needs you</h2>
+          <% if (continuationOfferOpen) { %><span class="admin-lesson-tag" style="background:#e4ead9;color:#5f7256" title="The refund & continue offer is open">🌿 Refund offer open</span><% } %>
+        </div>
+        <div class="admin-desk">
+          <div class="admin-desk-card">
+            <h3>🌿 Refund &amp; continue decisions</h3>
+            <div class="admin-tally">
+              <div><div class="n" style="color:#5f7256"><%= stayingList.length %></div><div class="l">staying</div></div>
+              <div><div class="n" style="color:#9a6a1e"><%= refundList.length %></div><div class="l">want refund</div></div>
+              <div><div class="n"><%= decidingList.length %></div><div class="l">still deciding</div></div>
+            </div>
+          </div>
+          <div class="admin-desk-card">
+            <h3>Refunds to issue in Stripe</h3>
+            <ul class="admin-desk-list">
+              <% if (refundList.length) { refundList.forEach(function(u){ %>
+                <li class="admin-desk-row">
+                  <div class="sidebar-avatar" style="width:26px;height:26px;font-size:.72rem"><%= u.avatar_initial || u.name.charAt(0) %></div>
+                  <div class="grow"><div style="font-size:.9rem"><%= u.name %></div><div style="font-size:.74rem;color:rgba(16,15,16,.5)"><%= u.email %></div></div>
+                  <span class="admin-lesson-tag" style="background:#f7e6c4;color:#9a6a1e">Wants refund</span>
+                </li>
+              <% }); } else { %>
+                <li class="admin-desk-empty">No open refund requests. 🌿</li>
+              <% } %>
+            </ul>
+            <p class="admin-desk-note">You issue the money in Stripe; the choice is only recorded here.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── Cohorts ──────────────────────────────────────────────────────── -->
+      <section class="dash-section" id="section-cohorts" data-tab="cohorts">
         <div class="dash-section-header">
           <h2 class="dash-section-title">Cohorts</h2>
           <div class="admin-section-actions">
@@ -144,7 +211,7 @@
       </section>
 
       <!-- ── Students ─────────────────────────────────────────────────────── -->
-      <section class="dash-section" id="section-students">
+      <section class="dash-section" id="section-students" data-tab="people">
         <div class="dash-section-header">
           <h2 class="dash-section-title">Gardeners</h2>
           <div class="admin-section-actions">
@@ -232,7 +299,7 @@
 
       <!-- ── Pending signups (started, never paid) ────────────────────────── -->
       <% if (pendingSignups.length) { %>
-      <section class="dash-section" id="section-pending">
+      <section class="dash-section" id="section-pending" data-tab="overview">
         <div class="dash-section-header">
           <h2 class="dash-section-title">Pending signups</h2>
           <span class="admin-count"><%= pendingSignups.length %> haven't paid</span>
@@ -277,7 +344,7 @@
       <% } %>
 
       <!-- ── The 3-Week Challenge (the current offering) ──────────────────── -->
-      <section class="dash-section" id="section-challenge">
+      <section class="dash-section" id="section-challenge" data-tab="overview">
         <div class="dash-section-header">
           <h2 class="dash-section-title">The 3-Week Challenge</h2>
           <div class="admin-section-actions">
@@ -405,7 +472,7 @@
       </section>
 
       <!-- ── Lessons ──────────────────────────────────────────────────────── -->
-      <section class="dash-section" id="section-lessons">
+      <section class="dash-section" id="section-lessons" data-tab="course">
         <div class="dash-section-header">
           <h2 class="dash-section-title">Lessons</h2>
           <div class="admin-section-actions">
@@ -455,7 +522,7 @@
       </section>
 
       <!-- ── Resources ────────────────────────────────────────────────────── -->
-      <section class="dash-section" id="section-resources">
+      <section class="dash-section" id="section-resources" data-tab="course">
         <div class="dash-section-header">
           <h2 class="dash-section-title">Resources</h2>
           <div class="admin-section-actions">
@@ -495,7 +562,7 @@
       </section>
 
       <!-- ── Five days in — check-in responses ─────────────────────────────── -->
-      <section class="dash-section" id="section-checkins">
+      <section class="dash-section" id="section-checkins" data-tab="people">
         <div class="dash-section-header">
           <h2 class="dash-section-title"><%= checkinTitle %> — check-in responses</h2>
           <span class="admin-count"><%= checkins.length %> in</span>
@@ -519,7 +586,7 @@
       </section>
 
       <!-- ── Student Assessments ──────────────────────────────────────────── -->
-      <section class="dash-section" id="section-assessments">
+      <section class="dash-section" id="section-assessments" data-tab="people">
         <div class="dash-section-header">
           <h2 class="dash-section-title">Gardener Assessments</h2>
         </div>
@@ -589,7 +656,7 @@
       </section>
 
       <!-- ── Lesson Completions ────────────────────────────────────────────── -->
-      <section class="dash-section">
+      <section class="dash-section" data-tab="people">
         <div class="dash-section-header">
           <h2 class="dash-section-title">Lesson Completions</h2>
         </div>
@@ -611,7 +678,7 @@
       <!-- ══ Settings & tools (kept at the bottom — used rarely) ═══════════════ -->
 
       <!-- ── Course Settings ──────────────────────────────────────────────── -->
-      <section class="dash-section">
+      <section class="dash-section" data-tab="course">
         <div class="dash-section-header">
           <h2 class="dash-section-title">Course Settings</h2>
         </div>
@@ -740,7 +807,7 @@
       <%
         const SEASON_LABELS = { spring: 'Spring · Curiosity', summer: 'Summer · Create', autumn: 'Autumn · Share', winter: 'Winter · Connect' };
       %>
-      <section class="dash-section" id="section-quotes">
+      <section class="dash-section" id="section-quotes" data-tab="course">
         <div class="dash-section-header">
           <h2 class="dash-section-title">Dashboard Quotes</h2>
           <div class="admin-section-actions">
@@ -1970,6 +2037,28 @@
           </div>
         </div>`;
     }
+  </script>
+
+  <script>
+    // Admin tabs: show one group of sections at a time. Sections are tagged
+    // with data-tab; nothing is moved, so every existing dialog/handler still
+    // works. The active tab is mirrored to the URL hash so a reload stays put.
+    (function () {
+      var tabs = Array.prototype.slice.call(document.querySelectorAll('.admin-tab'));
+      var panels = Array.prototype.slice.call(document.querySelectorAll('section[data-tab]'));
+      var valid = { overview: 1, cohorts: 1, people: 1, course: 1 };
+      function show(tab) {
+        if (!valid[tab]) tab = 'overview';
+        tabs.forEach(function (t) { t.setAttribute('aria-current', t.dataset.tab === tab ? 'true' : 'false'); });
+        panels.forEach(function (p) { p.hidden = (p.dataset.tab !== tab); });
+        try { history.replaceState(null, '', '#' + tab); } catch (e) {}
+      }
+      tabs.forEach(function (t) {
+        t.addEventListener('click', function () { show(t.dataset.tab); window.scrollTo({ top: 0 }); });
+      });
+      var init = (location.hash || '').replace('#', '');
+      show(valid[init] ? init : 'overview');
+    })();
   </script>
 
 </body>
