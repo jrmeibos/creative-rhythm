@@ -80,7 +80,10 @@
     document.querySelectorAll('[data-choice]').forEach(function (btn) {
       btn.addEventListener('click', async function () {
         const choice = btn.getAttribute('data-choice');
-        if (choice === 'refund' && !confirm('Just checking — you’d like your refund instead of staying? You can change this until the deadline.')) return;
+        // No native confirm() here: it was silently eating refund clicks when a
+        // student dismissed it, so the choice never recorded. The choice is
+        // reversible until the deadline and the next screen confirms it, so we
+        // record straight away — the same way "continue" already does.
         document.querySelectorAll('[data-choice]').forEach(b => b.disabled = true);
         try {
           const res = await fetch('/api/continuation/choose', {
