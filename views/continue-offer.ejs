@@ -17,15 +17,18 @@
     .offer-list li::before { content: "🌱"; position: absolute; left: 0; top: 0; font-size: 0.9rem; }
     .offer-list b { font-weight: 700; }
     .offer-actions { display: flex; flex-wrap: wrap; gap: 0.85rem; margin: 2rem 0 1rem; }
-    .offer-btn { appearance: none; border: none; cursor: pointer; font-family: var(--font-body); font-size: 0.98rem; padding: 0.85rem 1.4rem; border-radius: 10px; }
-    .offer-btn--stay { background: var(--color-bloem); color: #fff; }
-    .offer-btn--stay:hover { background: var(--color-bloem-mid); }
-    .offer-btn--refund { background: transparent; color: var(--color-ink-stained); border: 1.5px solid rgba(112,92,108,0.3); }
-    .offer-btn--refund:hover { border-color: var(--color-bloem); }
+    .offer-btn { appearance: none; cursor: pointer; font-family: var(--font-body); font-size: 1rem; padding: 0.95rem 1.4rem; border-radius: 10px; border: 1.5px solid transparent; flex: 1 1 220px; text-align: center; }
+    .offer-btn--stay { background: var(--color-bloem); color: #fff; border-color: var(--color-bloem); }
+    .offer-btn--stay:hover { background: var(--color-bloem-mid); border-color: var(--color-bloem-mid); }
+    /* Refund reads as a real, co-equal choice — solid fill + full bloem border,
+       not the faint ghost outline that students were overlooking. */
+    .offer-btn--refund { background: var(--color-blank-page); color: var(--color-bloem); border-color: var(--color-bloem); }
+    .offer-btn--refund:hover { background: var(--color-new-growth); }
     .offer-btn:disabled { opacity: 0.5; cursor: default; }
     .offer-deadline { font-family: var(--font-body); font-size: 0.92rem; color: rgba(16,15,16,0.6); margin: 0.5rem 0 0; }
     .offer-confirm-eyebrow { font-family: var(--font-body); font-size: 0.8rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--color-understory); margin: 0 0 0.6rem; font-weight: 700; }
-    .offer-change { background: none; border: none; cursor: pointer; font-family: var(--font-body); font-size: 0.9rem; color: var(--color-bloem); text-decoration: underline; padding: 0; margin-top: 1.4rem; }
+    .offer-change { display: inline-block; background: none; cursor: pointer; font-family: var(--font-body); font-size: 0.92rem; color: var(--color-bloem); border: 1.5px solid var(--color-bloem); border-radius: 9px; padding: 0.55rem 0.9rem; margin-top: 1.4rem; }
+    .offer-change:hover { background: var(--color-new-growth); }
     .offer-error { color: #c0392b; font-family: var(--font-body); font-size: 0.9rem; margin: 0.8rem 0 0; }
   </style>
 </head>
