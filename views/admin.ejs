@@ -10,18 +10,26 @@
     .admin-tab:hover{opacity:.85}
     .admin-tab[aria-current="true"]{opacity:1;color:var(--color-bloem);border-bottom-color:var(--color-bloem)}
     section[data-tab][hidden]{display:none}
-    .admin-desk{display:grid;grid-template-columns:repeat(2,1fr);gap:1rem}
-    @media(max-width:820px){.admin-desk{grid-template-columns:1fr}}
-    .admin-desk-card{background:var(--color-blank-page);border:1px solid rgba(112,92,108,0.16);border-radius:14px;padding:1.1rem 1.2rem}
-    .admin-desk-card h3{font:inherit;font-size:1rem;font-weight:500;margin:0 0 .9rem;display:flex;align-items:center;gap:.4rem}
-    .admin-tally{display:flex;gap:1.6rem;flex-wrap:wrap}
-    .admin-tally .n{font-family:'Goldage',Georgia,serif;font-size:2rem;line-height:1}
-    .admin-tally .l{font-size:.78rem;color:rgba(16,15,16,.56);margin-top:.15rem}
-    .admin-desk-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:.5rem}
-    .admin-desk-row{display:flex;align-items:center;gap:.6rem;padding:.5rem .6rem;border-radius:9px;background:var(--color-pearl)}
-    .admin-desk-row .grow{flex:1 1 auto;min-width:0}
-    .admin-desk-note{font-size:.75rem;color:rgba(16,15,16,.42);margin:.85rem 0 0}
-    .admin-desk-empty{color:rgba(16,15,16,.42);font-size:.88rem;font-style:italic;padding:.3rem .2rem}
+    /* Cohorts tab — collapsible cohort cards + roster */
+    .cohort-card{padding:0;overflow:hidden}
+    .cohort-card-head{display:flex;align-items:center;gap:.7rem;padding:.9rem 1.1rem;cursor:pointer}
+    .cohort-card-head:hover{background:var(--color-pearl)}
+    .cohort-chevron{color:rgba(16,15,16,.4);font-size:.75rem;width:.9rem;flex:none}
+    .cohort-head-meta{display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;justify-content:flex-end}
+    .cohort-roster{border-top:1px solid rgba(112,92,108,0.14)}
+    .cohort-roster[hidden]{display:none}
+    .cohort-roster-scroll{overflow-x:auto}
+    .cohort-roster-tbl{width:100%;border-collapse:collapse;font-size:.86rem}
+    .cohort-roster-tbl th{text-align:left;font-weight:500;font-size:.68rem;letter-spacing:.08em;text-transform:uppercase;color:rgba(16,15,16,.5);padding:.55rem .7rem;border-bottom:1px solid rgba(112,92,108,0.14);white-space:nowrap}
+    .cohort-roster-tbl td{padding:.55rem .7rem;border-bottom:1px solid rgba(112,92,108,0.1);vertical-align:middle}
+    .cohort-roster-tbl tbody tr:last-child td{border-bottom:none}
+    .who-cell{display:flex;align-items:center;gap:.55rem;min-width:0}
+    .who-cell .admin-user-name{font-size:.88rem}
+    .who-cell .admin-user-email{font-size:.72rem}
+    .rec-dot,.season-dot{display:inline-block;width:.55rem;height:.55rem;border-radius:50%;margin-right:.35rem;vertical-align:middle}
+    .admin-btn-text{appearance:none;border:none;background:none;color:var(--color-bloem);font:inherit;font-size:.82rem;cursor:pointer;padding:.2rem .1rem;white-space:nowrap}
+    .admin-btn-text:hover{text-decoration:underline}
+    .cohort-move{font:inherit;font-size:.78rem;border:1px solid rgba(112,92,108,0.3);border-radius:7px;padding:.25rem .4rem;background:var(--color-blank-page);max-width:160px}
   </style>
 </head>
 <body class="app-body">
@@ -78,44 +86,6 @@
             : 'Starts ' + d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
         };
       %>
-      <!-- ── Overview · action desk ───────────────────────────────────────── -->
-      <%
-        const paidStudents  = studentUsers.filter(u => u.challenge_payment_status === 'paid');
-        const stayingList   = studentUsers.filter(u => u.continuation_choice === 'continue');
-        const refundList    = studentUsers.filter(u => u.continuation_choice === 'refund');
-        const decidingList  = paidStudents.filter(u => u.cohort_id && !u.continuation_choice);
-      %>
-      <section class="dash-section" data-tab="overview">
-        <div class="dash-section-header">
-          <h2 class="dash-section-title">What needs you</h2>
-          <% if (continuationOfferOpen) { %><span class="admin-lesson-tag" style="background:#e4ead9;color:#5f7256" title="The refund & continue offer is open">🌿 Refund offer open</span><% } %>
-        </div>
-        <div class="admin-desk">
-          <div class="admin-desk-card">
-            <h3>🌿 Refund &amp; continue decisions</h3>
-            <div class="admin-tally">
-              <div><div class="n" style="color:#5f7256"><%= stayingList.length %></div><div class="l">staying</div></div>
-              <div><div class="n" style="color:#9a6a1e"><%= refundList.length %></div><div class="l">want refund</div></div>
-              <div><div class="n"><%= decidingList.length %></div><div class="l">still deciding</div></div>
-            </div>
-          </div>
-          <div class="admin-desk-card">
-            <h3>Refunds to issue in Stripe</h3>
-            <ul class="admin-desk-list">
-              <% if (refundList.length) { refundList.forEach(function(u){ %>
-                <li class="admin-desk-row">
-                  <div class="sidebar-avatar" style="width:26px;height:26px;font-size:.72rem"><%= u.avatar_initial || u.name.charAt(0) %></div>
-                  <div class="grow"><div style="font-size:.9rem"><%= u.name %></div><div style="font-size:.74rem;color:rgba(16,15,16,.5)"><%= u.email %></div></div>
-                  <span class="admin-lesson-tag" style="background:#f7e6c4;color:#9a6a1e">Wants refund</span>
-                </li>
-              <% }); } else { %>
-                <li class="admin-desk-empty">No open refund requests. 🌿</li>
-              <% } %>
-            </ul>
-            <p class="admin-desk-note">You issue the money in Stripe; the choice is only recorded here.</p>
-          </div>
-        </div>
-      </section>
 
       <!-- ── Cohorts ──────────────────────────────────────────────────────── -->
       <section class="dash-section" id="section-cohorts" data-tab="cohorts">
@@ -135,48 +105,65 @@
           <div class="admin-card"><p class="admin-user-email" style="margin:0">No cohorts yet. Create one to get started.</p></div>
         <% } %>
 
-        <% for (const c of cohortList) { const members = membersByCohort.get(c.id) || []; %>
-          <div class="admin-card" style="margin-bottom:1rem">
-            <div class="dash-section-header" style="margin-bottom:0.6rem">
-              <div>
+        <% for (const c of cohortList) {
+             const members = membersByCohort.get(c.id) || [];
+             const openByDefault = c.status === 'active';
+             const seasonMap = { spring: ['#D8B0AB','Spring'], summer: ['#F6C95C','Summer'], autumn: ['#a990a4','Autumn'], winter: ['#76856C','Winter'] };
+        %>
+          <div class="admin-card cohort-card" style="margin-bottom:1rem">
+            <div class="cohort-card-head" role="button" tabindex="0"
+                 onclick="toggleCohort(<%= c.id %>)"
+                 onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleCohort(<%= c.id %>);}">
+              <span class="cohort-chevron" id="cohort-chev-<%= c.id %>"><%= openByDefault ? '▾' : '▸' %></span>
+              <div style="flex:1 1 auto;min-width:0">
                 <span class="admin-user-name" style="font-size:1rem"><%= c.name %></span>
                 <div class="admin-user-email">
-                  <%= fmtCohortStart(c.start_date) %> · <%= c.length_weeks %> weeks · <%= cohortStatusLabel[c.status] || c.status %><% if (c.comped) { %> · <span title="This whole cohort has full access without paying.">comped</span><% } %> · <span title="Whether members can see their cohort room (feed + progress)."><%= c.room_open ? '🟢 room open' : '🔒 room closed' %></span>
+                  <%= fmtCohortStart(c.start_date) %> · <%= c.length_weeks %> weeks · <%= cohortStatusLabel[c.status] || c.status %><% if (c.comped) { %> · comped<% } %> · <%= c.room_open ? '🟢 room open' : '🔒 room closed' %>
                 </div>
               </div>
-              <div class="admin-section-actions">
+              <div class="cohort-head-meta">
                 <span class="admin-count"><%= members.length %> member<%= members.length === 1 ? '' : 's' %></span>
                 <button class="admin-btn-icon" type="button" title="Edit cohort"
-                  onclick="openEditCohort(<%= JSON.stringify({ id: c.id, name: c.name, start_date: c.start_date ? String(c.start_date).slice(0,10) : '', length_weeks: c.length_weeks, status: c.status, comped: !!c.comped, room_open: !!c.room_open }) %>)">✎</button>
+                  onclick="event.stopPropagation();openEditCohort(<%= JSON.stringify({ id: c.id, name: c.name, start_date: c.start_date ? String(c.start_date).slice(0,10) : '', length_weeks: c.length_weeks, status: c.status, comped: !!c.comped, room_open: !!c.room_open }) %>)">✎</button>
                 <% if (!members.length) { %>
                   <button class="admin-btn-icon admin-btn-icon--danger" type="button" title="Delete cohort"
-                    onclick="deleteCohort(<%= c.id %>, <%= JSON.stringify(c.name) %>)">✕</button>
+                    onclick="event.stopPropagation();deleteCohort(<%= c.id %>, <%= JSON.stringify(c.name) %>)">✕</button>
                 <% } %>
               </div>
             </div>
-            <% if (members.length) { %>
-              <% for (const m of members) { %>
-                <div class="admin-user-row">
-                  <div class="sidebar-avatar" style="width:32px;height:32px;font-size:0.85rem;flex-shrink:0"><%= m.avatar_initial || m.name.charAt(0) %></div>
-                  <div class="admin-user-info">
-                    <span class="admin-user-name"><%= m.name %></span>
-                    <span class="admin-user-email"><%= m.email %></span>
-                  </div>
-                  <% if (m.challenge_payment_status === 'refunded') { %><span class="admin-lesson-tag" title="Paid then refunded on completion">Refunded</span>
-                  <% } else if (m.challenge_payment_status === 'paid') { %><span class="admin-lesson-tag" title="Paid the challenge fee">Paid</span><% } %>
-                  <% if (m.continuation_choice === 'continue') { %><span class="admin-lesson-tag" title="Chose to stay in the garden">🌿 Staying</span>
-                  <% } else if (m.continuation_choice === 'refund') { %><span class="admin-lesson-tag" title="Chose the refund — issue it in Stripe">Wants refund</span><% } %>
-                  <select class="admin-input admin-select" style="width:auto;max-width:230px" onchange="assignCohort(<%= m.id %>, this.value)">
-                    <option value="">— Unassigned</option>
-                    <% for (const oc of cohortList) { %>
-                      <option value="<%= oc.id %>" <%= oc.id === c.id ? 'selected' : '' %>><%= oc.name %></option>
+            <div class="cohort-roster" id="cohort-roster-<%= c.id %>" <%= openByDefault ? '' : 'hidden' %>>
+              <% if (members.length) { %>
+                <div class="cohort-roster-scroll">
+                  <table class="cohort-roster-tbl">
+                    <thead><tr>
+                      <th>Gardener</th><th>Payment</th><th>Recording</th><th>Season</th><th>Responses</th><th>Move</th>
+                    </tr></thead>
+                    <tbody>
+                    <% for (const m of members) {
+                         const ra = (typeof recordingSummary !== 'undefined' && recordingSummary[m.id]) ? recordingSummary[m.id] : null;
+                         const sc = seasonMap[m.current_season] || seasonMap.winter;
+                    %>
+                      <tr>
+                        <td><div class="who-cell"><div class="sidebar-avatar" style="width:30px;height:30px;font-size:0.8rem;flex-shrink:0"><%= m.avatar_initial || m.name.charAt(0) %></div><div style="min-width:0"><div class="admin-user-name"><%= m.name %></div><div class="admin-user-email"><%= m.email %></div></div></div></td>
+                        <td><% if (m.challenge_payment_status === 'refunded') { %><span class="admin-lesson-tag" title="Paid then refunded">Refunded</span><% } else if (m.challenge_payment_status === 'paid') { %><span class="admin-lesson-tag" title="Paid the fee">Paid</span><% } else { %><span class="admin-lesson-tag" style="background:#f7e6c4;color:#9a6a1e">Unpaid</span><% } %></td>
+                        <td style="white-space:nowrap"><% if (ra && ra.everRecorded) { %><span class="rec-dot" style="background:<%= ra.quiet ? '#c9a24a' : '#5f7256' %>"></span><%= ra.recentCount %> in 7d<% if (ra.quiet) { %> · quiet<% } %><% } else { %><span style="color:rgba(16,15,16,.3)">none yet</span><% } %></td>
+                        <td style="white-space:nowrap"><span class="season-dot" style="background:<%= sc[0] %>"></span><%= sc[1] %></td>
+                        <td><button class="admin-btn-text" type="button" onclick="viewStudentData(<%= m.id %>, <%= JSON.stringify(m.name) %>)">View →</button></td>
+                        <td><select class="cohort-move" onchange="assignCohort(<%= m.id %>, this.value)" title="Move to another cohort">
+                          <option value="">— Unassigned</option>
+                          <% for (const oc of cohortList) { %>
+                            <option value="<%= oc.id %>" <%= oc.id === c.id ? 'selected' : '' %>><%= oc.name %></option>
+                          <% } %>
+                        </select></td>
+                      </tr>
                     <% } %>
-                  </select>
+                    </tbody>
+                  </table>
                 </div>
+              <% } else { %>
+                <p class="admin-user-email" style="margin:0;padding:.7rem 1.1rem">No members yet.</p>
               <% } %>
-            <% } else { %>
-              <p class="admin-user-email" style="margin:0.2rem 0 0">No members yet.</p>
-            <% } %>
+            </div>
           </div>
         <% } %>
 
@@ -719,39 +706,6 @@
             </div>
           </div>
 
-          <!-- End-of-challenge refund / continue offer -->
-          <div class="admin-settings-block">
-            <span class="admin-settings-block-label">Refund &amp; continue offer</span>
-            <p class="admin-field-hint">
-              Opens the <code>/continue-offer</code> page (and a dashboard card) to your paid
-              challenge members, where each person privately chooses their <strong>refund</strong>
-              or to <strong>stay in the garden</strong>. Flip it on after your final call, then send
-              them the link. It auto-closes after the <strong>Nov 3</strong> deadline. Staying opens
-              their full garden; you issue any refunds in Stripe.
-            </p>
-            <div class="admin-unlock-row" style="margin-top:0.5rem">
-              <div>
-                <strong>Currently: <%= continuationOfferOpen ? 'Open to members' : 'Closed' %></strong>
-                <span class="admin-unlock-hint">
-                  <% if (continuationOfferOpen) { %>
-                    Members can see it and choose. Preview: <a href="/continue-offer" target="_blank" rel="noopener">/continue-offer</a>
-                  <% } else { %>
-                    Hidden from everyone until you open it.
-                  <% } %>
-                </span>
-              </div>
-              <div style="display:flex;align-items:center;gap:0.6rem">
-                <span class="admin-unlock-badge <%= continuationOfferOpen ? 'admin-unlock-badge--on' : 'admin-unlock-badge--off' %>">
-                  <%= continuationOfferOpen ? '✓ Open' : 'Closed' %>
-                </span>
-                <% if (continuationOfferOpen) { %>
-                  <button type="button" class="admin-btn-sm" onclick="setFlag('continuation_offer_open', 'false')">Close offer</button>
-                <% } else { %>
-                  <button type="button" class="admin-btn-sm" onclick="setFlag('continuation_offer_open', 'true')">Open offer</button>
-                <% } %>
-              </div>
-            </div>
-          </div>
 
           <!-- Upgrade / pricing page mode -->
           <div class="admin-settings-block">
@@ -2059,6 +2013,15 @@
       var init = (location.hash || '').replace('#', '');
       show(valid[init] ? init : 'overview');
     })();
+
+    // Expand/collapse a cohort's roster in the Cohorts tab.
+    function toggleCohort(id) {
+      var r = document.getElementById('cohort-roster-' + id);
+      var ch = document.getElementById('cohort-chev-' + id);
+      if (!r) return;
+      r.hidden = !r.hidden;
+      if (ch) ch.textContent = r.hidden ? '▸' : '▾';
+    }
   </script>
 
 </body>
