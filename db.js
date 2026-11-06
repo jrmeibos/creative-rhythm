@@ -359,6 +359,16 @@ db.exec(`
     comped       INTEGER DEFAULT 0,
     created_at   DATETIME DEFAULT CURRENT_TIMESTAMP
   );
+
+  -- Dated schedule items for a cohort (kick-off call, challenge start, half-way
+  -- call, end, closing call…). Shown on members' calendars.
+  CREATE TABLE IF NOT EXISTS cohort_events (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    cohort_id  INTEGER NOT NULL,
+    event_date TEXT    NOT NULL,
+    title      TEXT    NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
 `);
 
 // Migrate existing databases to add new columns
@@ -1902,6 +1912,24 @@ module.exports = {
 
   getCohortById(id) {
     return db.prepare('SELECT * FROM cohorts WHERE id = ?').get(id);
+  },
+
+  // ── Cohort schedule events ──────────────────────────────────────────────
+  getCohortEvents(cohortId) {
+    if (!cohortId) return [];
+    return db.prepare(
+      'SELECT id, cohort_id, event_date, title FROM cohort_events WHERE cohort_id = ? ORDER BY event_date ASC, id ASC'
+    ).all(cohortId);
+  },
+
+  addCohortEvent(cohortId, eventDate, title) {
+    return db.prepare(
+      'INSERT INTO cohort_events (cohort_id, event_date, title) VALUES (?, ?, ?)'
+    ).run(cohortId, eventDate, title);
+  },
+
+  deleteCohortEvent(id) {
+    return db.prepare('DELETE FROM cohort_events WHERE id = ?').run(id);
   },
 
   createCohort({ name, startDate = null, lengthWeeks = 3, status = 'upcoming', comped = 0 }) {

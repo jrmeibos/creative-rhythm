@@ -8,6 +8,9 @@
     .cal-schedule{display:flex;gap:.6rem;flex-wrap:wrap;margin:.7rem 0 0}
     .cal-schedule-item{font-family:var(--font-body);font-size:.88rem;color:var(--color-ink-stained);background:var(--color-new-growth);border-radius:999px;padding:.32rem .85rem}
     .cal-schedule-label{text-transform:uppercase;letter-spacing:.08em;font-size:.68rem;color:var(--color-bloem);font-weight:700;margin-right:.3rem}
+    .cal-schedule-item--past{opacity:.5}
+    .cal-schedule-item--today{background:var(--color-apricity)}
+    .cal-schedule-item--today .cal-schedule-label{color:var(--color-ink-stained)}
   </style>
 </head>
 <body class="app-body">
@@ -21,7 +24,15 @@
         <div>
           <h1 class="cal-page-title"><%= typeof pageHeading !== 'undefined' ? pageHeading : 'Your 12-Week Journey' %></h1>
           <p class="cal-page-sub">Plan ahead, reflect back, tend the garden.</p>
-          <% if (typeof isTrial !== 'undefined' && isTrial && challengeStartLabel) { %>
+          <% if (typeof scheduleEvents !== 'undefined' && scheduleEvents && scheduleEvents.length) { %>
+            <div class="cal-schedule">
+              <% for (const ev of scheduleEvents) { %>
+                <span class="cal-schedule-item cal-schedule-item--<%= ev.state %>">
+                  <span class="cal-schedule-label"><%= ev.title %></span> <%= ev.label %>
+                </span>
+              <% } %>
+            </div>
+          <% } else if (typeof isTrial !== 'undefined' && isTrial && challengeStartLabel) { %>
             <div class="cal-schedule">
               <span class="cal-schedule-item"><span class="cal-schedule-label">Begins</span> <%= challengeStartLabel %></span>
               <span class="cal-schedule-item"><span class="cal-schedule-label">Wraps</span> <%= challengeEndLabel %></span>

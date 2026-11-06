@@ -2251,6 +2251,17 @@ app.get('/calendar', requireAuth, (req, res) => {
   const fmtLong = (iso) => iso
     ? new Date(iso + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
     : '';
+  const calTodayStr = toLocalDateString(getNow(req.session.user));
+  // The cohort's real schedule (kick-off call, start, half-way call, end,
+  // closing call…) that Julia entered in admin. Shown as a schedule panel.
+  const fmtShort = (iso) => iso
+    ? new Date(iso + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
+    : '';
+  const scheduleEvents = db.getCohortEvents(req.session.user.cohort_id).map(e => ({
+    title: e.title,
+    label: fmtShort(e.event_date),
+    state: e.event_date < calTodayStr ? 'past' : (e.event_date === calTodayStr ? 'today' : 'future'),
+  }));
   const challengeEndDate = addDaysCivil(courseStartDate, courseLengthWeeks * 7 - 1);
   res.render('calendar', {
     title:                calTitle,
@@ -2263,12 +2274,13 @@ app.get('/calendar', requireAuth, (req, res) => {
     courseCurrentWeekStart,
     courseStartDate,
     courseLengthWeeks,
-    // Challenge schedule summary (trial students). Anchored to the student's
-    // course_start_date, which they inherit from their cohort.
+    // The cohort's entered schedule; falls back to a begins/wraps summary when
+    // no events exist yet. Both anchor to the cohort via course_start_date.
+    scheduleEvents,
     challengeStartLabel:  fmtLong(courseStartDate),
     challengeEndLabel:    fmtLong(challengeEndDate),
     hasLockedWeeks:       false,
-    todayStr: toLocalDateString(getNow(req.session.user))
+    todayStr: calTodayStr
   });
 });
 
@@ -4934,10 +4946,14 @@ app.get('/admin', requireAdmin, (req, res) => {
     })(),
   };
 
+  const adminCohorts = db.getAllCohorts();
+  const cohortEventsByCohort = {};
+  for (const c of adminCohorts) cohortEventsByCohort[c.id] = db.getCohortEvents(c.id);
   res.render('admin', {
     title: 'Admin', page: 'admin',
     users, lessons, resources, lessonStats, lessonHomework, courseStartDate,
-    cohorts: db.getAllCohorts(),
+    cohorts: adminCohorts,
+    cohortEventsByCohort,
     recordingSummary, enrollments, challengeStats,
     challengeParticipants: db.getChallengeParticipants(),
     checkins: db.getAllCheckinResponses(CHECKIN.key),
@@ -5004,6 +5020,24 @@ app.delete('/api/admin/cohorts/:id', requireAdmin, (req, res) => {
     return res.status(400).json({ error: `Move or unassign its ${members.length} member(s) first.` });
   }
   db.deleteCohort(id);
+  res.json({ ok: true });
+});
+
+// Cohort schedule events — dated items (kick-off call, challenge start,
+// half-way call, end, closing call…) shown on members' calendars.
+app.post('/api/admin/cohorts/:id/events', requireAdmin, (req, res) => {
+  const cohortId = parseInt(req.params.id, 10);
+  if (!db.getCohortById(cohortId)) return res.status(404).json({ error: 'Cohort not found.' });
+  const date  = ((req.body && req.body.date)  || '').trim();
+  const title = ((req.body && req.body.title) || '').trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return res.status(400).json({ error: 'A valid date is required.' });
+  if (!title) return res.status(400).json({ error: 'A title is required.' });
+  const result = db.addCohortEvent(cohortId, date, title);
+  res.json({ ok: true, id: result.lastInsertRowid });
+});
+
+app.delete('/api/admin/cohort-events/:eventId', requireAdmin, (req, res) => {
+  db.deleteCohortEvent(parseInt(req.params.eventId, 10));
   res.json({ ok: true });
 });
 
