@@ -1868,7 +1868,16 @@ module.exports = {
   // midcourse/harvest unlock, garden stage, day-view bounds) reads through
   // this helper and degrades gracefully to a "not started" state on null.
   getUserCourseStartDate(user) {
-    return (user && user.course_start_date) || null;
+    // A member's own course_start_date wins (it's the per-person override). If
+    // they don't have one but they're in a cohort, inherit the cohort's start
+    // date — so assigning someone to a cohort automatically puts them on that
+    // cohort's schedule (calendar + week math) with no per-member date entry.
+    if (user && user.course_start_date) return user.course_start_date;
+    if (user && user.cohort_id) {
+      const c = this.getCohortById(user.cohort_id);
+      if (c && c.start_date) return String(c.start_date).slice(0, 10);
+    }
+    return null;
   },
 
   setUserCourseStartDate(userId, dateString) {
