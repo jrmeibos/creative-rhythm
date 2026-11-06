@@ -4,6 +4,11 @@
   <%- include('partials/head') %>
   <link rel="stylesheet" href="/css/dashboard.css">
   <link rel="stylesheet" href="/css/calendar.css">
+  <style>
+    .cal-schedule{display:flex;gap:.6rem;flex-wrap:wrap;margin:.7rem 0 0}
+    .cal-schedule-item{font-family:var(--font-body);font-size:.88rem;color:var(--color-ink-stained);background:var(--color-new-growth);border-radius:999px;padding:.32rem .85rem}
+    .cal-schedule-label{text-transform:uppercase;letter-spacing:.08em;font-size:.68rem;color:var(--color-bloem);font-weight:700;margin-right:.3rem}
+  </style>
 </head>
 <body class="app-body">
 
@@ -15,12 +20,13 @@
       <header class="cal-page-header">
         <div>
           <h1 class="cal-page-title"><%= typeof pageHeading !== 'undefined' ? pageHeading : 'Your 12-Week Journey' %></h1>
-          <p class="cal-page-sub">
-            Plan ahead, reflect back, tend the garden.
-            <% if (hasLockedWeeks) { %>
-              <a href="/upgrade" class="cal-upgrade-link">Weeks <%= courseLengthWeeks + 1 %>–12 unlock with the full course →</a>
-            <% } %>
-          </p>
+          <p class="cal-page-sub">Plan ahead, reflect back, tend the garden.</p>
+          <% if (typeof isTrial !== 'undefined' && isTrial && challengeStartLabel) { %>
+            <div class="cal-schedule">
+              <span class="cal-schedule-item"><span class="cal-schedule-label">Begins</span> <%= challengeStartLabel %></span>
+              <span class="cal-schedule-item"><span class="cal-schedule-label">Wraps</span> <%= challengeEndLabel %></span>
+            </div>
+          <% } %>
         </div>
       </header>
 

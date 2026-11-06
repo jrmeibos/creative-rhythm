@@ -2148,14 +2148,14 @@ app.get('/calendar', requireAuth, (req, res) => {
   const courseStartDate      = db.getUserCourseStartDate(req.session.user) || currentWeekStart;
   const courseLengthWeeks    = getCourseLengthWeeks(req.session.user);
 
-  // Trials show a fixed 12-week grid: weeks beyond their paid access render as
-  // locked tiles linking to /upgrade, previewing what the full course unlocks.
-  // Full-course students who pass week 12 are evergreen — the grid keeps
-  // growing to their current week instead of stranding them at 12.
+  // Challenge (trial) students see ONLY their own weeks — the 3-week grid, with
+  // no locked upgrade teasers. The full 12-week view appears only once they
+  // continue onto the full course. Full-course students who pass week 12 are
+  // evergreen — the grid keeps growing to their current week.
   const currentWeekNumber    = courseWeekInfo.weekNumber;
   const isTrial              = courseLengthWeeks < 12;
   const isEvergreen          = !isTrial && typeof currentWeekNumber === 'number' && currentWeekNumber > 12;
-  const gridWeeks            = isTrial ? 12 : Math.max(12, currentWeekNumber || 12);
+  const gridWeeks            = isTrial ? courseLengthWeeks : Math.max(12, currentWeekNumber || 12);
   const weekStarts           = generateCourseWeeks(courseStartDate, gridWeeks);
   const allGoalsRaw          = db.getGoalsForWeeks(userId, weekStarts);
   const reflectionsRaw       = db.getWeeklyReflections(userId, weekStarts);
@@ -2245,17 +2245,29 @@ app.get('/calendar', requireAuth, (req, res) => {
     };
   });
 
+  const calTitle = isTrial
+    ? `Your ${courseLengthWeeks}-Week Challenge`
+    : (isEvergreen ? 'Your Journey' : 'Your 12-Week Journey');
+  const fmtLong = (iso) => iso
+    ? new Date(iso + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
+    : '';
+  const challengeEndDate = addDaysCivil(courseStartDate, courseLengthWeeks * 7 - 1);
   res.render('calendar', {
-    title:                isEvergreen ? 'Your Journey' : 'Your 12-Week Journey',
-    pageHeading:          isEvergreen ? 'Your Journey' : 'Your 12-Week Journey',
+    title:                calTitle,
+    pageHeading:          calTitle,
     isEvergreen,
+    isTrial,
     page:                 'calendar',
     weeks,
     currentWeekStart,
     courseCurrentWeekStart,
     courseStartDate,
     courseLengthWeeks,
-    hasLockedWeeks:       courseLengthWeeks < 12,
+    // Challenge schedule summary (trial students). Anchored to the student's
+    // course_start_date, which they inherit from their cohort.
+    challengeStartLabel:  fmtLong(courseStartDate),
+    challengeEndLabel:    fmtLong(challengeEndDate),
+    hasLockedWeeks:       false,
     todayStr: toLocalDateString(getNow(req.session.user))
   });
 });
