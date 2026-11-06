@@ -620,6 +620,15 @@ db.exec(`
     console.log('✓ Migrated: added room_open column to cohorts');
   }
 
+  // Cohort-scoped resources. null cohort_id = visible to everyone; a cohort id
+  // = only that cohort's members (+ admins) see it. Lets call recordings stay
+  // private to the cohort they were recorded for.
+  const resCols = db.prepare("PRAGMA table_info(resources)").all().map(r => r.name);
+  if (resCols.length && !resCols.includes('cohort_id')) {
+    db.exec("ALTER TABLE resources ADD COLUMN cohort_id INTEGER");
+    console.log('✓ Migrated: added cohort_id column to resources');
+  }
+
   // End-of-challenge refund-vs-continue choice. null = undecided, 'continue'
   // (staying — garden flipped open) or 'refund' (wants the refund; Julia issues
   // it in Stripe). Just records the decision; no money moves here.
@@ -2577,12 +2586,16 @@ module.exports = {
   },
 
   getAllResources() {
-    return db.prepare('SELECT * FROM resources ORDER BY category_tag, title').all();
+    return db.prepare(`
+      SELECT r.*, c.name AS cohort_name
+      FROM resources r LEFT JOIN cohorts c ON c.id = r.cohort_id
+      ORDER BY r.category_tag, r.title
+    `).all();
   },
 
-  createResource(title, description, categoryTag, url, filePath) {
-    return db.prepare('INSERT INTO resources (title, description, category_tag, url, file_path) VALUES (?, ?, ?, ?, ?)')
-      .run(title, description, categoryTag, url, filePath);
+  createResource(title, description, categoryTag, url, filePath, cohortId) {
+    return db.prepare('INSERT INTO resources (title, description, category_tag, url, file_path, cohort_id) VALUES (?, ?, ?, ?, ?, ?)')
+      .run(title, description, categoryTag, url, filePath, cohortId ?? null);
   },
 
   getLessonCompletionCounts() {
@@ -2791,10 +2804,10 @@ module.exports = {
 
   // ─── Admin: resources ──────────────────────────────────────────────────────
 
-  updateResource(id, title, description, categoryTag, url) {
+  updateResource(id, title, description, categoryTag, url, cohortId) {
     return db.prepare(
-      'UPDATE resources SET title=?, description=?, category_tag=?, url=? WHERE id=?'
-    ).run(title, description || '', categoryTag || '', url || '', id);
+      'UPDATE resources SET title=?, description=?, category_tag=?, url=?, cohort_id=? WHERE id=?'
+    ).run(title, description || '', categoryTag || '', url || '', cohortId ?? null, id);
   },
 
   deleteResource(id) {

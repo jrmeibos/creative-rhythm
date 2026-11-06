@@ -4410,7 +4410,15 @@ app.get('/resources', requireAuth, (req, res) => {
   // Call recordings live in the resources table as rows whose url is a video
   // link (YouTube/Vimeo). Render those as embeds, newest first; any other
   // resources are left to the page's curated cards.
+  //
+  // Cohort scoping: a recording with no cohort_id is visible to everyone; one
+  // tagged with a cohort id is visible only to that cohort's members (admins
+  // see all). So Cohort 1's call recordings stay private to Cohort 1.
+  const viewer       = req.session.user;
+  const isAdmin      = viewer.role === 'admin';
+  const viewerCohort = viewer.cohort_id || null;
   const recordings = db.getAllResources()
+    .filter(r => isAdmin || r.cohort_id == null || r.cohort_id === viewerCohort)
     .map(r => ({ title: r.title, description: r.description, embedUrl: toVideoEmbedUrl(r.url), createdAt: r.created_at }))
     .filter(r => r.embedUrl)
     .sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
@@ -5426,17 +5434,19 @@ app.post('/api/admin/lessons/:id/move', requireAdmin, (req, res) => {
 // ─── Admin: Resources ──────────────────────────────────────────────────────
 
 app.post('/api/admin/resources', requireAdmin, (req, res) => {
-  const { title, description, category_tag, url } = req.body;
+  const { title, description, category_tag, url, cohort_id } = req.body;
   if (!title) return res.status(400).json({ error: 'Title is required.' });
-  const result = db.createResource(title.trim(), description || '', category_tag || '', url || '', null);
+  const cid = cohort_id ? parseInt(cohort_id, 10) : null;
+  const result = db.createResource(title.trim(), description || '', category_tag || '', url || '', null, cid);
   res.json({ ok: true, id: result.lastInsertRowid });
 });
 
 app.put('/api/admin/resources/:id', requireAdmin, (req, res) => {
   const id = parseInt(req.params.id);
-  const { title, description, category_tag, url } = req.body;
+  const { title, description, category_tag, url, cohort_id } = req.body;
   if (!title) return res.status(400).json({ error: 'Title is required.' });
-  db.updateResource(id, title.trim(), description || '', category_tag || '', url || '');
+  const cid = cohort_id ? parseInt(cohort_id, 10) : null;
+  db.updateResource(id, title.trim(), description || '', category_tag || '', url || '', cid);
   res.json({ ok: true });
 });
 
