@@ -212,6 +212,17 @@ db.exec(`
     FOREIGN KEY (user_id) REFERENCES users(id)
   );
 
+  CREATE TABLE IF NOT EXISTS community_comment_reactions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    comment_id INTEGER NOT NULL,
+    user_id INTEGER NOT NULL,
+    reaction_type TEXT NOT NULL DEFAULT 'heart',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (comment_id) REFERENCES community_comments(id),
+    FOREIGN KEY (user_id) REFERENCES users(id),
+    UNIQUE(comment_id, user_id, reaction_type)
+  );
+
   CREATE TABLE IF NOT EXISTS settings (
     key TEXT PRIMARY KEY,
     value TEXT NOT NULL DEFAULT ''
@@ -2618,6 +2629,46 @@ module.exports = {
       db.prepare('INSERT INTO community_reactions (post_id, user_id, reaction_type) VALUES (?, ?, ?)').run(postId, userId, reactionType);
       return true;
     }
+  },
+
+  toggleCommentReaction(commentId, userId, reactionType) {
+    const existing = db.prepare('SELECT id FROM community_comment_reactions WHERE comment_id = ? AND user_id = ? AND reaction_type = ?')
+      .get(commentId, userId, reactionType);
+    if (existing) {
+      db.prepare('DELETE FROM community_comment_reactions WHERE id = ?').run(existing.id);
+      return false;
+    }
+    db.prepare('INSERT INTO community_comment_reactions (comment_id, user_id, reaction_type) VALUES (?, ?, ?)').run(commentId, userId, reactionType);
+    return true;
+  },
+
+  // Reaction summaries: id -> { reaction_type: { count, reacted } }
+  getReactionsForPosts(postIds, viewerId) {
+    if (!postIds || !postIds.length) return {};
+    const ph = postIds.map(() => '?').join(',');
+    const rows = db.prepare(
+      `SELECT post_id, reaction_type, COUNT(*) AS count,
+              MAX(CASE WHEN user_id = ? THEN 1 ELSE 0 END) AS reacted
+       FROM community_reactions WHERE post_id IN (${ph})
+       GROUP BY post_id, reaction_type`
+    ).all(viewerId, ...postIds);
+    const map = {};
+    for (const r of rows) (map[r.post_id] = map[r.post_id] || {})[r.reaction_type] = { count: r.count, reacted: !!r.reacted };
+    return map;
+  },
+
+  getReactionsForComments(commentIds, viewerId) {
+    if (!commentIds || !commentIds.length) return {};
+    const ph = commentIds.map(() => '?').join(',');
+    const rows = db.prepare(
+      `SELECT comment_id, reaction_type, COUNT(*) AS count,
+              MAX(CASE WHEN user_id = ? THEN 1 ELSE 0 END) AS reacted
+       FROM community_comment_reactions WHERE comment_id IN (${ph})
+       GROUP BY comment_id, reaction_type`
+    ).all(viewerId, ...commentIds);
+    const map = {};
+    for (const r of rows) (map[r.comment_id] = map[r.comment_id] || {})[r.reaction_type] = { count: r.count, reacted: !!r.reacted };
+    return map;
   },
 
   // Comments (one level of threading: a comment, or a reply whose

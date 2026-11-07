@@ -40,6 +40,14 @@
     .react-btn, .comment-toggle, .post-admin-btn { appearance:none; background:none; border:1px solid rgba(112,92,108,0.2); border-radius:999px; padding:0.28rem 0.7rem; font-family:var(--font-body); font-size:0.82rem; color:rgba(16,15,16,0.7); cursor:pointer; }
     .react-btn.is-on { background:color-mix(in srgb, var(--color-curiositys-kiss) 40%, var(--color-blank-page)); border-color:var(--color-curiositys-kiss); color:var(--color-ink-stained); }
     .react-btn:hover, .comment-toggle:hover, .post-admin-btn:hover { border-color:var(--color-bloem); }
+    .reaction-bar { display:inline-flex; align-items:center; gap:0.3rem; flex-wrap:wrap; }
+    .react-btn { display:inline-flex; align-items:center; gap:0.2rem; padding:0.22rem 0.5rem; }
+    .react-emoji { font-size:0.95rem; line-height:1; }
+    .react-count { font-variant-numeric:tabular-nums; }
+    .react-count.is-zero { display:none; }
+    .comment .reaction-bar { margin:0.3rem 0 0 0.1rem; }
+    .comment .react-btn { padding:0.12rem 0.4rem; font-size:0.78rem; }
+    .comment .react-emoji { font-size:0.85rem; }
     .post-admin-btn { margin-left:0.1rem; }
     .post-admin-btn--danger:hover { border-color:#c0392b; color:#c0392b; }
     .post-admin-btn--danger { margin-left:auto; }
@@ -169,8 +177,7 @@
                 </div>
                 <p class="post-body"><%= post.content %></p>
                 <div class="post-reactions">
-                  <button class="react-btn <%= post.viewer_hearted ? 'is-on' : '' %>" data-post-id="<%= post.id %>" data-reaction="heart">❤ <span class="react-count"><%= post.heart_count %></span></button>
-                  <button class="react-btn <%= post.viewer_sparked ? 'is-on' : '' %>" data-post-id="<%= post.id %>" data-reaction="spark">✨ <span class="react-count"><%= post.spark_count %></span></button>
+                  <%- include('partials/reaction-bar', { reactionSet, reactions: post.reactions, kind: 'post', id: post.id }) %>
                   <button class="comment-toggle" data-post-id="<%= post.id %>">💬 <span class="comment-count"><%= post.comment_count %></span></button>
                   <% if (viewerIsAdmin) { %>
                     <button class="post-admin-btn" data-action="pin" data-post-id="<%= post.id %>" data-pinned="<%= post.pinned ? 1 : 0 %>"><%= post.pinned ? 'Unpin' : 'Pin' %></button>
@@ -189,6 +196,7 @@
                           <span class="comment-author"><%= c.author_name %><% if (c.author_role === 'admin') { %> <span class="post-guide-badge">Guide</span><% } %></span>
                           <p class="comment-text"><%= c.content %></p>
                         </div>
+                        <%- include('partials/reaction-bar', { reactionSet, reactions: c.reactions, kind: 'comment', id: c.id }) %>
                         <div class="comment-meta">
                           <time class="comment-time" data-ts="<%= c.created_at %>"><%= c.created_at %></time>
                           <button data-action="reply-toggle" data-comment-id="<%= c.id %>">Reply</button>
@@ -205,6 +213,7 @@
                                 <span class="comment-author"><%= r.author_name %><% if (r.author_role === 'admin') { %> <span class="post-guide-badge">Guide</span><% } %></span>
                                 <p class="comment-text"><%= r.content %></p>
                               </div>
+                              <%- include('partials/reaction-bar', { reactionSet, reactions: r.reactions, kind: 'comment', id: r.id }) %>
                               <div class="comment-meta">
                                 <time class="comment-time" data-ts="<%= r.created_at %>"><%= r.created_at %></time>
                                 <% if (viewerIsAdmin || r.user_id === currentUserId) { %>

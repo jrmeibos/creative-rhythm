@@ -1,0 +1,12 @@
+<%# Emoji reaction bar for a post or comment.
+    Locals: reactionSet (array of {key,emoji}), reactions (map key -> {count,reacted}),
+            kind ('post'|'comment'), id %>
+<div class="reaction-bar">
+  <% for (const r of reactionSet) { const rx = (reactions && reactions[r.key]) || { count: 0, reacted: false }; %>
+    <button type="button" class="react-btn <%= rx.reacted ? 'is-on' : '' %>"
+      <% if (kind === 'comment') { %>data-comment-id="<%= id %>"<% } else { %>data-post-id="<%= id %>"<% } %>
+      data-reaction="<%= r.key %>" aria-label="React <%= r.key %>">
+      <span class="react-emoji"><%= r.emoji %></span><span class="react-count <%= rx.count ? '' : 'is-zero' %>"><%= rx.count %></span>
+    </button>
+  <% } %>
+</div>

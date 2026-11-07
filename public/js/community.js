@@ -72,23 +72,30 @@ document.addEventListener('click', async (e) => {
   const btn = e.target.closest('button');
   if (!btn) return;
 
-  // Reactions (optimistic — no reload)
+  // Reactions on posts AND comments (optimistic — no reload)
   if (btn.classList.contains('react-btn')) {
-    const postId = btn.getAttribute('data-post-id');
+    const commentId = btn.getAttribute('data-comment-id');
+    const postId    = btn.getAttribute('data-post-id');
+    const url = commentId
+      ? '/api/community/comments/' + commentId + '/react'
+      : '/api/community/posts/' + postId + '/react';
     const reaction = btn.getAttribute('data-reaction');
     const countEl = btn.querySelector('.react-count');
+    const setCount = (n) => { if (countEl) { countEl.textContent = n; countEl.classList.toggle('is-zero', n <= 0); } };
     const wasOn = btn.classList.contains('is-on');
+    const cur = countEl ? (parseInt(countEl.textContent, 10) || 0) : 0;
     // optimistic flip
     btn.classList.toggle('is-on', !wasOn);
-    if (countEl) countEl.textContent = Math.max(0, parseInt(countEl.textContent, 10) + (wasOn ? -1 : 1));
-    const { ok, data } = await cr_fetch('/api/community/posts/' + postId + '/react', 'POST', { reaction });
+    setCount(Math.max(0, cur + (wasOn ? -1 : 1)));
+    const { ok, data } = await cr_fetch(url, 'POST', { reaction });
     if (!ok) { // revert
       btn.classList.toggle('is-on', wasOn);
-      if (countEl) countEl.textContent = Math.max(0, parseInt(countEl.textContent, 10) + (wasOn ? 1 : -1));
+      setCount(cur);
       alert(data.error || 'Could not react.');
-    } else if (countEl && typeof data.on === 'boolean' && data.on === wasOn) {
+    } else if (typeof data.on === 'boolean' && data.on === wasOn) {
       // server disagreed with our optimistic guess — trust it
       btn.classList.toggle('is-on', data.on);
+      setCount(Math.max(0, cur + (data.on ? 1 : -1)));
     }
     return;
   }

@@ -1962,6 +1962,11 @@ app.get('/community', requireAuth, (req, res) => {
   if (roomOpen && cohort) {
     posts = db.getPostsForCohort(cohort.id, viewer.id);
     const commentRows = posts.length ? db.getCommentsForPosts(posts.map(p => p.id)) : [];
+    // Emoji reaction summaries for posts + comments (id -> {type: {count, reacted}}).
+    const postRx    = db.getReactionsForPosts(posts.map(p => p.id), viewer.id);
+    const commentRx = db.getReactionsForComments(commentRows.map(c => c.id), viewer.id);
+    for (const p of posts)       p.reactions = postRx[p.id] || {};
+    for (const c of commentRows) c.reactions = commentRx[c.id] || {};
     const byPost = {};
     for (const p of posts) byPost[p.id] = { top: [], byId: {} };
     for (const c of commentRows) {
@@ -1983,6 +1988,7 @@ app.get('/community', requireAuth, (req, res) => {
   res.render('community', {
     title: 'Community',
     page:  'community',
+    reactionSet: COMMUNITY_REACTIONS,
     viewerIsAdmin,
     cohort,
     cohorts,
@@ -2034,14 +2040,40 @@ app.post('/api/community/posts', requireAuth, (req, res) => {
   res.json({ ok: true, id: r.lastInsertRowid });
 });
 
+// The emoji palette for community reactions (posts + comments). Keys are stored
+// in the DB; 'heart'/'spark' pre-date this set so they keep their keys.
+const COMMUNITY_REACTIONS = [
+  { key: 'heart',  emoji: '❤️' },
+  { key: 'spark',  emoji: '✨' },
+  { key: 'fire',   emoji: '🔥' },
+  { key: 'clap',   emoji: '👏' },
+  { key: 'praise', emoji: '🙌' },
+  { key: 'joy',    emoji: '😊' },
+];
+const COMMUNITY_REACTION_KEYS = new Set(COMMUNITY_REACTIONS.map(r => r.key));
+
 app.post('/api/community/posts/:id/react', requireAuth, (req, res) => {
   const post = db.getPostById(parseInt(req.params.id, 10));
   if (!post) return res.status(404).json({ error: 'Post not found.' });
   if (!canAccessCohortRoom(req.session.user, post.cohort_id)) {
     return res.status(403).json({ error: 'This isn’t your room.' });
   }
-  const type = (req.body && req.body.reaction === 'spark') ? 'spark' : 'heart';
+  const type = COMMUNITY_REACTION_KEYS.has(req.body && req.body.reaction) ? req.body.reaction : null;
+  if (!type) return res.status(400).json({ error: 'Unknown reaction.' });
   const on = db.toggleReaction(post.id, req.session.user.id, type);
+  res.json({ ok: true, on });
+});
+
+app.post('/api/community/comments/:id/react', requireAuth, (req, res) => {
+  const comment = db.getCommentById(parseInt(req.params.id, 10));
+  if (!comment) return res.status(404).json({ error: 'Comment not found.' });
+  const post = db.getPostById(comment.post_id);
+  if (!post || !canAccessCohortRoom(req.session.user, post.cohort_id)) {
+    return res.status(403).json({ error: 'This isn’t your room.' });
+  }
+  const type = COMMUNITY_REACTION_KEYS.has(req.body && req.body.reaction) ? req.body.reaction : null;
+  if (!type) return res.status(400).json({ error: 'Unknown reaction.' });
+  const on = db.toggleCommentReaction(comment.id, req.session.user.id, type);
   res.json({ ok: true, on });
 });
 
