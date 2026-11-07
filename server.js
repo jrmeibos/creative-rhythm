@@ -649,6 +649,12 @@ app.post('/signup', signupLimiter, async (req, res) => {
     db.setUserCourseLengthWeeks(userId, 3);
     db.setUserCourseStartDate(userId, CHALLENGE_START_DATE);
     db.setChallengePaymentStatus(userId, 'pending');
+    // Auto-join the cohort for this challenge (matched by its start date) so the
+    // registrant picks up the cohort's schedule + community room with no manual
+    // step. If no matching cohort exists yet, they stay unassigned until one is
+    // created for this start date.
+    const signupCohort = db.getCohortByStartDate(CHALLENGE_START_DATE);
+    if (signupCohort) db.setUserCohort(userId, signupCohort.id);
     if (timezone !== 'America/Denver') {
       db.setUserTimezone(userId, timezone);
     }
@@ -663,6 +669,7 @@ app.post('/signup', signupLimiter, async (req, res) => {
       course_start_date: user.course_start_date || null,
       course_length_weeks: user.course_length_weeks || 3,
       challenge_payment_status: 'pending',
+      cohort_id: user.cohort_id || null,
     };
     // Sync to Mailchimp — fire-and-forget so it never blocks or breaks signup.
     const mcTags = [MAILCHIMP_TAG_REGISTERED];

@@ -1914,6 +1914,20 @@ module.exports = {
     return db.prepare('SELECT * FROM cohorts WHERE id = ?').get(id);
   },
 
+  // The cohort a new sign-up should join — the one whose start date matches the
+  // current challenge. Compares date portions so a stored timestamp still
+  // matches a 'YYYY-MM-DD' start; prefers an upcoming/active cohort if several
+  // share a day. Returns null when no cohort has been created for it yet.
+  getCohortByStartDate(startDate) {
+    if (!startDate) return null;
+    const rows = db.prepare(
+      `SELECT * FROM cohorts
+       WHERE substr(start_date, 1, 10) = substr(?, 1, 10)
+       ORDER BY CASE status WHEN 'upcoming' THEN 0 WHEN 'active' THEN 1 ELSE 2 END, id DESC`
+    ).all(startDate);
+    return rows[0] || null;
+  },
+
   // ── Cohort schedule events ──────────────────────────────────────────────
   getCohortEvents(cohortId) {
     if (!cohortId) return [];
