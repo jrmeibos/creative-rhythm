@@ -121,8 +121,8 @@
 .ob-welcome-video {
   position: relative;
   width: 100%;
-  max-width: 340px;
-  aspect-ratio: 9 / 16;
+  max-width: 560px;
+  aspect-ratio: 16 / 9;
   margin: 0 auto 2rem;
   border-radius: 12px;
   overflow: hidden;

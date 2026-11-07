@@ -2625,8 +2625,8 @@
 .recording-howto-video {
   position: relative;
   width: 100%;
-  max-width: 320px;
-  aspect-ratio: 9 / 16;
+  max-width: 560px;
+  aspect-ratio: 16 / 9;
   border-radius: 10px;
   overflow: hidden;
   background: var(--color-ink-stained);
