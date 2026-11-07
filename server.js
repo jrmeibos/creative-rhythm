@@ -182,7 +182,7 @@ function pixelConsentMode(req) {
 // Fixed cohort start for the paid 3-week Winter challenge (beta). Everyone
 // who signs up shares this date so the weekly group meetings + week math line
 // up. Update here when a future cohort starts on a different date.
-const CHALLENGE_START_DATE = '2026-10-05';
+const CHALLENGE_START_DATE = '2027-01-05';
 
 // Cap on the beta cohort. A "spot" is a paid seat — pending (signed-up but
 // not yet paid) accounts don't consume one, so a tire-kicker who abandons
@@ -198,7 +198,7 @@ const CHALLENGE_CAPACITY = 20;
 // future instant to reopen/move the deadline, or null to never auto-close (the
 // capacity cap still applies). No redeploy needed at the deadline — it flips
 // itself. Currently: a 12-hour reopen window ending 8:00 PM Mountain, Oct 4.
-const CHALLENGE_SIGNUP_CLOSE_AT = '2026-10-04T20:00:00-06:00';
+const CHALLENGE_SIGNUP_CLOSE_AT = '2027-01-04T23:59:00-07:00';
 function challengeSignupsClosed() {
   if (!CHALLENGE_SIGNUP_CLOSE_AT) return false;
   const closeAt = Date.parse(CHALLENGE_SIGNUP_CLOSE_AT);
@@ -206,7 +206,9 @@ function challengeSignupsClosed() {
 }
 
 function challengeSpotsTaken() {
-  const c = db.getChallengeStatusCounts();
+  // Scoped to the current challenge's start date so a new cohort's capacity
+  // starts fresh — previous cohorts (a different start date) don't eat seats.
+  const c = db.getChallengeStatusCountsForStart(CHALLENGE_START_DATE);
   return (c.paid || 0) + (c.refunded || 0);
 }
 // Gates the signup page, the signup POST, and payment-intent creation. "Full"
@@ -931,6 +933,7 @@ app.get('/dashboard', requireAuth, (req, res) => {
   res.render('dashboard', {
     title: 'Dashboard',
     page: 'dashboard',
+    challengePriceLabel: STRIPE.formatPrice(STRIPE.getChallengePriceCents()),
     greeting: getGreeting(req.session.user),
     upgradeBanner,
     challenge,

@@ -2047,6 +2047,20 @@ module.exports = {
     return { paid: row.paid || 0, pending: row.pending || 0, refunded: row.refunded || 0 };
   },
 
+  // Counts scoped to one challenge start date, so capacity for the current
+  // cohort doesn't include seats from a previous one (every registrant for a
+  // given challenge shares its start date).
+  getChallengeStatusCountsForStart(startDate) {
+    const row = db.prepare(
+      `SELECT
+         SUM(CASE WHEN challenge_payment_status = 'paid'     THEN 1 ELSE 0 END) AS paid,
+         SUM(CASE WHEN challenge_payment_status = 'pending'  THEN 1 ELSE 0 END) AS pending,
+         SUM(CASE WHEN challenge_payment_status = 'refunded' THEN 1 ELSE 0 END) AS refunded
+       FROM users WHERE role = 'student' AND course_start_date = ?`
+    ).get(startDate);
+    return { paid: row.paid || 0, pending: row.pending || 0, refunded: row.refunded || 0 };
+  },
+
   // ── Mid-challenge check-ins (distinct from the weekly-goal saveCheckin) ──
   getCheckinResponse(userId, key) {
     return db.prepare('SELECT * FROM check_ins WHERE user_id = ? AND checkin_key = ?').get(userId, key);

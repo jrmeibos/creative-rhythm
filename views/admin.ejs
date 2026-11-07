@@ -295,7 +295,7 @@
           <span class="admin-count"><%= pendingSignups.length %> haven't paid</span>
         </div>
         <p class="admin-field-hint" style="margin:0 0 0.9rem">
-          These people created an account but didn't finish the $299 payment, so they're
+          These people created an account but didn't finish the challenge payment, so they're
           <strong>not in the cohort</strong> and don't take a spot. They can still pay and
           join until it fills — warm leads worth a nudge, or you can remove them.
         </p>
@@ -321,7 +321,7 @@
                 <span class="admin-user-email"><%= u.email %></span>
                 <% if (signedUpLabel) { %><span class="admin-user-activity admin-user-activity--quiet"><%= signedUpLabel %></span><% } %>
               </div>
-              <span class="admin-lesson-tag" title="Created an account but hasn't paid the $299">Unpaid</span>
+              <span class="admin-lesson-tag" title="Created an account but hasn't paid the challenge fee">Unpaid</span>
               <div class="admin-row-actions">
                 <a class="admin-btn-icon" title="Email this person" href="mailto:<%= u.email %>?subject=Your%20spot%20in%20The%20Creative%27s%20Garden">✉</a>
                 <button class="admin-btn-icon admin-btn-icon--danger" type="button" title="Delete"

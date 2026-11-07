@@ -332,9 +332,9 @@
         <section class="ch-refund <%= ch.qualifies ? 'ch-refund--won' : '' %>">
           <div class="ch-refund-head">
             <h2 class="ch-refund-title">
-              <% if (ch.status === 'refunded') { %>Your $299 has been refunded ✓
-              <% } else if (ch.qualifies) { %>You've earned your $299 back 🎉
-              <% } else { %>Earn your $299 back<% } %>
+              <% if (ch.status === 'refunded') { %>Your <%= challengePriceLabel %> has been refunded ✓
+              <% } else if (ch.qualifies) { %>You've earned your <%= challengePriceLabel %> back 🎉
+              <% } else { %>Earn your <%= challengePriceLabel %> back<% } %>
             </h2>
             <p class="ch-refund-sub">
               <% if (ch.status === 'refunded') { %>
@@ -342,7 +342,7 @@
               <% } else if (ch.qualifies) { %>
                 You've hit the mark. Keep going to the finish, and I'll refund your challenge fee once the three weeks wrap.
               <% } else { %>
-                Record on at least <%= ch.refundThreshold %> of the <%= ch.totalDays %> days and share your honest feedback at the end, and your $299 is fully refunded.
+                Record on at least <%= ch.refundThreshold %> of the <%= ch.totalDays %> days and share your honest feedback at the end, and your <%= challengePriceLabel %> is fully refunded.
               <% } %>
             </p>
           </div>
