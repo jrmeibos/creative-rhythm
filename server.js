@@ -889,6 +889,9 @@ app.get('/dashboard', requireAuth, (req, res) => {
   const springCardVisible = effSeason === 'spring' && !hiddenBanners.has('season_spring');
   const summerCardVisible = effSeason === 'summer' && !hiddenBanners.has('season_summer');
   const fallCardVisible   = effSeason === 'autumn' && !hiddenBanners.has('season_autumn');
+  // Platform tour — a dismissible welcome card for students (new folks watch
+  // it; anyone can hide it once they've got their bearings).
+  const tourCardVisible = req.session.user.role === 'student' && !hiddenBanners.has('tour');
   const trialComplete = isTrial && (
     trialClosingSubmitted ||
     (typeof weekNumber === 'number' && weekNumber > courseLengthWeeks)
@@ -954,6 +957,7 @@ app.get('/dashboard', requireAuth, (req, res) => {
     springCardVisible,
     summerCardVisible,
     fallCardVisible,
+    tourCardVisible,
     // Full-course students get the workbench idea-capture on the dashboard.
     canJotIdea: !isTrial,
     // Mid-challenge check-in card — shown to students once the check-in opens,
@@ -1736,7 +1740,7 @@ app.post('/api/season/intro-seen', requireAuth, (req, res) => {
 
 // Dismiss a dashboard banner. action='snooze' hides it until tomorrow (it
 // re-shows the next calendar day); action='remove' hides it for good.
-const DISMISSIBLE_BANNERS = ['midcourse', 'trial_closing', 'season_spring', 'season_summer', 'season_autumn'];
+const DISMISSIBLE_BANNERS = ['midcourse', 'trial_closing', 'season_spring', 'season_summer', 'season_autumn', 'tour'];
 app.post('/api/banner/dismiss', requireAuth, (req, res) => {
   const key    = String((req.body && req.body.key) || '').trim();
   const action = String((req.body && req.body.action) || '').trim();

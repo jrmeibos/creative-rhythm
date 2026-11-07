@@ -59,6 +59,25 @@
         <% } %>
       </header>
 
+      <% if (locals.tourCardVisible) { %>
+      <section class="dash-section">
+        <div class="mid-card" data-banner-key="tour">
+          <%- include('partials/card-dismiss', { snoozeLabel: 'Later', removeLabel: 'Got it — hide this' }) %>
+          <p class="mid-card-eyebrow">Welcome 🌿</p>
+          <h2 class="mid-card-title">Take a quick tour of your garden</h2>
+          <p class="mid-card-body">A short walk through the platform — where everything lives and how to make the most of it.</p>
+          <div class="recording-howto-video">
+            <iframe
+              src="https://www.youtube.com/embed/B44LI0Sx-xs"
+              title="A tour of The Creative's Garden"
+              frameborder="0"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowfullscreen></iframe>
+          </div>
+        </div>
+      </section>
+      <% } %>
+
       <% if (locals.showCheckinCard) { %>
       <section class="dash-section">
         <a href="/check-in" class="ci-prompt">
