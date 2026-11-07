@@ -4,6 +4,14 @@
   <%- include('partials/head') %>
   <link rel="stylesheet" href="/css/dashboard.css">
   <link rel="stylesheet" href="/css/lessons.css">
+  <style>
+    .videos-list { display: flex; flex-direction: column; gap: 2.25rem; max-width: 760px; }
+    .video-item-title { font-family: 'Goldage', Georgia, serif; font-size: 1.35rem; font-weight: 600; margin: 0 0 .3rem; color: var(--color-ink-stained); }
+    .video-item-sub { font-size: .95rem; color: rgba(16,15,16,.6); margin: 0 0 .85rem; font-style: italic; }
+    .video-embed { position: relative; width: 100%; aspect-ratio: 16 / 9; border-radius: 14px; overflow: hidden; background: #100F10; }
+    .video-embed iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+    .videos-empty { color: rgba(16,15,16,.5); font-style: italic; }
+  </style>
 </head>
 <body class="app-body">
 
@@ -14,92 +22,31 @@
 
       <header class="lessons-header">
         <div class="lessons-header-left">
-          <h1 class="lessons-title">Your Lessons</h1>
-          <p class="lessons-sub">Read at your own pace. Return to anything, anytime.</p>
-        </div>
-        <%
-          // Completion pill counts only the numbered curriculum — the
-          // Course Introduction is a real lesson (completion still tracked)
-          // but kept out of the X / N total so the pill stays curriculum-
-          // focused and never reads "13".
-          const numberedLessons    = lessons.filter(l => l.slug !== 'course-introduction');
-          const numberedCompleted  = numberedLessons.filter(l => completedIds.has(l.id)).length;
-        %>
-        <div class="lessons-progress-pill">
-          <span class="lessons-progress-count"><%= numberedCompleted %> / <%= numberedLessons.length %></span>
-          <span class="lessons-progress-label">complete</span>
+          <h1 class="lessons-title">Videos</h1>
+          <p class="lessons-sub">Watch at your own pace — return to anything, anytime.</p>
         </div>
       </header>
 
-      <!-- Category filter tabs -->
-      <div class="lessons-filter" id="lessonFilter">
-        <button class="filter-tab is-active" data-filter="all">All</button>
-        <% const categories = [...new Set(lessons.map(l => l.category_tag).filter(Boolean))]; %>
-        <% for (const cat of categories) { %>
-          <button class="filter-tab" data-filter="<%= cat.toLowerCase() %>"><%= cat %></button>
-        <% } %>
-      </div>
-
-      <!-- Lesson cards -->
-      <div class="lessons-grid" id="lessonsGrid">
-        <% for (const lesson of lessons) { %>
-          <%
-            const isComplete = completedIds.has(lesson.id);
-            const catKey = (lesson.category_tag || '').toLowerCase();
-            const tagClass = ['mindset','practical','perspective'].includes(catKey)
-              ? `lesson-card-tag--${catKey}`
-              : 'lesson-card-tag--default';
-            const articleTagClass = ['mindset','practical','perspective'].includes(catKey)
-              ? `lesson-article-tag--${catKey}`
-              : 'lesson-article-tag--default';
-          %>
-          <a
-            href="/lessons/<%= lesson.slug %>"
-            class="lesson-card <%= isComplete ? 'is-complete' : '' %>"
-            data-category="<%= catKey %>">
-
-            <% if (isComplete) { %>
-              <div class="lesson-complete-badge">✓</div>
-            <% } %>
-
-            <div class="lesson-card-tag <%= tagClass %>"><%= lesson.category_tag || 'Lesson' %></div>
-            <div class="lesson-card-body">
-              <h2 class="lesson-card-title"><%= lesson.title %></h2>
-              <p class="lesson-card-subtitle"><em><%= lesson.subtitle %></em></p>
-              <div class="lesson-card-footer">
-                <span class="lesson-card-read-time">~<%= lesson.estimated_read_time %> min read</span>
-                <span class="lesson-card-cta"><%= isComplete ? 'Read again →' : 'Read →' %></span>
+      <% if (!videos.length) { %>
+        <p class="videos-empty">Videos are on their way. 🌿</p>
+      <% } else { %>
+        <div class="videos-list">
+          <% for (const v of videos) { %>
+            <div class="video-item">
+              <h2 class="video-item-title"><%= v.title %></h2>
+              <% if (v.subtitle) { %><p class="video-item-sub"><%= v.subtitle %></p><% } %>
+              <div class="video-embed">
+                <iframe src="<%= v.video_url %>" title="<%= v.title %>" frameborder="0"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowfullscreen></iframe>
               </div>
             </div>
-          </a>
-        <% } %>
-      </div>
-
-      <% if (numberedCompleted === numberedLessons.length && numberedLessons.length > 0) { %>
-        <div class="lessons-all-done">
-          <p class="lessons-all-done-title">You've read everything. Beautiful work.</p>
-          <p class="lessons-all-done-sub">Feel free to return to any lesson anytime — some things only land on a second read.</p>
+          <% } %>
         </div>
       <% } %>
 
     </main>
   </div>
-
-  <script>
-    const tabs = document.querySelectorAll('.filter-tab');
-    const cards = document.querySelectorAll('.lesson-card');
-
-    tabs.forEach(tab => {
-      tab.addEventListener('click', () => {
-        tabs.forEach(t => t.classList.remove('is-active'));
-        tab.classList.add('is-active');
-        const filter = tab.dataset.filter;
-        cards.forEach(card => {
-          card.style.display = (filter === 'all' || card.dataset.category === filter) ? '' : 'none';
-        });
-      });
-    });
-  </script>
 
 </body>
 </html>

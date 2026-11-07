@@ -1794,54 +1794,20 @@ function normalizeVideoUrl(url) {
 }
 
 app.get('/lessons', requireAuth, (req, res) => {
-  // Lessons are hidden from students during the trial run — not ready yet.
-  // Admin-only for now (nav link + dashboard surfaces are hidden to match);
-  // remove this guard to reopen lessons to students.
-  if (req.session.user.role !== 'admin') return res.redirect('/dashboard');
-  const allLessons = db.getAllLessons();
-  const completedIds = new Set(db.completedLessonIds(req.session.user.id));
-  // Trial students only see lessons within their course length. The
-  // "Course Introduction" sits outside the numbered curriculum so it stays
-  // visible to everyone. Numbered lessons N > length are hidden.
-  const courseLengthWeeks = getCourseLengthWeeks(req.session.user);
-  let visible = allLessons;
-  if (req.session.user.role !== 'admin' && courseLengthWeeks < 12) {
-    const numbered = allLessons.filter(l => l.slug !== 'course-introduction');
-    const allowedNumbered = new Set(numbered.slice(0, courseLengthWeeks).map(l => l.id));
-    visible = allLessons.filter(l => l.slug === 'course-introduction' || allowedNumbered.has(l.id));
-  }
+  // The "Videos" library — open to everyone. Shows only entries that actually
+  // have a video, so the old text-only course lessons stay out of it. No
+  // curriculum gating: every video is visible to every student.
+  const videos = db.getAllLessons().filter(l => l.video_url);
   res.render('lessons', {
-    title: 'Lessons',
+    title: 'Videos',
     page: 'lessons',
-    lessons: visible,
-    completedIds,
-    completedCount: completedIds.size
+    videos,
   });
 });
 
 app.get('/lessons/:slug', requireAuth, (req, res) => {
-  // Lessons hidden from students during the trial run (see /lessons above).
-  if (req.session.user.role !== 'admin') return res.redirect('/dashboard');
   const lesson = db.getLessonBySlug(req.params.slug);
-  if (!lesson) return res.status(404).render('error', { title: '404', message: 'Lesson not found.', user: req.session.user, page: 'lessons' });
-  // Block trial students from URL-hacking into a lesson past their length.
-  // Admins always pass; intro is always allowed; numbered lessons N > length
-  // 404 with a friendly message instead of silently rendering.
-  if (req.session.user.role !== 'admin' && lesson.slug !== 'course-introduction') {
-    const courseLengthWeeks = getCourseLengthWeeks(req.session.user);
-    if (courseLengthWeeks < 12) {
-      const numbered = db.getAllLessons().filter(l => l.slug !== 'course-introduction');
-      const numIdx = numbered.findIndex(l => l.id === lesson.id);
-      if (numIdx >= 0 && numIdx + 1 > courseLengthWeeks) {
-        return res.status(404).render('error', {
-          title: 'Not yet',
-          message: `This lesson is part of the full course. Your trial covers lessons 1–${courseLengthWeeks}.`,
-          user: req.session.user,
-          page: 'lessons',
-        });
-      }
-    }
-  }
+  if (!lesson) return res.status(404).render('error', { title: '404', message: 'Video not found.', user: req.session.user, page: 'lessons' });
   const completed = !!db.getLessonCompletion(req.session.user.id, lesson.id);
   const allLessons = db.getAllLessons();
   const idx = allLessons.findIndex(l => l.id === lesson.id);
@@ -5438,10 +5404,10 @@ app.get('/api/admin/student-data/:id', requireAdmin, (req, res) => {
 // ─── Admin: Lessons ────────────────────────────────────────────────────────
 
 app.post('/api/admin/lessons', requireAdmin, (req, res) => {
-  const { slug, title, subtitle, category_tag, content, estimated_read_time } = req.body;
+  const { slug, title, subtitle, category_tag, content, estimated_read_time, video_url } = req.body;
   if (!title || !slug) return res.status(400).json({ error: 'Title and slug are required.' });
   try {
-    const result = db.createLesson(slug.trim(), title.trim(), subtitle, category_tag, content, parseInt(estimated_read_time) || 5);
+    const result = db.createLesson(slug.trim(), title.trim(), subtitle, category_tag, content, parseInt(estimated_read_time) || 5, normalizeVideoUrl(video_url));
     res.json({ ok: true, id: result.lastInsertRowid });
   } catch (e) {
     if (e.message && e.message.includes('UNIQUE')) return res.status(409).json({ error: 'That slug is already used by another lesson.' });

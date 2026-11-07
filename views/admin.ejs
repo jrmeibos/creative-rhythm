@@ -875,11 +875,15 @@
       </div>
     </div>
     <div class="admin-form-field">
+      <label class="admin-form-label">Video link <span class="admin-form-hint">(YouTube/Vimeo — entries with a video show on the student Videos page)</span></label>
+      <input class="admin-input" type="url" id="add-lesson-video" placeholder="https://youtu.be/…">
+    </div>
+    <div class="admin-form-field">
       <label class="admin-form-label">Est. Read Time <span class="admin-form-hint">(minutes)</span></label>
       <input class="admin-input admin-input--short" type="number" id="add-lesson-readtime" value="5" min="1">
     </div>
     <div class="admin-form-field">
-      <label class="admin-form-label">Content <span class="admin-form-hint">(HTML accepted)</span></label>
+      <label class="admin-form-label">Content <span class="admin-form-hint">(optional — HTML accepted)</span></label>
       <textarea class="admin-input admin-textarea" id="add-lesson-content" rows="10"
                 placeholder="<p>Lesson content here…</p>"></textarea>
     </div>
@@ -1743,12 +1747,13 @@
       const category_tag = document.getElementById('add-lesson-category').value.trim();
       const estimated_read_time = parseInt(document.getElementById('add-lesson-readtime').value) || 5;
       const content  = document.getElementById('add-lesson-content').value;
+      const video_url = document.getElementById('add-lesson-video').value.trim();
       if (!title || !slug) return showError('add-lesson-error', 'Title and slug are required.');
 
       const res = await fetch('/api/admin/lessons', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ slug, title, subtitle, category_tag, content, estimated_read_time })
+        body:    JSON.stringify({ slug, title, subtitle, category_tag, content, estimated_read_time, video_url })
       });
       const data = await res.json();
       if (!res.ok) return showError('add-lesson-error', data.error);

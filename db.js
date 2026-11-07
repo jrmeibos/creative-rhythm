@@ -2784,13 +2784,13 @@ module.exports = {
     return db.prepare('SELECT * FROM lessons WHERE id=?').get(id);
   },
 
-  createLesson(slug, title, subtitle, categoryTag, content, estimatedReadTime) {
+  createLesson(slug, title, subtitle, categoryTag, content, estimatedReadTime, videoUrl) {
     const maxRow = db.prepare('SELECT MAX(sort_order) as m FROM lessons').get();
     const sortOrder = (maxRow.m || 0) + 10;
     return db.prepare(`
-      INSERT INTO lessons (slug, title, subtitle, category_tag, content, estimated_read_time, sort_order, published)
-      VALUES (?, ?, ?, ?, ?, ?, ?, 1)
-    `).run(slug, title, subtitle || '', categoryTag || '', content || '', estimatedReadTime || 5, sortOrder);
+      INSERT INTO lessons (slug, title, subtitle, category_tag, content, estimated_read_time, video_url, sort_order, published)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)
+    `).run(slug, title, subtitle || '', categoryTag || '', content || '', estimatedReadTime || 5, videoUrl || null, sortOrder);
   },
 
   updateLesson(id, title, subtitle, categoryTag, content, estimatedReadTime, videoUrl) {
