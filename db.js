@@ -1724,6 +1724,28 @@ function seedCourseIntroduction() {
   );
 }
 
+// One-time seed of the ready course videos into the Videos page. Guarded by a
+// flag so it runs ONCE: afterward Julia fully owns these entries (edit,
+// reorder, delete) and they won't reappear on deploy.
+function seedCourseVideos() {
+  const flag = db.prepare("SELECT value FROM settings WHERE key = 'videos_seeded'").get();
+  if (flag && flag.value === 'true') return;
+  const vids = [
+    ['tour-of-the-garden',  'A Tour of the Garden',        'Find your way around the platform',            'https://www.youtube.com/embed/B44LI0Sx-xs'],
+    ['why-we-do-this',      "Why We're Doing This",        "My experience, and three gardeners' journeys", 'https://www.youtube.com/embed/qprPPoxPmDw'],
+    ['the-daily-recording', 'The Daily Recording Process', 'How to show up each day',                      'https://www.youtube.com/embed/HEsdCWNT7bM'],
+  ];
+  const maxRow = db.prepare('SELECT MAX(sort_order) AS m FROM lessons').get();
+  let sort = (maxRow.m || 0) + 10;
+  const ins = db.prepare(
+    `INSERT OR IGNORE INTO lessons (slug, title, subtitle, category_tag, content, estimated_read_time, video_url, sort_order, published)
+     VALUES (?, ?, ?, 'Video', '', 5, ?, ?, 1)`
+  );
+  for (const [slug, title, subtitle, video] of vids) { ins.run(slug, title, subtitle, video, sort); sort += 10; }
+  db.prepare("INSERT INTO settings (key, value) VALUES ('videos_seeded', 'true') ON CONFLICT(key) DO UPDATE SET value = 'true'").run();
+  console.log('✓ Seeded course videos');
+}
+
 function seedLesson1Homework() {
   const lesson = db.prepare("SELECT id FROM lessons WHERE slug='welcome-to-the-rhythm'").get();
   if (!lesson) return;
@@ -1869,6 +1891,7 @@ safeInit('backfillUserStartDates', backfillUserStartDates);
 safeInit('seedCohortsAndBackfill',  seedCohortsAndBackfill);
 safeInit('seedLessons',             seedLessons);
 safeInit('seedCourseIntroduction',  seedCourseIntroduction);
+safeInit('seedCourseVideos',        seedCourseVideos);
 safeInit('seedLesson1Homework',     seedLesson1Homework);
 safeInit('seedContentFormats',      seedContentFormats);
 

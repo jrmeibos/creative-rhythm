@@ -48,6 +48,9 @@
     .comment .reaction-bar { margin:0.3rem 0 0 0.1rem; }
     .comment .react-btn { padding:0.12rem 0.4rem; font-size:0.78rem; }
     .comment .react-emoji { font-size:0.85rem; }
+    /* Make "Reply" an obvious affordance, not a muted text link. */
+    .comment-meta button.comment-reply-btn { color:var(--color-bloem); font-weight:600; border:1px solid rgba(112,92,108,0.3); border-radius:999px; padding:0.12rem 0.65rem; }
+    .comment-meta button.comment-reply-btn:hover { background:rgba(112,92,108,0.08); border-color:var(--color-bloem); color:var(--color-bloem); text-decoration:none; }
     .post-admin-btn { margin-left:0.1rem; }
     .post-admin-btn--danger:hover { border-color:#c0392b; color:#c0392b; }
     .post-admin-btn--danger { margin-left:auto; }
@@ -199,7 +202,7 @@
                         <%- include('partials/reaction-bar', { reactionSet, reactions: c.reactions, kind: 'comment', id: c.id }) %>
                         <div class="comment-meta">
                           <time class="comment-time" data-ts="<%= c.created_at %>"><%= c.created_at %></time>
-                          <button data-action="reply-toggle" data-comment-id="<%= c.id %>">Reply</button>
+                          <button class="comment-reply-btn" data-action="reply-toggle" data-comment-id="<%= c.id %>">↩ Reply</button>
                           <% if (viewerIsAdmin || c.user_id === currentUserId) { %>
                             <button data-action="delete-comment" data-comment-id="<%= c.id %>">Delete</button>
                           <% } %>
