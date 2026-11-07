@@ -2553,19 +2553,21 @@ async function notifyAdminOfMidcourseSubmission(submittingUser) {
   }
 }
 
-// Trial students see this at the end of their 3-week run. Unlocks during
-// week 3 (day 14 onward — mirrors the full course's harvest at day 77).
-// Pilot students never reach this — gated to lengthWeeks < 12.
-// End-of-project feedback opens on this date, measured on the student's own
-// wall clock. Set for the Oct-5 cohort to Oct 24 (the challenge wraps Oct 25).
-// Change here to move the open date.
-const TRIAL_CLOSING_OPEN_DATE = '2026-10-24';
+// Trial students see this at the end of their OWN 3-week run — it opens in the
+// final days of each student's challenge (two days before it wraps), measured
+// on their own wall clock from course_start_date. This must be per-student, not
+// a fixed calendar date: a global date wrongly showed the closing card to
+// brand-new signups whose challenge hadn't started yet. Full-course/pilot
+// students never reach it — gated to lengthWeeks < 12.
 function isTrialClosingUnlockedFor(user) {
-  if (getCourseLengthWeeks(user) >= 12) return false;
-  if (!db.getUserCourseStartDate(user)) return false; // real challenge accounts only
+  const len = getCourseLengthWeeks(user);
+  if (len >= 12) return false;
+  const courseStart = db.getUserCourseStartDate(user);
+  if (!courseStart) return false; // real challenge accounts only
   // getNow (not Date.now) so time travel can QA this and the boundary lands on
   // the student's wall clock, not the server's.
-  return toLocalDateString(getNow(user)) >= TRIAL_CLOSING_OPEN_DATE;
+  const daysDiff = Math.floor((getNow(user).getTime() - new Date(courseStart + 'T00:00:00').getTime()) / 86400000);
+  return daysDiff >= len * 7 - 2;
 }
 
 app.get('/trial-closing', requireAuth, (req, res) => {
