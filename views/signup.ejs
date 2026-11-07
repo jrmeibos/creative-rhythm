@@ -4,6 +4,10 @@
   <%- include('partials/head') %>
   <%- include('partials/fb-pixel') %>
   <link rel="stylesheet" href="/css/signup.css">
+  <style>
+    .sg-video { position: relative; width: 100%; max-width: 640px; margin: 1.5rem auto 0; aspect-ratio: 16 / 9; border-radius: 14px; overflow: hidden; background: #100F10; }
+    .sg-video iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+  </style>
 </head>
 <body class="signup-body">
 
@@ -35,6 +39,23 @@
         <a href="/<%= returnTo ? '?returnTo=' + encodeURIComponent(returnTo) : '' %>" class="sg-link">Sign in</a>
       </p>
     </header>
+
+    <!-- ── Why this works (Julia's experience + three gardeners' journeys) ── -->
+    <section class="sg-section">
+      <p class="sg-eyebrow sg-eyebrow--sage">Does this really work?</p>
+      <h2 class="sg-section-title">What three weeks can do</h2>
+      <p class="sg-note" style="margin:0 auto">
+        A little on why this works — from my own experience, and the journeys of three gardeners who went through it.
+      </p>
+      <div class="sg-video">
+        <iframe
+          src="https://www.youtube.com/embed/qprPPoxPmDw"
+          title="Why this works — real journeys"
+          frameborder="0"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+          allowfullscreen></iframe>
+      </div>
+    </section>
 
     <!-- ── This is for you if ───────────────────────────────────────────── -->
     <section class="sg-section">
