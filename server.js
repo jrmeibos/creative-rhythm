@@ -1236,7 +1236,7 @@ app.get('/upgrade', (req, res) => {
   if (upgradeMode === 'coming_soon' && !adminPreviewFull) {
     const mailchimpConfigured = !!(MAILCHIMP_SIGNUP.host && MAILCHIMP_SIGNUP.u && MAILCHIMP_SIGNUP.id);
     return res.render('upgrade-coming-soon', {
-      title: 'The full course is coming soon',
+      title: 'The Creative\'s Garden',
       page: 'upgrade',
       user: sessionUser || null,
       mailchimp: MAILCHIMP_SIGNUP,

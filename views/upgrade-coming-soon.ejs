@@ -4,6 +4,26 @@
   <%- include('partials/head') %>
   <link rel="stylesheet" href="/css/dashboard.css">
   <link rel="stylesheet" href="/css/upgrade.css">
+  <style>
+    .cs-seasons { margin: 2.5rem 0 1rem; }
+    .cs-seasons-title { font-family: var(--font-display); font-size: 1.9rem; color: var(--color-ink-stained); margin: 0 0 0.6rem; font-weight: 400; }
+    .cs-seasons-intro { font-family: var(--font-body); font-size: 1.02rem; line-height: 1.7; color: rgba(16,15,16,0.72); margin: 0 0 1.5rem; max-width: 640px; }
+    .cs-seasons-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; }
+    .cs-season-card { border-radius: 14px; overflow: hidden; border: 1px solid rgba(16,15,16,0.08); background: var(--color-blank-page); display: flex; flex-direction: column; }
+    .cs-season-head { padding: 0.85rem 1rem; display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; color: var(--color-ink-stained); }
+    .cs-season-head--winter { background: #76856C; }
+    .cs-season-head--spring { background: #D8B0AB; }
+    .cs-season-head--summer { background: #F6C95C; }
+    .cs-season-head--autumn { background: #a990a4; }
+    .cs-season-emoji { font-size: 1.15rem; line-height: 1; }
+    .cs-season-name { font-family: var(--font-display); font-size: 1.05rem; font-weight: 400; }
+    .cs-season-body { font-family: var(--font-body); font-size: 0.92rem; line-height: 1.6; color: var(--color-ink-stained); padding: 0.9rem 1rem 1.1rem; margin: 0; }
+    .cs-seasons-close { font-family: var(--font-body); font-size: 1.02rem; line-height: 1.7; color: rgba(16,15,16,0.78); margin: 1.5rem 0 0.75rem; max-width: 760px; }
+    .cs-seasons-cta { font-family: var(--font-body); font-size: 1rem; margin: 0.5rem 0 0; }
+    .cs-seasons-cta a { color: var(--color-bloem); font-weight: 600; text-decoration: underline; }
+    @media (max-width: 900px) { .cs-seasons-grid { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 560px) { .cs-seasons-grid { grid-template-columns: 1fr; } }
+  </style>
 </head>
 <body class="app-body<%= locals.user ? '' : ' up-body--anon' %>">
   <div class="app-layout">
@@ -48,7 +68,7 @@
           <p class="up-trial-body">
             What would happen if you showed up on camera for yourself first? In
             this experiment, we'll do three weeks of daily recording to see what
-            unblocks. It's $299 — and fully refundable when you complete it.
+            unblocks. It's $199.
           </p>
         </div>
         <div class="up-trial-cta-wrap">
@@ -61,28 +81,43 @@
         </div>
       </section>
 
-      <!-- ─── Full course — coming soon ──────────────────────────────────── -->
-      <section class="cs-soon" aria-labelledby="cs-soon-title">
-        <p class="up-trial-eyebrow">Coming soon</p>
-        <h2 class="cs-soon-title" id="cs-soon-title">The full 12-week course</h2>
-        <p class="cs-soon-body">
-          The complete Creative's Garden is being built right now. Your feedback
-          is helping me build it. Want to know the moment the doors open? Leave
-          your email, and I'll be in touch.
+      <!-- ─── This is just the beginning ─────────────────────────────────── -->
+      <section class="cs-seasons" aria-labelledby="cs-seasons-title">
+        <h2 class="cs-seasons-title" id="cs-seasons-title">This is just the beginning</h2>
+        <p class="cs-seasons-intro">
+          These three weeks are the first season of The Creative's Garden. If you
+          want to see what grows from them, here's where the garden is headed:
         </p>
 
-        <form class="cs-form" id="cs-notify-form" novalidate>
-          <label class="cs-form-label" for="cs-email">Email address</label>
-          <div class="cs-form-row">
-            <input class="cs-form-input" type="email" id="cs-email" name="EMAIL"
-                   placeholder="you@example.com" autocomplete="email" required>
-            <button class="up-btn up-btn--primary" type="submit" id="cs-notify-btn">Notify me →</button>
-          </div>
-          <p class="cs-form-msg" id="cs-notify-msg" hidden></p>
-          <p class="cs-form-fineprint">
-            No spam, I promise. Unsubscribe anytime.
-          </p>
-        </form>
+        <% const csSeasons = [
+          { key: 'winter', emoji: '❄️', name: 'Record · Winter', body: "By the end, you'll have a whole bed of cuttings — weeks of recordings and notes about what you really think. Thoughts that are really, truly yours." },
+          { key: 'spring', emoji: '🌸', name: 'Watch · Spring',  body: "Watch a few past recordings and practice deciding what's just for you and what might be worth sharing." },
+          { key: 'summer', emoji: '☀️', name: 'Create · Summer', body: "Create something from your ideas, editing a few, with no pressure to post." },
+          { key: 'autumn', emoji: '🍂', name: 'Share · Autumn',  body: "It's fall — we share our harvest. Here, we'll start sharing our creations with the group or online." }
+        ]; %>
+        <div class="cs-seasons-grid">
+          <% csSeasons.forEach(function(s) { %>
+            <div class="cs-season-card">
+              <div class="cs-season-head cs-season-head--<%= s.key %>">
+                <span class="cs-season-emoji"><%= s.emoji %></span>
+                <span class="cs-season-name"><%= s.name %></span>
+              </div>
+              <p class="cs-season-body"><%= s.body %></p>
+            </div>
+          <% }); %>
+        </div>
+
+        <p class="cs-seasons-close">
+          The idea is to practice visibility in small, bite-sized chunks. Each part
+          of online visibility has its own challenges. If you want to keep going
+          after the challenge, we can explore working together one-on-one — and
+          while I already hope to keep you, there's no pressure either way.
+        </p>
+
+        <p class="cs-seasons-cta">
+          Curious about working together?
+          <a href="mailto:julia@meibostouch.com?subject=Working%20together%20%E2%80%94%20The%20Creative%27s%20Garden">Reach out to Julia →</a>
+        </p>
       </section>
 
       <footer class="cs-footer">
@@ -94,83 +129,5 @@
     </main>
   </div>
 
-  <script>
-    // Mailchimp embedded-form signup via JSONP — posts straight to Mailchimp
-    // from the browser (no API key, no server round-trip). Config comes from
-    // the /upgrade route's MAILCHIMP_SIGNUP constant.
-    (function () {
-      const MC    = <%- JSON.stringify(mailchimp) %>;
-      const MC_OK = <%= mailchimpConfigured ? 'true' : 'false' %>;
-      const form  = document.getElementById('cs-notify-form');
-      const email = document.getElementById('cs-email');
-      const btn   = document.getElementById('cs-notify-btn');
-      const msg   = document.getElementById('cs-notify-msg');
-      let cbSeq   = 0; // unique-ifies each JSONP callback name
-
-      function showMsg(text, kind) {
-        msg.textContent = text;
-        msg.hidden = false;
-        msg.className = 'cs-form-msg cs-form-msg--' + (kind || 'note');
-      }
-
-      form.addEventListener('submit', function (e) {
-        e.preventDefault();
-        const value = (email.value || '').trim();
-        if (!value || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
-          showMsg('Please enter a valid email address.', 'error');
-          return;
-        }
-        if (!MC_OK) {
-          // Mailchimp not wired up yet — fail gracefully instead of posting nowhere.
-          showMsg("Signups are opening soon — check back shortly!", 'note');
-          return;
-        }
-
-        btn.disabled = true;
-        const cbName = 'mcCallback_' + (++cbSeq);
-
-        window[cbName] = function (data) {
-          btn.disabled = false;
-          const ok = data && data.result === 'success';
-          if (ok) {
-            // Mailchimp's success msg says "confirm your email" when the
-            // audience uses double opt-in — reflect that so we don't promise
-            // they're subscribed before they've clicked the confirmation link.
-            const needsConfirm = data.msg && /confirm/i.test(data.msg);
-            showMsg(needsConfirm
-              ? "Almost there — check your inbox and click the confirmation link to lock in your spot. 🌱"
-              : "You're on the list — I'll email you the moment the doors open. 🌱", 'success');
-            form.reset();
-          } else {
-            // Mailchimp returns a helpful message (e.g. already subscribed).
-            let m = (data && data.msg) ? String(data.msg).replace(/^\d+\s*-\s*/, '') : 'Something went wrong — please try again.';
-            showMsg(m, 'error');
-          }
-          try { delete window[cbName]; } catch (_) { window[cbName] = undefined; }
-          if (s && s.parentNode) s.parentNode.removeChild(s);
-        };
-
-        // Mailchimp's post-json endpoint + JSONP callback. The b_<u>_<id>
-        // field is the anti-bot honeypot Mailchimp expects (left empty).
-        const base = 'https://' + MC.host + '/subscribe/post-json';
-        const url  = base
-          + '?u='  + encodeURIComponent(MC.u)
-          + '&id=' + encodeURIComponent(MC.id)
-          + '&EMAIL=' + encodeURIComponent(value)
-          + '&b_' + MC.u + '_' + MC.id + '='
-          + '&c=' + cbName;
-
-        const s = document.createElement('script');
-        s.src = url;
-        s.onerror = function () {
-          btn.disabled = false;
-          showMsg('Could not reach the signup service — please try again.', 'error');
-          try { delete window[cbName]; } catch (_) {}
-          if (s && s.parentNode) s.parentNode.removeChild(s);
-        };
-        document.body.appendChild(s);
-      });
-    })();
-  </script>
 </body>
 </html>
