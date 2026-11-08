@@ -35,13 +35,6 @@
     }
     .cc-price { font-family: var(--font-display); font-size: 1.9rem; color: var(--color-ink-stained); }
     .cc-price-note { font-family: var(--font-body); font-size: 0.85rem; color: rgba(16,15,16,0.6); }
-    .cc-refund {
-      background: color-mix(in srgb, var(--color-apricity) 18%, var(--color-blank-page));
-      border: 1px solid rgba(246,201,92,0.5); border-radius: 12px;
-      padding: 0.85rem 1rem; margin-bottom: 1.4rem;
-      font-family: var(--font-body); font-size: 0.88rem; line-height: 1.5; color: var(--color-ink-stained);
-    }
-    .cc-refund strong { font-weight: 700; }
     #cc-pay-element { margin-bottom: 1rem; }
     .cc-error { color: #b3261e; font-family: var(--font-body); font-size: 0.85rem; margin: 0 0 0.85rem; }
     .cc-note { font-family: var(--font-body); font-size: 0.78rem; color: rgba(16,15,16,0.5); margin: 0.9rem 0 0; text-align:center; }
@@ -78,10 +71,6 @@
         <div class="cc-price-row">
           <span class="cc-price"><%= priceLabel %></span>
           <span class="cc-price-note">one-time · to join the beta cohort</span>
-        </div>
-
-        <div class="cc-refund">
-          <strong>Fully refundable.</strong> Record every day (with a little grace — 18 of the 21 days) and share your honest feedback at the end, and I refund every penny.
         </div>
 
         <% if (!stripeConfigured) { %>

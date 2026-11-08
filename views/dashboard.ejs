@@ -325,44 +325,41 @@
         </div>
       </section>
 
-      <%# Refund-progress tracker — shown only to paid-challenge (beta) students.
-          Sits below the daily recording so the day's action comes first. %>
+      <%# Challenge completion tracker — shown only to paid-challenge (beta)
+          students. Sits below the daily recording so the day's action comes
+          first. (Class names kept as ch-refund-* CSS hooks though the goal is
+          now completion, not a refund.) %>
       <% if (locals.challenge) { %>
         <% const ch = challenge; %>
         <section class="ch-refund <%= ch.qualifies ? 'ch-refund--won' : '' %>">
           <div class="ch-refund-head">
             <h2 class="ch-refund-title">
-              <% if (ch.status === 'refunded') { %>Your <%= challengePriceLabel %> has been refunded ✓
-              <% } else if (ch.qualifies) { %>You've earned your <%= challengePriceLabel %> back 🎉
-              <% } else { %>Earn your <%= challengePriceLabel %> back<% } %>
+              <% if (ch.qualifies) { %>You've completed the challenge 🎉
+              <% } else { %>Finish the challenge strong<% } %>
             </h2>
             <p class="ch-refund-sub">
-              <% if (ch.status === 'refunded') { %>
-                Thank you for finishing the challenge — and for your honest feedback.
-              <% } else if (ch.qualifies) { %>
-                You've hit the mark. Keep going to the finish, and I'll refund your challenge fee once the three weeks wrap.
+              <% if (ch.qualifies) { %>
+                You've hit the mark — keep going all the way to the finish. I'm so proud of you.
               <% } else { %>
-                Record on at least <%= ch.refundThreshold %> of the <%= ch.totalDays %> days and share your honest feedback at the end, and your <%= challengePriceLabel %> is fully refunded.
+                Record on at least <%= ch.refundThreshold %> of the <%= ch.totalDays %> days and share your honest feedback at the end. That's how you complete the challenge.
               <% } %>
             </p>
           </div>
 
-          <% if (ch.status !== 'refunded') { %>
-            <div class="ch-refund-bar" role="img" aria-label="<%= ch.daysRecorded %> of <%= ch.totalDays %> days recorded">
-              <div class="ch-refund-bar-fill" style="width: <%= Math.min(100, Math.round(ch.daysRecorded / ch.totalDays * 100)) %>%"></div>
-            </div>
-            <p class="ch-refund-count"><strong><%= ch.daysRecorded %></strong> of <%= ch.totalDays %> days recorded</p>
-            <ul class="ch-refund-reqs">
-              <li class="<%= ch.daysRecorded >= ch.refundThreshold ? 'is-done' : '' %>">
-                <span class="ch-refund-check" aria-hidden="true"><%= ch.daysRecorded >= ch.refundThreshold ? '✓' : '○' %></span>
-                <span>Record on at least <%= ch.refundThreshold %> days<% if (ch.daysRecorded < ch.refundThreshold) { %> <span class="ch-refund-remain">— <%= ch.refundThreshold - ch.daysRecorded %> to go</span><% } %></span>
-              </li>
-              <li class="<%= ch.feedbackSubmitted ? 'is-done' : '' %>">
-                <span class="ch-refund-check" aria-hidden="true"><%= ch.feedbackSubmitted ? '✓' : '○' %></span>
-                <span>Share your honest feedback<% if (!ch.feedbackSubmitted) { %> <span class="ch-refund-remain">— at the end of the challenge</span><% } %></span>
-              </li>
-            </ul>
-          <% } %>
+          <div class="ch-refund-bar" role="img" aria-label="<%= ch.daysRecorded %> of <%= ch.totalDays %> days recorded">
+            <div class="ch-refund-bar-fill" style="width: <%= Math.min(100, Math.round(ch.daysRecorded / ch.totalDays * 100)) %>%"></div>
+          </div>
+          <p class="ch-refund-count"><strong><%= ch.daysRecorded %></strong> of <%= ch.totalDays %> days recorded</p>
+          <ul class="ch-refund-reqs">
+            <li class="<%= ch.daysRecorded >= ch.refundThreshold ? 'is-done' : '' %>">
+              <span class="ch-refund-check" aria-hidden="true"><%= ch.daysRecorded >= ch.refundThreshold ? '✓' : '○' %></span>
+              <span>Record on at least <%= ch.refundThreshold %> days<% if (ch.daysRecorded < ch.refundThreshold) { %> <span class="ch-refund-remain">— <%= ch.refundThreshold - ch.daysRecorded %> to go</span><% } %></span>
+            </li>
+            <li class="<%= ch.feedbackSubmitted ? 'is-done' : '' %>">
+              <span class="ch-refund-check" aria-hidden="true"><%= ch.feedbackSubmitted ? '✓' : '○' %></span>
+              <span>Share your honest feedback<% if (!ch.feedbackSubmitted) { %> <span class="ch-refund-remain">— at the end of the challenge</span><% } %></span>
+            </li>
+          </ul>
         </section>
       <% } %>
 
