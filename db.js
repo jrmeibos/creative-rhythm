@@ -660,6 +660,22 @@ db.exec(`
     console.log('✓ Migrated: added continuation_choice columns to users');
   }
 
+  // Mailing address (collected optionally at the start of onboarding, editable
+  // later in the profile). All nullable/blank — a student can skip it entirely.
+  // Stored on the user row, surfaced in the admin View dialog. No country
+  // default: the pilot cohort came from all over.
+  const userColsMail = db.prepare("PRAGMA table_info(users)").all().map(r => r.name);
+  if (!userColsMail.includes('mail_name')) {
+    db.exec("ALTER TABLE users ADD COLUMN mail_name TEXT DEFAULT ''");
+    db.exec("ALTER TABLE users ADD COLUMN mail_street TEXT DEFAULT ''");
+    db.exec("ALTER TABLE users ADD COLUMN mail_unit TEXT DEFAULT ''");
+    db.exec("ALTER TABLE users ADD COLUMN mail_city TEXT DEFAULT ''");
+    db.exec("ALTER TABLE users ADD COLUMN mail_state TEXT DEFAULT ''");
+    db.exec("ALTER TABLE users ADD COLUMN mail_zip TEXT DEFAULT ''");
+    db.exec("ALTER TABLE users ADD COLUMN mail_country TEXT DEFAULT ''");
+    console.log('✓ Migrated: added mailing-address columns to users');
+  }
+
   // Rebuild self_assessments if it has old column schema
   const saCols = db.prepare("PRAGMA table_info(self_assessments)").all().map(r => r.name);
   if (saCols.length > 0 && saCols.includes('q1_rating')) {
@@ -694,6 +710,22 @@ db.exec(`
   if (!saColsNow.includes('q12_text')) {
     db.exec("ALTER TABLE self_assessments ADD COLUMN q12_text TEXT DEFAULT ''");
     console.log('✓ Migrated: added q12_text to self_assessments');
+  }
+  // Trial-closing additions (Jan 2027): q13–q17 hold the new testimonial /
+  // story / anything-else answers; share_consent is the "you may share my
+  // words" checkbox (0 = no, 1 = yes). The before/after re-asks reuse the
+  // existing q1–q6 columns on the trial_closing row, so no new columns needed
+  // for those.
+  const saColsNow2 = db.prepare("PRAGMA table_info(self_assessments)").all().map(r => r.name);
+  for (const col of ['q13_text', 'q14_text', 'q15_text', 'q16_text', 'q17_text']) {
+    if (!saColsNow2.includes(col)) {
+      db.exec(`ALTER TABLE self_assessments ADD COLUMN ${col} TEXT DEFAULT ''`);
+      console.log(`✓ Migrated: added ${col} to self_assessments`);
+    }
+  }
+  if (!saColsNow2.includes('share_consent')) {
+    db.exec("ALTER TABLE self_assessments ADD COLUMN share_consent INTEGER DEFAULT 0");
+    console.log('✓ Migrated: added share_consent to self_assessments');
   }
 
   // Goals: add legacy tending columns if missing (for tables created before the rebuild)
@@ -2189,7 +2221,21 @@ module.exports = {
   },
 
   getUserFullProfile(id) {
-    return db.prepare('SELECT id, name, email, role, avatar_initial, current_season, profile_photo, timezone, notify_new_fieldnotes, notify_community, notify_weekly_reminder, community_goals_public, community_season_public, daily_reminder_enabled, daily_reminder_hour, reminder_email_enabled, weekly_reminder_enabled, weekly_reminder_hour, weekly_reminder_email FROM users WHERE id = ?').get(id);
+    return db.prepare('SELECT id, name, email, role, avatar_initial, current_season, profile_photo, timezone, notify_new_fieldnotes, notify_community, notify_weekly_reminder, community_goals_public, community_season_public, daily_reminder_enabled, daily_reminder_hour, reminder_email_enabled, weekly_reminder_enabled, weekly_reminder_hour, weekly_reminder_email, mail_name, mail_street, mail_unit, mail_city, mail_state, mail_zip, mail_country FROM users WHERE id = ?').get(id);
+  },
+
+  // Save the optional mailing address. Fields are trimmed/clamped by the route;
+  // here we just persist whatever (already-validated) strings arrive.
+  updateUserAddress(userId, a) {
+    return db.prepare(`
+      UPDATE users SET
+        mail_name=?, mail_street=?, mail_unit=?, mail_city=?,
+        mail_state=?, mail_zip=?, mail_country=?
+      WHERE id=?
+    `).run(
+      a.mail_name || '', a.mail_street || '', a.mail_unit || '', a.mail_city || '',
+      a.mail_state || '', a.mail_zip || '', a.mail_country || '', userId
+    );
   },
 
   updateUserDetails(userId, name, email) {
@@ -3193,13 +3239,15 @@ module.exports = {
   upsertAssessment(userId, type, data) {
     const { q1_choice, q2_rating, q3_choice, q4_rating, q5_choice, q6_rating,
             q7_choices, q8_choice, q9_text, q10_text, q11_text, q12_text,
+            q13_text, q14_text, q15_text, q16_text, q17_text, share_consent,
             harvest_reflection } = data;
     return db.prepare(`
       INSERT INTO self_assessments
         (user_id, assessment_type, q1_choice, q2_rating, q3_choice, q4_rating,
          q5_choice, q6_rating, q7_choices, q8_choice, q9_text, q10_text,
-         q11_text, q12_text, harvest_reflection, completed_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+         q11_text, q12_text, q13_text, q14_text, q15_text, q16_text, q17_text,
+         share_consent, harvest_reflection, completed_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
       ON CONFLICT(user_id, assessment_type) DO UPDATE SET
         q1_choice          = excluded.q1_choice,
         q2_rating          = excluded.q2_rating,
@@ -3213,6 +3261,12 @@ module.exports = {
         q10_text           = excluded.q10_text,
         q11_text           = excluded.q11_text,
         q12_text           = excluded.q12_text,
+        q13_text           = excluded.q13_text,
+        q14_text           = excluded.q14_text,
+        q15_text           = excluded.q15_text,
+        q16_text           = excluded.q16_text,
+        q17_text           = excluded.q17_text,
+        share_consent      = excluded.share_consent,
         harvest_reflection = excluded.harvest_reflection,
         completed_at       = CURRENT_TIMESTAMP
     `)
@@ -3223,6 +3277,8 @@ module.exports = {
       q1_choice || '', q2_rating ?? null, q3_choice || '', q4_rating ?? null,
       q5_choice || '', q6_rating ?? null, q7_choices || '', q8_choice || '',
       q9_text || '', q10_text || '', q11_text || '', q12_text || '',
+      q13_text || '', q14_text || '', q15_text || '', q16_text || '',
+      q17_text || '', share_consent ? 1 : 0,
       harvest_reflection || '');
   },
 
@@ -4247,7 +4303,7 @@ module.exports = {
 
   getStudentFullData(userId) {
     const user = db.prepare(
-      'SELECT id, name, email, avatar_initial, midcourse_submitted_at, course_length_weeks FROM users WHERE id=?'
+      'SELECT id, name, email, avatar_initial, midcourse_submitted_at, course_length_weeks, mail_name, mail_street, mail_unit, mail_city, mail_state, mail_zip, mail_country FROM users WHERE id=?'
     ).get(userId);
     const opening = db.prepare(
       "SELECT * FROM self_assessments WHERE user_id=? AND assessment_type='opening'"

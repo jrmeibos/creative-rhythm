@@ -205,11 +205,72 @@
   color: var(--color-blank-page);
 }
 
+.ob-btn--ghost {
+  background: transparent;
+  color: var(--color-bloem);
+  border: 1px solid rgba(112, 92, 108, 0.35);
+}
+
 .ob-actions {
   margin-top: 2.5rem;
   display: flex;
   align-items: center;
   gap: 1rem;
+}
+
+.ob-actions--split { justify-content: space-between; }
+
+/* ─── Onboarding: mailing-address form ───────────────────────────────────── */
+
+.ob-address-form {
+  margin-top: 1.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.ob-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  flex: 1;
+}
+
+.ob-field-label {
+  font-family: var(--font-body);
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--color-ink-stained);
+}
+
+.ob-field-hint {
+  font-weight: 300;
+  color: rgba(16, 15, 16, 0.45);
+}
+
+.ob-field-row {
+  display: flex;
+  gap: 1rem;
+}
+
+.ob-input {
+  font-family: var(--font-body);
+  font-size: 1rem;
+  padding: 0.7rem 0.85rem;
+  border: 1px solid rgba(16, 15, 16, 0.18);
+  border-radius: var(--radius-md);
+  background: var(--color-blank-page);
+  color: var(--color-ink-stained);
+  width: 100%;
+}
+
+.ob-input:focus {
+  outline: none;
+  border-color: var(--color-bloem);
+}
+
+@media (max-width: 640px) {
+  .ob-field-row { flex-direction: column; gap: 1rem; }
 }
 
 .ob-error {
@@ -491,6 +552,57 @@
   line-height: 1;
 }
 
+/* ─── Trial-closing: section headers ─────────────────────────────────────── */
+
+.tc-section {
+  margin: 2.75rem 0 0.25rem;
+  padding-bottom: 0.6rem;
+  border-bottom: 1px solid rgba(112, 92, 108, 0.2);
+}
+.tc-section:first-child { margin-top: 0.5rem; }
+
+.tc-section-title {
+  font-family: var(--font-display);
+  font-size: 1.35rem;
+  color: var(--color-bloem);
+  margin: 0;
+  font-weight: 400;
+}
+
+.tc-section-intro {
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+  color: rgba(16, 15, 16, 0.6);
+  margin: 0.4rem 0 0;
+  line-height: 1.5;
+}
+
+/* ─── Trial-closing: consent checkbox ────────────────────────────────────── */
+
+.tc-consent {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.7rem;
+  cursor: pointer;
+  padding: 0.5rem 0;
+}
+
+.tc-consent-cb {
+  width: 20px;
+  height: 20px;
+  margin-top: 0.15rem;
+  flex-shrink: 0;
+  accent-color: var(--color-bloem);
+  cursor: pointer;
+}
+
+.tc-consent-label {
+  font-family: var(--font-body);
+  font-size: 1rem;
+  line-height: 1.5;
+  color: var(--color-ink-stained);
+}
+
 /* ─── Responsive ─────────────────────────────────────────────────────────── */
 
 @media (max-width: 640px) {
@@ -500,4 +612,5 @@
   .ob-rating-btn { width: 38px; height: 38px; font-size: 0.82rem; }
   .ob-content { padding: 2rem 1.25rem 4rem; }
   .ob-center { padding: 2rem 1.25rem 3rem; }
+  .tc-section-title { font-size: 1.2rem; }
 }

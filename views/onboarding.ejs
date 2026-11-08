@@ -16,11 +16,11 @@
   <!-- Progress bar -->
   <div class="ob-progress" id="ob-progress">
     <div class="ob-progress-inner">
-      <% for (let i = 1; i <= 3; i++) { %>
+      <% for (let i = 1; i <= 4; i++) { %>
         <div class="ob-dot <%= i === 1 ? 'is-active' : '' %>" id="ob-dot-<%= i %>">
           <span class="ob-dot-num"><%= i %></span>
         </div>
-        <% if (i < 3) { %><div class="ob-progress-line" id="ob-line-<%= i %>"></div><% } %>
+        <% if (i < 4) { %><div class="ob-progress-line" id="ob-line-<%= i %>"></div><% } %>
       <% } %>
     </div>
   </div>
@@ -48,8 +48,57 @@
     </div>
   </div>
 
-  <!-- ── Step 2: Self-Assessment ───────────────────────────────────────── -->
+  <!-- ── Step 2: Mailing address (optional) ────────────────────────────── -->
   <div class="ob-step" id="step-2">
+    <div class="ob-content">
+      <h2 class="ob-title">What's your mailing address?</h2>
+      <p class="ob-subtitle">As a lover of snail mail, I'd love to send you a little something to thank you for being here. This is completely optional, and you can always add it later in your profile.</p>
+
+      <div class="ob-address-form">
+        <label class="ob-field">
+          <span class="ob-field-label">Full name <span class="ob-field-hint">(for the envelope)</span></span>
+          <input type="text" class="ob-input" id="addr-name" autocomplete="name" maxlength="120">
+        </label>
+        <label class="ob-field">
+          <span class="ob-field-label">Street address</span>
+          <input type="text" class="ob-input" id="addr-street" autocomplete="address-line1" maxlength="200">
+        </label>
+        <label class="ob-field">
+          <span class="ob-field-label">Apt / unit <span class="ob-field-hint">(optional)</span></span>
+          <input type="text" class="ob-input" id="addr-unit" autocomplete="address-line2" maxlength="80">
+        </label>
+        <div class="ob-field-row">
+          <label class="ob-field">
+            <span class="ob-field-label">City</span>
+            <input type="text" class="ob-input" id="addr-city" autocomplete="address-level2" maxlength="120">
+          </label>
+          <label class="ob-field">
+            <span class="ob-field-label">State / province</span>
+            <input type="text" class="ob-input" id="addr-state" autocomplete="address-level1" maxlength="120">
+          </label>
+        </div>
+        <div class="ob-field-row">
+          <label class="ob-field">
+            <span class="ob-field-label">ZIP / postal code</span>
+            <input type="text" class="ob-input" id="addr-zip" autocomplete="postal-code" maxlength="40">
+          </label>
+          <label class="ob-field">
+            <span class="ob-field-label">Country</span>
+            <input type="text" class="ob-input" id="addr-country" autocomplete="country-name" maxlength="120">
+          </label>
+        </div>
+      </div>
+
+      <p class="ob-error" id="addr-error" hidden>Couldn't save that — you can add it later in your profile.</p>
+      <div class="ob-actions ob-actions--split">
+        <button class="ob-btn ob-btn--ghost" type="button" onclick="skipAddress()">Skip for now</button>
+        <button class="ob-btn ob-btn--primary" type="button" id="addr-save-btn" onclick="saveAddress()">Save &amp; continue →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Step 3: Self-Assessment ───────────────────────────────────────── -->
+  <div class="ob-step" id="step-3">
     <div class="ob-content">
       <h2 class="ob-title">Where are you right now?</h2>
       <p class="ob-subtitle">There are no right answers. Honest is the point.<br>You'll return to these questions at the end of the course — and see how much has shifted.</p>
@@ -104,8 +153,8 @@
     </div>
   </div>
 
-  <!-- ── Step 3: Done ───────────────────────────────────────────────────── -->
-  <div class="ob-step" id="step-3">
+  <!-- ── Step 4: Done ───────────────────────────────────────────────────── -->
+  <div class="ob-step" id="step-4">
     <div class="ob-center">
       <div class="ob-done-icon">🌿</div>
       <h2 class="ob-title ob-title--hero">Your snapshot is saved</h2>
@@ -130,19 +179,62 @@
     const assessmentData = {};
 
     // ── Step navigation ────────────────────────────────────────────────────
+    const TOTAL_STEPS = 4;
     function goToStep(n) {
       document.getElementById(`step-${currentStep}`).classList.remove('is-active');
       document.getElementById(`step-${n}`).classList.add('is-active');
-      for (let i = 1; i <= 3; i++) {
+      for (let i = 1; i <= TOTAL_STEPS; i++) {
         const dot = document.getElementById(`ob-dot-${i}`);
         dot.classList.toggle('is-active', i === n);
         dot.classList.toggle('is-done', i < n);
       }
-      for (let i = 1; i <= 2; i++) {
+      for (let i = 1; i < TOTAL_STEPS; i++) {
         document.getElementById(`ob-line-${i}`).classList.toggle('is-done', i < n);
       }
       currentStep = n;
       window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    // ── Mailing address (step 2) — optional ─────────────────────────────────
+    function skipAddress() { goToStep(3); }
+
+    async function saveAddress() {
+      const btn = document.getElementById('addr-save-btn');
+      const err = document.getElementById('addr-error');
+      err.hidden = true;
+      const payload = {
+        mail_name:    document.getElementById('addr-name').value.trim(),
+        mail_street:  document.getElementById('addr-street').value.trim(),
+        mail_unit:    document.getElementById('addr-unit').value.trim(),
+        mail_city:    document.getElementById('addr-city').value.trim(),
+        mail_state:   document.getElementById('addr-state').value.trim(),
+        mail_zip:     document.getElementById('addr-zip').value.trim(),
+        mail_country: document.getElementById('addr-country').value.trim(),
+      };
+      // Everything's optional — if they left it all blank, just move on.
+      const anything = Object.values(payload).some(v => v);
+      if (!anything) { goToStep(3); return; }
+
+      btn.disabled = true;
+      btn.textContent = 'Saving…';
+      try {
+        const res = await fetch('/api/onboarding/address', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        if (res.ok) {
+          goToStep(3);
+        } else {
+          err.hidden = false;
+          btn.disabled = false;
+          btn.textContent = 'Save & continue →';
+        }
+      } catch (_) {
+        err.hidden = false;
+        btn.disabled = false;
+        btn.textContent = 'Save & continue →';
+      }
     }
 
     // ── Choice buttons ──────────────────────────────────────────────────────
@@ -220,7 +312,7 @@
           body: JSON.stringify(assessmentData)
         });
         if (res.ok) {
-          goToStep(3);
+          goToStep(4);
         } else {
           errEl.textContent = 'Something went wrong. Please try again.';
           errEl.hidden = false;

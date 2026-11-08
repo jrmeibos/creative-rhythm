@@ -2382,41 +2382,107 @@ const ASSESSMENT_QUESTIONS = [
 // reuses the q1_choice column as plain TEXT storage; SQLite is dynamically
 // typed so the column type doesn't constrain us, and the admin View dialog
 // renders by question-type lookup not column-name lookup.
+// Restructured Jan 2027. Sections (A–F) are organizational: a question with a
+// `section` renders a small heading before it. The before/after re-asks (A)
+// mirror the OPENING intake VERBATIM and store into the SAME q*_choice /
+// q*_rating columns on the trial_closing row, so the admin View dialog can
+// show a clean before→after for each. `beforeAfter: true` marks the ones the
+// admin should diff against the opening (ratings always diff; this flag adds
+// the "(was: …)" for choice re-asks and keeps unrelated choices like "continue
+// to Spring" from being compared to the opening's q8). New story/testimonial
+// answers land in fresh columns (q13–q17); the consent checkbox in
+// share_consent.
 const TRIAL_CLOSING_QUESTIONS = [
-  { id: 'tq1', type: 'rating', field: 'q2_rating', scaleMin: 0, scaleMax: 10,
-    text: 'How do you feel about your relationship with being on camera, three weeks in?',
-    low:  '1 = worse than when I started',
-    mid:  '0 = the same as when I started',
-    high: '10 = something has shifted for the better'
+  // ── A. A quick before & after (verbatim re-asks of the intake) ──
+  { id: 'tc_q1', type: 'choice', field: 'q1_choice', beforeAfter: true,
+    section: 'A quick before & after',
+    intro: "Some quick-fire questions to see how far you've come.",
+    text: 'How often are you sharing your creative work or perspective online now?',
+    choices: [
+      { val: 'A', label: "I have never posted. (Or haven't in a long while)" },
+      { val: 'B', label: 'I barely post' },
+      { val: 'C', label: 'A few times a month' },
+      { val: 'D', label: 'A few times a week' },
+      { val: 'E', label: 'Daily' }
+    ]
   },
-  // tq1a / tq1b mirror the OPENING intake's Q4 and Q6 verbatim (same 1–10
-  // wording, stored in the same q4_rating / q6_rating columns, just on the
-  // trial_closing row) so there's a clean before/after on these two metrics.
-  { id: 'tq1a', type: 'rating', field: 'q4_rating',
+  { id: 'tc_q2', type: 'rating', field: 'q2_rating', beforeAfter: true,
+    text: 'How congruent do you feel between who you are and how you show up on camera?',
+    low: '1 = completely different people', high: '10 = exactly the same person'
+  },
+  { id: 'tc_q3', type: 'choice', field: 'q3_choice', beforeAfter: true,
+    text: "When you sit down to create content — or even just think about creating — what's your default state?",
+    choices: [
+      { val: 'A', label: 'Frozen or avoidant' },
+      { val: 'B', label: 'Forcing it, going through the motions' },
+      { val: 'C', label: 'Flashes of clarity, mostly noise' },
+      { val: 'D', label: 'Clear and intuitive, most of the time' },
+      { val: 'E', label: 'Fully open — when I create, I\'m in flow' }
+    ]
+  },
+  { id: 'tc_q4', type: 'rating', field: 'q4_rating', beforeAfter: true,
     text: 'How safe do you feel being seen online?',
     low: '1 = visibility feels like a threat', high: '10 = visibility feels like home'
   },
-  { id: 'tq1b', type: 'rating', field: 'q6_rating',
+  { id: 'tc_q6', type: 'rating', field: 'q6_rating', beforeAfter: true,
     text: "How fully yourself do you feel when the camera's rolling?",
     low: '1 = I hold almost everything back', high: "10 = I'm completely myself"
   },
-  { id: 'tq2', type: 'text', field: 'q9_text',
+  { id: 'tc_q5', type: 'choice', field: 'q5_choice', beforeAfter: true,
+    text: "How clear are you now on what's genuinely yours to talk about?",
+    choices: [
+      { val: 'A', label: "No idea — that's part of why I'm here" },
+      { val: 'B', label: 'A few threads, but nothing solid' },
+      { val: 'C', label: "I know it, I just freeze when it's time" },
+      { val: 'D', label: 'Pretty clear, most days' },
+      { val: 'E', label: "Crystal clear — I know what's mine to say" }
+    ]
+  },
+
+  // ── B. Your reflections ──
+  { id: 'tc_changed', type: 'text', field: 'q9_text',
+    section: 'Your reflections',
     text: "What's changed for you in these 3 weeks?",
     placeholder: "Is there anything that's different for you now than from when we started? Tell me more."
   },
-  { id: 'tq3', type: 'text', field: 'q10_text',
-    text: "Was there anything I could've done better as a program curator?",
-    placeholder: 'Your honesty will help me improve this program for other people in the future.'
+  { id: 'tc_aha', type: 'text', field: 'q13_text',
+    text: 'What was your biggest "aha" moment — or your favorite part of these three weeks?',
+    placeholder: 'The moment something clicked, or the part you looked forward to.'
   },
-  { id: 'tq4', type: 'text', field: 'q11_text',
+  { id: 'tc_surprise', type: 'text', field: 'q14_text',
+    text: "What's one thing about these three weeks that surprised you?",
+    placeholder: "Something you didn't see coming — in the best or hardest way."
+  },
+  { id: 'tc_keep', type: 'text', field: 'q11_text',
     text: 'Is there anything from this experience that you intend to keep using?',
     placeholder: 'A practice, a question, a frame to come back to.'
   },
-  { id: 'tq5', type: 'text', field: 'q12_text',
+
+  // ── C. Helping me make the next round better ──
+  { id: 'tc_better', type: 'text', field: 'q10_text',
+    section: 'Helping me make the next round better',
+    text: "Was there anything I could've done better as a program curator?",
+    placeholder: 'Your honesty will help me improve this program for other people in the future.'
+  },
+  { id: 'tc_stuck', type: 'text', field: 'q12_text',
     text: 'Where did you get stuck, or where did the program fall short for you?',
     placeholder: 'Honesty here helps the next round of students.'
   },
-  { id: 'tq6', type: 'choice', field: 'q8_choice',
+
+  // ── D. The before → after story (doubles as a testimonial) ──
+  { id: 'tc_before', type: 'text', field: 'q15_text',
+    section: 'Your story',
+    text: 'Thinking back to before you started — what was the hardest part of showing up, and how was it weighing on you?',
+    placeholder: 'Where you were when you began.'
+  },
+  { id: 'tc_now', type: 'text', field: 'q16_text',
+    text: 'And now, three weeks later — what feels different? What does showing up look like for you today?',
+    placeholder: 'Where you are now.'
+  },
+
+  // ── E. What's next ──
+  { id: 'tc_spring', type: 'choice', field: 'q8_choice',
+    section: "What's next",
     text: 'Would you be interested in continuing on with Spring in the garden?',
     choices: [
       { val: 'A', label: 'Yes — I\'d love to continue into Spring' },
@@ -2425,7 +2491,13 @@ const TRIAL_CLOSING_QUESTIONS = [
       { val: 'D', label: 'No thank you' },
     ]
   },
-  { id: 'tq7', type: 'text', field: 'q1_choice', optional: true,
+
+  // ── F. Close ──
+  { id: 'tc_consent', type: 'consent', field: 'share_consent', optional: true,
+    text: "You're welcome to share my words (first name only) to help others decide whether this is for them.",
+    consentLabel: 'Yes — you can share my words (first name only).'
+  },
+  { id: 'tc_anything', type: 'text', field: 'q17_text', optional: true,
     text: 'Anything else you want me to know?',
     placeholder: 'Optional.'
   },
@@ -2652,6 +2724,7 @@ app.post('/api/trial-closing/submit', requireAuth, async (req, res) => {
     if (q.type === 'rating')        row[q.field] = Number(v);
     else if (q.type === 'multi')    row[q.field] = Array.isArray(v) ? v.join(',') : '';
     else if (q.type === 'choice')   row[q.field] = String(v || '');
+    else if (q.type === 'consent')  row[q.field] = v ? 1 : 0;
     else if (q.type === 'text')     row[q.field] = (typeof v === 'string' ? v : '').trim();
   }
   db.upsertAssessment(user.id, 'trial_closing', row);
@@ -2679,6 +2752,8 @@ async function notifyAdminOfTrialClosing(student, row) {
         }).join(' • ');
       } else if (q.type === 'rating') {
         label = `${v}/10`;
+      } else if (q.type === 'consent') {
+        label = v ? 'Yes — may share my words (first name only)' : 'No';
       } else {
         label = v || '(no answer)';
       }
@@ -2713,6 +2788,29 @@ app.post('/api/onboarding/assessment', requireAuth, (req, res) => {
   // Admin preview never persists — admins have no onboarding data.
   if (req.session.user.role === 'admin') return res.json({ ok: true, preview: true });
   db.upsertAssessment(req.session.user.id, 'opening', req.body);
+  res.json({ ok: true });
+});
+
+// Optional mailing address, collected at the start of onboarding (and editable
+// later in the profile). Everything is optional — a student can submit a
+// partial address or skip the step entirely. Guard allows /api/onboarding/*.
+function sanitizeAddress(body) {
+  const clamp = (v, n) => String(v == null ? '' : v).trim().slice(0, n);
+  return {
+    mail_name:    clamp(body.mail_name, 120),
+    mail_street:  clamp(body.mail_street, 200),
+    mail_unit:    clamp(body.mail_unit, 80),
+    mail_city:    clamp(body.mail_city, 120),
+    mail_state:   clamp(body.mail_state, 120),
+    mail_zip:     clamp(body.mail_zip, 40),
+    mail_country: clamp(body.mail_country, 120),
+  };
+}
+
+app.post('/api/onboarding/address', requireAuth, (req, res) => {
+  // Admin preview never persists.
+  if (req.session.user.role === 'admin') return res.json({ ok: true, preview: true });
+  db.updateUserAddress(req.session.user.id, sanitizeAddress(req.body || {}));
   res.json({ ok: true });
 });
 
@@ -2766,6 +2864,11 @@ app.post('/api/profile/name', requireAuth, (req, res) => {
     if (err) return res.status(500).json({ error: 'Session save failed.' });
     res.json({ ok: true, display_name: name, avatar_initial: name.charAt(0).toUpperCase() });
   });
+});
+
+app.post('/api/profile/address', requireAuth, (req, res) => {
+  db.updateUserAddress(req.session.user.id, sanitizeAddress(req.body || {}));
+  res.json({ ok: true });
 });
 
 app.post('/api/profile/email', requireAuth, async (req, res) => {

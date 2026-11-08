@@ -111,6 +111,27 @@
             </div>
           </div>
 
+          <!-- Edit mailing address -->
+          <div class="profile-edit-item">
+            <button class="profile-edit-link" type="button" data-section="address" onclick="toggleEdit('address')">Edit mailing address</button>
+            <div class="profile-inline-form" id="edit-address-form">
+              <p class="profile-address-note">Totally optional — Julia uses this to send the occasional bit of snail mail.</p>
+              <input type="text" class="profile-inline-input" id="addr-name" placeholder="Full name (for the envelope)" value="<%= profile.mail_name || '' %>" maxlength="120" autocomplete="name">
+              <input type="text" class="profile-inline-input" id="addr-street" placeholder="Street address" value="<%= profile.mail_street || '' %>" maxlength="200" autocomplete="address-line1">
+              <input type="text" class="profile-inline-input" id="addr-unit" placeholder="Apt / unit (optional)" value="<%= profile.mail_unit || '' %>" maxlength="80" autocomplete="address-line2">
+              <input type="text" class="profile-inline-input" id="addr-city" placeholder="City" value="<%= profile.mail_city || '' %>" maxlength="120" autocomplete="address-level2">
+              <input type="text" class="profile-inline-input" id="addr-state" placeholder="State / province" value="<%= profile.mail_state || '' %>" maxlength="120" autocomplete="address-level1">
+              <input type="text" class="profile-inline-input" id="addr-zip" placeholder="ZIP / postal code" value="<%= profile.mail_zip || '' %>" maxlength="40" autocomplete="postal-code">
+              <input type="text" class="profile-inline-input" id="addr-country" placeholder="Country" value="<%= profile.mail_country || '' %>" maxlength="120" autocomplete="country-name">
+              <div class="profile-inline-actions">
+                <button class="profile-inline-save" type="button" onclick="saveAddress()">Save</button>
+                <button class="profile-inline-cancel" type="button" onclick="closeSection('address')">Cancel</button>
+              </div>
+              <p class="profile-inline-error" id="address-error" hidden></p>
+              <p class="profile-inline-saved" id="address-saved" hidden>Saved 🌿</p>
+            </div>
+          </div>
+
         </div>
       </section>
 
@@ -475,6 +496,22 @@
       const initEl = document.getElementById('profile-avatar-initials');
       if (initEl) initEl.textContent = data.avatar_initial;
       showSaved('name-saved', () => closeSection('name'));
+    }
+
+    async function saveAddress() {
+      const payload = {
+        mail_name:    document.getElementById('addr-name').value.trim(),
+        mail_street:  document.getElementById('addr-street').value.trim(),
+        mail_unit:    document.getElementById('addr-unit').value.trim(),
+        mail_city:    document.getElementById('addr-city').value.trim(),
+        mail_state:   document.getElementById('addr-state').value.trim(),
+        mail_zip:     document.getElementById('addr-zip').value.trim(),
+        mail_country: document.getElementById('addr-country').value.trim(),
+      };
+      document.getElementById('address-error').hidden = true;
+      const { ok, data } = await apiPost('/api/profile/address', payload);
+      if (!ok) return showError('address-error', data.error || 'Something went wrong.');
+      showSaved('address-saved', () => closeSection('address'));
     }
 
     async function saveEmail() {

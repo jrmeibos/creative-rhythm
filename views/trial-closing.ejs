@@ -24,14 +24,26 @@
 
           <div class="ob-questions">
             <% questions.forEach(function(q, idx) { %>
+              <% if (q.section) { %>
+                <div class="tc-section">
+                  <h3 class="tc-section-title"><%= q.section %></h3>
+                  <% if (q.intro) { %><p class="tc-section-intro"><%= q.intro %></p><% } %>
+                </div>
+              <% } %>
               <div class="ob-question" id="q-block-<%= q.id %>">
-                <div class="ob-q-num">0<%= idx + 1 %></div>
+                <div class="ob-q-num"><%= String(idx + 1).padStart(2, '0') %></div>
                 <p class="ob-q-text">
                   <%= q.text %>
                   <% if (q.optional) { %><span style="opacity:0.5;font-weight:300"> (optional)</span><% } %>
                 </p>
 
-                <% if (q.type === 'multi') { %>
+                <% if (q.type === 'consent') { %>
+                  <label class="tc-consent">
+                    <input type="checkbox" class="tc-consent-cb" data-field="<%= q.field %>">
+                    <span class="tc-consent-label"><%= q.consentLabel || 'Yes, you can share my words.' %></span>
+                  </label>
+
+                <% } else if (q.type === 'multi') { %>
                   <p class="ob-multi-note">Choose any that apply<% if (q.max) { %> (up to <%= q.max %>)<% } %></p>
                   <div class="ob-choices">
                     <% q.choices.forEach(function(c) { %>
@@ -137,6 +149,12 @@
       });
     });
 
+    document.querySelectorAll('.tc-consent-cb').forEach(function (cb) {
+      cb.addEventListener('change', function () {
+        answers[cb.dataset.field] = cb.checked;
+      });
+    });
+
     async function submitTrialClosing() {
       const err  = document.getElementById('trial-error');
       const btn  = document.getElementById('trial-submit-btn');
@@ -150,6 +168,7 @@
         if (q.type === 'rating')      payload[q.field] = v != null ? Number(v) : null;
         else if (q.type === 'multi')  payload[q.field] = Array.isArray(v) ? v : [];
         else if (q.type === 'choice') payload[q.field] = typeof v === 'string' ? v : '';
+        else if (q.type === 'consent') payload[q.field] = !!v;
         else if (q.type === 'text')   payload[q.field] = typeof v === 'string' ? v.trim() : '';
       }
       const incomplete = QUESTIONS.some(q => {
