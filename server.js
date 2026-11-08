@@ -2674,6 +2674,13 @@ function isTrialClosingUnlockedFor(user) {
   return daysDiff >= len * 7 - 2;
 }
 
+// The Seasons of the Garden — an evergreen page explaining the four seasons
+// (the stages of the creation process). Linked from the greenhouse's Winter
+// "return in Spring" message instead of the old /upgrade course page.
+app.get('/seasons', requireAuth, (req, res) => {
+  res.render('seasons', { title: 'The Seasons of the Garden', page: 'seasons' });
+});
+
 app.get('/trial-closing', requireAuth, (req, res) => {
   if (req.session.user.role === 'admin') return res.redirect('/dashboard');
   if (!isTrialClosingUnlockedFor(req.session.user)) return res.redirect('/dashboard');

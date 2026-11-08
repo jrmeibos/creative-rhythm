@@ -101,7 +101,7 @@
         </div>
         <% if (isWinterLocked) { %>
           <p class="gh-beds-caption gh-beds-caption--winter">
-            It's currently Winter in the garden. Return in <% if (user && (user.course_length_weeks || 12) < 12) { %><a href="/upgrade" class="gh-winter-link">Spring</a><% } else { %>Spring<% } %> to plant your goals.
+            It's currently Winter in the garden. Return in <a href="/seasons" class="gh-winter-link">Spring</a> to plant your goals.
           </p>
         <% } else { %>
           <p class="gh-beds-caption">You can plant up to three goals here. Plant them one at a time, in whatever order feels right.</p>

@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <%- include('partials/head') %>
+  <link rel="stylesheet" href="/css/dashboard.css">
+  <style>
+    .seasons-wrap { max-width: 820px; margin: 0 auto; }
+
+    .seasons-header { margin: 1.5rem 0 1.25rem; }
+    .seasons-title {
+      font-family: var(--font-display);
+      font-size: 2.1rem;
+      color: var(--color-ink-stained);
+      margin: 0 0 0.75rem;
+      font-weight: 400;
+    }
+    .seasons-intro {
+      font-family: var(--font-body);
+      font-size: 1.02rem;
+      line-height: 1.7;
+      color: rgba(16, 15, 16, 0.72);
+      margin: 0;
+    }
+    .seasons-intro em { font-style: italic; }
+
+    .season-card {
+      border-radius: 16px;
+      overflow: hidden;
+      margin-bottom: 1.25rem;
+      border: 1px solid rgba(16, 15, 16, 0.08);
+      box-shadow: 0 1px 3px rgba(16, 15, 16, 0.04);
+    }
+
+    .season-card-header {
+      padding: 1.1rem 1.5rem;
+      display: flex;
+      align-items: baseline;
+      gap: 0.6rem;
+      flex-wrap: wrap;
+      color: var(--color-ink-stained); /* dark text on every season — brand rule */
+    }
+    .season-card-header--winter { background: #76856C; }
+    .season-card-header--spring { background: #D8B0AB; }
+    .season-card-header--summer { background: #F6C95C; }
+    .season-card-header--autumn { background: #a990a4; }
+
+    .season-emoji { font-size: 1.5rem; line-height: 1; align-self: center; }
+    .season-name {
+      font-family: var(--font-display);
+      font-size: 1.35rem;
+      font-weight: 400;
+    }
+    .season-tagline {
+      font-family: var(--font-body);
+      font-style: italic;
+      font-size: 1rem;
+      opacity: 0.8;
+    }
+
+    .season-card-body {
+      background: var(--color-blank-page);
+      padding: 1.25rem 1.5rem;
+      font-family: var(--font-body);
+      font-size: 1rem;
+      line-height: 1.75;
+      color: var(--color-ink-stained);
+    }
+    .season-card-body em { font-style: italic; }
+
+    .seasons-closing {
+      margin: 1.5rem 0 3rem;
+      padding: 1.25rem 1.5rem;
+      background: var(--color-new-growth);
+      border-radius: 14px;
+      font-family: var(--font-body);
+      font-size: 1.02rem;
+      line-height: 1.7;
+      color: rgba(16, 15, 16, 0.8);
+    }
+
+    @media (max-width: 640px) {
+      .seasons-title { font-size: 1.7rem; }
+      .season-name { font-size: 1.2rem; }
+    }
+  </style>
+</head>
+<body class="app-body">
+
+  <div class="app-layout">
+    <%- include('partials/sidebar') %>
+
+    <main class="main-content">
+      <div class="seasons-wrap">
+
+        <header class="seasons-header">
+          <h1 class="seasons-title">The Seasons of the Garden</h1>
+          <p class="seasons-intro">
+            Each season is a different part of the creation process — and it's completely
+            normal to get stuck in some of them. (I've gotten stuck in every single one.)
+            Moving through the garden season by season lets you watch yourself in each stage
+            of creating. That noticing is the whole advantage: once you can see where you
+            tend to freeze, you can meet yourself there.
+          </p>
+        </header>
+
+        <%
+          const seasons = [
+            { key: 'winter', emoji: '❄️', name: 'Winter · Connect', tagline: 'Focus in.',
+              body: "In Winter, we focus inward. The daily practice — recording yourself on camera — is a new habit you're building, and in this season, we let that be enough. There's no need to record <em>and</em> share yet. We start from one small building block, and let it be the whole thing." },
+            { key: 'spring', emoji: '🌸', name: 'Spring · Curiosity', tagline: 'A different kind of looking.',
+              body: "Spring works a different muscle. We look inward again, but with more distance — getting curious about the things we've said and the ideas we've already shared with ourselves. We go back to our recordings and notice: is there anything here worth keeping? Anything we'd want to explore further?" },
+            { key: 'summer', emoji: '☀️', name: 'Summer · Create', tagline: 'Make something from it.',
+              body: "Summer is where we start to make things. We take the thoughts and ideas we've gathered and create from them — a piece of writing, a post, a video, whatever wants to come through. This is the season of turning what's inside into something real." },
+            { key: 'autumn', emoji: '🍂', name: 'Autumn · Share', tagline: 'Practice being seen.',
+              body: "Autumn is where we practice sharing. The ideas we've explored and the things we've made — this is the season we begin to offer them to others. Sharing is a muscle too, and here's where we start to build it." }
+          ];
+        %>
+
+        <% seasons.forEach(function(s) { %>
+          <section class="season-card">
+            <div class="season-card-header season-card-header--<%= s.key %>">
+              <span class="season-emoji"><%= s.emoji %></span>
+              <span class="season-name"><%= s.name %></span>
+              <span class="season-tagline"><%= s.tagline %></span>
+            </div>
+            <div class="season-card-body"><%- s.body %></div>
+          </section>
+        <% }); %>
+
+        <p class="seasons-closing">
+          You'll probably find some seasons come easily, and others are exactly where you
+          get stuck. That's the point of noticing. Move through them at your own pace — and
+          when you're ready to go deeper, reach out.
+        </p>
+
+      </div>
+    </main>
+  </div>
+
+</body>
+</html>
