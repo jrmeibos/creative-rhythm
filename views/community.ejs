@@ -56,6 +56,7 @@
     .post-admin-btn--danger { margin-left:auto; }
 
     .post-comments { margin-top:0.9rem; border-top:1px solid rgba(112,92,108,0.12); padding-top:0.85rem; }
+    .comment-count-label { font-family:var(--font-body); font-size:0.82rem; color:rgba(16,15,16,0.5); padding:0.28rem 0.4rem; }
     .comment { display:flex; gap:0.55rem; margin-bottom:0.75rem; }
     .comment--reply { margin-left:2.1rem; }
     .comment-main { flex:1; }
@@ -181,7 +182,7 @@
                 <p class="post-body"><%= post.content %></p>
                 <div class="post-reactions">
                   <%- include('partials/reaction-bar', { reactionSet, reactions: post.reactions, kind: 'post', id: post.id }) %>
-                  <button class="comment-toggle" data-post-id="<%= post.id %>">💬 <span class="comment-count"><%= post.comment_count %></span></button>
+                  <span class="comment-count-label">💬 <span class="comment-count"><%= post.comment_count %></span></span>
                   <% if (viewerIsAdmin) { %>
                     <button class="post-admin-btn" data-action="pin" data-post-id="<%= post.id %>" data-pinned="<%= post.pinned ? 1 : 0 %>"><%= post.pinned ? 'Unpin' : 'Pin' %></button>
                   <% } %>
@@ -190,7 +191,7 @@
                   <% } %>
                 </div>
 
-                <div class="post-comments" id="comments-<%= post.id %>" hidden>
+                <div class="post-comments" id="comments-<%= post.id %>">
                   <% for (const c of post.comments) { %>
                     <div class="comment" data-comment-id="<%= c.id %>">
                       <%- roomAvatar(c.avatar_initial, c.profile_photo, 30) %>

@@ -100,13 +100,6 @@ document.addEventListener('click', async (e) => {
     return;
   }
 
-  // Toggle a post's comment section
-  if (btn.classList.contains('comment-toggle')) {
-    const sec = document.getElementById('comments-' + btn.getAttribute('data-post-id'));
-    if (sec) sec.hidden = !sec.hidden;
-    return;
-  }
-
   const action = btn.getAttribute('data-action');
   if (!action) return;
 
