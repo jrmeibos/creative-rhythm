@@ -341,4 +341,81 @@ The Creative's Garden`;
   }
 }
 
-module.exports = { sendPasswordResetEmail, sendAdminMilestoneEmail, sendDailyReminderEmail, sendWeeklyReminderEmail };
+// ─── Check-in (admin-approved nudge to a quiet participant) ─────────────────
+// Sent ONLY when Julia clicks "Send check-in" for a specific gardener who has
+// gone quiet during an active challenge. Never automated — one warm, no-pressure
+// note, from the admin panel, per quiet spell.
+async function sendCheckinEmail(toEmail, displayName) {
+  const fromAddress  = process.env.EMAIL_FROM || 'hello@creativesgarden.com';
+  const appUrl       = (process.env.APP_URL || 'https://www.creativesgarden.com').replace(/\/$/, '');
+  const dashboardUrl = `${appUrl}/dashboard`;
+  const name         = displayName || 'there';
+  const subject      = 'Just checking in 🌱';
+
+  const text = `Hi ${name},
+
+I noticed it's been a few days since your last recording, and I wanted to check in — no pressure at all. Some days (and weeks) are just like that, and the garden will be here whenever you're ready to come back to it.
+
+If something's getting in the way and I can help, just hit reply. Rooting for you.
+
+Tend your Garden: ${dashboardUrl}
+
+🌿
+Julia — The Creative's Garden`;
+
+  const html = `<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><title>${subject}</title></head>
+<body style="font-family: Georgia, serif; background: #FAFAFA; margin: 0; padding: 32px;">
+  <div style="max-width: 560px; margin: 0 auto; background: #F2EEE3; padding: 40px; border-radius: 8px;">
+    <div style="text-align: center; margin-bottom: 32px;">
+      <img src="https://www.creativesgarden.com/images/brand/email-badge-green.png"
+           alt="The Creative's Garden"
+           width="96" height="96"
+           style="display: inline-block; width: 96px; max-width: 96px; height: auto; border-radius: 50%;" />
+    </div>
+    <p style="color: #100F10; font-size: 16px; line-height: 1.6; margin: 0 0 16px;">Hi ${name},</p>
+    <p style="color: #100F10; font-size: 16px; line-height: 1.7; margin: 0 0 16px;">
+      I noticed it's been a few days since your last recording, and I wanted to check in — no pressure at all. Some days (and weeks) are just like that, and the garden will be here whenever you're ready to come back to it.
+    </p>
+    <p style="color: #100F10; font-size: 16px; line-height: 1.7; margin: 0 0 24px;">
+      If something's getting in the way and I can help, just hit reply. Rooting for you.
+    </p>
+    <p style="margin: 32px 0; text-align: center;">
+      <a href="${dashboardUrl}"
+         style="background: #705C6C; color: #F2EEE3; text-decoration: none; padding: 14px 28px; border-radius: 6px; font-family: Georgia, serif; display: inline-block;">
+        Tend your Garden
+      </a>
+    </p>
+    <p style="color: #76856C; font-size: 14px; line-height: 1.6; margin: 24px 0 0; font-style: italic;">🌿 Julia</p>
+    <p style="margin: 32px 0 0; text-align: center;">
+      <img src="https://www.creativesgarden.com/images/brand/Favicon_3.png"
+           alt="The Creative's Garden"
+           width="32" height="32"
+           style="display: inline-block; width: 32px; max-width: 32px; height: auto;" />
+    </p>
+  </div>
+</body>
+</html>`;
+
+  try {
+    const client = getResend();
+    if (!client) {
+      console.warn('[email] RESEND_API_KEY not set — skipping send');
+      return { ok: false, error: 'RESEND_API_KEY not set' };
+    }
+    const result = await client.emails.send({
+      from: `The Creative's Garden <${fromAddress}>`,
+      to: toEmail,
+      subject,
+      text,
+      html,
+    });
+    return { ok: true, id: result.data?.id };
+  } catch (err) {
+    console.error('[email] Failed to send check-in:', err);
+    return { ok: false, error: err.message };
+  }
+}
+
+module.exports = { sendPasswordResetEmail, sendAdminMilestoneEmail, sendDailyReminderEmail, sendWeeklyReminderEmail, sendCheckinEmail };

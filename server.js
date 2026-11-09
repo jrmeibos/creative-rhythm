@@ -9,7 +9,7 @@ const fs = require('fs');
 const multer = require('multer');
 const db = require('./db');
 const { requireAuth, requireAdmin } = require('./auth');
-const { sendPasswordResetEmail, sendAdminMilestoneEmail } = require('./email');
+const { sendPasswordResetEmail, sendAdminMilestoneEmail, sendCheckinEmail } = require('./email');
 const { ANGLES, getAngle, getQuestion } = require('./lib/seed-packet-questions');
 const { getCurricularSeason, getCurricularSeasonLabel, getCurricularSeasonDescriptor } = require('./lib/curricular-season');
 const { getSeasonPrompt } = require('./lib/season-prompts');
@@ -5228,11 +5228,16 @@ app.get('/admin', requireAdmin, (req, res) => {
   const adminCohorts = db.getAllCohorts();
   const cohortEventsByCohort = {};
   for (const c of adminCohorts) cohortEventsByCohort[c.id] = db.getCohortEvents(c.id);
+
+  // ── Cohort Overview (command center for the active-or-upcoming cohort) ──────
+  const cohortOverview = buildCohortOverview(req.session.user, adminCohorts);
+
   res.render('admin', {
     title: 'Admin', page: 'admin',
     users, lessons, resources, lessonStats, lessonHomework, courseStartDate,
     cohorts: adminCohorts,
     cohortEventsByCohort,
+    cohortOverview,
     recordingSummary, enrollments, challengeStats,
     challengeParticipants: db.getChallengeParticipants(),
     checkins: db.getAllCheckinResponses(CHECKIN.key),
@@ -5703,6 +5708,26 @@ app.get('/api/admin/student-data/:id', requireAdmin, (req, res) => {
   res.json(data);
 });
 
+// Admin-approved check-in: sends ONE gentle nudge to a quiet gardener and marks
+// the spell so they won't resurface until they record again. Never automated.
+app.post('/api/admin/checkin/:userId', requireAdmin, async (req, res) => {
+  const userId = parseInt(req.params.userId, 10);
+  const target = db.getUserById(userId);
+  if (!target)       return res.status(404).json({ error: 'Gardener not found.' });
+  if (!target.email) return res.status(400).json({ error: 'No email on file for this gardener.' });
+
+  const firstName = (target.name || '').trim().split(/\s+/)[0] || target.name;
+  const result = await sendCheckinEmail(target.email, firstName);
+  if (!result.ok) {
+    const msg = result.error === 'RESEND_API_KEY not set'
+      ? 'Email isn\'t configured on the server yet (RESEND_API_KEY), so nothing was sent.'
+      : (result.error || 'Could not send the check-in.');
+    return res.status(502).json({ error: msg });
+  }
+  db.markCheckinSent(userId);
+  res.json({ ok: true });
+});
+
 // ─── Admin: Lessons ────────────────────────────────────────────────────────
 
 app.post('/api/admin/lessons', requireAdmin, (req, res) => {
@@ -6004,6 +6029,74 @@ app.get('/admin/reminder-check', requireAdmin, (req, res) => {
 });
 
 // ─── Helpers ───────────────────────────────────────────────────────────────
+
+// Builds the admin "Cohort Overview": the active-or-upcoming cohort's status, a
+// timeline of its automated moments (calls + the two assessment opens), and the
+// quiet gardeners who may want a check-in. The challenge runs CHALLENGE_DAYS.
+function buildCohortOverview(adminUser, cohorts) {
+  const CHALLENGE_DAYS = 21;
+  const adminToday = toLocalDateString(getNow(adminUser));
+  const fmt = iso => new Date(iso + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+
+  const states = (cohorts || [])
+    .filter(c => c.start_date)
+    .map(c => {
+      const start = String(c.start_date).slice(0, 10);
+      const end = addDaysCivil(start, CHALLENGE_DAYS - 1);
+      const phase = adminToday < start ? 'upcoming' : (adminToday <= end ? 'running' : 'past');
+      return { c, start, end, phase };
+    });
+  const sel =
+    states.find(s => s.phase === 'running') ||
+    states.filter(s => s.phase === 'upcoming').sort((a, b) => a.start.localeCompare(b.start))[0] ||
+    states.filter(s => s.phase === 'past').sort((a, b) => b.start.localeCompare(a.start))[0] ||
+    null;
+  if (!sel) return null;
+
+  const { c, start, end, phase } = sel;
+  const daysUntil      = phase === 'upcoming' ? daysBetweenCivil(adminToday, start) : 0;
+  const dayOfChallenge = phase === 'running' ? daysBetweenCivil(start, adminToday) + 1 : null;
+  const weekOf         = dayOfChallenge ? Math.floor((dayOfChallenge - 1) / 7) + 1 : null;
+
+  // Timeline: the cohort's entered schedule + the two platform-automated opens.
+  const stateFor = d => d < adminToday ? 'past' : (d === adminToday ? 'today' : 'upcoming');
+  const evs = db.getCohortEvents(c.id).map(e => ({ date: String(e.event_date).slice(0, 10), title: e.title, kind: 'event' }));
+  evs.push({ date: addDaysCivil(start, 7),                 title: 'Day-7 check-in opens',          kind: 'assessment' });
+  evs.push({ date: addDaysCivil(start, CHALLENGE_DAYS - 2), title: 'End-of-challenge reflection opens', kind: 'assessment' });
+  const timeline = evs
+    .filter(e => e.date)
+    .sort((a, b) => a.date.localeCompare(b.date))
+    .map(e => ({ ...e, label: fmt(e.date), state: stateFor(e.date) }));
+
+  // Quiet gardeners — only while the cohort is running. 2+ days since the last
+  // recording. A check-in is "due" unless we already nudged this quiet spell
+  // (a check-in sent on/after their most recent recording).
+  let quietGardeners = [];
+  if (phase === 'running') {
+    quietGardeners = db.getCohortGardenersActivity(c.id).map(g => {
+      const lastRec = g.last_recorded_date || null;
+      const daysSince = Math.max(0, daysBetweenCivil(lastRec || start, adminToday));
+      const checkinDay = g.last_checkin_sent_at ? String(g.last_checkin_sent_at).slice(0, 10) : null;
+      const alreadyNudged = !!checkinDay && (!lastRec || checkinDay >= lastRec);
+      return {
+        id: g.id, name: g.name, avatarInitial: g.avatar_initial,
+        daysSince, neverRecorded: !lastRec,
+        lastRecordedLabel: lastRec ? fmt(lastRec) : null,
+        nudgedLabel: alreadyNudged ? fmt(checkinDay) : null,
+        needsCheckin: daysSince >= 2 && !alreadyNudged,
+      };
+    }).filter(g => g.daysSince >= 2).sort((a, b) => b.daysSince - a.daysSince);
+  }
+
+  return {
+    name: c.name, phase,
+    startLabel: fmt(start), endLabel: fmt(end),
+    daysUntil, dayOfChallenge, weekOf, challengeDays: CHALLENGE_DAYS,
+    memberCount: c.member_count || 0,
+    timeline, quietGardeners,
+    resendConfigured: !!process.env.RESEND_API_KEY,
+  };
+}
 
 function getUnlockState(user) {
   // Date-based (per-user) OR admin manual override — whichever is true wins.

@@ -10,6 +10,28 @@
     .admin-tab:hover{opacity:.85}
     .admin-tab[aria-current="true"]{opacity:1;color:var(--color-bloem);border-bottom-color:var(--color-bloem)}
     section[data-tab][hidden]{display:none}
+    /* Cohort Overview */
+    .co-status{display:flex;flex-direction:column;gap:.15rem;padding-bottom:1rem;margin-bottom:1rem;border-bottom:1px solid rgba(16,15,16,.08)}
+    .co-status-big{font-family:var(--font-display);font-size:1.5rem;color:var(--color-bloem)}
+    .co-status-sub{font-size:.9rem;color:rgba(16,15,16,.6)}
+    .co-subhead{font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;color:var(--color-understory);font-weight:700;margin:0 0 .7rem}
+    .co-timeline{list-style:none;margin:0;padding:0}
+    .co-tl{display:flex;align-items:center;gap:.65rem;padding:.4rem 0;font-size:.92rem}
+    .co-tl-dot{width:9px;height:9px;border-radius:50%;background:rgba(16,15,16,.2);flex-shrink:0}
+    .co-tl--past{opacity:.5}
+    .co-tl--past .co-tl-dot{background:var(--color-understory)}
+    .co-tl--today .co-tl-dot{background:var(--color-apricity);box-shadow:0 0 0 3px rgba(246,201,92,.3)}
+    .co-tl--upcoming .co-tl-dot{background:var(--color-bloem)}
+    .co-tl-date{width:92px;flex-shrink:0;color:rgba(16,15,16,.55);font-variant-numeric:tabular-nums}
+    .co-tl-title{color:var(--color-ink-stained)}
+    .co-tl-tag{font-size:.62rem;text-transform:uppercase;letter-spacing:.05em;background:var(--color-new-growth);color:var(--color-understory);padding:.05rem .4rem;border-radius:999px;margin-left:.2rem;vertical-align:middle}
+    .co-tl-now{font-size:.65rem;text-transform:uppercase;letter-spacing:.06em;font-weight:700;color:var(--color-ink-stained);background:var(--color-apricity);padding:.1rem .45rem;border-radius:999px;margin-left:auto}
+    .co-quiet-row{display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:.6rem 0;border-top:1px solid rgba(16,15,16,.06)}
+    .co-quiet-row:first-child{border-top:none}
+    .co-quiet-info{display:flex;align-items:center;gap:.6rem}
+    .co-quiet-name{display:block;font-weight:600;color:var(--color-ink-stained)}
+    .co-quiet-sub{display:block;font-size:.8rem;color:rgba(16,15,16,.55)}
+    .co-quiet-nudged{font-size:.82rem;color:var(--color-understory)}
     /* Cohorts tab — collapsible cohort cards + roster */
     .cohort-card{padding:0;overflow:hidden}
     .cohort-card-head{display:flex;align-items:center;gap:.7rem;padding:.9rem 1.1rem;cursor:pointer}
@@ -286,6 +308,79 @@
           <% } %>
         </div>
       </section>
+
+      <!-- ── Cohort Overview (command center) ──────────────────────────────── -->
+      <% if (typeof cohortOverview !== 'undefined' && cohortOverview) { %>
+      <% const co = cohortOverview; %>
+      <section class="dash-section" data-tab="overview">
+        <div class="dash-section-header">
+          <h2 class="dash-section-title">Cohort Overview</h2>
+          <span class="admin-count"><%= co.name %></span>
+        </div>
+
+        <div class="admin-card">
+          <div class="co-status">
+            <% if (co.phase === 'upcoming') { %>
+              <span class="co-status-big"><%= co.daysUntil %> day<%= co.daysUntil === 1 ? '' : 's' %> until it starts</span>
+              <span class="co-status-sub">Starts <%= co.startLabel %> · <%= co.memberCount %> gardener<%= co.memberCount === 1 ? '' : 's' %></span>
+            <% } else if (co.phase === 'running') { %>
+              <span class="co-status-big">Day <%= co.dayOfChallenge %> of <%= co.challengeDays %> · Week <%= co.weekOf %></span>
+              <span class="co-status-sub"><%= co.startLabel %> → <%= co.endLabel %> · <%= co.memberCount %> gardener<%= co.memberCount === 1 ? '' : 's' %></span>
+            <% } else { %>
+              <span class="co-status-big">Wrapped</span>
+              <span class="co-status-sub"><%= co.startLabel %> → <%= co.endLabel %></span>
+            <% } %>
+          </div>
+
+          <h3 class="co-subhead">Timeline</h3>
+          <ol class="co-timeline">
+            <% for (const t of co.timeline) { %>
+              <li class="co-tl co-tl--<%= t.state %>">
+                <span class="co-tl-dot" aria-hidden="true"></span>
+                <span class="co-tl-date"><%= t.label %></span>
+                <span class="co-tl-title"><%= t.title %><% if (t.kind === 'assessment') { %> <span class="co-tl-tag">auto</span><% } %></span>
+                <% if (t.state === 'today') { %><span class="co-tl-now">today</span><% } %>
+              </li>
+            <% } %>
+          </ol>
+          <p class="admin-field-hint" style="margin:.7rem 0 0">Emails will slot into this timeline once the automated sequence is turned on.</p>
+        </div>
+
+        <% if (co.phase === 'running') { %>
+        <div class="dash-section-header" style="margin-top:1.6rem">
+          <h2 class="dash-section-title">Quiet gardeners</h2>
+          <span class="admin-count"><%= co.quietGardeners.length %> at 2+ days</span>
+        </div>
+        <div class="admin-card">
+          <% if (!co.quietGardeners.length) { %>
+            <p class="admin-empty">Everyone's recorded in the last couple of days. 🌿</p>
+          <% } else { %>
+            <% if (!co.resendConfigured) { %>
+              <p class="admin-field-hint" style="margin:0 0 .8rem;color:#9a6a1e">Email isn't configured on the server yet, so check-ins can't send from here.</p>
+            <% } %>
+            <% for (const g of co.quietGardeners) { %>
+              <div class="co-quiet-row" id="quiet-row-<%= g.id %>">
+                <div class="co-quiet-info">
+                  <div class="sidebar-avatar" style="width:28px;height:28px;font-size:0.75rem;flex-shrink:0;display:inline-flex"><%= g.avatarInitial || g.name.charAt(0) %></div>
+                  <div>
+                    <span class="co-quiet-name"><%= g.name %></span>
+                    <span class="co-quiet-sub"><% if (g.neverRecorded) { %>No recordings yet<% } else { %>Last recorded <%= g.lastRecordedLabel %><% } %> · <%= g.daysSince %> days quiet</span>
+                  </div>
+                </div>
+                <div class="co-quiet-action">
+                  <% if (g.needsCheckin) { %>
+                    <button class="admin-btn-sm" type="button" onclick="sendCheckin(<%= g.id %>, <%= JSON.stringify(g.name) %>)"<%= co.resendConfigured ? '' : ' disabled' %>>Send check-in</button>
+                  <% } else { %>
+                    <span class="co-quiet-nudged">✓ Checked in <%= g.nudgedLabel %></span>
+                  <% } %>
+                </div>
+              </div>
+            <% } %>
+          <% } %>
+        </div>
+        <% } %>
+      </section>
+      <% } %>
 
       <!-- ── Pending signups (started, never paid) ────────────────────────── -->
       <% if (pendingSignups.length) { %>
@@ -1900,6 +1995,28 @@
 
       closeDialog('dialog-edit-resource');
       window.location.reload();
+    }
+
+    // Admin-approved check-in: one gentle nudge to a quiet gardener.
+    async function sendCheckin(id, name) {
+      if (!confirm(`Send a check-in email to ${name}? They'll get one gentle, no-pressure note.`)) return;
+      const row = document.getElementById(`quiet-row-${id}`);
+      const btn = row ? row.querySelector('.admin-btn-sm') : null;
+      if (btn) { btn.disabled = true; btn.textContent = 'Sending…'; }
+      try {
+        const res  = await fetch(`/api/admin/checkin/${id}`, { method: 'POST' });
+        const data = await res.json();
+        if (!res.ok) {
+          alert(data.error || 'Could not send the check-in.');
+          if (btn) { btn.disabled = false; btn.textContent = 'Send check-in'; }
+          return;
+        }
+        const action = row ? row.querySelector('.co-quiet-action') : null;
+        if (action) action.innerHTML = '<span class="co-quiet-nudged">✓ Check-in sent</span>';
+      } catch (e) {
+        alert('Network error — please try again.');
+        if (btn) { btn.disabled = false; btn.textContent = 'Send check-in'; }
+      }
     }
 
     async function deleteResource(id, title) {

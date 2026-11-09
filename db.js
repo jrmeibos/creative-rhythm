@@ -833,6 +833,12 @@ db.exec(`
     db.exec("ALTER TABLE users ADD COLUMN last_recorded_date TEXT");
     console.log('✓ Migrated: added last_recorded_date to users');
   }
+  // When the admin last sent a manual "check-in" nudge to a quiet gardener.
+  // Used to enforce one nudge per quiet spell (suppress until they record again).
+  if (!userColsRec.includes('last_checkin_sent_at')) {
+    db.exec("ALTER TABLE users ADD COLUMN last_checkin_sent_at DATETIME");
+    console.log('✓ Migrated: added last_checkin_sent_at to users');
+  }
 
   // Users: add IANA timezone so getNow() can compute the user's local
   // wall-clock for date comparisons. NULL until the browser first posts
@@ -4293,6 +4299,23 @@ module.exports = {
       map.set(r.user_id, e);
     }
     return map;
+  },
+
+  // Students in a cohort with their most recent recording (from cuttings) and
+  // last admin check-in. The route computes days-quiet + nudge-eligibility
+  // against its own time-travel-aware "today".
+  getCohortGardenersActivity(cohortId) {
+    return db.prepare(`
+      SELECT u.id, u.name, u.avatar_initial, u.email, u.last_checkin_sent_at,
+             (SELECT MAX(recorded_date) FROM cuttings c WHERE c.user_id = u.id) AS last_recorded_date
+      FROM users u
+      WHERE u.role = 'student' AND u.cohort_id = ?
+      ORDER BY u.name ASC
+    `).all(cohortId);
+  },
+
+  markCheckinSent(userId) {
+    return db.prepare('UPDATE users SET last_checkin_sent_at = CURRENT_TIMESTAMP WHERE id = ?').run(userId);
   },
 
   getUserTimezone(userId) {
