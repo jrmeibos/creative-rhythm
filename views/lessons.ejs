@@ -8,6 +8,20 @@
     .videos-section { margin-bottom: 2.75rem; }
     .videos-section-title { font-family: 'Goldage', Georgia, serif; font-size: 1.6rem; font-weight: 400; margin: 0 0 .3rem; color: var(--color-ink-stained); }
     .videos-section-sub { font-size: .95rem; color: rgba(16,15,16,.6); margin: 0 0 1.4rem; }
+    /* Compact call cards — 3 across, each either a recording or a "coming soon"
+       placeholder for a scheduled-but-not-yet-happened call. */
+    .call-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; max-width: 920px; }
+    .call-card { border: 1px solid rgba(16,15,16,.1); border-radius: 12px; overflow: hidden; background: var(--color-blank-page); display: flex; flex-direction: column; }
+    .call-card--soon { border-style: dashed; }
+    .call-media { position: relative; aspect-ratio: 16 / 9; background: #100F10; }
+    .call-media iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+    .call-media--soon { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .35rem; background: var(--color-new-growth); color: var(--color-understory); }
+    .call-meta { padding: .7rem .8rem .85rem; }
+    .call-title { font-family: 'Goldage', Georgia, serif; font-size: 1rem; font-weight: 600; margin: 0; color: var(--color-ink-stained); line-height: 1.25; }
+    .call-date { font-size: .8rem; color: rgba(16,15,16,.55); margin: .25rem 0 0; }
+    .call-date--soon { color: var(--color-bloem); font-weight: 600; }
+    @media (max-width: 640px) { .call-grid { grid-template-columns: 1fr 1fr; } }
+    @media (max-width: 420px) { .call-grid { grid-template-columns: 1fr; } }
     .videos-list { display: flex; flex-direction: column; gap: 2.25rem; max-width: 760px; }
     .video-item-title { font-family: 'Goldage', Georgia, serif; font-size: 1.35rem; font-weight: 600; margin: 0 0 .3rem; color: var(--color-ink-stained); }
     .video-item-sub { font-size: .95rem; color: rgba(16,15,16,.6); margin: 0 0 .85rem; font-style: italic; }
@@ -35,16 +49,31 @@
       <% if (hasRecordings) { %>
         <section class="videos-section">
           <h2 class="videos-section-title">Call recordings</h2>
-          <p class="videos-section-sub">Recordings of our group calls — watch or re-watch anytime.</p>
-          <div class="videos-list">
+          <p class="videos-section-sub">Our group calls — watch or re-watch anytime. Upcoming calls appear here until their recording is ready.</p>
+          <div class="call-grid">
             <% for (const rec of recordings) { %>
-              <div class="video-item">
-                <h3 class="video-item-title"><%= rec.title %></h3>
-                <% if (rec.description) { %><p class="video-item-sub"><%= rec.description %></p><% } %>
-                <div class="video-embed">
-                  <iframe src="<%= rec.embedUrl %>" title="<%= rec.title %>" loading="lazy" frameborder="0"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowfullscreen></iframe>
+              <div class="call-card <%= rec.embedUrl ? '' : 'call-card--soon' %>">
+                <% if (rec.embedUrl) { %>
+                  <div class="call-media">
+                    <iframe src="<%= rec.embedUrl %>" title="<%= rec.title %>" loading="lazy" frameborder="0"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowfullscreen></iframe>
+                  </div>
+                <% } else { %>
+                  <div class="call-media call-media--soon" aria-hidden="true">
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4">
+                      <rect x="2.5" y="5.5" width="13.5" height="13" rx="2"/>
+                      <path d="M16 10l5.5-3v10L16 14z"/>
+                    </svg>
+                  </div>
+                <% } %>
+                <div class="call-meta">
+                  <h3 class="call-title"><%= rec.title %></h3>
+                  <% if (!rec.embedUrl) { %>
+                    <p class="call-date call-date--soon">Coming soon<% if (rec.scheduledLabel) { %> · <%= rec.scheduledLabel %><% } %></p>
+                  <% } else if (rec.scheduledLabel) { %>
+                    <p class="call-date"><%= rec.scheduledLabel %></p>
+                  <% } %>
                 </div>
               </div>
             <% } %>

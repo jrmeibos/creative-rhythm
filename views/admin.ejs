@@ -952,6 +952,11 @@
       <input class="admin-input" type="url" id="add-resource-url" placeholder="https://…">
     </div>
     <div class="admin-form-field">
+      <label class="admin-form-label">Scheduled date <span style="font-weight:300;opacity:0.6">(for call recordings)</span></label>
+      <input class="admin-input" type="date" id="add-resource-date">
+      <p class="admin-field-hint">Set a date and leave the URL blank to show a "coming soon" placeholder. Add the URL once the call is recorded.</p>
+    </div>
+    <div class="admin-form-field">
       <label class="admin-form-label">Visible to</label>
       <select class="admin-input" id="add-resource-cohort">
         <option value="">Everyone (all cohorts)</option>
@@ -986,6 +991,11 @@
     <div class="admin-form-field">
       <label class="admin-form-label">URL</label>
       <input class="admin-input" type="url" id="edit-resource-url">
+    </div>
+    <div class="admin-form-field">
+      <label class="admin-form-label">Scheduled date <span style="font-weight:300;opacity:0.6">(for call recordings)</span></label>
+      <input class="admin-input" type="date" id="edit-resource-date">
+      <p class="admin-field-hint">Set a date and leave the URL blank to show a "coming soon" placeholder. Add the URL once the call is recorded.</p>
     </div>
     <div class="admin-form-field">
       <label class="admin-form-label">Visible to</label>
@@ -1071,11 +1081,12 @@
     const RESOURCE_DATA = {};
     <% for (const r of resources) { %>
       RESOURCE_DATA[<%= r.id %>] = <%- JSON.stringify({
-        title:        r.title,
-        description:  r.description  || '',
-        category_tag: r.category_tag || '',
-        url:          r.url          || '',
-        cohort_id:    r.cohort_id    || ''
+        title:          r.title,
+        description:    r.description    || '',
+        category_tag:   r.category_tag   || '',
+        url:            r.url            || '',
+        cohort_id:      r.cohort_id      || '',
+        scheduled_date: r.scheduled_date || ''
       }).replace(/</g, '\\u003c') %>;
     <% } %>
 
@@ -1842,6 +1853,7 @@
       document.getElementById('edit-resource-desc').value     = r.description;
       document.getElementById('edit-resource-category').value = r.category_tag;
       document.getElementById('edit-resource-url').value      = r.url;
+      document.getElementById('edit-resource-date').value     = r.scheduled_date || '';
       document.getElementById('edit-resource-cohort').value   = r.cohort_id || '';
       document.getElementById('edit-resource-error').hidden   = true;
       openDialog('dialog-edit-resource');
@@ -1852,13 +1864,14 @@
       const description = document.getElementById('add-resource-desc').value.trim();
       const category_tag = document.getElementById('add-resource-category').value.trim();
       const url         = document.getElementById('add-resource-url').value.trim();
+      const scheduled_date = document.getElementById('add-resource-date').value;
       const cohort_id   = document.getElementById('add-resource-cohort').value;
       if (!title) return showError('add-resource-error', 'Title is required.');
 
       const res = await fetch('/api/admin/resources', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ title, description, category_tag, url, cohort_id })
+        body:    JSON.stringify({ title, description, category_tag, url, cohort_id, scheduled_date })
       });
       const data = await res.json();
       if (!res.ok) return showError('add-resource-error', data.error);
@@ -1873,13 +1886,14 @@
       const description = document.getElementById('edit-resource-desc').value.trim();
       const category_tag = document.getElementById('edit-resource-category').value.trim();
       const url         = document.getElementById('edit-resource-url').value.trim();
+      const scheduled_date = document.getElementById('edit-resource-date').value;
       const cohort_id   = document.getElementById('edit-resource-cohort').value;
       if (!title) return showError('edit-resource-error', 'Title is required.');
 
       const res = await fetch(`/api/admin/resources/${id}`, {
         method:  'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ title, description, category_tag, url, cohort_id })
+        body:    JSON.stringify({ title, description, category_tag, url, cohort_id, scheduled_date })
       });
       const data = await res.json();
       if (!res.ok) return showError('edit-resource-error', data.error);

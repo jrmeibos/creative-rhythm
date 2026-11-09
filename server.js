@@ -1827,11 +1827,26 @@ app.get('/videos', requireAuth, (req, res) => {
   const viewer       = req.session.user;
   const isAdmin      = viewer.role === 'admin';
   const viewerCohort = viewer.cohort_id || null;
+  // Include a recording if it has a playable video OR a scheduled date (a
+  // not-yet-happened call that shows as "coming soon"). Chronological order so
+  // the call slots read first → last.
+  const fmtCallDate = d => {
+    if (!d) return null;
+    const dt = new Date(d + 'T00:00:00');
+    return isNaN(dt) ? null : dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  };
   const recordings = db.getAllResources()
     .filter(r => isAdmin || r.cohort_id == null || r.cohort_id === viewerCohort)
-    .map(r => ({ title: r.title, description: r.description, embedUrl: toVideoEmbedUrl(r.url), createdAt: r.created_at }))
-    .filter(r => r.embedUrl)
-    .sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
+    .map(r => ({
+      title:          r.title,
+      description:    r.description,
+      embedUrl:       toVideoEmbedUrl(r.url),
+      scheduledDate:  r.scheduled_date || null,
+      scheduledLabel: fmtCallDate(r.scheduled_date),
+      createdAt:      r.created_at,
+    }))
+    .filter(r => r.embedUrl || r.scheduledDate)
+    .sort((a, b) => String(a.scheduledDate || a.createdAt || '').localeCompare(String(b.scheduledDate || b.createdAt || '')));
 
   res.render('lessons', {
     title: 'Videos',
@@ -5717,20 +5732,26 @@ app.post('/api/admin/lessons/:id/move', requireAdmin, (req, res) => {
 
 // ─── Admin: Resources ──────────────────────────────────────────────────────
 
+// A scheduled_date (YYYY-MM-DD) is optional; with it and no url, the recording
+// shows as a "coming soon" placeholder on the Videos page until the url lands.
+function cleanScheduledDate(v) {
+  return (typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v.trim())) ? v.trim() : '';
+}
+
 app.post('/api/admin/resources', requireAdmin, (req, res) => {
-  const { title, description, category_tag, url, cohort_id } = req.body;
+  const { title, description, category_tag, url, cohort_id, scheduled_date } = req.body;
   if (!title) return res.status(400).json({ error: 'Title is required.' });
   const cid = cohort_id ? parseInt(cohort_id, 10) : null;
-  const result = db.createResource(title.trim(), description || '', category_tag || '', url || '', null, cid);
+  const result = db.createResource(title.trim(), description || '', category_tag || '', url || '', null, cid, cleanScheduledDate(scheduled_date));
   res.json({ ok: true, id: result.lastInsertRowid });
 });
 
 app.put('/api/admin/resources/:id', requireAdmin, (req, res) => {
   const id = parseInt(req.params.id);
-  const { title, description, category_tag, url, cohort_id } = req.body;
+  const { title, description, category_tag, url, cohort_id, scheduled_date } = req.body;
   if (!title) return res.status(400).json({ error: 'Title is required.' });
   const cid = cohort_id ? parseInt(cohort_id, 10) : null;
-  db.updateResource(id, title.trim(), description || '', category_tag || '', url || '', cid);
+  db.updateResource(id, title.trim(), description || '', category_tag || '', url || '', cid, cleanScheduledDate(scheduled_date));
   res.json({ ok: true });
 });
 

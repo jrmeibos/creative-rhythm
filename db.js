@@ -649,6 +649,12 @@ db.exec(`
     db.exec("ALTER TABLE resources ADD COLUMN cohort_id INTEGER");
     console.log('✓ Migrated: added cohort_id column to resources');
   }
+  // scheduled_date (YYYY-MM-DD) lets a call recording exist as a placeholder
+  // before it happens: a row with a date but no url renders as "coming soon".
+  if (resCols.length && !resCols.includes('scheduled_date')) {
+    db.exec("ALTER TABLE resources ADD COLUMN scheduled_date TEXT DEFAULT ''");
+    console.log('✓ Migrated: added scheduled_date column to resources');
+  }
 
   // End-of-challenge refund-vs-continue choice. null = undecided, 'continue'
   // (staying — garden flipped open) or 'refund' (wants the refund; Julia issues
@@ -2778,9 +2784,9 @@ module.exports = {
     `).all();
   },
 
-  createResource(title, description, categoryTag, url, filePath, cohortId) {
-    return db.prepare('INSERT INTO resources (title, description, category_tag, url, file_path, cohort_id) VALUES (?, ?, ?, ?, ?, ?)')
-      .run(title, description, categoryTag, url, filePath, cohortId ?? null);
+  createResource(title, description, categoryTag, url, filePath, cohortId, scheduledDate) {
+    return db.prepare('INSERT INTO resources (title, description, category_tag, url, file_path, cohort_id, scheduled_date) VALUES (?, ?, ?, ?, ?, ?, ?)')
+      .run(title, description, categoryTag, url, filePath, cohortId ?? null, scheduledDate || '');
   },
 
   getLessonCompletionCounts() {
@@ -2989,10 +2995,10 @@ module.exports = {
 
   // ─── Admin: resources ──────────────────────────────────────────────────────
 
-  updateResource(id, title, description, categoryTag, url, cohortId) {
+  updateResource(id, title, description, categoryTag, url, cohortId, scheduledDate) {
     return db.prepare(
-      'UPDATE resources SET title=?, description=?, category_tag=?, url=?, cohort_id=? WHERE id=?'
-    ).run(title, description || '', categoryTag || '', url || '', cohortId ?? null, id);
+      'UPDATE resources SET title=?, description=?, category_tag=?, url=?, cohort_id=?, scheduled_date=? WHERE id=?'
+    ).run(title, description || '', categoryTag || '', url || '', cohortId ?? null, scheduledDate || '', id);
   },
 
   deleteResource(id) {
