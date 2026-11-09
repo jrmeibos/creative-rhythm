@@ -49,14 +49,6 @@
             <% } %>
           </p>
         </div>
-        <%# Lessons hidden from students during the trial run. The completion
-            pill stays visible to admin only; remove this guard to restore it. %>
-        <% if (user && user.role === 'admin') { %>
-        <div class="dash-progress-pill">
-          <span class="dash-progress-count"><%= completedCount %> / <%= totalLessons %></span>
-          <span class="dash-progress-label">lessons complete</span>
-        </div>
-        <% } %>
       </header>
 
       <% if (locals.tourCardVisible) { %>
@@ -1231,40 +1223,6 @@
           <% } %>
         </div>
       </section>
-      <% } %>
-
-      <!-- Continue learning -->
-      <%# Lessons hidden from students during the trial run. Whole section is
-          admin-only for now; remove this role guard to show students again. %>
-      <% if (user && user.role === 'admin') { %>
-      <% if (currentLesson) { %>
-      <section class="dash-section">
-        <div class="dash-section-header">
-          <h2 class="dash-section-title">Continue reading</h2>
-          <a href="/videos" class="dash-section-link">All lessons →</a>
-        </div>
-
-        <a href="/videos/<%= currentLesson.slug %>" class="lesson-continue-card">
-          <div class="lesson-continue-tag"><%= currentLesson.category_tag || 'Lesson' %></div>
-          <h3 class="lesson-continue-title"><%= currentLesson.title %></h3>
-          <p class="lesson-continue-subtitle"><em><%= currentLesson.subtitle %></em></p>
-          <div class="lesson-continue-meta">
-            <span>~<%= currentLesson.estimated_read_time %> min read</span>
-            <span class="lesson-continue-arrow">Read now →</span>
-          </div>
-        </a>
-      </section>
-      <% } else { %>
-      <section class="dash-section">
-        <div class="dash-section-header">
-          <h2 class="dash-section-title">Your lessons</h2>
-        </div>
-        <div class="all-complete-card">
-          <p class="all-complete-text">You've read all available lessons. Beautiful work.</p>
-          <a href="/videos" class="dash-section-link">Browse lessons →</a>
-        </div>
-      </section>
-      <% } %>
       <% } %>
 
       <!-- Daily quote -->
