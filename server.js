@@ -6047,6 +6047,9 @@ function buildCohortOverview(adminUser, cohorts) {
       return { c, start, end, phase };
     });
   const sel =
+    // The current challenge cohort (the one signups join) wins, so a stray
+    // running/test cohort can't hijack the overview and hide its schedule.
+    states.find(s => s.start === CHALLENGE_START_DATE) ||
     states.find(s => s.phase === 'running') ||
     states.filter(s => s.phase === 'upcoming').sort((a, b) => a.start.localeCompare(b.start))[0] ||
     states.filter(s => s.phase === 'past').sort((a, b) => b.start.localeCompare(a.start))[0] ||
