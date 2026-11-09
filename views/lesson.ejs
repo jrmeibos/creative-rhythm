@@ -12,7 +12,7 @@
 
     <main class="main-content" id="main">
 
-      <a href="/lessons" class="lesson-back">← All lessons</a>
+      <a href="/videos" class="lesson-back">← All videos</a>
 
       <div class="lesson-layout">
 
@@ -147,7 +147,7 @@
 
           <nav class="lesson-nav" aria-label="Lesson navigation">
             <% if (prevLesson) { %>
-              <a href="/lessons/<%= prevLesson.slug %>" class="lesson-nav-item lesson-nav-item--prev">
+              <a href="/videos/<%= prevLesson.slug %>" class="lesson-nav-item lesson-nav-item--prev">
                 <span class="lesson-nav-direction">← Previous</span>
                 <span class="lesson-nav-title"><%= prevLesson.title %></span>
               </a>
@@ -156,7 +156,7 @@
             <% } %>
 
             <% if (nextLesson) { %>
-              <a href="/lessons/<%= nextLesson.slug %>" class="lesson-nav-item lesson-nav-item--next">
+              <a href="/videos/<%= nextLesson.slug %>" class="lesson-nav-item lesson-nav-item--next">
                 <span class="lesson-nav-direction">Next →</span>
                 <span class="lesson-nav-title"><%= nextLesson.title %></span>
               </a>

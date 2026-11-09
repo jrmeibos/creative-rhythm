@@ -1226,10 +1226,10 @@
       <section class="dash-section">
         <div class="dash-section-header">
           <h2 class="dash-section-title">Continue reading</h2>
-          <a href="/lessons" class="dash-section-link">All lessons →</a>
+          <a href="/videos" class="dash-section-link">All lessons →</a>
         </div>
 
-        <a href="/lessons/<%= currentLesson.slug %>" class="lesson-continue-card">
+        <a href="/videos/<%= currentLesson.slug %>" class="lesson-continue-card">
           <div class="lesson-continue-tag"><%= currentLesson.category_tag || 'Lesson' %></div>
           <h3 class="lesson-continue-title"><%= currentLesson.title %></h3>
           <p class="lesson-continue-subtitle"><em><%= currentLesson.subtitle %></em></p>
@@ -1246,7 +1246,7 @@
         </div>
         <div class="all-complete-card">
           <p class="all-complete-text">You've read all available lessons. Beautiful work.</p>
-          <a href="/lessons" class="dash-section-link">Browse lessons →</a>
+          <a href="/videos" class="dash-section-link">Browse lessons →</a>
         </div>
       </section>
       <% } %>

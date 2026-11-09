@@ -1793,21 +1793,47 @@ function normalizeVideoUrl(url) {
   return url;
 }
 
-app.get('/lessons', requireAuth, (req, res) => {
+// Old /lessons paths redirect to /videos (the page was renamed). The PDF under
+// public/lessons/ is served by express.static before these routes, so it's
+// unaffected. :slug redirects carry the slug across.
+app.get('/lessons', (req, res) => res.redirect(301, '/videos'));
+app.get('/lessons/:slug', (req, res, next) => {
+  // Don't swallow static files under /lessons/ (e.g. the intro PDF); those are
+  // served earlier by express.static and never reach here. Anything that does
+  // reach here is a page slug, so forward it to /videos/:slug.
+  res.redirect(301, '/videos/' + encodeURIComponent(req.params.slug));
+});
+
+app.get('/videos', requireAuth, (req, res) => {
   // The "Videos" library — open to everyone. Shows only entries that actually
   // have a video, so the old text-only course lessons stay out of it. No
-  // curriculum gating: every video is visible to every student.
+  // curriculum gating: every course video is visible to every student.
   const videos = db.getAllLessons().filter(l => l.video_url);
+
+  // Call recordings live here too (not on /resources). They're resources-table
+  // rows whose url is a video link, scoped by cohort: a recording with no
+  // cohort_id is visible to everyone; one tagged with a cohort id is visible
+  // only to that cohort's members (admins see all).
+  const viewer       = req.session.user;
+  const isAdmin      = viewer.role === 'admin';
+  const viewerCohort = viewer.cohort_id || null;
+  const recordings = db.getAllResources()
+    .filter(r => isAdmin || r.cohort_id == null || r.cohort_id === viewerCohort)
+    .map(r => ({ title: r.title, description: r.description, embedUrl: toVideoEmbedUrl(r.url), createdAt: r.created_at }))
+    .filter(r => r.embedUrl)
+    .sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
+
   res.render('lessons', {
     title: 'Videos',
-    page: 'lessons',
+    page: 'videos',
     videos,
+    recordings,
   });
 });
 
-app.get('/lessons/:slug', requireAuth, (req, res) => {
+app.get('/videos/:slug', requireAuth, (req, res) => {
   const lesson = db.getLessonBySlug(req.params.slug);
-  if (!lesson) return res.status(404).render('error', { title: '404', message: 'Video not found.', user: req.session.user, page: 'lessons' });
+  if (!lesson) return res.status(404).render('error', { title: '404', message: 'Video not found.', user: req.session.user, page: 'videos' });
   const completed = !!db.getLessonCompletion(req.session.user.id, lesson.id);
   const allLessons = db.getAllLessons();
   const idx = allLessons.findIndex(l => l.id === lesson.id);
@@ -1827,7 +1853,7 @@ app.get('/lessons/:slug', requireAuth, (req, res) => {
   const curricularSeasonLabel = lessonNumber ? getCurricularSeasonLabel(curricularSeason) : '';
   res.render('lesson', {
     title: lesson.title,
-    page: 'lessons',
+    page: 'videos',
     lesson,
     completed,
     prevLesson,
@@ -4531,7 +4557,7 @@ app.post('/api/account/weekly-reminder', requireAuth, (req, res) => {
 // ─── Resources ─────────────────────────────────────────────────────────────
 
 // Turn a YouTube/Vimeo share URL into an embeddable player URL, or null if it
-// isn't a recognized video link. Used to render call recordings on /resources.
+// isn't a recognized video link. Used to render call recordings on the Videos page.
 function toVideoEmbedUrl(raw) {
   if (!raw || typeof raw !== 'string') return null;
   const url = raw.trim();
@@ -4543,22 +4569,9 @@ function toVideoEmbedUrl(raw) {
 }
 
 app.get('/resources', requireAuth, (req, res) => {
-  // Call recordings live in the resources table as rows whose url is a video
-  // link (YouTube/Vimeo). Render those as embeds, newest first; any other
-  // resources are left to the page's curated cards.
-  //
-  // Cohort scoping: a recording with no cohort_id is visible to everyone; one
-  // tagged with a cohort id is visible only to that cohort's members (admins
-  // see all). So Cohort 1's call recordings stay private to Cohort 1.
-  const viewer       = req.session.user;
-  const isAdmin      = viewer.role === 'admin';
-  const viewerCohort = viewer.cohort_id || null;
-  const recordings = db.getAllResources()
-    .filter(r => isAdmin || r.cohort_id == null || r.cohort_id === viewerCohort)
-    .map(r => ({ title: r.title, description: r.description, embedUrl: toVideoEmbedUrl(r.url), createdAt: r.created_at }))
-    .filter(r => r.embedUrl)
-    .sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
-  res.render('resources', { title: 'Resources', page: 'resources', recordings });
+  // Call recordings now live on the Videos page (/lessons). This page is the
+  // curated resource cards (Seed Packets, Block Buster, Watch Yourself).
+  res.render('resources', { title: 'Resources', page: 'resources' });
 });
 
 // ─── Mid-challenge check-in ────────────────────────────────────────────────

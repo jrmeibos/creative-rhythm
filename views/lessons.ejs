@@ -5,6 +5,9 @@
   <link rel="stylesheet" href="/css/dashboard.css">
   <link rel="stylesheet" href="/css/lessons.css">
   <style>
+    .videos-section { margin-bottom: 2.75rem; }
+    .videos-section-title { font-family: 'Goldage', Georgia, serif; font-size: 1.6rem; font-weight: 400; margin: 0 0 .3rem; color: var(--color-ink-stained); }
+    .videos-section-sub { font-size: .95rem; color: rgba(16,15,16,.6); margin: 0 0 1.4rem; }
     .videos-list { display: flex; flex-direction: column; gap: 2.25rem; max-width: 760px; }
     .video-item-title { font-family: 'Goldage', Georgia, serif; font-size: 1.35rem; font-weight: 600; margin: 0 0 .3rem; color: var(--color-ink-stained); }
     .video-item-sub { font-size: .95rem; color: rgba(16,15,16,.6); margin: 0 0 .85rem; font-style: italic; }
@@ -27,23 +30,48 @@
         </div>
       </header>
 
-      <% if (!videos.length) { %>
-        <p class="videos-empty">Videos are on their way. 🌿</p>
-      <% } else { %>
-        <div class="videos-list">
-          <% for (const v of videos) { %>
-            <div class="video-item">
-              <h2 class="video-item-title"><%= v.title %></h2>
-              <% if (v.subtitle) { %><p class="video-item-sub"><%= v.subtitle %></p><% } %>
-              <div class="video-embed">
-                <iframe src="<%= v.video_url %>" title="<%= v.title %>" frameborder="0"
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                  allowfullscreen></iframe>
+      <% const hasRecordings = locals.recordings && recordings.length; %>
+
+      <% if (hasRecordings) { %>
+        <section class="videos-section">
+          <h2 class="videos-section-title">Call recordings</h2>
+          <p class="videos-section-sub">Recordings of our group calls — watch or re-watch anytime.</p>
+          <div class="videos-list">
+            <% for (const rec of recordings) { %>
+              <div class="video-item">
+                <h3 class="video-item-title"><%= rec.title %></h3>
+                <% if (rec.description) { %><p class="video-item-sub"><%= rec.description %></p><% } %>
+                <div class="video-embed">
+                  <iframe src="<%= rec.embedUrl %>" title="<%= rec.title %>" loading="lazy" frameborder="0"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowfullscreen></iframe>
+                </div>
               </div>
-            </div>
-          <% } %>
-        </div>
+            <% } %>
+          </div>
+        </section>
       <% } %>
+
+      <section class="videos-section">
+        <% if (hasRecordings) { %><h2 class="videos-section-title">Course videos</h2><% } %>
+        <% if (!videos.length) { %>
+          <p class="videos-empty">Videos are on their way. 🌿</p>
+        <% } else { %>
+          <div class="videos-list">
+            <% for (const v of videos) { %>
+              <div class="video-item">
+                <h3 class="video-item-title"><%= v.title %></h3>
+                <% if (v.subtitle) { %><p class="video-item-sub"><%= v.subtitle %></p><% } %>
+                <div class="video-embed">
+                  <iframe src="<%= v.video_url %>" title="<%= v.title %>" frameborder="0"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowfullscreen></iframe>
+                </div>
+              </div>
+            <% } %>
+          </div>
+        <% } %>
+      </section>
 
     </main>
   </div>

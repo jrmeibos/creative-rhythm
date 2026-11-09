@@ -17,29 +17,6 @@
         </div>
       </header>
 
-      <% if (locals.recordings && recordings.length) { %>
-      <section class="dash-section">
-        <h2 class="dash-section-title">Call recordings</h2>
-        <p class="rec-intro">Recordings of our group calls — watch (or re-watch) anytime.</p>
-        <div class="rec-list">
-          <% for (const rec of recordings) { %>
-            <article class="rec-item">
-              <div class="rec-video">
-                <iframe src="<%= rec.embedUrl %>" title="<%= rec.title %>" loading="lazy"
-                        frameborder="0"
-                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                        allowfullscreen></iframe>
-              </div>
-              <div class="rec-meta">
-                <h3 class="rec-title"><%= rec.title %></h3>
-                <% if (rec.description) { %><p class="rec-desc"><%= rec.description %></p><% } %>
-              </div>
-            </article>
-          <% } %>
-        </div>
-      </section>
-      <% } %>
-
       <section class="dash-section">
         <div class="resources-grid">
 
@@ -64,8 +41,8 @@
           </a>
 
           <!-- Watch Yourself — unlocks in Spring. Pre-Spring students see a
-               locked preview linking to /upgrade so they know it's coming. -->
-          <a href="<%= locals.showTending ? '/watch-yourself' : '/upgrade' %>"
+               locked preview linking to /seasons so they know what's coming. -->
+          <a href="<%= locals.showTending ? '/watch-yourself' : '/seasons' %>"
              class="resource-card <%= locals.showTending ? '' : 'resource-card--locked' %>">
             <div class="resource-card-inner">
               <img class="resource-card-art resource-card-art--landscape"
