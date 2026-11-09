@@ -22,11 +22,16 @@
     .call-date--soon { color: var(--color-bloem); font-weight: 600; }
     @media (max-width: 640px) { .call-grid { grid-template-columns: 1fr 1fr; } }
     @media (max-width: 420px) { .call-grid { grid-template-columns: 1fr; } }
-    .videos-list { display: flex; flex-direction: column; gap: 2.25rem; max-width: 760px; }
-    .video-item-title { font-family: 'Goldage', Georgia, serif; font-size: 1.35rem; font-weight: 600; margin: 0 0 .3rem; color: var(--color-ink-stained); }
-    .video-item-sub { font-size: .95rem; color: rgba(16,15,16,.6); margin: 0 0 .85rem; font-style: italic; }
-    .video-embed { position: relative; width: 100%; aspect-ratio: 16 / 9; border-radius: 14px; overflow: hidden; background: #100F10; }
+    /* Course videos — same card treatment as the call cards, just larger: the
+       title sits in a white strip under the video so it doesn't compete with
+       the "Course videos" section heading. */
+    .videos-list { display: flex; flex-direction: column; gap: 1.5rem; max-width: 640px; }
+    .video-card { border: 1px solid rgba(16,15,16,.1); border-radius: 14px; overflow: hidden; background: var(--color-blank-page); }
+    .video-embed { position: relative; width: 100%; aspect-ratio: 16 / 9; background: #100F10; }
     .video-embed iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+    .video-card-meta { padding: .85rem 1.1rem 1rem; }
+    .video-card-title { font-family: 'Goldage', Georgia, serif; font-size: 1.15rem; font-weight: 600; margin: 0; color: var(--color-ink-stained); line-height: 1.3; }
+    .video-card-sub { font-size: .9rem; color: rgba(16,15,16,.6); margin: .25rem 0 0; font-style: italic; }
     .videos-empty { color: rgba(16,15,16,.5); font-style: italic; }
   </style>
 </head>
@@ -88,13 +93,15 @@
         <% } else { %>
           <div class="videos-list">
             <% for (const v of videos) { %>
-              <div class="video-item">
-                <h3 class="video-item-title"><%= v.title %></h3>
-                <% if (v.subtitle) { %><p class="video-item-sub"><%= v.subtitle %></p><% } %>
+              <div class="video-card">
                 <div class="video-embed">
                   <iframe src="<%= v.video_url %>" title="<%= v.title %>" frameborder="0"
                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                     allowfullscreen></iframe>
+                </div>
+                <div class="video-card-meta">
+                  <h3 class="video-card-title"><%= v.title %></h3>
+                  <% if (v.subtitle) { %><p class="video-card-sub"><%= v.subtitle %></p><% } %>
                 </div>
               </div>
             <% } %>
