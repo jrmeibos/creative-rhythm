@@ -40,6 +40,11 @@
       </p>
     </header>
 
+    <!-- ── Signup form (top) ────────────────────────────────────────────── -->
+    <section class="sg-section sg-signup" id="signup">
+      <%- include('partials/signup-form', { sfx: '-top', showError: true }) %>
+    </section>
+
     <!-- ── Why this works (Julia's experience + three gardeners' journeys) ── -->
     <section class="sg-section">
       <p class="sg-eyebrow sg-eyebrow--sage">Does this really work?</p>
@@ -132,89 +137,9 @@
       </p>
     </section>
 
-    <!-- ── Signup form ──────────────────────────────────────────────────── -->
-    <section class="sg-section sg-signup" id="signup">
-      <div class="sg-form-card">
-        <% if (locals.full) { %>
-          <h2 class="sg-form-title">This cohort is full</h2>
-          <p class="sg-body" style="text-align:center; margin-top:0.5rem">
-            Every spot for the January 5 challenge is spoken for. Join the waitlist
-            and I'll email you the moment a spot opens or the next cohort begins.
-          </p>
-
-          <form id="waitlist-form" class="sg-form" novalidate style="margin-top:1.25rem">
-            <div class="form-group">
-              <label for="waitlist-email" class="form-label">Email</label>
-              <input type="email" id="waitlist-email" name="email" class="form-input"
-                     placeholder="you@example.com" autocomplete="email" required>
-            </div>
-            <button type="submit" class="btn btn-primary btn-full" id="waitlist-btn">Join the waitlist →</button>
-            <p class="sg-help" id="waitlist-msg" role="status" aria-live="polite" style="text-align:center; margin-top:0.6rem" hidden></p>
-          </form>
-
-          <p class="sg-help" style="text-align:center; margin-top:0.6rem">
-            Prefer email? <a href="mailto:julia@meibostouch.com?subject=Creative%27s%20Garden%20waitlist" class="sg-link">Reach out directly</a>.
-          </p>
-        <% } else { %>
-        <h2 class="sg-form-title">Join the three-week challenge</h2>
-
-        <% if (error) { %>
-          <div class="sg-error" role="alert"><%= error %></div>
-        <% } %>
-
-        <form action="/signup" method="POST" class="sg-form" novalidate>
-          <div class="sg-name-row">
-            <div class="form-group">
-              <label for="firstName" class="form-label">First name</label>
-              <input type="text" id="firstName" name="firstName" class="form-input"
-                     placeholder="First name" autocomplete="given-name"
-                     value="<%= firstName %>" required>
-            </div>
-            <div class="form-group">
-              <label for="lastName" class="form-label">Last name</label>
-              <input type="text" id="lastName" name="lastName" class="form-input"
-                     placeholder="Last name" autocomplete="family-name"
-                     value="<%= lastName %>" required>
-            </div>
-          </div>
-
-          <div class="form-group">
-            <label for="email" class="form-label">Email</label>
-            <input type="email" id="email" name="email" class="form-input"
-                   placeholder="you@example.com" autocomplete="email"
-                   value="<%= email %>" required>
-          </div>
-
-          <div class="form-group">
-            <label for="password" class="form-label">Password</label>
-            <input type="password" id="password" name="password" class="form-input"
-                   placeholder="At least 8 characters" autocomplete="new-password" required>
-            <p class="sg-help">Minimum 8 characters. Include a number or symbol.</p>
-          </div>
-
-          <label class="sg-newsletter">
-            <input type="checkbox" name="newsletter" value="1" class="sg-newsletter-cb">
-            <span>Add me to The Meibos Touch newsletter for occasional notes and updates.</span>
-          </label>
-
-          <!-- Timezone detected client-side; server falls back to America/Denver. -->
-          <input type="hidden" id="timezone" name="timezone" value="">
-          <% if (returnTo) { %>
-            <input type="hidden" name="returnTo" value="<%= returnTo %>">
-          <% } %>
-
-          <button type="submit" class="btn btn-primary btn-full">Join the challenge →</button>
-          <p class="sg-help" style="text-align:center; margin-top:0.6rem">
-            Next step: a one-time <strong>$199</strong> to hold your spot. We start January 5.
-          </p>
-        </form>
-        <% } %>
-
-        <p class="sg-signin-line">
-          Already have an account?
-          <a href="/<%= returnTo ? '?returnTo=' + encodeURIComponent(returnTo) : '' %>" class="sg-link">Sign in</a>
-        </p>
-      </div>
+    <!-- ── Signup form (bottom) ─────────────────────────────────────────── -->
+    <section class="sg-section sg-signup">
+      <%- include('partials/signup-form', { sfx: '', showError: false }) %>
     </section>
 
     <footer class="sg-footer">
@@ -234,53 +159,56 @@
     // wall clock. Server falls back to America/Denver if empty/unrecognized.
     try {
       const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-      if (tz) document.getElementById('timezone').value = tz;
+      if (tz) document.querySelectorAll('input[name="timezone"]').forEach(function (el) { el.value = tz; });
     } catch (_) { /* no-op — server fallback handles it */ }
   </script>
 
   <script>
-    // Waitlist form (shown only when the cohort is full). Posts to /api/waitlist,
-    // which tags the contact in Mailchimp. No-op when the form isn't on the page.
+    // Waitlist forms (shown only when the cohort is full). Posts to /api/waitlist,
+    // which tags the contact in Mailchimp. The form appears at the top and bottom
+    // of the page, so wire every copy; no-op when none are present.
     (function () {
-      var form = document.getElementById('waitlist-form');
-      if (!form) return;
-      var btn   = document.getElementById('waitlist-btn');
-      var input = document.getElementById('waitlist-email');
-      var msg   = document.getElementById('waitlist-msg');
+      var forms = document.querySelectorAll('.sg-waitlist-form');
+      if (!forms.length) return;
+      forms.forEach(function (form) {
+        var btn   = form.querySelector('.sg-waitlist-btn');
+        var input = form.querySelector('.sg-waitlist-email');
+        var msg   = form.querySelector('.sg-waitlist-msg');
 
-      function show(text, ok) {
-        msg.hidden = false;
-        msg.textContent = text;
-        msg.style.color = ok ? '' : '#b00020';
-      }
-
-      form.addEventListener('submit', function (e) {
-        e.preventDefault();
-        var email = (input.value || '').trim();
-        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-          show('Please enter a valid email address.', false);
-          return;
+        function show(text, ok) {
+          msg.hidden = false;
+          msg.textContent = text;
+          msg.style.color = ok ? '' : '#b00020';
         }
-        btn.disabled = true;
-        fetch('/api/waitlist', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-          body: JSON.stringify({ email: email })
-        })
-          .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, d: d }; }); })
-          .then(function (res) {
-            btn.disabled = false;
-            if (res.ok && res.d && res.d.ok) {
-              form.reset();
-              show('You’re on the list — I’ll be in touch. 🌱', true);
-            } else {
-              show((res.d && res.d.error) || 'Something went wrong — please try again.', false);
-            }
+
+        form.addEventListener('submit', function (e) {
+          e.preventDefault();
+          var email = (input.value || '').trim();
+          if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+            show('Please enter a valid email address.', false);
+            return;
+          }
+          btn.disabled = true;
+          fetch('/api/waitlist', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+            body: JSON.stringify({ email: email })
           })
-          .catch(function () {
-            btn.disabled = false;
-            show('Could not reach the server — please try again.', false);
-          });
+            .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, d: d }; }); })
+            .then(function (res) {
+              btn.disabled = false;
+              if (res.ok && res.d && res.d.ok) {
+                form.reset();
+                show('You’re on the list — I’ll be in touch. 🌱', true);
+              } else {
+                show((res.d && res.d.error) || 'Something went wrong — please try again.', false);
+              }
+            })
+            .catch(function () {
+              btn.disabled = false;
+              show('Could not reach the server — please try again.', false);
+            });
+        });
       });
     })();
   </script>

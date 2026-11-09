@@ -1,0 +1,88 @@
+<%# Signup form card, used twice on /signup (top + bottom). `sfx` keeps element
+    ids unique between the two copies; `showError` renders the error banner on
+    just one of them. Form fields are read server-side by `name`, so both copies
+    post identically. The timezone + waitlist scripts in signup.ejs target the
+    class hooks here (input[name="timezone"], .sg-waitlist-form) so they wire
+    every copy on the page. %>
+<% var sfx = locals.sfx || ''; %>
+<div class="sg-form-card">
+  <% if (locals.full) { %>
+    <h2 class="sg-form-title">This cohort is full</h2>
+    <p class="sg-body" style="text-align:center; margin-top:0.5rem">
+      Every spot for the January 5 challenge is spoken for. Join the waitlist
+      and I'll email you the moment a spot opens or the next cohort begins.
+    </p>
+
+    <form class="sg-form sg-waitlist-form" novalidate style="margin-top:1.25rem">
+      <div class="form-group">
+        <label for="waitlist-email<%= sfx %>" class="form-label">Email</label>
+        <input type="email" id="waitlist-email<%= sfx %>" name="email" class="form-input sg-waitlist-email"
+               placeholder="you@example.com" autocomplete="email" required>
+      </div>
+      <button type="submit" class="btn btn-primary btn-full sg-waitlist-btn">Join the waitlist →</button>
+      <p class="sg-help sg-waitlist-msg" role="status" aria-live="polite" style="text-align:center; margin-top:0.6rem" hidden></p>
+    </form>
+
+    <p class="sg-help" style="text-align:center; margin-top:0.6rem">
+      Prefer email? <a href="mailto:julia@meibostouch.com?subject=Creative%27s%20Garden%20waitlist" class="sg-link">Reach out directly</a>.
+    </p>
+  <% } else { %>
+    <h2 class="sg-form-title">Join the three-week challenge</h2>
+
+    <% if (error && locals.showError) { %>
+      <div class="sg-error" role="alert"><%= error %></div>
+    <% } %>
+
+    <form action="/signup" method="POST" class="sg-form" novalidate>
+      <div class="sg-name-row">
+        <div class="form-group">
+          <label for="firstName<%= sfx %>" class="form-label">First name</label>
+          <input type="text" id="firstName<%= sfx %>" name="firstName" class="form-input"
+                 placeholder="First name" autocomplete="given-name"
+                 value="<%= firstName %>" required>
+        </div>
+        <div class="form-group">
+          <label for="lastName<%= sfx %>" class="form-label">Last name</label>
+          <input type="text" id="lastName<%= sfx %>" name="lastName" class="form-input"
+                 placeholder="Last name" autocomplete="family-name"
+                 value="<%= lastName %>" required>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="email<%= sfx %>" class="form-label">Email</label>
+        <input type="email" id="email<%= sfx %>" name="email" class="form-input"
+               placeholder="you@example.com" autocomplete="email"
+               value="<%= email %>" required>
+      </div>
+
+      <div class="form-group">
+        <label for="password<%= sfx %>" class="form-label">Password</label>
+        <input type="password" id="password<%= sfx %>" name="password" class="form-input"
+               placeholder="At least 8 characters" autocomplete="new-password" required>
+        <p class="sg-help">Minimum 8 characters. Include a number or symbol.</p>
+      </div>
+
+      <label class="sg-newsletter">
+        <input type="checkbox" name="newsletter" value="1" class="sg-newsletter-cb">
+        <span>Add me to The Meibos Touch newsletter for occasional notes and updates.</span>
+      </label>
+
+      <!-- Timezone detected client-side; server falls back to America/Denver. -->
+      <input type="hidden" name="timezone" value="">
+      <% if (returnTo) { %>
+        <input type="hidden" name="returnTo" value="<%= returnTo %>">
+      <% } %>
+
+      <button type="submit" class="btn btn-primary btn-full">Join the challenge →</button>
+      <p class="sg-help" style="text-align:center; margin-top:0.6rem">
+        Next step: a one-time <strong>$199</strong> to hold your spot. We start January 5.
+      </p>
+    </form>
+  <% } %>
+
+  <p class="sg-signin-line">
+    Already have an account?
+    <a href="/<%= returnTo ? '?returnTo=' + encodeURIComponent(returnTo) : '' %>" class="sg-link">Sign in</a>
+  </p>
+</div>
