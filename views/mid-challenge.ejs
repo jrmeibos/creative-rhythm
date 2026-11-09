@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <%- include('partials/head') %>
+  <link rel="stylesheet" href="/css/dashboard.css">
+  <link rel="stylesheet" href="/css/onboarding.css">
+</head>
+<body class="app-body">
+  <div class="app-layout">
+    <%- include('partials/sidebar') %>
+    <main class="main-content">
+
+      <a href="/dashboard" class="cm-back-link" style="display:inline-block; margin: 1.5rem 0 1rem;">← Back to dashboard</a>
+
+      <div class="ob-step is-active" style="position: static; padding: 1rem 0 4rem;">
+        <div class="ob-content" style="margin: 0 auto; max-width: 720px;">
+
+          <h2 class="ob-title">Checking in</h2>
+          <p class="ob-subtitle" style="line-height:1.6;">
+            You're about a week in. A quick pulse on how it's going — this helps
+            me get ready for our first call together.
+          </p>
+
+          <div class="ob-questions">
+            <% questions.forEach(function(q, idx) { %>
+              <div class="ob-question" id="q-block-<%= q.id %>">
+                <div class="ob-q-num"><%= String(idx + 1).padStart(2, '0') %></div>
+                <p class="ob-q-text">
+                  <%= q.text %>
+                  <% if (q.optional) { %><span style="opacity:0.5;font-weight:300"> (optional)</span><% } %>
+                </p>
+
+                <% if (q.type === 'rating') { %>
+                  <p class="ob-rating-scale">
+                    <span><%= q.low %></span>
+                    <span><%= q.high %></span>
+                  </p>
+                  <div class="ob-rating-row">
+                    <% for (let i = 1; i <= 10; i++) { %>
+                      <button type="button" class="ob-rating-btn"
+                        data-group="<%= q.field %>" data-value="<%= i %>">
+                        <%= i %>
+                      </button>
+                    <% } %>
+                  </div>
+
+                <% } else if (q.type === 'text') { %>
+                  <textarea class="ob-textarea" data-field="<%= q.field %>"
+                            rows="4" placeholder="<%= q.placeholder %>"></textarea>
+                <% } %>
+              </div>
+            <% }); %>
+          </div>
+
+          <p class="ob-error" id="mc-error" hidden>Please answer the required questions before submitting.</p>
+          <div class="ob-actions">
+            <button class="ob-btn ob-btn--primary" id="mc-submit-btn" onclick="submitMidChallenge()">Send my check-in →</button>
+          </div>
+
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <script>
+    const QUESTIONS = <%- JSON.stringify(questions) %>;
+    const answers = {};
+
+    document.querySelectorAll('.ob-rating-btn').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        const group = btn.dataset.group;
+        document.querySelectorAll('[data-group="' + group + '"]').forEach(function (b) {
+          b.classList.remove('is-selected');
+        });
+        btn.classList.add('is-selected');
+        answers[group] = btn.dataset.value;
+      });
+    });
+
+    document.querySelectorAll('.ob-textarea').forEach(function (ta) {
+      ta.addEventListener('input', function () {
+        answers[ta.dataset.field] = ta.value;
+      });
+    });
+
+    async function submitMidChallenge() {
+      const err = document.getElementById('mc-error');
+      const btn = document.getElementById('mc-submit-btn');
+      err.hidden = true;
+
+      const payload = {};
+      for (const q of QUESTIONS) {
+        const v = answers[q.field];
+        if (q.type === 'rating')    payload[q.field] = v != null ? Number(v) : null;
+        else if (q.type === 'text') payload[q.field] = typeof v === 'string' ? v.trim() : '';
+      }
+      const incomplete = QUESTIONS.some(function (q) {
+        if (q.optional) return false;
+        const v = payload[q.field];
+        if (q.type === 'rating') return v == null;
+        if (q.type === 'text')   return !v;
+        return false;
+      });
+      if (incomplete) { err.hidden = false; return; }
+
+      btn.disabled = true;
+      btn.textContent = 'Sending…';
+      try {
+        const res = await fetch('/api/mid-challenge/submit', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ answers: payload }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          err.textContent = data.error || 'Something went wrong. Please try again.';
+          err.hidden = false;
+          btn.disabled = false;
+          btn.textContent = 'Send my check-in →';
+          return;
+        }
+        window.location.href = '/dashboard';
+      } catch (e) {
+        err.textContent = 'Network error. Please try again.';
+        err.hidden = false;
+        btn.disabled = false;
+        btn.textContent = 'Send my check-in →';
+      }
+    }
+  </script>
+</body>
+</html>

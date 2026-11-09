@@ -158,6 +158,21 @@
       </script>
       <% } %>
       <% } %>
+      <% if (midChallengeCardVisible) { %>
+      <section class="dash-section">
+        <div class="mid-card" data-banner-key="mid_challenge">
+          <%- include('partials/card-dismiss', { snoozeLabel: 'Remind me later', removeLabel: "I'd rather skip this" }) %>
+          <p class="mid-card-eyebrow">A quick check-in 🌱</p>
+          <h2 class="mid-card-title">How's your first week going?</h2>
+          <p class="mid-card-body">
+            You're about a week into the challenge. A short pulse on how it's landing —
+            it helps me get ready for our first call together.
+          </p>
+          <a href="/mid-challenge" class="mid-card-cta">Take the check-in →</a>
+        </div>
+      </section>
+      <% } %>
+
       <% if (midcourseCardVisible) { %>
       <section class="dash-section">
         <div class="mid-card" data-banner-key="midcourse">

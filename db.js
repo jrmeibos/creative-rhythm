@@ -3365,6 +3365,17 @@ module.exports = {
     return { done, total };
   },
 
+  // Day-7 mid-challenge check-in is attributed: one self_assessments row per
+  // student with assessment_type = 'mid_challenge'. Count how many students
+  // have submitted, for the admin panel.
+  countMidChallengeSubmissions() {
+    const total = db.prepare("SELECT COUNT(*) AS c FROM users WHERE role='student'").get().c;
+    const done  = db.prepare(
+      "SELECT COUNT(*) AS c FROM self_assessments WHERE assessment_type='mid_challenge'"
+    ).get().c;
+    return { done, total };
+  },
+
   setOnboardingComplete(userId) {
     return db.prepare('UPDATE users SET onboarding_completed = 1 WHERE id = ?').run(userId);
   },
@@ -4292,7 +4303,9 @@ module.exports = {
       SELECT u.id, u.name, u.avatar_initial, u.role,
         (SELECT completed_at FROM self_assessments WHERE user_id=u.id AND assessment_type='opening') as opening_at,
         (SELECT completed_at FROM self_assessments WHERE user_id=u.id AND assessment_type='midcourse') as midcourse_at,
+        (SELECT completed_at FROM self_assessments WHERE user_id=u.id AND assessment_type='mid_challenge') as mid_challenge_at,
         (SELECT completed_at FROM self_assessments WHERE user_id=u.id AND assessment_type='closing') as closing_at,
+        (SELECT completed_at FROM self_assessments WHERE user_id=u.id AND assessment_type='trial_closing') as trial_closing_at,
         (SELECT COUNT(*) FROM goals WHERE user_id=u.id AND (feeling!='' OR looks_like!='')) as goals_count
       FROM users u
       WHERE u.role = 'student'
@@ -4314,6 +4327,9 @@ module.exports = {
     const trialClosing = db.prepare(
       "SELECT * FROM self_assessments WHERE user_id=? AND assessment_type='trial_closing'"
     ).get(userId);
+    const midChallenge = db.prepare(
+      "SELECT * FROM self_assessments WHERE user_id=? AND assessment_type='mid_challenge'"
+    ).get(userId);
     const goals    = db.prepare('SELECT * FROM goals WHERE user_id=? ORDER BY seed_number').all(userId);
 
     // Reach for the existing seed-packet + cuttings helpers so this method
@@ -4327,7 +4343,7 @@ module.exports = {
     // on users.midcourse_submitted_at. Surface just that — the dialog turns
     // it into a "✓ Submitted on DATE" line.
     return {
-      user, opening, closing, trialClosing, goals,
+      user, opening, closing, trialClosing, midChallenge, goals,
       midcourseSubmittedAt: user ? user.midcourse_submitted_at : null,
       courseLengthWeeks:    user ? (user.course_length_weeks || 12) : 12,
       seedPacketAnswers, seedPacketSeeds, cuttings,

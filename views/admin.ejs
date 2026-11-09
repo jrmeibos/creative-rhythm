@@ -461,8 +461,8 @@
                 <th>Gardener</th>
                 <th>Opening</th>
                 <th>Goals</th>
-                <th>Mid-course</th>
-                <th>Closing</th>
+                <th>Mid-challenge</th>
+                <th>End-of-challenge</th>
                 <th></th>
               </tr>
             </thead>
@@ -492,15 +492,16 @@
                     <% } %>
                   </td>
                   <td>
-                    <% if (s.midcourse_at) { %>
-                      <span class="assess-status assess-status--done">✓ <%= new Date(s.midcourse_at).toLocaleDateString('en-US', {month:'short',day:'numeric'}) %></span>
+                    <% if (s.mid_challenge_at) { %>
+                      <span class="assess-status assess-status--done">✓ <%= new Date(s.mid_challenge_at).toLocaleDateString('en-US', {month:'short',day:'numeric'}) %></span>
                     <% } else { %>
                       <span class="assess-status assess-status--pending">Pending</span>
                     <% } %>
                   </td>
                   <td>
-                    <% if (s.closing_at) { %>
-                      <span class="assess-status assess-status--done">✓ <%= new Date(s.closing_at).toLocaleDateString('en-US', {month:'short',day:'numeric'}) %></span>
+                    <% const endAt = s.trial_closing_at || s.closing_at; %>
+                    <% if (endAt) { %>
+                      <span class="assess-status assess-status--done">✓ <%= new Date(endAt).toLocaleDateString('en-US', {month:'short',day:'numeric'}) %></span>
                     <% } else { %>
                       <span class="assess-status assess-status--pending">Pending</span>
                     <% } %>
@@ -554,31 +555,24 @@
           <!-- Automatic unlocks -->
           <div class="admin-settings-block" style="border-top:none;padding-top:0">
             <span class="admin-settings-block-label">Automatic unlocks</span>
-            <p class="admin-field-hint">These open on their own, based on each gardener's start date — set per gardener in the Gardeners section above. Dates below preview the earliest-started gardener. No action needed.</p>
+            <p class="admin-field-hint">These open on their own, based on each gardener's start date — set per gardener in the Gardeners section above. The date below previews the earliest-started gardener. No action needed.</p>
             <div class="admin-unlock-status-grid">
               <div class="admin-unlock-row">
                 <div>
-                  <strong>Mid-course check-in</strong>
-                  <span class="admin-unlock-hint">Week 6<% if (midcourseUnlockDate) { %> · <%= midcourseUnlockDate %><% } %></span>
-                  <span class="admin-unlock-hint"><%= midcourseSubmittedCount.done %> / <%= midcourseSubmittedCount.total %> submitted</span>
+                  <strong>Mid-challenge check-in</strong>
+                  <span class="admin-unlock-hint">Day 7<% if (midChallengeUnlockDate) { %> · <%= midChallengeUnlockDate %><% } %></span>
+                  <span class="admin-unlock-hint"><%= midChallengeSubmittedCount.done %> / <%= midChallengeSubmittedCount.total %> submitted · each gardener's answers show on their row above</span>
                 </div>
-                <div style="display:flex;align-items:center;gap:0.6rem">
-                  <span class="admin-unlock-badge <%= midcourseUnlocked ? 'admin-unlock-badge--on' : 'admin-unlock-badge--off' %>">
-                    <%= midcourseUnlocked ? '✓ Unlocked' : 'Locked' %>
-                  </span>
-                  <% if (midcourseSubmittedCount.done > 0) { %>
-                    <button type="button" class="admin-btn-sm" onclick="viewAllMidcourseResponses()">View responses</button>
-                  <% } %>
-                </div>
+                <span class="admin-unlock-badge <%= midChallengeUnlocked ? 'admin-unlock-badge--on' : 'admin-unlock-badge--off' %>">
+                  <%= midChallengeUnlocked ? '✓ Open' : 'Not yet' %>
+                </span>
               </div>
               <div class="admin-unlock-row">
                 <div>
-                  <strong>Harvest (closing assessment)</strong>
-                  <span class="admin-unlock-hint">Week 12<% if (closingUnlockDate) { %> · <%= closingUnlockDate %><% } %></span>
+                  <strong>End-of-challenge reflection</strong>
+                  <span class="admin-unlock-hint">Final days · opens automatically</span>
+                  <span class="admin-unlock-hint">Each gardener's answers show on their row above.</span>
                 </div>
-                <span class="admin-unlock-badge <%= harvestUnlocked ? 'admin-unlock-badge--on' : 'admin-unlock-badge--off' %>">
-                  <%= harvestUnlocked ? '✓ Unlocked' : 'Locked' %>
-                </span>
               </div>
             </div>
           </div>
@@ -1107,6 +1101,7 @@
     // the View dialog can join answers ↔ questions without a second fetch.
     const SEED_PACKET_ANGLES = <%- JSON.stringify(seedPacketAngles) %>;
     const TRIAL_CLOSING_QS   = <%- JSON.stringify(trialClosingQuestions) %>;
+    const MID_CHALLENGE_QS   = <%- JSON.stringify(midChallengeQuestions) %>;
     const OPENING_QS         = <%- JSON.stringify(questions) %>;
     const CLOSING_QS         = <%- JSON.stringify(closingQuestions) %>;
 
@@ -1294,7 +1289,13 @@
         html += renderAssessment(OPENING_QS, data.opening);
       }
 
-      // ─── Mid-course check-in (per-student: only the submission flag) ──────
+      // ─── Mid-challenge check-in (day 7, attributed) ──────────────────────
+      if (data.midChallenge) {
+        html += '<h4 style="font-weight:700;margin:1rem 0 0.5rem;color:var(--color-understory)">Mid-challenge Check-in · day 7</h4>';
+        html += renderAssessment(MID_CHALLENGE_QS, data.midChallenge);
+      }
+
+      // ─── Mid-course check-in (legacy 12-week; per-student submission flag) ─
       if (data.midcourseSubmittedAt) {
         html += `<h4 style="font-weight:700;margin:1rem 0 0.5rem;color:var(--color-understory)">Mid-course Check-in ✓</h4>`;
         html += `<p style="color:rgba(16,15,16,0.5)">Submitted on ${fmtDate(data.midcourseSubmittedAt)}</p>`;

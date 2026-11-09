@@ -878,6 +878,15 @@ app.get('/dashboard', requireAuth, (req, res) => {
     !hiddenBanners.has('midcourse')
   );
 
+  // Day-7 mid-challenge check-in card (attributed). Challenge students only,
+  // from day 7 until they submit (or the closing opens).
+  const midChallengeCardVisible = (
+    req.session.user.role !== 'admin' &&
+    isMidChallengeUnlockedFor(req.session.user) &&
+    !db.getAssessment(req.session.user.id, 'mid_challenge') &&
+    !hiddenBanners.has('mid_challenge')
+  );
+
   // Trial-aware fields: total weeks for the "Week N of X" label, plus
   // flags driving the three trial-only dashboard states:
   //   • trialClosingCardVisible — week 3 reached, closing not yet submitted
@@ -960,6 +969,7 @@ app.get('/dashboard', requireAuth, (req, res) => {
     today,
     quote: getRotatingQuote(req.session.user),
     midcourseCardVisible,
+    midChallengeCardVisible,
     courseLengthWeeks,
     isTrial,
     trialComplete,
@@ -1750,7 +1760,7 @@ app.post('/api/season/intro-seen', requireAuth, (req, res) => {
 
 // Dismiss a dashboard banner. action='snooze' hides it until tomorrow (it
 // re-shows the next calendar day); action='remove' hides it for good.
-const DISMISSIBLE_BANNERS = ['midcourse', 'trial_closing', 'season_spring', 'season_summer', 'season_autumn', 'tour'];
+const DISMISSIBLE_BANNERS = ['midcourse', 'mid_challenge', 'trial_closing', 'season_spring', 'season_summer', 'season_autumn', 'tour'];
 app.post('/api/banner/dismiss', requireAuth, (req, res) => {
   const key    = String((req.body && req.body.key) || '').trim();
   const action = String((req.body && req.body.action) || '').trim();
@@ -2605,18 +2615,11 @@ const MIDCOURSE_QUESTIONS = [
 // True if THIS user's mid-course should be visible — either their own
 // course_start_date is ≥35 days ago, or admin force-unlocked globally.
 function isMidcourseUnlockedFor(user) {
-  // Mid-course doesn't apply to short trials. Purely per-user timeline now —
-  // the old global midcourse_unlocked "force on for everyone" override was
-  // fine for the single-cohort pilot but is wrong once students start on
-  // different dates. If an individual student needs an early unlock, adjust
-  // their course_start_date on /admin.
-  if (getCourseLengthWeeks(user) < 12) return false;
-  const courseStart = db.getUserCourseStartDate(user);
-  if (!courseStart) return false;
-  // getNow (not Date.now) so time travel can QA this unlock and the day-35
-  // boundary lands on the student's wall clock, not the server's.
-  const daysDiff = Math.floor((getNow(user).getTime() - new Date(courseStart + 'T00:00:00').getTime()) / 86400000);
-  return daysDiff >= 35;
+  // DORMANT (Jan 2027): the old Week-6 anonymous mid-course check-in no longer
+  // auto-fires for anyone — it's been replaced by the day-7 mid-challenge
+  // check-in (isMidChallengeUnlockedFor). The /midcourse route and the past
+  // anonymous responses are kept for reference, but nothing unlocks it anymore.
+  return false;
 }
 
 app.get('/midcourse', requireAuth, (req, res) => {
@@ -2689,6 +2692,44 @@ async function notifyAdminOfMidcourseSubmission(submittingUser) {
 // a fixed calendar date: a global date wrongly showed the closing card to
 // brand-new signups whose challenge hadn't started yet. Full-course/pilot
 // students never reach it — gated to lengthWeeks < 12.
+// Day-7 mid-challenge check-in (attributed). A quick pulse Julia reads before
+// the first group call. Replaces the old Week-6 anonymous mid-course check-in,
+// which is now dormant (isMidcourseUnlockedFor returns false). Answers store on
+// the student's self_assessments row with assessment_type = 'mid_challenge'.
+const MID_CHALLENGE_QUESTIONS = [
+  { id: 'mc1', type: 'rating', field: 'q2_rating',
+    text: "How's it going with the daily recording this first week?",
+    low: "1 = I'm really struggling to show up", high: "10 = It's way easier than I expected"
+  },
+  { id: 'mc2', type: 'text', field: 'q9_text',
+    text: "What's surprised you so far?",
+    placeholder: "Anything you didn't expect."
+  },
+  { id: 'mc3', type: 'text', field: 'q10_text',
+    text: "What's felt hard — or where are you getting stuck?",
+    placeholder: 'Be honest — this helps me help you.'
+  },
+  { id: 'mc4', type: 'text', field: 'q11_text',
+    text: "Anything you'd like me to cover on our first call?",
+    placeholder: 'A question, a worry, a topic.'
+  },
+  { id: 'mc5', type: 'text', field: 'q12_text', optional: true,
+    text: "Anything else you'd like me to know?",
+    placeholder: 'Optional.'
+  },
+];
+
+function isMidChallengeUnlockedFor(user) {
+  // Challenge (3-week) students only, from day 7 until the closing opens (so the
+  // mid and closing cards never overlap). getNow so time travel can QA it.
+  const len = getCourseLengthWeeks(user);
+  if (len >= 12) return false;
+  const courseStart = db.getUserCourseStartDate(user);
+  if (!courseStart) return false;
+  const daysDiff = Math.floor((getNow(user).getTime() - new Date(courseStart + 'T00:00:00').getTime()) / 86400000);
+  return daysDiff >= 7 && daysDiff < len * 7 - 2;
+}
+
 function isTrialClosingUnlockedFor(user) {
   const len = getCourseLengthWeeks(user);
   if (len >= 12) return false;
@@ -2800,6 +2841,70 @@ async function notifyAdminOfTrialClosing(student, row) {
     });
   } catch (err) {
     console.error('[trial-closing] notify failed:', err);
+  }
+}
+
+// ─── Mid-challenge check-in (day 7, attributed) ────────────────────────────
+app.get('/mid-challenge', requireAuth, (req, res) => {
+  if (req.session.user.role === 'admin') return res.redirect('/dashboard');
+  if (!isMidChallengeUnlockedFor(req.session.user)) return res.redirect('/dashboard');
+  if (db.getAssessment(req.session.user.id, 'mid_challenge')) return res.redirect('/dashboard');
+  res.render('mid-challenge', {
+    title: 'Mid-challenge check-in',
+    page: 'dashboard',
+    questions: MID_CHALLENGE_QUESTIONS,
+  });
+});
+
+app.post('/api/mid-challenge/submit', requireAuth, async (req, res) => {
+  const user = req.session.user;
+  if (user.role === 'admin')                 return res.status(403).json({ error: 'Admins do not submit.' });
+  if (!isMidChallengeUnlockedFor(user))      return res.status(403).json({ error: 'The check-in is not open yet.' });
+  if (db.getAssessment(user.id, 'mid_challenge')) {
+    return res.status(409).json({ error: 'You have already submitted this check-in. Thank you.' });
+  }
+
+  const { answers } = req.body || {};
+  if (!answers || typeof answers !== 'object') return res.status(400).json({ error: 'Missing answers.' });
+
+  for (const q of MID_CHALLENGE_QUESTIONS) {
+    if (q.optional) continue;
+    const v = answers[q.field];
+    if (q.type === 'rating') {
+      const n = Number(v);
+      if (!Number.isFinite(n) || n < 1 || n > 10) return res.status(400).json({ error: `Question ${q.id} requires a 1–10 rating.` });
+    } else if (q.type === 'text') {
+      if (typeof v !== 'string' || !v.trim())     return res.status(400).json({ error: `Question ${q.id} requires an answer.` });
+    }
+  }
+
+  const row = {};
+  for (const q of MID_CHALLENGE_QUESTIONS) {
+    const v = answers[q.field];
+    if (q.type === 'rating')    row[q.field] = Number(v);
+    else if (q.type === 'text') row[q.field] = (typeof v === 'string' ? v : '').trim();
+  }
+  db.upsertAssessment(user.id, 'mid_challenge', row);
+
+  res.json({ ok: true });
+  setImmediate(() => notifyAdminOfMidChallenge(user, row));
+});
+
+async function notifyAdminOfMidChallenge(student, row) {
+  try {
+    const lines = MID_CHALLENGE_QUESTIONS.map(q => {
+      const v = row[q.field];
+      const label = q.type === 'rating' ? `${v}/10` : (v || '(no answer)');
+      return `${q.text}\n  → ${label}\n`;
+    }).join('\n');
+
+    await sendAdminMilestoneEmail({
+      studentName: student.name,
+      subject:     `[Creative's Garden] ${student.name} — day-7 check-in`,
+      bodyLine:    `${student.name} just submitted their day-7 mid-challenge check-in.\n\n${lines}`,
+    });
+  } catch (err) {
+    console.error('[mid-challenge] notify failed:', err);
   }
 }
 
@@ -5016,14 +5121,19 @@ app.get('/admin', requireAdmin, (req, res) => {
     lessonHomework[l.id] = db.getHomeworkForLesson(l.id);
   }
 
-  let midcourseUnlockDate = null, closingUnlockDate = null;
+  let midcourseUnlockDate = null, closingUnlockDate = null, midChallengeUnlockDate = null, midChallengeUnlocked = false;
   if (courseStartDate) {
     const start = new Date(courseStartDate + 'T00:00:00');
     const m = new Date(start); m.setDate(m.getDate() + 35);
     const c = new Date(start); c.setDate(c.getDate() + 77);
+    const mc = new Date(start); mc.setDate(mc.getDate() + 7);
     const fmt = d => d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
-    midcourseUnlockDate = fmt(m);
-    closingUnlockDate   = fmt(c);
+    midcourseUnlockDate    = fmt(m);
+    closingUnlockDate      = fmt(c);
+    midChallengeUnlockDate = fmt(mc);
+    // The day-7 check-in has "opened" for the earliest-started cohort once
+    // today (admin's wall clock) is on or past that date.
+    midChallengeUnlocked = toLocalDateString(getNow(req.session.user)) >= toLocalDateString(mc);
   }
 
   // ── Enrollments overview ────────────────────────────────────────────────
@@ -5097,14 +5207,17 @@ app.get('/admin', requireAdmin, (req, res) => {
     checkinTitle: CHECKIN.title,
     harvestUnlocked, midcourseUnlocked, upgradeMode,
     midcourseUnlockDate, closingUnlockDate,
+    midChallengeUnlockDate, midChallengeUnlocked,
     simulatedToday,
     studentAssessments,
     questions: ASSESSMENT_QUESTIONS,
     closingQuestions: CLOSING_QUESTIONS,
+    midChallengeQuestions: MID_CHALLENGE_QUESTIONS,
     // Surfaced so the View-student dialog can join answers↔questions and
     // group by angle without doing a second fetch.
     seedPacketAngles: ANGLES,
     midcourseSubmittedCount: db.countMidcourseSubmissionsByStudents(),
+    midChallengeSubmittedCount: db.countMidChallengeSubmissions(),
     quotes: db.getAllQuotes(),
     // Trial closing question catalog — the View dialog needs the labels to
     // render readable answers (rating low/high, choice labels, etc).
