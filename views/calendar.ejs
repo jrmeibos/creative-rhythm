@@ -11,6 +11,7 @@
     .cal-schedule-item--past{opacity:.5}
     .cal-schedule-item--today{background:var(--color-apricity)}
     .cal-schedule-item--today .cal-schedule-label{color:var(--color-ink-stained)}
+    .cal-countdown{font-family:var(--font-body);font-size:1.02rem;font-weight:600;color:var(--color-bloem);margin:.55rem 0 0}
   </style>
 </head>
 <body class="app-body">
@@ -24,6 +25,11 @@
         <div>
           <h1 class="cal-page-title"><%= typeof pageHeading !== 'undefined' ? pageHeading : 'Your 12-Week Journey' %></h1>
           <p class="cal-page-sub">Plan ahead, reflect back, tend the garden.</p>
+          <% if (typeof isPreStart !== 'undefined' && isPreStart) { %>
+            <p class="cal-countdown">
+              <%= weeksUntilStart %> week<%= weeksUntilStart === 1 ? '' : 's' %> until the challenge starts<% if (challengeStartLabel) { %> · <%= challengeStartLabel %><% } %>
+            </p>
+          <% } %>
           <% if (typeof scheduleEvents !== 'undefined' && scheduleEvents && scheduleEvents.length) { %>
             <div class="cal-schedule">
               <% for (const ev of scheduleEvents) { %>

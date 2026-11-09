@@ -2205,11 +2205,26 @@ const WEEKLY_MEETINGS = {
 
 app.get('/calendar', requireAuth, (req, res) => {
   const userId               = req.session.user.id;
-  const courseWeekInfo         = getCurrentCourseWeek(req.session.user);
+
+  // Anchor the calendar to the cohort's start date (whatever it is) so week 1 is
+  // always the cohort's first week — not the member's signup date. Falls back to
+  // their own start date when they aren't in a cohort.
+  const calCohort = req.session.user.cohort_id ? db.getCohortById(req.session.user.cohort_id) : null;
+  const anchorDate = (calCohort && calCohort.start_date)
+    ? String(calCohort.start_date).slice(0, 10)
+    : (db.getUserCourseStartDate(req.session.user) || toLocalDateString(getNow(req.session.user)));
+
+  const courseWeekInfo         = getCurrentCourseWeek(req.session.user, anchorDate);
   const courseCurrentWeekStart = courseWeekInfo.weekStart;
   const currentWeekStart     = courseCurrentWeekStart;
-  const courseStartDate      = db.getUserCourseStartDate(req.session.user) || currentWeekStart;
+  const courseStartDate      = anchorDate;
   const courseLengthWeeks    = getCourseLengthWeeks(req.session.user);
+
+  // Pre-start countdown: before the anchor date, show "N weeks until start"
+  // instead of implying the member is already in week 1.
+  const daysUntilStart  = daysBetweenCivil(toLocalDateString(getNow(req.session.user)), anchorDate);
+  const isPreStart      = daysUntilStart > 0;
+  const weeksUntilStart = isPreStart ? Math.ceil(daysUntilStart / 7) : 0;
 
   // Challenge (trial) students see ONLY their own weeks — the 3-week grid, with
   // no locked upgrade teasers. The full 12-week view appears only once they
@@ -2343,6 +2358,8 @@ app.get('/calendar', requireAuth, (req, res) => {
     challengeStartLabel:  fmtLong(courseStartDate),
     challengeEndLabel:    fmtLong(challengeEndDate),
     hasLockedWeeks:       false,
+    isPreStart,
+    weeksUntilStart,
     todayStr: calTodayStr
   });
 });
