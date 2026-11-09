@@ -24,37 +24,41 @@
     .seasons-intro em { font-style: italic; }
 
     .season-card {
-      border-radius: 16px;
+      border-radius: 14px;
       overflow: hidden;
-      margin-bottom: 1.25rem;
+      margin-bottom: 1.1rem;
+      background: var(--color-blank-page);
       border: 1px solid rgba(16, 15, 16, 0.08);
+      border-left: 4px solid rgba(16, 15, 16, 0.12); /* season spine, set below */
       box-shadow: 0 1px 3px rgba(16, 15, 16, 0.04);
     }
+    .season-card--winter { border-left-color: #76856C; }
+    .season-card--spring { border-left-color: #D8B0AB; }
+    .season-card--summer { border-left-color: #F6C95C; }
+    .season-card--autumn { border-left-color: #a990a4; }
 
-    .season-card-header {
-      padding: 1.1rem 1.5rem;
-      display: flex;
-      align-items: baseline;
-      gap: 0.6rem;
-      flex-wrap: wrap;
-      color: var(--color-ink-stained); /* dark text on every season — brand rule */
-    }
-    .season-card-header--winter { background: #76856C; }
-    .season-card-header--spring { background: #D8B0AB; }
-    .season-card-header--summer { background: #F6C95C; }
-    .season-card-header--autumn { background: #a990a4; }
+    /* Header: a soft wash of the season color behind the name, not a solid
+       block — keeps the colour cue quiet and the type the focus. */
+    .season-card-header { padding: 1.15rem 1.5rem 0.95rem; }
+    .season-card--winter .season-card-header { background: color-mix(in srgb, #76856C 13%, var(--color-blank-page)); }
+    .season-card--spring .season-card-header { background: color-mix(in srgb, #D8B0AB 16%, var(--color-blank-page)); }
+    .season-card--summer .season-card-header { background: color-mix(in srgb, #F6C95C 18%, var(--color-blank-page)); }
+    .season-card--autumn .season-card-header { background: color-mix(in srgb, #a990a4 15%, var(--color-blank-page)); }
 
-    .season-emoji { font-size: 1.5rem; line-height: 1; align-self: center; }
     .season-name {
       font-family: var(--font-display);
-      font-size: 1.35rem;
+      font-size: 1.5rem;
       font-weight: 400;
+      color: var(--color-ink-stained);
+      margin: 0;
+      line-height: 1.2;
     }
     .season-tagline {
       font-family: var(--font-body);
       font-style: italic;
-      font-size: 1rem;
-      opacity: 0.8;
+      font-size: 0.98rem;
+      color: rgba(16, 15, 16, 0.58);
+      margin: 0.2rem 0 0;
     }
 
     .season-card-body {
@@ -80,7 +84,7 @@
 
     @media (max-width: 640px) {
       .seasons-title { font-size: 1.7rem; }
-      .season-name { font-size: 1.2rem; }
+      .season-name { font-size: 1.3rem; }
     }
   </style>
 </head>
@@ -105,23 +109,22 @@
 
         <%
           const seasons = [
-            { key: 'winter', emoji: '❄️', name: 'Winter · Connect', tagline: 'Focus in.',
+            { key: 'winter', name: 'Winter · Connect', tagline: 'Focus in.',
               body: "In Winter, we focus inward. The daily practice — recording yourself on camera — is a new habit you're building, and in this season, we let that be enough. There's no need to record <em>and</em> share yet. We start from one small building block, and let it be the whole thing." },
-            { key: 'spring', emoji: '🌸', name: 'Spring · Curiosity', tagline: 'A different kind of looking.',
+            { key: 'spring', name: 'Spring · Curiosity', tagline: 'A different kind of looking.',
               body: "Spring works a different muscle. We look inward again, but with more distance — getting curious about the things we've said and the ideas we've already shared with ourselves. We go back to our recordings and notice: is there anything here worth keeping? Anything we'd want to explore further?" },
-            { key: 'summer', emoji: '☀️', name: 'Summer · Create', tagline: 'Make something from it.',
+            { key: 'summer', name: 'Summer · Create', tagline: 'Make something from it.',
               body: "Summer is where we start to make things. We take the thoughts and ideas we've gathered and create from them — a piece of writing, a post, a video, whatever wants to come through. This is the season of turning what's inside into something real." },
-            { key: 'autumn', emoji: '🍂', name: 'Autumn · Share', tagline: 'Practice being seen.',
+            { key: 'autumn', name: 'Autumn · Share', tagline: 'Practice being seen.',
               body: "Autumn is where we practice sharing. The ideas we've explored and the things we've made — this is the season we begin to offer them to others. Sharing is a muscle too, and here's where we start to build it." }
           ];
         %>
 
         <% seasons.forEach(function(s) { %>
-          <section class="season-card">
-            <div class="season-card-header season-card-header--<%= s.key %>">
-              <span class="season-emoji"><%= s.emoji %></span>
-              <span class="season-name"><%= s.name %></span>
-              <span class="season-tagline"><%= s.tagline %></span>
+          <section class="season-card season-card--<%= s.key %>">
+            <div class="season-card-header">
+              <h2 class="season-name"><%= s.name %></h2>
+              <p class="season-tagline"><%= s.tagline %></p>
             </div>
             <div class="season-card-body"><%- s.body %></div>
           </section>
