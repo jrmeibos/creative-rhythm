@@ -1768,26 +1768,37 @@ function seedCourseIntroduction() {
   );
 }
 
-// One-time seed of the ready course videos into the Videos page. Guarded by a
-// flag so it runs ONCE: afterward Julia fully owns these entries (edit,
-// reorder, delete) and they won't reappear on deploy.
+// Ensures the three core course videos exist on the Videos page. Self-healing
+// (runs every boot): re-adds any that were removed and restores a blanked or
+// unpublished video link, while preserving Julia's title/subtitle edits and any
+// custom link she's set. (Was a one-time seed; made self-healing after the
+// videos went missing in production.)
 function seedCourseVideos() {
-  const flag = db.prepare("SELECT value FROM settings WHERE key = 'videos_seeded'").get();
-  if (flag && flag.value === 'true') return;
   const vids = [
     ['tour-of-the-garden',  'A Tour of the Garden',        'Find your way around the platform',            'https://www.youtube.com/embed/B44LI0Sx-xs'],
     ['why-we-do-this',      "Why We're Doing This",        "My experience, and three gardeners' journeys", 'https://www.youtube.com/embed/qprPPoxPmDw'],
     ['the-daily-recording', 'The Daily Recording Process', 'How to show up each day',                      'https://www.youtube.com/embed/HEsdCWNT7bM'],
   ];
+  const getRow = db.prepare('SELECT id, video_url, published FROM lessons WHERE slug = ?');
   const maxRow = db.prepare('SELECT MAX(sort_order) AS m FROM lessons').get();
   let sort = (maxRow.m || 0) + 10;
   const ins = db.prepare(
-    `INSERT OR IGNORE INTO lessons (slug, title, subtitle, category_tag, content, estimated_read_time, video_url, sort_order, published)
+    `INSERT INTO lessons (slug, title, subtitle, category_tag, content, estimated_read_time, video_url, sort_order, published)
      VALUES (?, ?, ?, 'Video', '', 5, ?, ?, 1)`
   );
-  for (const [slug, title, subtitle, video] of vids) { ins.run(slug, title, subtitle, video, sort); sort += 10; }
-  db.prepare("INSERT INTO settings (key, value) VALUES ('videos_seeded', 'true') ON CONFLICT(key) DO UPDATE SET value = 'true'").run();
-  console.log('✓ Seeded course videos');
+  const restore = db.prepare('UPDATE lessons SET video_url = ?, published = 1 WHERE id = ?');
+  let added = 0, fixed = 0;
+  for (const [slug, title, subtitle, video] of vids) {
+    const row = getRow.get(slug);
+    if (!row) {
+      ins.run(slug, title, subtitle, video, sort); sort += 10; added++;
+    } else if (!row.video_url || !String(row.video_url).trim() || !row.published) {
+      // Only touch the link when it's blank/unpublished — a custom link stays.
+      restore.run((row.video_url && String(row.video_url).trim()) ? row.video_url : video, row.id);
+      fixed++;
+    }
+  }
+  if (added || fixed) console.log(`✓ Course videos ensured (added ${added}, restored ${fixed})`);
 }
 
 function seedLesson1Homework() {
