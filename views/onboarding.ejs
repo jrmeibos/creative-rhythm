@@ -34,71 +34,12 @@
         <p>You'll answer a short self-assessment. At the end of the challenge, we'll return to it.<br>The before and after will help tell your story.</p>
       </div>
 
-      <!-- Why this works: Julia's experience + three gardeners' journeys. -->
-      <div class="ob-welcome-video">
-        <iframe
-          src="https://www.youtube.com/embed/qprPPoxPmDw"
-          title="Why this works — real journeys"
-          frameborder="0"
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-          allowfullscreen></iframe>
-      </div>
-
       <button class="ob-btn ob-btn--primary" onclick="goToStep(2)">Let's begin →</button>
     </div>
   </div>
 
-  <!-- ── Step 2: Mailing address (optional) ────────────────────────────── -->
+  <!-- ── Step 2: Self-Assessment ───────────────────────────────────────── -->
   <div class="ob-step" id="step-2">
-    <div class="ob-content">
-      <h2 class="ob-title">What's your mailing address?</h2>
-      <p class="ob-subtitle">As a lover of snail mail, I'd love to send you a little something to thank you for being here. This is completely optional, and you can always add it later in your profile.</p>
-
-      <div class="ob-address-form">
-        <label class="ob-field">
-          <span class="ob-field-label">Full name <span class="ob-field-hint">(for the envelope)</span></span>
-          <input type="text" class="ob-input" id="addr-name" autocomplete="name" maxlength="120">
-        </label>
-        <label class="ob-field">
-          <span class="ob-field-label">Street address</span>
-          <input type="text" class="ob-input" id="addr-street" autocomplete="address-line1" maxlength="200">
-        </label>
-        <label class="ob-field">
-          <span class="ob-field-label">Apt / unit <span class="ob-field-hint">(optional)</span></span>
-          <input type="text" class="ob-input" id="addr-unit" autocomplete="address-line2" maxlength="80">
-        </label>
-        <div class="ob-field-row">
-          <label class="ob-field">
-            <span class="ob-field-label">City</span>
-            <input type="text" class="ob-input" id="addr-city" autocomplete="address-level2" maxlength="120">
-          </label>
-          <label class="ob-field">
-            <span class="ob-field-label">State / province</span>
-            <input type="text" class="ob-input" id="addr-state" autocomplete="address-level1" maxlength="120">
-          </label>
-        </div>
-        <div class="ob-field-row">
-          <label class="ob-field">
-            <span class="ob-field-label">ZIP / postal code</span>
-            <input type="text" class="ob-input" id="addr-zip" autocomplete="postal-code" maxlength="40">
-          </label>
-          <label class="ob-field">
-            <span class="ob-field-label">Country</span>
-            <input type="text" class="ob-input" id="addr-country" autocomplete="country-name" maxlength="120">
-          </label>
-        </div>
-      </div>
-
-      <p class="ob-error" id="addr-error" hidden>Couldn't save that — you can add it later in your profile.</p>
-      <div class="ob-actions ob-actions--split">
-        <button class="ob-btn ob-btn--ghost" type="button" onclick="skipAddress()">Skip for now</button>
-        <button class="ob-btn ob-btn--primary" type="button" id="addr-save-btn" onclick="saveAddress()">Save &amp; continue →</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- ── Step 3: Self-Assessment ───────────────────────────────────────── -->
-  <div class="ob-step" id="step-3">
     <div class="ob-content">
       <h2 class="ob-title">Where are you right now?</h2>
       <p class="ob-subtitle">There are no right answers. Honest is the point.<br>You'll return to these questions at the end of the course — and see how much has shifted.</p>
@@ -153,6 +94,55 @@
     </div>
   </div>
 
+  <!-- ── Step 3: Mailing address (optional) ────────────────────────────── -->
+  <div class="ob-step" id="step-3">
+    <div class="ob-content">
+      <h2 class="ob-title">What's your mailing address?</h2>
+      <p class="ob-subtitle">As a lover of snail mail, I'd love to send you a little something to thank you for being here. This is completely optional, and you can always add it later in your profile.</p>
+
+      <div class="ob-address-form">
+        <label class="ob-field">
+          <span class="ob-field-label">Full name <span class="ob-field-hint">(for the envelope)</span></span>
+          <input type="text" class="ob-input" id="addr-name" autocomplete="name" maxlength="120">
+        </label>
+        <label class="ob-field">
+          <span class="ob-field-label">Street address</span>
+          <input type="text" class="ob-input" id="addr-street" autocomplete="address-line1" maxlength="200">
+        </label>
+        <label class="ob-field">
+          <span class="ob-field-label">Apt / unit <span class="ob-field-hint">(optional)</span></span>
+          <input type="text" class="ob-input" id="addr-unit" autocomplete="address-line2" maxlength="80">
+        </label>
+        <div class="ob-field-row">
+          <label class="ob-field">
+            <span class="ob-field-label">City</span>
+            <input type="text" class="ob-input" id="addr-city" autocomplete="address-level2" maxlength="120">
+          </label>
+          <label class="ob-field">
+            <span class="ob-field-label">State / province</span>
+            <input type="text" class="ob-input" id="addr-state" autocomplete="address-level1" maxlength="120">
+          </label>
+        </div>
+        <div class="ob-field-row">
+          <label class="ob-field">
+            <span class="ob-field-label">ZIP / postal code</span>
+            <input type="text" class="ob-input" id="addr-zip" autocomplete="postal-code" maxlength="40">
+          </label>
+          <label class="ob-field">
+            <span class="ob-field-label">Country</span>
+            <input type="text" class="ob-input" id="addr-country" autocomplete="country-name" maxlength="120">
+          </label>
+        </div>
+      </div>
+
+      <p class="ob-error" id="addr-error" hidden>Couldn't save that — you can add it later in your profile.</p>
+      <div class="ob-actions ob-actions--split">
+        <button class="ob-btn ob-btn--ghost" type="button" onclick="skipAddress()">Skip for now</button>
+        <button class="ob-btn ob-btn--primary" type="button" id="addr-save-btn" onclick="saveAddress()">Save &amp; continue →</button>
+      </div>
+    </div>
+  </div>
+
   <!-- ── Step 4: Done ───────────────────────────────────────────────────── -->
   <div class="ob-step" id="step-4">
     <div class="ob-center">
@@ -160,14 +150,19 @@
       <h2 class="ob-title ob-title--hero">Your snapshot is saved</h2>
       <p class="ob-body-text">Now, here's an introduction to your new practice: the daily talk-to-camera video. Here's what to do each day.</p>
 
-      <!-- Welcome video: the daily-recording practice + how to log it. -->
+      <!-- Daily-recording how-to. Facade: a crisp maxres poster + play button
+           that swaps in the autoplay player on click — sharper than YouTube's
+           default poster, and the player isn't loaded until it's asked for. -->
       <div class="ob-welcome-video">
-        <iframe
-          src="https://www.youtube.com/embed/HEsdCWNT7bM"
-          title="Welcome — the daily recording practice"
-          frameborder="0"
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-          allowfullscreen></iframe>
+        <button type="button" class="ob-video-facade"
+                aria-label="Play: the daily recording practice"
+                data-embed="https://www.youtube.com/embed/HEsdCWNT7bM?autoplay=1&rel=0"
+                onclick="playOnboardingVideo(this)">
+          <img src="https://i.ytimg.com/vi/HEsdCWNT7bM/maxresdefault.jpg" alt="" loading="lazy">
+          <span class="ob-video-play" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="26" height="26" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+          </span>
+        </button>
       </div>
 
       <button class="ob-btn ob-btn--primary" id="enter-btn" onclick="completeOnboarding()">Enter the Garden</button>
@@ -196,7 +191,7 @@
     }
 
     // ── Mailing address (step 2) — optional ─────────────────────────────────
-    function skipAddress() { goToStep(3); }
+    function skipAddress() { goToStep(4); }
 
     async function saveAddress() {
       const btn = document.getElementById('addr-save-btn');
@@ -213,7 +208,7 @@
       };
       // Everything's optional — if they left it all blank, just move on.
       const anything = Object.values(payload).some(v => v);
-      if (!anything) { goToStep(3); return; }
+      if (!anything) { goToStep(4); return; }
 
       btn.disabled = true;
       btn.textContent = 'Saving…';
@@ -224,7 +219,7 @@
           body: JSON.stringify(payload)
         });
         if (res.ok) {
-          goToStep(3);
+          goToStep(4);
         } else {
           err.hidden = false;
           btn.disabled = false;
@@ -312,7 +307,7 @@
           body: JSON.stringify(assessmentData)
         });
         if (res.ok) {
-          goToStep(4);
+          goToStep(3);
         } else {
           errEl.textContent = 'Something went wrong. Please try again.';
           errEl.hidden = false;
@@ -345,6 +340,17 @@
         // network hiccups — re-enable so they can retry.
         reset();
       }
+    }
+
+    // ── Daily-recording video: crisp poster → load the player on click ───────
+    function playOnboardingVideo(el) {
+      const iframe = document.createElement('iframe');
+      iframe.src = el.dataset.embed;
+      iframe.title = 'The daily recording practice';
+      iframe.setAttribute('frameborder', '0');
+      iframe.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture';
+      iframe.allowFullscreen = true;
+      el.replaceWith(iframe);
     }
   </script>
 
