@@ -1786,8 +1786,12 @@ function seedCourseVideos() {
     ['tour-of-the-garden',  'A Tour of the Garden',        'Find your way around the platform',            'https://www.youtube.com/embed/B44LI0Sx-xs'],
     ['why-we-do-this',      "Why We're Doing This",        "My experience, and three gardeners' journeys", 'https://www.youtube.com/embed/qprPPoxPmDw'],
     ['the-daily-recording', 'The Daily Recording Process', 'How to show up each day',                      'https://www.youtube.com/embed/HEsdCWNT7bM'],
-    ['seed-packets-intro',  'What to Talk About',          'Using your Seed Packets to find your material', 'https://www.youtube.com/embed/u4HiT9DX8BA'],
+    ['seed-packets-intro',  'What to Talk About',          'Using your Seed Packets to find your material', 'https://www.youtube.com/embed/PQf720_2woU'],
   ];
+  // One-time correction: the Seed Packets intro was re-recorded. Move the row
+  // off the old placeholder video to the new one — only if it still points at
+  // the old clip, so a deliberate custom link is never clobbered. Idempotent.
+  db.prepare("UPDATE lessons SET video_url = 'https://www.youtube.com/embed/PQf720_2woU' WHERE slug = 'seed-packets-intro' AND video_url LIKE '%u4HiT9DX8BA%'").run();
   const getRow = db.prepare('SELECT id, video_url, published FROM lessons WHERE slug = ?');
   const maxRow = db.prepare('SELECT MAX(sort_order) AS m FROM lessons').get();
   let sort = (maxRow.m || 0) + 10;
