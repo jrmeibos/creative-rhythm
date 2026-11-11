@@ -16,7 +16,7 @@
       </div>
 
       <div class="cm-map-wrap">
-        <svg viewBox="0 0 920 560" width="100%" preserveAspectRatio="xMidYMid meet"
+        <svg viewBox="0 185 920 300" width="100%" preserveAspectRatio="xMidYMid meet"
              class="seed-packets-svg" xmlns="http://www.w3.org/2000/svg">
           <title>Seed Packets</title>
           <desc>Five seed packets on a shelf, each representing an angle of self-inquiry. Click a packet to explore its questions.</desc>
@@ -44,8 +44,8 @@
             </radialGradient>
           </defs>
 
-          <!-- Background -->
-          <rect width="920" height="560" fill="#F2EEE3"/>
+          <!-- Background (matches the cropped viewBox so nothing paints outside it) -->
+          <rect x="0" y="185" width="920" height="300" fill="#F2EEE3"/>
 
           <!-- Shadows (before shelf so line renders on top) -->
           <ellipse cx="155" cy="465" rx="68" ry="6" fill="url(#packet-shadow)"/>
