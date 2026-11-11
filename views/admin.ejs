@@ -173,7 +173,7 @@
                         <td><% if (m.challenge_payment_status === 'refunded') { %><span class="admin-lesson-tag" title="Paid then refunded">Refunded</span><% } else if (m.challenge_payment_status === 'paid') { %><span class="admin-lesson-tag" title="Paid the fee">Paid</span><% } else { %><span class="admin-lesson-tag" style="background:#f7e6c4;color:#9a6a1e">Unpaid</span><% } %></td>
                         <td style="white-space:nowrap"><% if (ra && ra.everRecorded) { %><span class="rec-dot" style="background:<%= ra.quiet ? '#c9a24a' : '#5f7256' %>"></span><%= ra.recentCount %> in 7d<% if (ra.quiet) { %> · quiet<% } %><% } else { %><span style="color:rgba(16,15,16,.3)">none yet</span><% } %></td>
                         <td style="white-space:nowrap"><span class="season-dot" style="background:<%= sc[0] %>"></span><%= sc[1] %></td>
-                        <td><button class="admin-btn-text" type="button" onclick="viewStudentData(<%= m.id %>, <%= JSON.stringify(m.name) %>)">View →</button></td>
+                        <td><a class="admin-btn-text" href="/admin/gardener/<%= m.id %>">View →</a></td>
                         <td><select class="cohort-move" onchange="assignCohort(<%= m.id %>, this.value)" title="Move to another cohort">
                           <option value="">— Unassigned</option>
                           <% for (const oc of cohortList) { %>
@@ -602,8 +602,7 @@
                     <% } %>
                   </td>
                   <td>
-                    <button class="admin-btn-icon" type="button" title="View responses"
-                      onclick="viewStudentData(<%= s.id %>, <%= JSON.stringify(s.name) %>)">View</button>
+                    <a class="admin-btn-icon" href="/admin/gardener/<%= s.id %>" title="View full profile">View</a>
                   </td>
                 </tr>
               <% } %>

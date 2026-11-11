@@ -5256,6 +5256,71 @@ app.get('/admin', requireAdmin, (req, res) => {
   });
 });
 
+// ─── Admin: full-page gardener profile ──────────────────────────────────────
+// Clicking a gardener in the admin People list opens their whole submission
+// history on a page (richer than the old pop-up dialog): progress at a glance
+// up top, then assessments / check-ins / seeds, with the daily recordings last.
+// The detail list is rendered client-side from /api/admin/student-data/:id via
+// the shared partials/gardener-render.ejs; the at-a-glance stats are computed
+// here so the header shows instantly.
+app.get('/admin/gardener/:id', requireAdmin, (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (!Number.isInteger(id)) return res.redirect('/admin#people');
+  const data = db.getStudentFullData(id);
+  if (!data || !data.user) return res.redirect('/admin#people');
+
+  // Distinct calendar days with a recording (civil dates, so a timezone can't
+  // shift which day a recording lands on).
+  const recDates = [...new Set((data.cuttings || [])
+    .map(c => String(c.recorded_date || '').slice(0, 10))
+    .filter(Boolean))].sort();
+  const daysRecorded = recDates.length;
+  const totalDays = (data.courseLengthWeeks || 3) * 7;
+
+  // Current streak: consecutive calendar days ending at the most recent recording.
+  let currentStreak = 0;
+  if (recDates.length) {
+    currentStreak = 1;
+    for (let i = recDates.length - 1; i > 0; i--) {
+      const gap = Math.round(
+        (new Date(recDates[i] + 'T00:00:00') - new Date(recDates[i - 1] + 'T00:00:00')) / 86400000
+      );
+      if (gap === 1) currentStreak++;
+      else break;
+    }
+  }
+
+  const stats = {
+    daysRecorded,
+    totalDays,
+    currentStreak,
+    goalsActive: (data.goals || []).filter(g => g.is_active !== 0 && g.status !== 'replaced').length,
+    seeds: (data.seedPacketSeeds || []).length,
+    forms: {
+      opening:      !!data.opening,
+      midChallenge: !!data.midChallenge,
+      closing:      !!(data.closing || data.trialClosing),
+    },
+  };
+
+  res.render('admin-gardener', {
+    title: data.user.name + ' — Gardener',
+    page: 'admin',
+    gardener: {
+      id: data.user.id, name: data.user.name, email: data.user.email,
+      avatar_initial: data.user.avatar_initial,
+    },
+    stats,
+    // Catalogs the shared renderer partial needs to turn stored values into
+    // readable answers (same ones the admin page passes its View dialog).
+    questions: ASSESSMENT_QUESTIONS,
+    closingQuestions: CLOSING_QUESTIONS,
+    midChallengeQuestions: MID_CHALLENGE_QUESTIONS,
+    trialClosingQuestions: TRIAL_CLOSING_QUESTIONS,
+    seedPacketAngles: ANGLES,
+  });
+});
+
 // ─── Admin: Cohorts ─────────────────────────────────────────────────────────
 // A cohort is a named group that goes through the course together. These routes
 // back the admin cohort view: create the next cohort, edit one, reassign a

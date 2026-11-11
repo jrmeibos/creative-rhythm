@@ -1,0 +1,221 @@
+<%#
+  Shared client-side renderer for a gardener's full submission history.
+  Self-contained (IIFE → window.GardenerRender) so it never collides with the
+  admin page's own helpers. Given the JSON from /api/admin/student-data/:id it
+  returns the same section HTML the admin "View" dialog builds, in the same
+  order: assessments / check-ins / seeds first, daily recordings last.
+  Reads the question catalogs from page locals (passed by the route).
+%>
+<script>
+(function () {
+  const SEED_PACKET_ANGLES = <%- JSON.stringify(seedPacketAngles) %>;
+  const TRIAL_CLOSING_QS   = <%- JSON.stringify(trialClosingQuestions) %>;
+  const MID_CHALLENGE_QS   = <%- JSON.stringify(midChallengeQuestions) %>;
+  const OPENING_QS         = <%- JSON.stringify(questions) %>;
+  const CLOSING_QS         = <%- JSON.stringify(closingQuestions) %>;
+
+  const esc = v => String(v == null ? '' : v)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const fmtDate = iso => new Date(iso).toLocaleDateString('en-US',
+    { month: 'short', day: 'numeric', year: 'numeric' });
+
+  // One assessment (opening/closing/trial/mid) as question + answer pairs.
+  // Ratings → "N/10" (with a diff vs the opening when compareRow is passed),
+  // choices → label, multi → labels joined, text → full.
+  function renderAssessment(defs, row, compareRow) {
+    let out = '';
+    for (const def of defs) {
+      const raw = row[def.field];
+      if (raw == null || raw === '') continue;
+      if (def.type === 'consent') {
+        if (!raw || raw === '0') continue;
+        out += `<div class="admin-assess-qa"><div class="admin-assess-q">${esc(def.text)}</div><div class="admin-assess-a">Yes — may share my words (first name only) 🌿</div></div>`;
+        continue;
+      }
+      let answerHtml;
+      if (def.type === 'rating') {
+        answerHtml = esc(raw) + '/10';
+        if (compareRow && compareRow[def.field] != null && compareRow[def.field] !== '') {
+          const diff = (Number(raw) || 0) - (Number(compareRow[def.field]) || 0);
+          if (diff > 0)      answerHtml += ` <span style="color:var(--color-understory)">(↑${diff} from opening)</span>`;
+          else if (diff < 0) answerHtml += ` <span style="color:#D4956A">(↓${Math.abs(diff)} from opening)</span>`;
+          else               answerHtml += ` <span style="color:rgba(16,15,16,0.4)">(no change)</span>`;
+        }
+      } else if (def.type === 'choice') {
+        const c = (def.choices || []).find(c => c.val === raw);
+        answerHtml = esc(c ? c.label : raw);
+        if (def.beforeAfter && compareRow && compareRow[def.field] != null && compareRow[def.field] !== '') {
+          const prev = compareRow[def.field];
+          if (prev !== raw) {
+            const pc = (def.choices || []).find(c => c.val === prev);
+            answerHtml += ` <span style="color:rgba(16,15,16,0.5)">(was: ${esc(pc ? pc.label : prev)})</span>`;
+          } else {
+            answerHtml += ` <span style="color:rgba(16,15,16,0.4)">(no change)</span>`;
+          }
+        }
+      } else if (def.type === 'multi') {
+        const vals = Array.isArray(raw) ? raw : String(raw).split(',').filter(Boolean);
+        answerHtml = vals.map(v => {
+          const c = (def.choices || []).find(c => c.val === v);
+          return esc(c ? c.label : v);
+        }).join(' &bull; ') || '—';
+      } else {
+        answerHtml = esc(raw);
+      }
+      out += `<div class="admin-assess-qa"><div class="admin-assess-q">${esc(def.text)}</div><div class="admin-assess-a">${answerHtml}</div></div>`;
+    }
+    return out || '<p class="admin-empty">No answers recorded.</p>';
+  }
+
+  // Builds the full history HTML. Order: assessments / check-ins / seeds, then
+  // the daily recordings last (per the full-page layout).
+  function buildHtml(data) {
+    let html = '';
+
+    // ─── Mailing address (only if they gave one) ────────────────────────────
+    const u = data.user || {};
+    const addrParts = [u.mail_name, u.mail_street, u.mail_unit, u.mail_city,
+      u.mail_state, u.mail_zip, u.mail_country].map(v => (v || '').trim());
+    if (addrParts.some(v => v)) {
+      const [mName, mStreet, mUnit, mCity, mState, mZip, mCountry] = addrParts;
+      const cityLine = [mCity, mState].filter(Boolean).join(', ') + (mZip ? ' ' + mZip : '');
+      const lines = [mName, mStreet, mUnit, cityLine.trim(), mCountry].filter(Boolean);
+      html += '<h4 style="font-weight:700;margin:0.25rem 0 0.5rem;color:var(--color-bloem)">Mailing Address ✉️</h4>';
+      html += `<div style="margin-bottom:0.5rem;padding:0.6rem 0.8rem;background:var(--color-new-growth);border-radius:6px;line-height:1.5">${lines.map(esc).join('<br>')}</div>`;
+    }
+
+    // ─── Greenhouse goals ───────────────────────────────────────────────────
+    if (data.goals && data.goals.length) {
+      html += '<h4 style="font-weight:700;margin:0.75rem 0 0.5rem;color:var(--color-bloem)">Greenhouse Goals</h4>';
+      for (const s of data.goals) {
+        const isReplaced = s.is_active === 0 || s.status === 'replaced';
+        const hasFacets  = s.soil || s.seed || s.water || s.bloom;
+        const pill = isReplaced
+          ? '<span style="display:inline-block;background:#C97A45;color:#fff;font-size:0.62rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;padding:0.1rem 0.5rem;border-radius:999px">Replaced</span>'
+          : '<span style="display:inline-block;background:var(--color-understory);color:#fff;font-size:0.62rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;padding:0.1rem 0.5rem;border-radius:999px">Active</span>';
+        const cardStyle = isReplaced
+          ? 'margin-bottom:0.6rem;padding:0.65rem 0.8rem;border-radius:8px;background:rgba(16,15,16,0.035);border:1px dashed rgba(16,15,16,0.2)'
+          : 'margin-bottom:0.6rem;padding:0.65rem 0.8rem;border-radius:8px;background:var(--color-new-growth);border:1px solid rgba(118,133,108,0.3)';
+        const textStyle = isReplaced ? 'color:rgba(16,15,16,0.45)' : '';
+        const planted = s.created_at
+          ? new Date(String(s.created_at).slice(0, 10) + 'T00:00:00')
+              .toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+          : null;
+        const plantedHtml = planted
+          ? `<span style="margin-left:auto;font-size:0.72rem;color:rgba(16,15,16,0.5);white-space:nowrap">Planted ${planted}</span>`
+          : '';
+        html += `<div style="${cardStyle}">`;
+        html += `<div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.35rem"><strong>Bed ${s.seed_number}</strong> ${pill}${plantedHtml}</div>`;
+        if (hasFacets) {
+          html += `<div style="margin-left:0.15rem;${textStyle}">`;
+          html += `<div><strong>Soil:</strong> ${esc(s.soil)  || '—'}</div>`;
+          html += `<div><strong>Seed:</strong> ${esc(s.seed)  || '—'}</div>`;
+          html += `<div><strong>Water:</strong> ${esc(s.water) || '—'}</div>`;
+          html += `<div><strong>Bloom:</strong> ${esc(s.bloom) || '—'}</div>`;
+          html += '</div>';
+        } else {
+          html += `<div style="${textStyle}">${esc(s.feeling) || '—'} / ${esc(s.looks_like) || '—'}</div>`;
+        }
+        if (s.status === 'replaced' && (s.updated_feeling || s.updated_looks_like)) {
+          html += `<div style="margin-top:0.4rem;color:var(--color-understory)"><strong>↳ Replaced with:</strong> ${esc(s.updated_feeling) || '—'} / ${esc(s.updated_looks_like) || '—'}</div>`;
+        }
+        html += '</div>';
+      }
+    }
+
+    // ─── Seed Packet answers (grouped by angle) ─────────────────────────────
+    if (data.seedPacketAnswers && data.seedPacketAnswers.length) {
+      const answerByQid = {};
+      for (const a of data.seedPacketAnswers) answerByQid[a.question_id] = a;
+      let sectionOpen = false;
+      for (const angle of SEED_PACKET_ANGLES) {
+        const answered = angle.questions.filter(q => answerByQid[q.id]);
+        if (!answered.length) continue;
+        if (!sectionOpen) {
+          html += '<h4 style="font-weight:700;margin:1rem 0 0.5rem;color:var(--color-bloem)">Seed Packet Answers</h4>';
+          sectionOpen = true;
+        }
+        html += `<div style="margin:0.5rem 0 0.75rem;padding-left:0.5rem;border-left:2px solid rgba(112,92,108,0.2)">`;
+        html += `<div style="font-weight:700;color:var(--color-understory)">${esc(angle.name)}</div>`;
+        for (const q of answered) {
+          const ans = answerByQid[q.id];
+          html += `<div style="margin:0.4rem 0">`;
+          html += `<div style="font-style:italic;color:rgba(16,15,16,0.6)">${esc(q.text)}</div>`;
+          html += `<div>${esc(ans.answer_text)}</div>`;
+          html += `</div>`;
+        }
+        html += `</div>`;
+      }
+    }
+
+    // ─── Seed Packet seeds (named seeds) ────────────────────────────────────
+    if (data.seedPacketSeeds && data.seedPacketSeeds.length) {
+      html += '<h4 style="font-weight:700;margin:1rem 0 0.5rem;color:var(--color-bloem)">Seed Packets — Your Seeds</h4>';
+      for (const seed of data.seedPacketSeeds) {
+        html += `<div style="margin-bottom:0.75rem;padding:0.6rem 0.75rem;background:rgba(112,92,108,0.05);border-radius:6px">`;
+        html += `<div style="font-weight:700">${esc(seed.name) || '(untitled seed)'}</div>`;
+        if (seed.description) html += `<div style="font-style:italic;color:rgba(16,15,16,0.6);margin-top:0.2rem">${esc(seed.description)}</div>`;
+        if (seed.bullets && seed.bullets.length) {
+          html += '<ul style="margin:0.4rem 0 0 1.2rem;padding:0">';
+          for (const b of seed.bullets) html += `<li>${esc(b)}</li>`;
+          html += '</ul>';
+        }
+        if (seed.application) {
+          html += `<div style="margin-top:0.4rem"><strong>How it shows up:</strong> ${esc(seed.application)}</div>`;
+        }
+        html += `</div>`;
+      }
+    }
+
+    // ─── Opening assessment ─────────────────────────────────────────────────
+    if (data.opening) {
+      html += '<h4 style="font-weight:700;margin:1rem 0 0.5rem;color:var(--color-bloem)">Opening Assessment</h4>';
+      html += renderAssessment(OPENING_QS, data.opening);
+    }
+
+    // ─── Mid-challenge check-in (day 7, attributed) ─────────────────────────
+    if (data.midChallenge) {
+      html += '<h4 style="font-weight:700;margin:1rem 0 0.5rem;color:var(--color-understory)">Mid-challenge Check-in · day 7</h4>';
+      html += renderAssessment(MID_CHALLENGE_QS, data.midChallenge);
+    }
+
+    // ─── Mid-course check-in (legacy 12-week; submission flag only) ──────────
+    if (data.midcourseSubmittedAt) {
+      html += `<h4 style="font-weight:700;margin:1rem 0 0.5rem;color:var(--color-understory)">Mid-course Check-in ✓</h4>`;
+      html += `<p style="color:rgba(16,15,16,0.5)">Submitted on ${fmtDate(data.midcourseSubmittedAt)}</p>`;
+      html += `<p style="color:rgba(16,15,16,0.5);font-size:0.78rem;font-style:italic">Responses are stored anonymously — view all of them via "All mid-course responses" on the main admin page.</p>`;
+    }
+
+    // ─── Closing assessment (diffed vs opening) ─────────────────────────────
+    if (data.closing) {
+      html += '<h4 style="font-weight:700;margin:1rem 0 0.5rem;color:var(--color-understory)">Closing Assessment</h4>';
+      html += renderAssessment(CLOSING_QS, data.closing, data.opening);
+    }
+
+    // ─── Trial closing reflection (diffed vs opening) ───────────────────────
+    if (data.trialClosing) {
+      html += '<h4 style="font-weight:700;margin:1rem 0 0.5rem;color:var(--color-bloem)">Trial Closing Reflection</h4>';
+      html += renderAssessment(TRIAL_CLOSING_QS, data.trialClosing, data.opening);
+    }
+
+    // ─── Daily recordings (cuttings) — last, per the full-page layout ───────
+    if (data.cuttings && data.cuttings.length) {
+      html += '<h4 style="font-weight:700;margin:1.5rem 0 0.5rem;color:var(--color-bloem)">Daily Recordings</h4>';
+      for (const c of data.cuttings) {
+        html += `<div style="margin:0.6rem 0;padding:0.5rem 0.7rem;background:rgba(112,92,108,0.04);border-radius:6px">`;
+        html += `<div style="font-weight:700;color:var(--color-bloem)">${fmtDate(c.recorded_date)}${c.season ? ' · <span style="font-weight:300;color:rgba(16,15,16,0.5)">' + esc(c.season) + '</span>' : ''}</div>`;
+        if (c.prompt)          html += `<div style="font-style:italic;color:rgba(16,15,16,0.55);font-size:0.8rem;margin-top:0.2rem">${esc(c.prompt)}</div>`;
+        if (c.reflection_text) html += `<div style="margin-top:0.3rem">${esc(c.reflection_text)}</div>`;
+        if (c.talked_about)    html += `<div style="margin-top:0.3rem"><strong>Talked about:</strong> ${esc(c.talked_about)}</div>`;
+        if (c.how_it_felt)     html += `<div><strong>How it felt:</strong> ${esc(c.how_it_felt)}</div>`;
+        if (c.takeaway)        html += `<div><strong>Takeaway:</strong> ${esc(c.takeaway)}</div>`;
+        html += `</div>`;
+      }
+    }
+
+    return html || '<p class="admin-empty">No submissions yet.</p>';
+  }
+
+  window.GardenerRender = { buildHtml, renderAssessment, esc, fmtDate };
+})();
+</script>

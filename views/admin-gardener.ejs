@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <%- include('partials/head') %>
+  <link rel="stylesheet" href="/css/dashboard.css">
+  <style>
+    .ag-top { display:flex; align-items:center; gap:1rem; margin-bottom:0.35rem; }
+    .ag-avatar {
+      width:52px; height:52px; border-radius:50%; flex-shrink:0;
+      display:flex; align-items:center; justify-content:center;
+      font-family:var(--font-display); font-size:1.4rem; color:#fff;
+      background:var(--color-bloem);
+    }
+    .ag-name { font-family:var(--font-display); font-size:1.9rem; font-weight:400; color:var(--color-ink-stained); margin:0; line-height:1.1; }
+    .ag-email { font-size:0.85rem; color:rgba(16,15,16,0.5); margin:0.1rem 0 0; }
+    .ag-back { display:inline-block; font-size:0.85rem; color:var(--color-bloem); text-decoration:none; margin-bottom:1.25rem; opacity:0.85; }
+    .ag-back:hover { opacity:1; }
+
+    .ag-stats { display:flex; flex-wrap:wrap; gap:0.75rem; margin:1.25rem 0 0.5rem; }
+    .ag-stat {
+      flex:1 1 150px; min-width:140px;
+      background:var(--color-blank-page); border:1px solid rgba(112,92,108,0.14);
+      border-radius:12px; padding:0.85rem 1rem;
+    }
+    .ag-stat-num { font-family:var(--font-display); font-size:1.5rem; color:var(--color-bloem); line-height:1.1; }
+    .ag-stat-label { font-size:0.72rem; letter-spacing:0.04em; text-transform:uppercase; color:rgba(16,15,16,0.5); margin-top:0.2rem; }
+
+    .ag-forms { display:flex; flex-wrap:wrap; gap:0.5rem; margin:0.75rem 0 0; }
+    .ag-form-pill {
+      display:inline-flex; align-items:center; gap:0.35rem;
+      font-size:0.8rem; padding:0.3rem 0.7rem; border-radius:999px;
+      background:rgba(118,133,108,0.12); color:var(--color-ink-stained);
+    }
+    .ag-form-pill--todo { background:rgba(16,15,16,0.05); color:rgba(16,15,16,0.45); }
+    .ag-form-check { font-weight:700; color:var(--color-understory); }
+
+    .ag-body { margin-top:1.5rem; font-size:0.9rem; font-weight:300; line-height:1.6; }
+    .ag-body h4:first-child { margin-top:0 !important; }
+  </style>
+</head>
+<body class="app-body">
+  <div class="app-layout">
+    <%- include('partials/sidebar') %>
+    <main class="main-content">
+
+      <a href="/admin#people" class="ag-back">← All gardeners</a>
+
+      <div class="ag-top">
+        <div class="ag-avatar"><%= (gardener.avatar_initial || (gardener.name || '?').charAt(0)) %></div>
+        <div>
+          <h1 class="ag-name"><%= gardener.name %></h1>
+          <p class="ag-email"><%= gardener.email %></p>
+        </div>
+      </div>
+
+      <!-- Progress at a glance -->
+      <div class="ag-stats">
+        <div class="ag-stat">
+          <div class="ag-stat-num"><%= stats.daysRecorded %> <span style="font-size:1rem;color:rgba(16,15,16,0.4)">/ <%= stats.totalDays %></span></div>
+          <div class="ag-stat-label">Days recorded</div>
+        </div>
+        <div class="ag-stat">
+          <div class="ag-stat-num"><%= stats.currentStreak %></div>
+          <div class="ag-stat-label">Current streak</div>
+        </div>
+        <div class="ag-stat">
+          <div class="ag-stat-num"><%= stats.goalsActive %></div>
+          <div class="ag-stat-label">Goals planted</div>
+        </div>
+        <div class="ag-stat">
+          <div class="ag-stat-num"><%= stats.seeds %></div>
+          <div class="ag-stat-label">Seeds named</div>
+        </div>
+      </div>
+
+      <div class="ag-forms">
+        <span class="ag-form-pill <%= stats.forms.opening ? '' : 'ag-form-pill--todo' %>"><span class="ag-form-check"><%= stats.forms.opening ? '✓' : '○' %></span> Opening assessment</span>
+        <span class="ag-form-pill <%= stats.forms.midChallenge ? '' : 'ag-form-pill--todo' %>"><span class="ag-form-check"><%= stats.forms.midChallenge ? '✓' : '○' %></span> 1-week check-in</span>
+        <span class="ag-form-pill <%= stats.forms.closing ? '' : 'ag-form-pill--todo' %>"><span class="ag-form-check"><%= stats.forms.closing ? '✓' : '○' %></span> Closing reflection</span>
+      </div>
+
+      <!-- Full submission history (assessments / check-ins / seeds first, recordings last) -->
+      <div class="ag-body" id="gardener-body"><p class="admin-empty">Loading…</p></div>
+
+    </main>
+  </div>
+
+  <%- include('partials/gardener-render') %>
+  <script>
+    (function () {
+      const id = <%= gardener.id %>;
+      const body = document.getElementById('gardener-body');
+      fetch('/api/admin/student-data/' + id)
+        .then(r => r.ok ? r.json() : Promise.reject(new Error('HTTP ' + r.status)))
+        .then(data => { body.innerHTML = window.GardenerRender.buildHtml(data); })
+        .catch(() => { body.innerHTML = '<p class="admin-empty">Couldn\'t load this gardener\'s submissions. Try refreshing.</p>'; });
+    })();
+  </script>
+</body>
+</html>
