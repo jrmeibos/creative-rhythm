@@ -25,7 +25,8 @@
     /* Course videos — same card treatment as the call cards, just larger: the
        title sits in a white strip under the video so it doesn't compete with
        the "Course videos" section heading. */
-    .videos-list { display: flex; flex-direction: column; gap: 1.5rem; max-width: 448px; }
+    .videos-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.5rem; max-width: 920px; }
+    @media (max-width: 640px) { .videos-list { grid-template-columns: 1fr; max-width: 448px; } }
     .video-card { border: 1px solid rgba(16,15,16,.1); border-radius: 14px; overflow: hidden; background: var(--color-blank-page); }
     .video-embed { position: relative; width: 100%; aspect-ratio: 16 / 9; background: #100F10; }
     .video-embed iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }

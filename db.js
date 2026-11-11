@@ -1816,6 +1816,15 @@ function seedCourseVideos() {
     }
   }
   if (added || fixed) console.log(`✓ Course videos ensured (added ${added}, restored ${fixed})`);
+
+  // Julia's chosen display order for the course videos on /videos. Set each boot
+  // so the order holds regardless of when each video was added.
+  const ORDER = [
+    'why-we-do-this', 'meet-your-guide', 'the-daily-recording', 'tour-of-the-garden',
+    'values-in-the-garden', 'rules-of-the-garden', 'seed-packets-intro', 'faqs',
+  ];
+  const setOrder = db.prepare('UPDATE lessons SET sort_order = ? WHERE slug = ?');
+  ORDER.forEach((slug, i) => setOrder.run((i + 1) * 10, slug));
 }
 
 function seedLesson1Homework() {
