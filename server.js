@@ -980,12 +980,6 @@ app.get('/dashboard', requireAuth, (req, res) => {
     tourCardVisible,
     // Full-course students get the workbench idea-capture on the dashboard.
     canJotIdea: !isTrial,
-    // Mid-challenge check-in card — shown to students once the check-in opens,
-    // until they've submitted it.
-    showCheckinCard: req.session.user.role === 'student'
-      && today >= CHECKIN.openDate
-      && !db.getCheckinResponse(userId, CHECKIN.key),
-    checkinTitle: CHECKIN.title,
     canContinueFree,
   });
 });
@@ -4713,11 +4707,11 @@ app.get('/resources', requireAuth, (req, res) => {
 
 // ─── Mid-challenge check-in ────────────────────────────────────────────────
 app.get('/check-in', requireAuth, (req, res) => {
-  const existing = db.getCheckinResponse(req.session.user.id, CHECKIN.key);
-  res.render('check-in', {
-    title: CHECKIN.title, page: '', user: req.session.user,
-    checkin: CHECKIN, existing, saved: req.query.saved === '1',
-  });
+  // Retired: the "Five days in" check-in is no longer part of the student
+  // experience — the Day-7 mid-challenge check-in replaced it. Past responses
+  // stay readable in the admin "Five days in" section; the page itself just
+  // sends anyone arriving on an old link back to the dashboard.
+  res.redirect('/dashboard');
 });
 app.post('/check-in', requireAuth, (req, res) => {
   const b = req.body || {};
