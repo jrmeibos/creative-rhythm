@@ -1789,6 +1789,7 @@ function seedCourseVideos() {
     ['seed-packets-intro',  'What to Talk About',          'Using your Seed Packets to find your material', 'https://www.youtube.com/embed/PQf720_2woU'],
     ['meet-your-guide',     'Meet Your Guide',             'A hello from me before we begin',               'https://www.youtube.com/embed/VqB26R339-Q'],
     ['values-in-the-garden','Values in the Garden',        'The values that shape this space',              'https://www.youtube.com/embed/astdQC-eI-c'],
+    ['rules-of-the-garden', 'Rules of the Garden',         'The ground rules we agree to',                  'https://www.youtube.com/embed/QsSJQPk7KB4'],
   ];
   // One-time correction: the Seed Packets intro was re-recorded. Move the row
   // off the old placeholder video to the new one — only if it still points at
