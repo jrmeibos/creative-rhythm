@@ -160,6 +160,16 @@
     let html = '';
     html += buildRatingTracker(data);
 
+    // ─── Videos watched (which course videos, and when) ─────────────────────
+    if (data.videosWatched && data.videosWatched.length) {
+      html += `<h4 style="font-weight:700;margin:0.25rem 0 0.5rem;color:var(--color-bloem)">Videos watched <span style="font-weight:400;color:rgba(16,15,16,0.5)">· ${data.videosWatched.length} of ${data.totalVideos || data.videosWatched.length}</span></h4>`;
+      html += '<div style="margin-bottom:0.75rem">';
+      for (const v of data.videosWatched) {
+        html += `<div class="admin-assess-qa"><div class="admin-assess-q">${esc(v.title)}</div><div class="admin-assess-a">✓ ${v.completed_at ? esc(fmtDate(v.completed_at)) : 'watched'}</div></div>`;
+      }
+      html += '</div>';
+    }
+
     // ─── Mailing address (only if they gave one) ────────────────────────────
     const u = data.user || {};
     const addrParts = [u.mail_name, u.mail_street, u.mail_unit, u.mail_city,

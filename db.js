@@ -4408,11 +4408,23 @@ module.exports = {
     // it into a "✓ Submitted on DATE" line.
     const fiveDaysIn = this.getCheckinResponse(userId, 'five-days-in') || null;
 
+    // Which course videos they've marked watched, and when.
+    const videosWatched = db.prepare(`
+      SELECT l.title, l.sort_order, lc.completed_at
+      FROM lessons l JOIN lesson_completions lc ON lc.lesson_id = l.id
+      WHERE lc.user_id = ? AND l.video_url <> '' AND l.published = 1
+      ORDER BY l.sort_order
+    `).all(userId);
+    const totalVideos = db.prepare(
+      "SELECT COUNT(*) AS n FROM lessons WHERE video_url <> '' AND published = 1"
+    ).get().n;
+
     return {
       user, opening, closing, trialClosing, midChallenge, fiveDaysIn, goals,
       midcourseSubmittedAt: user ? user.midcourse_submitted_at : null,
       courseLengthWeeks:    user ? (user.course_length_weeks || 12) : 12,
       seedPacketAnswers, seedPacketSeeds, cuttings,
+      videosWatched, totalVideos,
     };
   },
 

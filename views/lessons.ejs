@@ -34,6 +34,19 @@
     .video-card-title { font-family: 'Goldage', Georgia, serif; font-size: 1.15rem; font-weight: 600; margin: 0; color: var(--color-ink-stained); line-height: 1.3; }
     .video-card-sub { font-size: .9rem; color: rgba(16,15,16,.6); margin: .25rem 0 0; font-style: italic; }
     .videos-empty { color: rgba(16,15,16,.5); font-style: italic; }
+    /* Light progress layer: watched count + bar, "next up" badge, watch toggle */
+    .videos-progress { display: flex; align-items: center; gap: .75rem; max-width: 920px; margin: 0 0 1.25rem; }
+    .videos-progress-label { font-size: .9rem; color: rgba(16,15,16,.65); white-space: nowrap; }
+    .videos-progress-label strong { color: var(--color-bloem); font-weight: 700; }
+    .videos-progress-track { flex: 1; height: 6px; border-radius: 999px; background: rgba(112,92,108,.15); overflow: hidden; }
+    .videos-progress-bar { display: block; height: 100%; background: var(--color-understory); border-radius: 999px; transition: width .25s; }
+    .video-next-badge { display: none; }
+    .video-card.is-next .video-next-badge { display: inline-block; font-size: .64rem; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: #fff; background: var(--color-bloem); border-radius: 999px; padding: .15rem .55rem; margin-bottom: .45rem; }
+    .video-card.is-next { border-color: var(--color-bloem); }
+    .video-watch-btn { margin-top: .7rem; font-family: var(--font-body); font-size: .82rem; font-weight: 600; color: var(--color-bloem); background: transparent; border: 1px solid rgba(112,92,108,.35); border-radius: 999px; padding: .35rem .9rem; cursor: pointer; transition: background .15s, color .15s, border-color .15s; }
+    .video-watch-btn:hover { background: rgba(112,92,108,.06); }
+    .video-watch-btn:disabled { opacity: .5; cursor: default; }
+    .video-watch-btn.is-watched { color: #fff; background: var(--color-understory); border-color: var(--color-understory); }
   </style>
 </head>
 <body class="app-body">
@@ -92,17 +105,23 @@
         <% if (!videos.length) { %>
           <p class="videos-empty">Videos are on their way. 🌿</p>
         <% } else { %>
+          <div class="videos-progress">
+            <span class="videos-progress-label">You've watched <strong id="video-progress-count"><%= watchedCount %> of <%= totalVideos %></strong></span>
+            <span class="videos-progress-track"><span class="videos-progress-bar" id="video-progress-bar" style="width:<%= totalVideos ? Math.round(watchedCount / totalVideos * 100) : 0 %>%"></span></span>
+          </div>
           <div class="videos-list">
             <% for (const v of videos) { %>
-              <div class="video-card">
+              <div class="video-card <%= v.watched ? 'is-watched' : '' %> <%= v.id === nextUpId ? 'is-next' : '' %>" data-lesson-id="<%= v.id %>">
                 <div class="video-embed">
                   <iframe src="<%= v.video_url %>" title="<%= v.title %>" frameborder="0"
                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                     allowfullscreen></iframe>
                 </div>
                 <div class="video-card-meta">
+                  <span class="video-next-badge">Next up</span>
                   <h3 class="video-card-title"><%= v.title %></h3>
                   <% if (v.subtitle) { %><p class="video-card-sub"><%= v.subtitle %></p><% } %>
+                  <button class="video-watch-btn <%= v.watched ? 'is-watched' : '' %>" type="button" onclick="markVideo(this)"><%= v.watched ? '✓ Watched' : 'Mark as watched' %></button>
                 </div>
               </div>
             <% } %>
@@ -113,5 +132,41 @@
     </main>
   </div>
 
+  <script>
+    // Mark/unmark a course video as watched, then refresh the count, bar, and
+    // the "next up" badge. Honest toggle — no gating, fully reversible.
+    function markVideo(btn) {
+      const card = btn.closest('.video-card');
+      const id = card.dataset.lessonId;
+      const willWatch = !card.classList.contains('is-watched');
+      btn.disabled = true;
+      fetch('/api/lessons/' + id + '/complete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ completed: willWatch })
+      })
+        .then(function (r) { if (!r.ok) throw new Error('bad'); card.classList.toggle('is-watched', willWatch); refreshVideoBtn(card); refreshVideoProgress(); })
+        .catch(function () {})
+        .finally(function () { btn.disabled = false; });
+    }
+    function refreshVideoBtn(card) {
+      const btn = card.querySelector('.video-watch-btn');
+      const watched = card.classList.contains('is-watched');
+      btn.textContent = watched ? '✓ Watched' : 'Mark as watched';
+      btn.classList.toggle('is-watched', watched);
+    }
+    function refreshVideoProgress() {
+      const cards = Array.prototype.slice.call(document.querySelectorAll('.video-card'));
+      const total = cards.length;
+      const watched = cards.filter(function (c) { return c.classList.contains('is-watched'); }).length;
+      const countEl = document.getElementById('video-progress-count');
+      if (countEl) countEl.textContent = watched + ' of ' + total;
+      const bar = document.getElementById('video-progress-bar');
+      if (bar) bar.style.width = (total ? Math.round(watched / total * 100) : 0) + '%';
+      cards.forEach(function (c) { c.classList.remove('is-next'); });
+      const next = cards.find(function (c) { return !c.classList.contains('is-watched'); });
+      if (next) next.classList.add('is-next');
+    }
+  </script>
 </body>
 </html>

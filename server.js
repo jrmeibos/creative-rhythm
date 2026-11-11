@@ -1813,7 +1813,14 @@ app.get('/videos', requireAuth, (req, res) => {
   // The "Videos" library — open to everyone. Shows only entries that actually
   // have a video, so the old text-only course lessons stay out of it. No
   // curriculum gating: every course video is visible to every student.
-  const videos = db.getAllLessons().filter(l => l.video_url);
+  const rawVideos = db.getAllLessons().filter(l => l.video_url);
+  // Light progress layer: mark which videos this viewer has watched, a count,
+  // and the first unwatched one (a gentle "next up"). No gating.
+  const watchedIds = new Set(db.completedLessonIds(req.session.user.id));
+  const videos = rawVideos.map(v => ({ ...v, watched: watchedIds.has(v.id) }));
+  const watchedCount = videos.filter(v => v.watched).length;
+  const nextUp = videos.find(v => !v.watched);
+  const nextUpId = nextUp ? nextUp.id : null;
 
   // Call recordings live here too (not on /resources). They're resources-table
   // rows whose url is a video link, scoped by cohort: a recording with no
@@ -1847,6 +1854,9 @@ app.get('/videos', requireAuth, (req, res) => {
     title: 'Videos',
     page: 'videos',
     videos,
+    watchedCount,
+    totalVideos: videos.length,
+    nextUpId,
     recordings,
   });
 });
@@ -5308,6 +5318,8 @@ app.get('/admin/gardener/:id', requireAdmin, (req, res) => {
     currentStreak,
     goalsActive: (data.goals || []).filter(g => g.is_active !== 0 && g.status !== 'replaced').length,
     seeds: (data.seedPacketSeeds || []).length,
+    videosWatched: (data.videosWatched || []).length,
+    totalVideos: data.totalVideos || 0,
     forms: {
       opening:      !!data.opening,
       midChallenge: !!data.midChallenge,
