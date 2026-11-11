@@ -974,6 +974,7 @@ app.get('/dashboard', requireAuth, (req, res) => {
     isTrial,
     trialComplete,
     trialClosingCardVisible,
+    trialFinalDayReached: isTrialFinalDayReached(req.session.user),
     springCardVisible,
     summerCardVisible,
     fallCardVisible,
@@ -2765,6 +2766,19 @@ function isTrialClosingUnlockedFor(user) {
   // the student's wall clock, not the server's.
   const daysDiff = Math.floor((getNow(user).getTime() - new Date(courseStart + 'T00:00:00').getTime()) / 86400000);
   return daysDiff >= len * 7 - 2;
+}
+
+// True once a trial challenge reaches its final day (Day = length*7, e.g. Day 21
+// for a 3-week challenge). The closing-reflection card opens a couple days
+// earlier to give time for the form, but the "You did it" closing video waits
+// for the actual last day.
+function isTrialFinalDayReached(user) {
+  const len = getCourseLengthWeeks(user);
+  if (len >= 12) return false;
+  const courseStart = db.getUserCourseStartDate(user);
+  if (!courseStart) return false;
+  const daysDiff = Math.floor((getNow(user).getTime() - new Date(courseStart + 'T00:00:00').getTime()) / 86400000);
+  return daysDiff >= len * 7 - 1;
 }
 
 // The Seasons of the Garden — an evergreen page explaining the four seasons

@@ -2638,6 +2638,10 @@
   height: 100%;
   border: 0;
 }
+/* A little breathing room when the video sits right under a card button. */
+.mid-card-cta + .recording-howto-video {
+  margin-top: 0.9rem;
+}
 .recording-about-panel p {
   font-family: var(--font-body);
   font-size: 0.92rem;

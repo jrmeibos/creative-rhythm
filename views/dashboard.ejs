@@ -91,6 +91,16 @@
             and whether you'd like to continue with the full 12-week course.
           </p>
           <a href="/trial-closing" class="mid-card-cta">Take the closing reflection →</a>
+          <% if (trialFinalDayReached) { %>
+          <div class="recording-howto-video">
+            <iframe
+              src="https://www.youtube.com/embed/oVYDuJZNZtY"
+              title="You did it — a closing message from Julia"
+              frameborder="0"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowfullscreen></iframe>
+          </div>
+          <% } %>
         </div>
       </section>
       <% } %>
