@@ -19,6 +19,14 @@
     .assess-name-link{display:flex;align-items:center;gap:.625rem;color:inherit;text-decoration:none}
     .assess-name-link:hover{color:var(--color-bloem)}
     .assess-name-link:hover span{text-decoration:underline}
+    /* Clickable cohort-roster name cell → full profile */
+    .roster-name-link{display:block;text-decoration:none;color:inherit}
+    .roster-name-link:hover .admin-user-name{color:var(--color-bloem);text-decoration:underline}
+    /* Resources: compact rows + "Show all" */
+    .res-hidden{display:none}
+    .res-load-more{display:inline-block;margin:.6rem 0 0;background:none;border:none;color:var(--color-bloem);font:inherit;font-size:.9rem;cursor:pointer;text-decoration:underline;padding:.2rem 0}
+    .res-load-more:hover{color:var(--color-bloem-mid)}
+    .admin-resource-row .admin-resource-desc{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
     /* Resource "visible to" cohort checkboxes */
     .admin-cohort-checks{display:flex;flex-direction:column;gap:.4rem;margin-top:.4rem}
     .admin-cohort-check{display:flex;align-items:center;gap:.5rem;font-size:.9rem;cursor:pointer}
@@ -182,7 +190,7 @@
                          const sc = seasonMap[m.current_season] || seasonMap.winter;
                     %>
                       <tr>
-                        <td><div class="who-cell"><div class="sidebar-avatar" style="width:30px;height:30px;font-size:0.8rem;flex-shrink:0"><%= m.avatar_initial || m.name.charAt(0) %></div><div style="min-width:0"><div class="admin-user-name"><%= m.name %></div><div class="admin-user-email"><%= m.email %></div></div></div></td>
+                        <td><a class="roster-name-link" href="/admin/gardener/<%= m.id %>" title="Open this gardener's profile"><div class="who-cell"><div class="sidebar-avatar" style="width:30px;height:30px;font-size:0.8rem;flex-shrink:0"><%= m.avatar_initial || m.name.charAt(0) %></div><div style="min-width:0"><div class="admin-user-name"><%= m.name %></div><div class="admin-user-email"><%= m.email %></div></div></div></a></td>
                         <td><% if (m.challenge_payment_status === 'refunded') { %><span class="admin-lesson-tag" title="Paid then refunded">Refunded</span><% } else if (m.challenge_payment_status === 'paid') { %><span class="admin-lesson-tag" title="Paid the fee">Paid</span><% } else { %><span class="admin-lesson-tag" style="background:#f7e6c4;color:#9a6a1e">Unpaid</span><% } %></td>
                         <td style="white-space:nowrap"><% if (ra && ra.everRecorded) { %><span class="rec-dot" style="background:<%= ra.quiet ? '#c9a24a' : '#5f7256' %>"></span><%= ra.recentCount %> in 7d<% if (ra.quiet) { %> · quiet<% } %><% } else { %><span style="color:rgba(16,15,16,.3)">none yet</span><% } %></td>
                         <td style="white-space:nowrap"><span class="season-dot" style="background:<%= sc[0] %>"></span><%= sc[1] %></td>
@@ -515,6 +523,7 @@
           for (const r of resources) {
             (resCohortIds(r).length ? cohortResources : universalResources).push(r);
           }
+          const RES_LIMIT = 4; // show this many per section, then a "Show all"
         %>
 
         <!-- Universal — everyone -->
@@ -524,9 +533,12 @@
             <button class="admin-add-btn" type="button" onclick="openAddResource()">+ Add universal resource</button>
           </div>
           <div class="admin-card">
-            <% for (const r of universalResources) { %><%- include('partials/admin-resource-row', { r, cohortNames: [] }) %><% } %>
+            <% universalResources.forEach((r, i) => { %><%- include('partials/admin-resource-row', { r, cohortNames: [], rowClass: i >= RES_LIMIT ? 'res-hidden' : '' }) %><% }) %>
             <% if (!universalResources.length) { %><p class="admin-empty">No universal resources yet.</p><% } %>
           </div>
+          <% if (universalResources.length > RES_LIMIT) { %>
+            <button class="res-load-more" type="button" onclick="showAllResources(this)">Show all <%= universalResources.length %> ↓</button>
+          <% } %>
         </div>
 
         <!-- Cohort-specific materials — one list; each item tagged with its cohorts -->
@@ -536,9 +548,12 @@
             <button class="admin-add-btn" type="button" onclick="openAddResource()">+ Add cohort material</button>
           </div>
           <div class="admin-card">
-            <% for (const r of cohortResources) { const names = resCohortIds(r).map(id => cohortNameById.get(id) || ('Cohort #' + id)); %><%- include('partials/admin-resource-row', { r, cohortNames: names }) %><% } %>
+            <% cohortResources.forEach((r, i) => { const names = resCohortIds(r).map(id => cohortNameById.get(id) || ('Cohort #' + id)); %><%- include('partials/admin-resource-row', { r, cohortNames: names, rowClass: i >= RES_LIMIT ? 'res-hidden' : '' }) %><% }) %>
             <% if (!cohortResources.length) { %><p class="admin-empty">No cohort-specific materials yet.</p><% } %>
           </div>
+          <% if (cohortResources.length > RES_LIMIT) { %>
+            <button class="res-load-more" type="button" onclick="showAllResources(this)">Show all <%= cohortResources.length %> ↓</button>
+          <% } %>
         </div>
       </section>
 
@@ -1714,6 +1729,13 @@
 
     // ── Resources ────────────────────────────────────────────────────────────
     // Open the Add Resource dialog with a cohort preselected ('' = everyone).
+    // Reveal the rest of a resources section (the "Show all" button).
+    function showAllResources(btn) {
+      const group = btn.closest('.admin-res-group');
+      if (group) group.querySelectorAll('.admin-resource-row.res-hidden').forEach(r => r.classList.remove('res-hidden'));
+      btn.remove();
+    }
+
     // Resource cohort checkboxes <-> CSV helpers.
     function collectCohortIds(containerId) {
       return [...document.querySelectorAll('#' + containerId + ' input[type=checkbox]:checked')]

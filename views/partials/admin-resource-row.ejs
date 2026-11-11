@@ -1,6 +1,6 @@
 <%# One resource row for the admin Resources section. The cohort is conveyed by
     the group heading it sits under, so there's no per-row cohort tag. Expects `r`. %>
-<div class="admin-resource-row" id="resource-row-<%= r.id %>">
+<div class="admin-resource-row <%= typeof rowClass !== 'undefined' ? rowClass : '' %>" id="resource-row-<%= r.id %>">
   <div class="admin-resource-info">
     <span class="admin-resource-title"><%= r.title %></span>
     <% if (r.category_tag) { %><span class="admin-lesson-tag"><%= r.category_tag %></span><% } %>
@@ -8,7 +8,7 @@
     <% if (typeof cohortNames !== 'undefined' && cohortNames && cohortNames.length) { %>
       <% for (const cn of cohortNames) { %><span class="admin-lesson-tag" style="background:#e4ead9;color:#5f7256" title="Visible to this cohort">🔒 <%= cn %></span><% } %>
     <% } %>
-    <% if (r.description) { %><span class="admin-resource-desc"><%= r.description %></span><% } %>
+    <% if (r.description) { %><span class="admin-resource-desc" title="<%= r.description %>"><%= r.description %></span><% } %>
   </div>
   <% if (r.url) { %>
     <a class="admin-resource-url" href="<%= r.url %>" target="_blank" rel="noopener"><%= r.url.length > 40 ? r.url.slice(0, 40) + '…' : r.url %></a>
