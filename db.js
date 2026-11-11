@@ -1827,6 +1827,38 @@ function seedCourseVideos() {
   ORDER.forEach((slug, i) => setOrder.run((i + 1) * 10, slug));
 }
 
+// One-time seed of the January challenge cohort's three group-call dates so they
+// appear on the calendar at launch. Runs once (guarded by a settings flag);
+// after that the dates are fully managed via the admin cohort "Schedule &
+// dates", so edits/removals there are never overwritten. If the cohort doesn't
+// exist yet, we skip without setting the flag and try again on a later boot.
+function seedJanuaryCallDates() {
+  // Raw sqlite only here (the higher-level db API isn't in scope during seeds).
+  const flag = db.prepare("SELECT value FROM settings WHERE key = 'jan_calls_seeded'").get();
+  if (flag && flag.value === '1') return;
+  const cohort = db.prepare(
+    "SELECT id FROM cohorts WHERE substr(start_date, 1, 10) = '2027-01-05' ORDER BY id DESC"
+  ).get();
+  if (!cohort) return; // cohort not created yet — retry on a later boot (flag unset)
+  const calls = [
+    ['2027-01-04', 'Kick-Off Call'],
+    ['2027-01-14', 'One-Week Check-In Call'],
+    ['2027-01-27', 'End-of-Challenge Group Call'],
+  ];
+  // Guard by date, so a call someone already placed on that day is never duplicated.
+  const haveDates = new Set(
+    db.prepare('SELECT substr(event_date, 1, 10) AS d FROM cohort_events WHERE cohort_id = ?')
+      .all(cohort.id).map(e => e.d)
+  );
+  const ins = db.prepare('INSERT INTO cohort_events (cohort_id, event_date, title) VALUES (?, ?, ?)');
+  let added = 0;
+  for (const [date, title] of calls) {
+    if (!haveDates.has(date)) { ins.run(cohort.id, date, title); added++; }
+  }
+  db.prepare("INSERT INTO settings (key, value) VALUES ('jan_calls_seeded', '1') ON CONFLICT(key) DO UPDATE SET value = '1'").run();
+  if (added) console.log(`✓ Seeded ${added} January group-call date(s) on the cohort schedule`);
+}
+
 function seedLesson1Homework() {
   const lesson = db.prepare("SELECT id FROM lessons WHERE slug='welcome-to-the-rhythm'").get();
   if (!lesson) return;
@@ -1973,6 +2005,7 @@ safeInit('seedCohortsAndBackfill',  seedCohortsAndBackfill);
 safeInit('seedLessons',             seedLessons);
 safeInit('seedCourseIntroduction',  seedCourseIntroduction);
 safeInit('seedCourseVideos',        seedCourseVideos);
+safeInit('seedJanuaryCallDates',    seedJanuaryCallDates);
 safeInit('seedLesson1Homework',     seedLesson1Homework);
 safeInit('seedContentFormats',      seedContentFormats);
 
