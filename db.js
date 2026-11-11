@@ -1787,6 +1787,7 @@ function seedCourseVideos() {
     ['why-we-do-this',      "Why We're Doing This",        "My experience, and three gardeners' journeys", 'https://www.youtube.com/embed/qprPPoxPmDw'],
     ['the-daily-recording', 'The Daily Recording Process', 'How to show up each day',                      'https://www.youtube.com/embed/HEsdCWNT7bM'],
     ['seed-packets-intro',  'What to Talk About',          'Using your Seed Packets to find your material', 'https://www.youtube.com/embed/PQf720_2woU'],
+    ['meet-your-guide',     'Meet Your Guide',             'A hello from me before we begin',               'https://www.youtube.com/embed/VqB26R339-Q'],
   ];
   // One-time correction: the Seed Packets intro was re-recorded. Move the row
   // off the old placeholder video to the new one — only if it still points at
