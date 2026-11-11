@@ -655,6 +655,14 @@ db.exec(`
     db.exec("ALTER TABLE resources ADD COLUMN scheduled_date TEXT DEFAULT ''");
     console.log('✓ Migrated: added scheduled_date column to resources');
   }
+  // cohort_ids (CSV of cohort ids) lets a resource be shared across several
+  // cohorts, not just one. Empty = everyone. Backfilled from the older single
+  // cohort_id so existing per-cohort resources carry over unchanged.
+  if (resCols.length && !resCols.includes('cohort_ids')) {
+    db.exec("ALTER TABLE resources ADD COLUMN cohort_ids TEXT DEFAULT ''");
+    db.exec("UPDATE resources SET cohort_ids = CAST(cohort_id AS TEXT) WHERE cohort_id IS NOT NULL AND (cohort_ids IS NULL OR cohort_ids = '')");
+    console.log('✓ Migrated: added cohort_ids column to resources (backfilled from cohort_id)');
+  }
 
   // End-of-challenge refund-vs-continue choice. null = undecided, 'continue'
   // (staying — garden flipped open) or 'refund' (wants the refund; Julia issues
@@ -2795,16 +2803,14 @@ module.exports = {
   },
 
   getAllResources() {
-    return db.prepare(`
-      SELECT r.*, c.name AS cohort_name
-      FROM resources r LEFT JOIN cohorts c ON c.id = r.cohort_id
-      ORDER BY r.category_tag, r.title
-    `).all();
+    // cohort_ids (CSV) is the source of truth for visibility; names are resolved
+    // against the cohorts list by the caller, so no join is needed here.
+    return db.prepare('SELECT * FROM resources ORDER BY category_tag, title').all();
   },
 
-  createResource(title, description, categoryTag, url, filePath, cohortId, scheduledDate) {
-    return db.prepare('INSERT INTO resources (title, description, category_tag, url, file_path, cohort_id, scheduled_date) VALUES (?, ?, ?, ?, ?, ?, ?)')
-      .run(title, description, categoryTag, url, filePath, cohortId ?? null, scheduledDate || '');
+  createResource(title, description, categoryTag, url, filePath, cohortIds, scheduledDate) {
+    return db.prepare('INSERT INTO resources (title, description, category_tag, url, file_path, cohort_ids, scheduled_date) VALUES (?, ?, ?, ?, ?, ?, ?)')
+      .run(title, description, categoryTag, url, filePath, cohortIds || '', scheduledDate || '');
   },
 
   getLessonCompletionCounts() {
@@ -3013,10 +3019,10 @@ module.exports = {
 
   // ─── Admin: resources ──────────────────────────────────────────────────────
 
-  updateResource(id, title, description, categoryTag, url, cohortId, scheduledDate) {
+  updateResource(id, title, description, categoryTag, url, cohortIds, scheduledDate) {
     return db.prepare(
-      'UPDATE resources SET title=?, description=?, category_tag=?, url=?, cohort_id=?, scheduled_date=? WHERE id=?'
-    ).run(title, description || '', categoryTag || '', url || '', cohortId ?? null, scheduledDate || '', id);
+      'UPDATE resources SET title=?, description=?, category_tag=?, url=?, cohort_ids=?, scheduled_date=? WHERE id=?'
+    ).run(title, description || '', categoryTag || '', url || '', cohortIds || '', scheduledDate || '', id);
   },
 
   deleteResource(id) {

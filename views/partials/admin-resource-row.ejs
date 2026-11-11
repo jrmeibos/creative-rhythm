@@ -5,6 +5,9 @@
     <span class="admin-resource-title"><%= r.title %></span>
     <% if (r.category_tag) { %><span class="admin-lesson-tag"><%= r.category_tag %></span><% } %>
     <% if (r.scheduled_date) { %><span class="admin-lesson-tag" style="background:#efe6d2;color:#8a6d2f" title="Scheduled call date">📅 <%= r.scheduled_date %></span><% } %>
+    <% if (typeof cohortNames !== 'undefined' && cohortNames && cohortNames.length) { %>
+      <% for (const cn of cohortNames) { %><span class="admin-lesson-tag" style="background:#e4ead9;color:#5f7256" title="Visible to this cohort">🔒 <%= cn %></span><% } %>
+    <% } %>
     <% if (r.description) { %><span class="admin-resource-desc"><%= r.description %></span><% } %>
   </div>
   <% if (r.url) { %>

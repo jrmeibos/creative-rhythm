@@ -1830,7 +1830,7 @@ app.get('/videos', requireAuth, (req, res) => {
     return isNaN(dt) ? null : dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   };
   const recordings = db.getAllResources()
-    .filter(r => isAdmin || r.cohort_id == null || r.cohort_id === viewerCohort)
+    .filter(r => isAdmin || resourceVisibleToCohort(r, viewerCohort))
     .map(r => ({
       title:          r.title,
       description:    r.description,
@@ -5839,20 +5839,39 @@ function cleanScheduledDate(v) {
   return (typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v.trim())) ? v.trim() : '';
 }
 
+// A resource's cohorts live in cohort_ids (CSV of cohort ids); fall back to the
+// legacy single cohort_id. An empty list means "visible to everyone".
+function resourceCohortIdList(r) {
+  const raw = (r.cohort_ids != null && String(r.cohort_ids).trim())
+    ? String(r.cohort_ids)
+    : (r.cohort_id != null ? String(r.cohort_id) : '');
+  return raw.split(',').map(s => parseInt(s, 10)).filter(Number.isInteger);
+}
+function resourceVisibleToCohort(r, cohortId) {
+  const ids = resourceCohortIdList(r);
+  return ids.length === 0 || (cohortId != null && ids.includes(cohortId));
+}
+// Normalize a cohort-ids input (array, or CSV string) to a clean CSV of distinct
+// integer ids. Empty string = everyone.
+function normalizeCohortIds(input) {
+  const arr = Array.isArray(input) ? input : (typeof input === 'string' ? input.split(',') : []);
+  return [...new Set(arr.map(v => parseInt(v, 10)).filter(Number.isInteger))].join(',');
+}
+
 app.post('/api/admin/resources', requireAdmin, (req, res) => {
-  const { title, description, category_tag, url, cohort_id, scheduled_date } = req.body;
+  const { title, description, category_tag, url, cohort_ids, scheduled_date } = req.body;
   if (!title) return res.status(400).json({ error: 'Title is required.' });
-  const cid = cohort_id ? parseInt(cohort_id, 10) : null;
-  const result = db.createResource(title.trim(), description || '', category_tag || '', url || '', null, cid, cleanScheduledDate(scheduled_date));
+  const cids = normalizeCohortIds(cohort_ids);
+  const result = db.createResource(title.trim(), description || '', category_tag || '', url || '', null, cids, cleanScheduledDate(scheduled_date));
   res.json({ ok: true, id: result.lastInsertRowid });
 });
 
 app.put('/api/admin/resources/:id', requireAdmin, (req, res) => {
   const id = parseInt(req.params.id);
-  const { title, description, category_tag, url, cohort_id, scheduled_date } = req.body;
+  const { title, description, category_tag, url, cohort_ids, scheduled_date } = req.body;
   if (!title) return res.status(400).json({ error: 'Title is required.' });
-  const cid = cohort_id ? parseInt(cohort_id, 10) : null;
-  db.updateResource(id, title.trim(), description || '', category_tag || '', url || '', cid, cleanScheduledDate(scheduled_date));
+  const cids = normalizeCohortIds(cohort_ids);
+  db.updateResource(id, title.trim(), description || '', category_tag || '', url || '', cids, cleanScheduledDate(scheduled_date));
   res.json({ ok: true });
 });
 

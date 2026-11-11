@@ -19,6 +19,10 @@
     .assess-name-link{display:flex;align-items:center;gap:.625rem;color:inherit;text-decoration:none}
     .assess-name-link:hover{color:var(--color-bloem)}
     .assess-name-link:hover span{text-decoration:underline}
+    /* Resource "visible to" cohort checkboxes */
+    .admin-cohort-checks{display:flex;flex-direction:column;gap:.4rem;margin-top:.4rem}
+    .admin-cohort-check{display:flex;align-items:center;gap:.5rem;font-size:.9rem;cursor:pointer}
+    .admin-cohort-check input{width:16px;height:16px;accent-color:var(--color-bloem);cursor:pointer}
     /* Cohort Overview */
     .co-status{display:flex;flex-direction:column;gap:.15rem;padding-bottom:1rem;margin-bottom:1rem;border-bottom:1px solid rgba(16,15,16,.08)}
     .co-status-big{font-family:var(--font-display);font-size:1.5rem;color:var(--color-bloem)}
@@ -494,56 +498,48 @@
           <h2 class="dash-section-title">Resources</h2>
           <span class="admin-count"><%= resources.length %> resource<%= resources.length !== 1 ? 's' : '' %></span>
         </div>
-        <p class="admin-field-hint" style="margin:-0.25rem 0 1.25rem">Universal resources show to every cohort. A cohort's own resources — like its group-call recordings — show only to that cohort.</p>
+        <p class="admin-field-hint" style="margin:-0.25rem 0 1.25rem">Universal resources show to every cohort. Cohort-specific materials — like group-call recordings — show only to the cohorts you check.</p>
 
         <%
-          const universalResources = resources.filter(r => !r.cohort_id);
-          const resByCohort = new Map();
+          // A resource's cohorts live in cohort_ids (CSV); fall back to the old
+          // single cohort_id. Empty = everyone.
+          const resCohortIds = (r) => {
+            const raw = (r.cohort_ids != null && String(r.cohort_ids).trim())
+              ? String(r.cohort_ids)
+              : (r.cohort_id != null ? String(r.cohort_id) : '');
+            return raw.split(',').map(s => parseInt(s, 10)).filter(n => Number.isInteger(n));
+          };
+          const cohortNameById = new Map(cohortList.map(c => [c.id, c.name]));
+          const universalResources = [];
+          const cohortResources = [];
           for (const r of resources) {
-            if (!r.cohort_id) continue;
-            if (!resByCohort.has(r.cohort_id)) resByCohort.set(r.cohort_id, []);
-            resByCohort.get(r.cohort_id).push(r);
+            (resCohortIds(r).length ? cohortResources : universalResources).push(r);
           }
-          const renderedCohortIds = new Set();
         %>
 
         <!-- Universal — everyone -->
         <div class="admin-res-group">
           <div class="admin-res-group-head">
             <h3 class="admin-res-group-title">Everyone <span class="admin-res-group-sub">· all cohorts see these</span></h3>
-            <button class="admin-add-btn" type="button" onclick="openAddResource('')">+ Add universal resource</button>
+            <button class="admin-add-btn" type="button" onclick="openAddResource()">+ Add universal resource</button>
           </div>
           <div class="admin-card">
-            <% for (const r of universalResources) { %><%- include('partials/admin-resource-row', { r }) %><% } %>
+            <% for (const r of universalResources) { %><%- include('partials/admin-resource-row', { r, cohortNames: [] }) %><% } %>
             <% if (!universalResources.length) { %><p class="admin-empty">No universal resources yet.</p><% } %>
           </div>
         </div>
 
-        <!-- One block per cohort -->
-        <% for (const c of cohortList) { renderedCohortIds.add(c.id); const items = resByCohort.get(c.id) || []; %>
+        <!-- Cohort-specific materials — one list; each item tagged with its cohorts -->
         <div class="admin-res-group">
           <div class="admin-res-group-head">
-            <h3 class="admin-res-group-title">🔒 <%= c.name %> <span class="admin-res-group-sub">· only this cohort</span></h3>
-            <button class="admin-add-btn" type="button" onclick="openAddResource('<%= c.id %>')">+ Add to this cohort</button>
+            <h3 class="admin-res-group-title">🔒 Cohort-specific materials <span class="admin-res-group-sub">· only the checked cohorts see these</span></h3>
+            <button class="admin-add-btn" type="button" onclick="openAddResource()">+ Add cohort material</button>
           </div>
           <div class="admin-card">
-            <% for (const r of items) { %><%- include('partials/admin-resource-row', { r }) %><% } %>
-            <% if (!items.length) { %><p class="admin-empty">No resources for this cohort yet.</p><% } %>
+            <% for (const r of cohortResources) { const names = resCohortIds(r).map(id => cohortNameById.get(id) || ('Cohort #' + id)); %><%- include('partials/admin-resource-row', { r, cohortNames: names }) %><% } %>
+            <% if (!cohortResources.length) { %><p class="admin-empty">No cohort-specific materials yet.</p><% } %>
           </div>
         </div>
-        <% } %>
-
-        <!-- Resources tied to a cohort that's no longer in the list -->
-        <% for (const [cid, items] of resByCohort) { if (renderedCohortIds.has(cid)) continue; %>
-        <div class="admin-res-group">
-          <div class="admin-res-group-head">
-            <h3 class="admin-res-group-title">🔒 <%= (items[0] && items[0].cohort_name) ? items[0].cohort_name : ('Cohort #' + cid) %> <span class="admin-res-group-sub">· cohort no longer listed</span></h3>
-          </div>
-          <div class="admin-card">
-            <% for (const r of items) { %><%- include('partials/admin-resource-row', { r }) %><% } %>
-          </div>
-        </div>
-        <% } %>
       </section>
 
       <!-- ── Five days in — check-in responses ─────────────────────────────── -->
@@ -1080,12 +1076,13 @@
     </div>
     <div class="admin-form-field">
       <label class="admin-form-label">Visible to</label>
-      <select class="admin-input" id="add-resource-cohort">
-        <option value="">Everyone (all cohorts)</option>
+      <p class="admin-field-hint">Leave all unchecked for everyone. Check cohorts to limit who sees it.</p>
+      <div class="admin-cohort-checks" id="add-resource-cohorts">
         <% for (const c of cohortList) { %>
-          <option value="<%= c.id %>"><%= c.name %></option>
+          <label class="admin-cohort-check"><input type="checkbox" value="<%= c.id %>"> <%= c.name %></label>
         <% } %>
-      </select>
+        <% if (!cohortList.length) { %><span class="admin-empty">No cohorts yet.</span><% } %>
+      </div>
     </div>
     <p class="admin-dialog-error" id="add-resource-error" hidden></p>
     <div class="admin-dialog-footer">
@@ -1121,12 +1118,13 @@
     </div>
     <div class="admin-form-field">
       <label class="admin-form-label">Visible to</label>
-      <select class="admin-input" id="edit-resource-cohort">
-        <option value="">Everyone (all cohorts)</option>
+      <p class="admin-field-hint">Leave all unchecked for everyone. Check cohorts to limit who sees it.</p>
+      <div class="admin-cohort-checks" id="edit-resource-cohorts">
         <% for (const c of cohortList) { %>
-          <option value="<%= c.id %>"><%= c.name %></option>
+          <label class="admin-cohort-check"><input type="checkbox" value="<%= c.id %>"> <%= c.name %></label>
         <% } %>
-      </select>
+        <% if (!cohortList.length) { %><span class="admin-empty">No cohorts yet.</span><% } %>
+      </div>
     </div>
     <p class="admin-dialog-error" id="edit-resource-error" hidden></p>
     <div class="admin-dialog-footer">
@@ -1198,7 +1196,7 @@
         description:    r.description    || '',
         category_tag:   r.category_tag   || '',
         url:            r.url            || '',
-        cohort_id:      r.cohort_id      || '',
+        cohort_ids:     r.cohort_ids     || (r.cohort_id != null ? String(r.cohort_id) : ''),
         scheduled_date: r.scheduled_date || ''
       }).replace(/</g, '\\u003c') %>;
     <% } %>
@@ -1716,9 +1714,26 @@
 
     // ── Resources ────────────────────────────────────────────────────────────
     // Open the Add Resource dialog with a cohort preselected ('' = everyone).
-    function openAddResource(cohortId) {
-      const sel = document.getElementById('add-resource-cohort');
-      if (sel) sel.value = (cohortId == null) ? '' : String(cohortId);
+    // Resource cohort checkboxes <-> CSV helpers.
+    function collectCohortIds(containerId) {
+      return [...document.querySelectorAll('#' + containerId + ' input[type=checkbox]:checked')]
+        .map(cb => cb.value).join(',');
+    }
+    function setCohortChecks(containerId, csv) {
+      const want = new Set(String(csv || '').split(',').map(s => s.trim()).filter(Boolean));
+      document.querySelectorAll('#' + containerId + ' input[type=checkbox]').forEach(cb => {
+        cb.checked = want.has(cb.value);
+      });
+    }
+
+    function openAddResource() {
+      document.getElementById('add-resource-title').value = '';
+      document.getElementById('add-resource-desc').value = '';
+      document.getElementById('add-resource-category').value = '';
+      document.getElementById('add-resource-url').value = '';
+      document.getElementById('add-resource-date').value = '';
+      setCohortChecks('add-resource-cohorts', '');
+      document.getElementById('add-resource-error').hidden = true;
       openDialog('dialog-add-resource');
     }
 
@@ -1731,7 +1746,7 @@
       document.getElementById('edit-resource-category').value = r.category_tag;
       document.getElementById('edit-resource-url').value      = r.url;
       document.getElementById('edit-resource-date').value     = r.scheduled_date || '';
-      document.getElementById('edit-resource-cohort').value   = r.cohort_id || '';
+      setCohortChecks('edit-resource-cohorts', r.cohort_ids || '');
       document.getElementById('edit-resource-error').hidden   = true;
       openDialog('dialog-edit-resource');
     }
@@ -1742,13 +1757,13 @@
       const category_tag = document.getElementById('add-resource-category').value.trim();
       const url         = document.getElementById('add-resource-url').value.trim();
       const scheduled_date = document.getElementById('add-resource-date').value;
-      const cohort_id   = document.getElementById('add-resource-cohort').value;
+      const cohort_ids  = collectCohortIds('add-resource-cohorts');
       if (!title) return showError('add-resource-error', 'Title is required.');
 
       const res = await fetch('/api/admin/resources', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ title, description, category_tag, url, cohort_id, scheduled_date })
+        body:    JSON.stringify({ title, description, category_tag, url, cohort_ids, scheduled_date })
       });
       const data = await res.json();
       if (!res.ok) return showError('add-resource-error', data.error);
@@ -1764,13 +1779,13 @@
       const category_tag = document.getElementById('edit-resource-category').value.trim();
       const url         = document.getElementById('edit-resource-url').value.trim();
       const scheduled_date = document.getElementById('edit-resource-date').value;
-      const cohort_id   = document.getElementById('edit-resource-cohort').value;
+      const cohort_ids  = collectCohortIds('edit-resource-cohorts');
       if (!title) return showError('edit-resource-error', 'Title is required.');
 
       const res = await fetch(`/api/admin/resources/${id}`, {
         method:  'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ title, description, category_tag, url, cohort_id, scheduled_date })
+        body:    JSON.stringify({ title, description, category_tag, url, cohort_ids, scheduled_date })
       });
       const data = await res.json();
       if (!res.ok) return showError('edit-resource-error', data.error);
