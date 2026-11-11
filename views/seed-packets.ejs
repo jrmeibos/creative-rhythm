@@ -13,6 +13,7 @@
       <div class="cm-header">
         <h1 class="cm-title">Seed Packets</h1>
         <p class="cm-subtitle">Five different angles. Thirty-five questions. Gather what's already alive in you.</p>
+        <button type="button" class="sp-intro-btn" onclick="openSpIntro()"><span class="sp-intro-play">▶</span> New here? Watch “What to talk about”</button>
       </div>
 
       <div class="cm-map-wrap">
@@ -169,5 +170,25 @@
 
     </main>
   </div>
+
+  <!-- Contextual "what to talk about / how to use this" intro video -->
+  <dialog id="sp-intro-dialog" class="sp-intro-dialog">
+    <div class="sp-intro-video" id="sp-intro-video"></div>
+    <button type="button" class="sp-intro-close" onclick="closeSpIntro()">Close</button>
+  </dialog>
+  <script>
+    function openSpIntro() {
+      document.getElementById('sp-intro-video').innerHTML =
+        '<iframe src="https://www.youtube.com/embed/u4HiT9DX8BA?autoplay=1&rel=0" title="What to talk about — using your Seed Packets" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>';
+      document.getElementById('sp-intro-dialog').showModal();
+    }
+    function closeSpIntro() {
+      document.getElementById('sp-intro-dialog').close();
+      document.getElementById('sp-intro-video').innerHTML = ''; // stop playback
+    }
+    document.getElementById('sp-intro-dialog').addEventListener('click', function (e) {
+      if (e.target === this) closeSpIntro(); // click the backdrop to close
+    });
+  </script>
 </body>
 </html>

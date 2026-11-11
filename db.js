@@ -1778,6 +1778,7 @@ function seedCourseVideos() {
     ['tour-of-the-garden',  'A Tour of the Garden',        'Find your way around the platform',            'https://www.youtube.com/embed/B44LI0Sx-xs'],
     ['why-we-do-this',      "Why We're Doing This",        "My experience, and three gardeners' journeys", 'https://www.youtube.com/embed/qprPPoxPmDw'],
     ['the-daily-recording', 'The Daily Recording Process', 'How to show up each day',                      'https://www.youtube.com/embed/HEsdCWNT7bM'],
+    ['seed-packets-intro',  'What to Talk About',          'Using your Seed Packets to find your material', 'https://www.youtube.com/embed/u4HiT9DX8BA'],
   ];
   const getRow = db.prepare('SELECT id, video_url, published FROM lessons WHERE slug = ?');
   const maxRow = db.prepare('SELECT MAX(sort_order) AS m FROM lessons').get();
