@@ -15,6 +15,10 @@
     .admin-res-group-head{display:flex;align-items:center;justify-content:space-between;gap:1rem;margin:0 0 .5rem;flex-wrap:wrap}
     .admin-res-group-title{font-family:var(--font-display);font-size:1.05rem;font-weight:400;color:var(--color-ink-stained);margin:0}
     .admin-res-group-sub{font-size:.8rem;color:rgba(16,15,16,.45);font-family:var(--font-body)}
+    /* Clickable gardener name → full profile */
+    .assess-name-link{display:flex;align-items:center;gap:.625rem;color:inherit;text-decoration:none}
+    .assess-name-link:hover{color:var(--color-bloem)}
+    .assess-name-link:hover span{text-decoration:underline}
     /* Cohort Overview */
     .co-status{display:flex;flex-direction:column;gap:.15rem;padding-bottom:1rem;margin-bottom:1rem;border-bottom:1px solid rgba(16,15,16,.08)}
     .co-status-big{font-family:var(--font-display);font-size:1.5rem;color:var(--color-bloem)}
@@ -587,10 +591,12 @@
               <% for (const s of studentAssessments) { %>
                 <tr id="assess-row-<%= s.id %>">
                   <td class="assess-name-cell">
-                    <div class="sidebar-avatar" style="width:28px;height:28px;font-size:0.75rem;flex-shrink:0;display:inline-flex">
-                      <%= s.avatar_initial || s.name.charAt(0) %>
-                    </div>
-                    <%= s.name %>
+                    <a class="assess-name-link" href="/admin/gardener/<%= s.id %>" title="Open this gardener's profile">
+                      <div class="sidebar-avatar" style="width:28px;height:28px;font-size:0.75rem;flex-shrink:0;display:inline-flex">
+                        <%= s.avatar_initial || s.name.charAt(0) %>
+                      </div>
+                      <span><%= s.name %></span>
+                    </a>
                   </td>
                   <td>
                     <% if (s.opening_at) { %>
@@ -624,7 +630,7 @@
                     <% } %>
                   </td>
                   <td>
-                    <a class="admin-btn-icon" href="/admin/gardener/<%= s.id %>" title="View full profile">View</a>
+                    <a class="admin-btn-text" href="/admin/gardener/<%= s.id %>" title="Open full profile">Open profile →</a>
                   </td>
                 </tr>
               <% } %>
