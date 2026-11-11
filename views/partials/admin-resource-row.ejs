@@ -1,0 +1,17 @@
+<%# One resource row for the admin Resources section. The cohort is conveyed by
+    the group heading it sits under, so there's no per-row cohort tag. Expects `r`. %>
+<div class="admin-resource-row" id="resource-row-<%= r.id %>">
+  <div class="admin-resource-info">
+    <span class="admin-resource-title"><%= r.title %></span>
+    <% if (r.category_tag) { %><span class="admin-lesson-tag"><%= r.category_tag %></span><% } %>
+    <% if (r.scheduled_date) { %><span class="admin-lesson-tag" style="background:#efe6d2;color:#8a6d2f" title="Scheduled call date">📅 <%= r.scheduled_date %></span><% } %>
+    <% if (r.description) { %><span class="admin-resource-desc"><%= r.description %></span><% } %>
+  </div>
+  <% if (r.url) { %>
+    <a class="admin-resource-url" href="<%= r.url %>" target="_blank" rel="noopener"><%= r.url.length > 40 ? r.url.slice(0, 40) + '…' : r.url %></a>
+  <% } %>
+  <div class="admin-row-actions">
+    <button class="admin-btn-icon" type="button" title="Edit" onclick="openEditResource(<%= r.id %>)">✎</button>
+    <button class="admin-btn-icon admin-btn-icon--danger" type="button" title="Delete" onclick="deleteResource(<%= r.id %>, <%= JSON.stringify(r.title) %>)">✕</button>
+  </div>
+</div>
