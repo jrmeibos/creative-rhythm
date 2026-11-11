@@ -87,10 +87,78 @@
     return out || '<p class="admin-empty">No answers recorded.</p>';
   }
 
+  // Trends for the 1–10 ratings that get re-asked across assessments, so you can
+  // see them move over time. Right now that's Opening → Closing for the three
+  // self-assessment scales; the chart handles N points, so it extends as more
+  // assessment points accrue (e.g. for gardeners who continue past the challenge).
+  function buildRatingTracker(data) {
+    const metrics = [
+      { field: 'q2_rating', label: 'Congruence',     color: '#705C6C' },
+      { field: 'q4_rating', label: 'Feeling safe',   color: '#76856C' },
+      { field: 'q6_rating', label: 'Fully yourself', color: '#a990a4' },
+    ];
+    const closingRow = data.trialClosing || data.closing;
+    const stages = [];
+    if (data.opening) stages.push({ label: 'Opening', row: data.opening });
+    if (closingRow)   stages.push({ label: 'Closing', row: closingRow });
+
+    const val = (row, f) => {
+      const n = Number(row && row[f]);
+      return (row && row[f] != null && row[f] !== '' && n >= 1 && n <= 10) ? n : null;
+    };
+    const hasChart = stages.some(s => metrics.some(m => val(s.row, m.field) != null));
+    const midEase = val(data.midChallenge, 'q2_rating'); // a different Q, shown as a note
+    if (!hasChart && midEase == null) return '';
+
+    let card = '<h4 style="font-weight:700;margin:0.25rem 0 0.5rem;color:var(--color-bloem)">Rating trends · 1–10</h4>'
+      + '<div style="background:var(--color-blank-page);border:1px solid rgba(112,92,108,0.14);border-radius:10px;padding:0.75rem 0.9rem;margin-bottom:0.75rem">';
+
+    if (hasChart) {
+      const W = 360, H = 188, padL = 26, padR = 14, padT = 12, padB = 30;
+      const plotW = W - padL - padR, plotH = H - padT - padB;
+      const xAt = (i) => stages.length === 1 ? padL + plotW / 2 : padL + (i * plotW) / (stages.length - 1);
+      const yAt = (v) => padT + plotH - ((v - 1) / 9) * plotH;
+      let svg = `<svg viewBox="0 0 ${W} ${H}" width="100%" style="max-width:420px;display:block" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="1 to 10 rating trends">`;
+      for (const g of [1, 5, 10]) {
+        const yy = yAt(g).toFixed(1);
+        svg += `<line x1="${padL}" y1="${yy}" x2="${W - padR}" y2="${yy}" stroke="rgba(16,15,16,0.08)"/>`;
+        svg += `<text x="${padL - 5}" y="${(yAt(g) + 3).toFixed(1)}" text-anchor="end" font-size="8" fill="rgba(16,15,16,0.4)">${g}</text>`;
+      }
+      stages.forEach((s, i) => {
+        svg += `<text x="${xAt(i).toFixed(1)}" y="${(H - padB + 16)}" text-anchor="middle" font-size="9" fill="rgba(16,15,16,0.55)">${esc(s.label)}</text>`;
+      });
+      for (const m of metrics) {
+        const pts = [];
+        stages.forEach((s, i) => { const v = val(s.row, m.field); if (v != null) pts.push({ i, v }); });
+        if (!pts.length) continue;
+        if (pts.length > 1) {
+          svg += `<polyline points="${pts.map(p => `${xAt(p.i).toFixed(1)},${yAt(p.v).toFixed(1)}`).join(' ')}" fill="none" stroke="${m.color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>`;
+        }
+        for (const p of pts) {
+          svg += `<circle cx="${xAt(p.i).toFixed(1)}" cy="${yAt(p.v).toFixed(1)}" r="3.2" fill="${m.color}"/>`;
+          svg += `<text x="${xAt(p.i).toFixed(1)}" y="${(yAt(p.v) - 6).toFixed(1)}" text-anchor="middle" font-size="8.5" font-weight="700" fill="${m.color}">${p.v}</text>`;
+        }
+      }
+      svg += '</svg>';
+      let legend = '<div style="display:flex;flex-wrap:wrap;gap:0.8rem;margin-top:0.35rem">';
+      for (const m of metrics) {
+        legend += `<span style="display:inline-flex;align-items:center;gap:0.3rem;font-size:0.78rem;color:rgba(16,15,16,0.7)"><span style="width:10px;height:10px;border-radius:50%;background:${m.color};display:inline-block"></span>${esc(m.label)}</span>`;
+      }
+      legend += '</div>';
+      card += svg + legend;
+    }
+
+    if (midEase != null) {
+      card += `<div style="font-size:0.78rem;color:rgba(16,15,16,0.55);margin-top:${hasChart ? '0.55rem' : '0'}">Week-1 daily-recording ease (asked once): <strong>${esc(midEase)}/10</strong></div>`;
+    }
+    return card + '</div>';
+  }
+
   // Builds the full history HTML. Order: assessments / check-ins / seeds, then
   // the daily recordings last (per the full-page layout).
   function buildHtml(data) {
     let html = '';
+    html += buildRatingTracker(data);
 
     // ─── Mailing address (only if they gave one) ────────────────────────────
     const u = data.user || {};
