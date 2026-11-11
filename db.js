@@ -4347,7 +4347,7 @@ module.exports = {
 
   getAllStudentAssessmentStatus() {
     return db.prepare(`
-      SELECT u.id, u.name, u.avatar_initial, u.role,
+      SELECT u.id, u.name, u.avatar_initial, u.role, u.cohort_id,
         (SELECT completed_at FROM self_assessments WHERE user_id=u.id AND assessment_type='opening') as opening_at,
         (SELECT completed_at FROM self_assessments WHERE user_id=u.id AND assessment_type='midcourse') as midcourse_at,
         (SELECT completed_at FROM self_assessments WHERE user_id=u.id AND assessment_type='mid_challenge') as mid_challenge_at,
@@ -4389,12 +4389,31 @@ module.exports = {
     // only per-student fact available is "have they submitted?", which lives
     // on users.midcourse_submitted_at. Surface just that — the dialog turns
     // it into a "✓ Submitted on DATE" line.
+    const fiveDaysIn = this.getCheckinResponse(userId, 'five-days-in') || null;
+
     return {
-      user, opening, closing, trialClosing, midChallenge, goals,
+      user, opening, closing, trialClosing, midChallenge, fiveDaysIn, goals,
       midcourseSubmittedAt: user ? user.midcourse_submitted_at : null,
       courseLengthWeeks:    user ? (user.course_length_weeks || 12) : 12,
       seedPacketAnswers, seedPacketSeeds, cuttings,
     };
+  },
+
+  // Every member of a cohort with their assessment rows, for the per-cohort
+  // "read all answers to one assessment" view. Kept as a thin aggregator.
+  getCohortAssessments(cohortId) {
+    const members = db.prepare(
+      "SELECT id, name, avatar_initial FROM users WHERE cohort_id = ? AND role = 'student' ORDER BY name ASC"
+    ).all(cohortId);
+    const getA = db.prepare('SELECT * FROM self_assessments WHERE user_id = ? AND assessment_type = ?');
+    return members.map(m => ({
+      id: m.id, name: m.name, avatar_initial: m.avatar_initial,
+      opening:      getA.get(m.id, 'opening')      || null,
+      midChallenge: getA.get(m.id, 'mid_challenge') || null,
+      closing:      getA.get(m.id, 'closing')       || null,
+      trialClosing: getA.get(m.id, 'trial_closing') || null,
+      fiveDaysIn:   this.getCheckinResponse(m.id, 'five-days-in') || null,
+    }));
   },
 
   // ─── Seed Packets ──────────────────────────────────────────────────────────

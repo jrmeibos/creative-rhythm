@@ -22,6 +22,9 @@
     /* Clickable cohort-roster name cell → full profile */
     .roster-name-link{display:block;text-decoration:none;color:inherit}
     .roster-name-link:hover .admin-user-name{color:var(--color-bloem);text-decoration:underline}
+    /* Any gardener name → their profile */
+    .name-link{text-decoration:none;color:inherit;cursor:pointer}
+    .name-link:hover{color:var(--color-bloem);text-decoration:underline}
     /* Resources: compact rows + "Show all" */
     .res-hidden{display:none}
     .res-load-more{display:inline-block;margin:.6rem 0 0;background:none;border:none;color:var(--color-bloem);font:inherit;font-size:.9rem;cursor:pointer;text-decoration:underline;padding:.2rem 0}
@@ -179,6 +182,7 @@
             </div>
             <div class="cohort-roster" id="cohort-roster-<%= c.id %>" <%= openByDefault ? '' : 'hidden' %>>
               <% if (members.length) { %>
+                <div style="padding:.2rem .1rem .7rem"><a class="admin-btn-text" href="/admin/cohort/<%= c.id %>/assessments">Read this cohort's assessments →</a></div>
                 <div class="cohort-roster-scroll">
                   <table class="cohort-roster-tbl">
                     <thead><tr>
@@ -226,7 +230,7 @@
               <div class="admin-user-row">
                 <div class="sidebar-avatar" style="width:32px;height:32px;font-size:0.85rem;flex-shrink:0"><%= m.avatar_initial || m.name.charAt(0) %></div>
                 <div class="admin-user-info">
-                  <span class="admin-user-name"><%= m.name %></span>
+                  <a class="admin-user-name name-link" href="/admin/gardener/<%= m.id %>" title="Open this gardener's profile"><%= m.name %></a>
                   <span class="admin-user-email"><%= m.email %></span>
                 </div>
                 <% if (m.challenge_payment_status === 'refunded') { %><span class="admin-lesson-tag">Refunded</span>
@@ -264,7 +268,7 @@
                 <%= u.avatar_initial || u.name.charAt(0) %>
               </div>
               <div class="admin-user-info">
-                <span class="admin-user-name"><%= u.name %></span>
+                <a class="admin-user-name name-link" href="/admin/gardener/<%= u.id %>" title="Open this gardener's profile"><%= u.name %></a>
                 <span class="admin-user-email"><%= u.email %></span>
                 <span class="admin-user-start-date">
                   <label for="user-start-<%= u.id %>" style="font-size:0.7rem;color:rgba(16,15,16,0.5);letter-spacing:0.08em;text-transform:uppercase;font-weight:600">Course start</label>
@@ -384,7 +388,7 @@
                 <div class="co-quiet-info">
                   <div class="sidebar-avatar" style="width:28px;height:28px;font-size:0.75rem;flex-shrink:0;display:inline-flex"><%= g.avatarInitial || g.name.charAt(0) %></div>
                   <div>
-                    <span class="co-quiet-name"><%= g.name %></span>
+                    <a class="co-quiet-name name-link" href="/admin/gardener/<%= g.id %>" title="Open this gardener's profile"><%= g.name %></a>
                     <span class="co-quiet-sub"><% if (g.neverRecorded) { %>No recordings yet<% } else { %>Last recorded <%= g.lastRecordedLabel %><% } %> · <%= g.daysSince %> days quiet</span>
                   </div>
                 </div>
@@ -433,7 +437,7 @@
                 <%= u.avatar_initial || u.name.charAt(0) %>
               </div>
               <div class="admin-user-info">
-                <span class="admin-user-name"><%= u.name %></span>
+                <a class="admin-user-name name-link" href="/admin/gardener/<%= u.id %>" title="Open this gardener's profile"><%= u.name %></a>
                 <span class="admin-user-email"><%= u.email %></span>
                 <% if (signedUpLabel) { %><span class="admin-user-activity admin-user-activity--quiet"><%= signedUpLabel %></span><% } %>
               </div>
@@ -557,29 +561,10 @@
         </div>
       </section>
 
-      <!-- ── Five days in — check-in responses ─────────────────────────────── -->
-      <section class="dash-section" id="section-checkins" data-tab="people">
-        <div class="dash-section-header">
-          <h2 class="dash-section-title"><%= checkinTitle %> — check-in responses</h2>
-          <span class="admin-count"><%= checkins.length %> in</span>
-        </div>
-        <% if (!checkins.length) { %>
-          <div class="admin-card"><p class="admin-empty">No check-ins yet.</p></div>
-        <% } else { %>
-          <% for (const c of checkins) { %>
-            <div class="admin-card ci-admin-card">
-              <div class="ci-admin-head">
-                <span class="ci-admin-name"><%= c.name %></span>
-                <% if (c.practice_rating) { %><span class="ci-admin-rating">Practice <%= c.practice_rating %>/5</span><% } %>
-              </div>
-              <% if (c.resistance)   { %><p class="ci-admin-q">Resistance</p><p class="ci-admin-a"><%= c.resistance %></p><% } %>
-              <% if (c.surprised)    { %><p class="ci-admin-q">Surprised / felt good</p><p class="ci-admin-a"><%= c.surprised %></p><% } %>
-              <% if (c.self_insight) { %><p class="ci-admin-q">Learned about themselves</p><p class="ci-admin-a"><%= c.self_insight %></p><% } %>
-              <% if (c.for_the_call) { %><p class="ci-admin-q">For the first call</p><p class="ci-admin-a"><%= c.for_the_call %></p><% } %>
-            </div>
-          <% } %>
-        <% } %>
-      </section>
+      <%# The flat "Five days in" responses list was removed to keep this tab
+          light: each gardener's answer now shows on their profile, and a whole
+          cohort's answers read together via "Read this cohort's assessments"
+          on the Cohorts tab. %>
 
       <!-- ── Student Assessments ──────────────────────────────────────────── -->
       <section class="dash-section" id="section-assessments" data-tab="people">
@@ -1553,7 +1538,7 @@
             ${initial}
           </div>
           <div class="admin-user-info">
-            <span class="admin-user-name">${u.name}</span>
+            <a class="admin-user-name name-link" href="/admin/gardener/${u.id}" title="Open this gardener's profile">${u.name}</a>
             <span class="admin-user-email">${u.email}</span>
           </div>
           <span class="admin-user-role ${roleClass}">${roleLabel}</span>

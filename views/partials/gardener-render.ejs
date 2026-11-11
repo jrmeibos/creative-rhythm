@@ -67,6 +67,26 @@
     return out || '<p class="admin-empty">No answers recorded.</p>';
   }
 
+  // The "Five days in" check-in isn't catalog-based (fixed columns), so it has
+  // its own renderer. Shared by the profile and the cohort-assessments view.
+  function renderFiveDaysIn(f) {
+    if (!f) return '<p class="admin-empty">No answers recorded.</p>';
+    let out = '';
+    if (f.practice_rating != null && f.practice_rating !== '') {
+      out += `<div class="admin-assess-qa"><div class="admin-assess-q">How's the practice going? (1–5)</div><div class="admin-assess-a">${esc(f.practice_rating)}/5</div></div>`;
+    }
+    const fields = [
+      ['resistance',   'Where there was resistance'],
+      ['surprised',    'Surprised / felt good'],
+      ['self_insight', 'Learned about themselves'],
+      ['for_the_call', 'For the first call'],
+    ];
+    for (const [k, label] of fields) {
+      if (f[k]) out += `<div class="admin-assess-qa"><div class="admin-assess-q">${esc(label)}</div><div class="admin-assess-a">${esc(f[k])}</div></div>`;
+    }
+    return out || '<p class="admin-empty">No answers recorded.</p>';
+  }
+
   // Builds the full history HTML. Order: assessments / check-ins / seeds, then
   // the daily recordings last (per the full-page layout).
   function buildHtml(data) {
@@ -179,6 +199,12 @@
       html += renderAssessment(MID_CHALLENGE_QS, data.midChallenge);
     }
 
+    // ─── Five-days-in check-in (older pulse; attributed) ────────────────────
+    if (data.fiveDaysIn) {
+      html += '<h4 style="font-weight:700;margin:1rem 0 0.5rem;color:var(--color-understory)">Five-days-in Check-in</h4>';
+      html += renderFiveDaysIn(data.fiveDaysIn);
+    }
+
     // ─── Mid-course check-in (legacy 12-week; submission flag only) ──────────
     if (data.midcourseSubmittedAt) {
       html += `<h4 style="font-weight:700;margin:1rem 0 0.5rem;color:var(--color-understory)">Mid-course Check-in ✓</h4>`;
@@ -216,6 +242,9 @@
     return html || '<p class="admin-empty">No submissions yet.</p>';
   }
 
-  window.GardenerRender = { buildHtml, renderAssessment, esc, fmtDate };
+  window.GardenerRender = {
+    buildHtml, renderAssessment, renderFiveDaysIn, esc, fmtDate,
+    catalogs: { OPENING_QS, MID_CHALLENGE_QS, CLOSING_QS, TRIAL_CLOSING_QS },
+  };
 })();
 </script>

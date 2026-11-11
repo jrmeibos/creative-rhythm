@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <%- include('partials/head') %>
+  <link rel="stylesheet" href="/css/dashboard.css">
+  <style>
+    .ca-back{display:inline-block;font-size:.85rem;color:var(--color-bloem);text-decoration:none;margin-bottom:1rem;opacity:.85}
+    .ca-back:hover{opacity:1}
+    .ca-title{font-family:var(--font-display);font-size:1.9rem;font-weight:400;color:var(--color-ink-stained);margin:0 0 .15rem;line-height:1.1}
+    .ca-sub{font-size:.85rem;color:rgba(16,15,16,.5);margin:0 0 1.25rem}
+    .ca-tabs{display:flex;flex-wrap:wrap;gap:.4rem;margin-bottom:1.5rem;border-bottom:1px solid rgba(112,92,108,.18)}
+    .ca-tab{appearance:none;border:none;background:none;font:inherit;font-size:.92rem;color:var(--color-ink-stained);opacity:.5;padding:.55rem .9rem;border-bottom:2px solid transparent;margin-bottom:-1px;cursor:pointer}
+    .ca-tab:hover{opacity:.85}
+    .ca-tab.is-active{opacity:1;color:var(--color-bloem);border-bottom-color:var(--color-bloem)}
+    .ca-tab-count{font-size:.75rem;color:rgba(16,15,16,.4)}
+    .ca-member{background:var(--color-blank-page);border:1px solid rgba(112,92,108,.14);border-radius:12px;padding:1rem 1.2rem;margin-bottom:1rem}
+    .ca-member-head{display:flex;align-items:center;gap:.6rem;margin-bottom:.6rem}
+    .ca-avatar{width:34px;height:34px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-size:1rem;color:#fff;background:var(--color-bloem)}
+    .ca-member-name{font-family:var(--font-display);font-size:1.1rem;color:var(--color-ink-stained)}
+    .ca-member-body{font-size:.9rem;font-weight:300;line-height:1.6}
+    .ca-member-body h4:first-child{margin-top:0 !important}
+  </style>
+</head>
+<body class="app-body">
+  <div class="app-layout">
+    <%- include('partials/sidebar') %>
+    <main class="main-content">
+
+      <a href="/admin#cohorts" class="ca-back">← Cohorts</a>
+      <h1 class="ca-title"><%= cohort.name %></h1>
+      <p class="ca-sub">Reading the whole cohort's answers, one assessment at a time · <%= members.length %> gardener<%= members.length === 1 ? '' : 's' %></p>
+
+      <div class="ca-tabs" id="ca-tabs">
+        <button class="ca-tab is-active" type="button" data-type="opening">Opening</button>
+        <button class="ca-tab" type="button" data-type="mid">Mid-challenge</button>
+        <button class="ca-tab" type="button" data-type="closing">Closing</button>
+        <button class="ca-tab" type="button" data-type="fivedays">Five-days-in</button>
+      </div>
+
+      <div id="ca-body"></div>
+
+    </main>
+  </div>
+
+  <%- include('partials/gardener-render') %>
+  <script>
+    (function () {
+      const MEMBERS = <%- JSON.stringify(members).replace(/</g, '\\u003c') %>;
+      const GR = window.GardenerRender;
+
+      function answersFor(m, type) {
+        if (type === 'opening') return m.opening ? GR.renderAssessment(GR.catalogs.OPENING_QS, m.opening) : '';
+        if (type === 'mid')     return m.midChallenge ? GR.renderAssessment(GR.catalogs.MID_CHALLENGE_QS, m.midChallenge) : '';
+        if (type === 'closing') {
+          if (m.trialClosing) return GR.renderAssessment(GR.catalogs.TRIAL_CLOSING_QS, m.trialClosing, m.opening);
+          if (m.closing)      return GR.renderAssessment(GR.catalogs.CLOSING_QS, m.closing, m.opening);
+          return '';
+        }
+        if (type === 'fivedays') return m.fiveDaysIn ? GR.renderFiveDaysIn(m.fiveDaysIn) : '';
+        return '';
+      }
+
+      function renderType(type) {
+        let html = '';
+        for (const m of MEMBERS) {
+          const inner = answersFor(m, type);
+          html += `<div class="ca-member"><div class="ca-member-head"><div class="ca-avatar">${GR.esc(m.avatar_initial || (m.name || '?').charAt(0))}</div><span class="ca-member-name">${GR.esc(m.name)}</span></div>`
+            + `<div class="ca-member-body">${inner || '<p class="admin-empty">— not submitted yet</p>'}</div></div>`;
+        }
+        document.getElementById('ca-body').innerHTML = html || '<p class="admin-empty">No gardeners in this cohort yet.</p>';
+        document.querySelectorAll('.ca-tab').forEach(b => b.classList.toggle('is-active', b.dataset.type === type));
+      }
+
+      // Count submitted per type, shown on each tab.
+      (function annotateTabs() {
+        const types = { opening:0, mid:0, closing:0, fivedays:0 };
+        for (const m of MEMBERS) {
+          if (m.opening) types.opening++;
+          if (m.midChallenge) types.mid++;
+          if (m.trialClosing || m.closing) types.closing++;
+          if (m.fiveDaysIn) types.fivedays++;
+        }
+        document.querySelectorAll('.ca-tab').forEach(b => {
+          const n = types[b.dataset.type];
+          b.innerHTML = b.textContent + ' <span class="ca-tab-count">' + n + '</span>';
+        });
+      })();
+
+      document.getElementById('ca-tabs').addEventListener('click', (e) => {
+        const btn = e.target.closest('.ca-tab');
+        if (btn) renderType(btn.dataset.type);
+      });
+
+      renderType('opening');
+    })();
+  </script>
+</body>
+</html>

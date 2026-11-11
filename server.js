@@ -5234,8 +5234,6 @@ app.get('/admin', requireAdmin, (req, res) => {
     cohortOverview,
     recordingSummary, enrollments, challengeStats,
     challengeParticipants: db.getChallengeParticipants(),
-    checkins: db.getAllCheckinResponses(CHECKIN.key),
-    checkinTitle: CHECKIN.title,
     harvestUnlocked, midcourseUnlocked, upgradeMode,
     midcourseUnlockDate, closingUnlockDate,
     midChallengeUnlockDate, midChallengeUnlocked,
@@ -5313,6 +5311,25 @@ app.get('/admin/gardener/:id', requireAdmin, (req, res) => {
     stats,
     // Catalogs the shared renderer partial needs to turn stored values into
     // readable answers (same ones the admin page passes its View dialog).
+    questions: ASSESSMENT_QUESTIONS,
+    closingQuestions: CLOSING_QUESTIONS,
+    midChallengeQuestions: MID_CHALLENGE_QUESTIONS,
+    trialClosingQuestions: TRIAL_CLOSING_QUESTIONS,
+    seedPacketAngles: ANGLES,
+  });
+});
+
+// ─── Admin: whole-cohort assessments (read one assessment across all members) ─
+app.get('/admin/cohort/:id/assessments', requireAdmin, (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  const cohort = db.getCohortById(id);
+  if (!cohort) return res.redirect('/admin#cohorts');
+  res.render('admin-cohort-assessments', {
+    title: cohort.name + ' — Assessments',
+    page: 'admin',
+    cohort,
+    members: db.getCohortAssessments(id),
+    // Catalogs for the shared renderer partial.
     questions: ASSESSMENT_QUESTIONS,
     closingQuestions: CLOSING_QUESTIONS,
     midChallengeQuestions: MID_CHALLENGE_QUESTIONS,
